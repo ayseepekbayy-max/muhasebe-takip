@@ -1,0 +1,81 @@
+@page "/Calisanlar"
+@model MuhasebeTakip2.App.Pages.Calisanlar.IndexModel
+
+<h1>Çalışanlar</h1>
+
+<div style="margin:12px 0;">
+  <form method="post" asp-page-handler="DisaAktar" style="display:inline;">
+    <button type="submit" class="btn btn-outline-success btn-sm">Çalışanları Excel Olarak İndir</button>
+  </form>
+</div>
+
+@if (!ViewData.ModelState.IsValid)
+{
+  <div style="color:red; margin:10px 0;">
+    @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+    {
+      <div>@err.ErrorMessage</div>
+    }
+  </div>
+}
+
+<div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:520px;">
+  <h3>Yeni Çalışan Ekle</h3>
+
+  <form method="post" asp-page-handler="Ekle">
+    <div style="margin-bottom:10px;">
+      <label><b>Ad Soyad</b></label><br />
+      <input asp-for="YeniCalisan.AdSoyad" style="width:100%; padding:8px;" />
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <label><b>Telefon</b></label><br />
+      <input asp-for="YeniCalisan.Telefon" style="width:100%; padding:8px;" />
+    </div>
+
+    <button type="submit" class="btn btn-dark btn-sm">Ekle</button>
+    <a class="btn btn-outline-dark btn-sm" href="/">Kasa</a>
+  </form>
+</div>
+
+<h3>Çalışan Listesi</h3>
+
+<table style="width:100%; border-collapse:collapse;">
+  <thead>
+    <tr>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Ad Soyad</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Telefon</th>
+      <th style="border-bottom:1px solid #555; padding:8px; width:260px;">İşlem</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    @if (Model.Liste.Count == 0)
+    {
+      <tr>
+        <td colspan="3" style="padding:8px;">Henüz çalışan yok.</td>
+      </tr>
+    }
+    else
+    {
+      @foreach (var c in Model.Liste)
+      {
+        <tr>
+          <td style="border-bottom:1px solid #333; padding:8px;">@c.AdSoyad</td>
+          <td style="border-bottom:1px solid #333; padding:8px;">@c.Telefon</td>
+          <td style="border-bottom:1px solid #333; padding:8px;">
+            <form method="post" asp-page-handler="Sil"
+                  onsubmit="return confirm('Çalışan silinsin mi?');"
+                  style="display:inline;">
+              <input type="hidden" name="id" value="@c.Id" />
+              <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
+            </form>
+
+            <a class="btn btn-outline-primary btn-sm" href="/Calisanlar/Detay/@c.Id">Detay</a>
+            <a class="btn btn-outline-success btn-sm" href="/Calisanlar/Puantaj/@c.Id">Puantaj</a>
+          </td>
+        </tr>
+      }
+    }
+  </tbody>
+</table>

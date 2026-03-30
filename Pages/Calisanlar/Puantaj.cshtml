@@ -1,0 +1,158 @@
+@page "{id:int}"
+@model MuhasebeTakip2.App.Pages.Calisanlar.PuantajModel
+
+<h1 style="margin-bottom:20px;">Aylık Puantaj</h1>
+
+<a class="btn btn-outline-dark btn-sm" href="/Calisanlar">← Çalışanlar</a>
+
+@if (!string.IsNullOrWhiteSpace(Model.Hata))
+{
+    <div style="color:red; margin:10px 0;">@Model.Hata</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Mesaj))
+{
+    <div style="color:green; margin:10px 0;">@Model.Mesaj</div>
+}
+
+@if (Model.Calisan != null)
+{
+    <div style="margin-top:20px; padding:16px; border-radius:12px; background:#f9fafb; border:1px solid #e5e7eb;">
+        <b>@Model.Calisan.AdSoyad</b> | @Model.Calisan.Telefon
+    </div>
+
+    <div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
+        <form method="get" style="display:flex; gap:10px; flex-wrap:wrap;">
+            <input type="hidden" name="id" value="@Model.CalisanId" />
+            <input type="number" name="yil" value="@Model.SeciliYil" style="width:120px; padding:8px;" />
+            <input type="number" name="ay" value="@Model.SeciliAy" min="1" max="12" style="width:120px; padding:8px;" />
+            <button class="btn btn-dark btn-sm" type="submit">Göster</button>
+        </form>
+
+        <form method="post" asp-page-handler="DisaAktar" style="display:inline;">
+            <input type="hidden" asp-for="CalisanId" />
+            <input type="hidden" asp-for="SeciliYil" />
+            <input type="hidden" asp-for="SeciliAy" />
+            <button type="submit" class="btn btn-outline-success btn-sm">
+                Puantajı Excel Olarak İndir
+            </button>
+        </form>
+    </div>
+
+    <div style="margin-top:20px; display:flex; gap:15px; flex-wrap:wrap;">
+        <div class="kart">Geldi: @Model.ToplamGeldi</div>
+        <div class="kart">Gelmedi: @Model.ToplamGelmedi</div>
+        <div class="kart">İzinli: @Model.ToplamIzinli</div>
+        <div class="kart">Yarım Gün: @Model.ToplamYarimGun</div>
+    </div>
+
+    <table style="width:100%; margin-top:20px; border-collapse:collapse;">
+        <thead>
+            <tr style="background:#f3f4f6;">
+                <th style="padding:10px; text-align:left;">Tarih</th>
+                <th style="text-align:left;">Gün</th>
+                <th style="text-align:left;">Durum / Not / İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var gun in Model.AylikGunler)
+            {
+                var haftaSonu = gun.Tarih.DayOfWeek == DayOfWeek.Sunday;
+
+                <tr style="border-bottom:1px solid #e5e7eb;">
+                    <td style="padding:10px;">@gun.Tarih.ToString("dd.MM.yyyy")</td>
+                    <td>@gun.Tarih.ToString("dddd")</td>
+                    <td style="padding:8px;">
+                        @if (haftaSonu)
+                        {
+                            <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#e5e7eb; color:#374151; font-weight:600;">
+                                Hafta Sonu
+                            </span>
+                        }
+                        else
+                        {
+                            <form method="post" asp-page-handler="Kaydet" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0;">
+                                <input type="hidden" name="CalisanId" value="@Model.CalisanId" />
+                                <input type="hidden" name="Tarih" value="@gun.Tarih.ToString("yyyy-MM-dd")" />
+                                <input type="hidden" name="SeciliYil" value="@Model.SeciliYil" />
+                                <input type="hidden" name="SeciliAy" value="@Model.SeciliAy" />
+
+                                <select name="Durum" style="padding:6px;">
+                                    @if (gun.Durum == MuhasebeTakip2.App.Models.PuantajDurum.Geldi)
+                                    {
+                                        <option value="1" selected>Geldi</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="1">Geldi</option>
+                                    }
+
+                                    @if (gun.Durum == MuhasebeTakip2.App.Models.PuantajDurum.Gelmedi)
+                                    {
+                                        <option value="2" selected>Gelmedi</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="2">Gelmedi</option>
+                                    }
+
+                                    @if (gun.Durum == MuhasebeTakip2.App.Models.PuantajDurum.Izinli)
+                                    {
+                                        <option value="3" selected>İzinli</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="3">İzinli</option>
+                                    }
+
+                                    @if (gun.Durum == MuhasebeTakip2.App.Models.PuantajDurum.YarimGun)
+                                    {
+                                        <option value="4" selected>Yarım Gün</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="4">Yarım Gün</option>
+                                    }
+                                </select>
+
+                                <input type="text"
+                                       name="Not"
+                                       value="@gun.Not"
+                                       placeholder="Not..."
+                                       style="padding:6px; width:180px;" />
+
+                                @switch (gun.Durum)
+                                {
+                                    case MuhasebeTakip2.App.Models.PuantajDurum.Geldi:
+                                        <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#d1fae5; color:#065f46; font-weight:600;">Geldi</span>
+                                        break;
+                                    case MuhasebeTakip2.App.Models.PuantajDurum.Gelmedi:
+                                        <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#fee2e2; color:#991b1b; font-weight:600;">Gelmedi</span>
+                                        break;
+                                    case MuhasebeTakip2.App.Models.PuantajDurum.Izinli:
+                                        <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#dbeafe; color:#1e3a8a; font-weight:600;">İzinli</span>
+                                        break;
+                                    case MuhasebeTakip2.App.Models.PuantajDurum.YarimGun:
+                                        <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#fef3c7; color:#92400e; font-weight:600;">Yarım Gün</span>
+                                        break;
+                                }
+
+                                <button class="btn btn-outline-primary btn-sm" type="submit">Kaydet</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<style>
+.kart {
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    font-weight: 600;
+}
+</style>

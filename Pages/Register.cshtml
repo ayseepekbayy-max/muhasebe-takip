@@ -1,0 +1,86 @@
+@page
+@model MuhasebeTakip2.App.Pages.RegisterModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Kayıt Ol";
+}
+
+<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;">
+    <div style="width:100%; max-width:460px; background:#ffffff; padding:36px; border-radius:24px; box-shadow:0 18px 50px rgba(15,23,42,0.10); border:1px solid #eaecf0;">
+
+        <div style="text-align:center; margin-bottom:28px;">
+            <div style="font-size:30px; font-weight:800; color:#111827; letter-spacing:0.5px; margin-bottom:8px;">
+                ANK
+            </div>
+            <h2 style="margin:0 0 8px 0; font-weight:700; color:#111827;">Kayıt Ol</h2>
+            <div style="color:#667085; font-size:15px;">Yeni firma hesabınızı oluşturun</div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Hata))
+        {
+            <div style="background:#fff1f2; color:#b42318; border:1px solid #fecdd3; padding:12px; border-radius:12px; margin-bottom:18px;">
+                @Model.Hata
+            </div>
+        }
+
+        <form method="post">
+            <div style="margin-bottom:16px;">
+                <label asp-for="FirmaAdi" style="display:block; margin-bottom:6px; font-weight:600; color:#344054;">Firma Adı</label>
+                <input asp-for="FirmaAdi"
+                       style="width:100%; padding:13px 14px; border:1px solid #d0d5dd; border-radius:12px; font-size:15px; outline:none; background:#fff;" />
+            </div>
+
+            <div style="margin-bottom:16px;">
+                <label asp-for="KullaniciAdi" style="display:block; margin-bottom:6px; font-weight:600; color:#344054;">Kullanıcı Adı</label>
+                <input asp-for="KullaniciAdi"
+                       style="width:100%; padding:13px 14px; border:1px solid #d0d5dd; border-radius:12px; font-size:15px; outline:none; background:#fff;" />
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label asp-for="Sifre" style="display:block; margin-bottom:6px; font-weight:600; color:#344054;">Şifre</label>
+
+                <div style="position:relative;">
+                    <input asp-for="Sifre" id="registerPassword" type="password"
+                           style="width:100%; padding:13px 44px 13px 14px; border:1px solid #d0d5dd; border-radius:12px; font-size:15px; outline:none; background:#fff;" />
+
+                    <button type="button"
+                            onclick="togglePassword('registerPassword', 'registerToggleText')"
+                            style="position:absolute; right:10px; top:50%; transform:translateY(-50%); border:none; background:none; color:#475467; font-weight:600; font-size:13px; cursor:pointer;">
+                        <span id="registerToggleText">Göster</span>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit"
+                    style="width:100%; padding:13px; border:none; border-radius:12px; background:#111827; color:white; font-size:16px; font-weight:700; cursor:pointer; margin-bottom:14px;">
+                Kayıt Ol
+            </button>
+
+            <a href="/Login"
+               style="display:block; width:100%; text-align:center; padding:13px; border:1px solid #d0d5dd; border-radius:12px; text-decoration:none; color:#1f2937; font-weight:600; background:#fff;">
+                Giriş Sayfasına Dön
+            </a>
+        </form>
+
+        <div style="text-align:center; margin-top:22px; color:#98a2b3; font-size:13px;">
+            Kayıt sonrası giriş yaparak devam edin
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function togglePassword(inputId, textId) {
+            const input = document.getElementById(inputId);
+            const text = document.getElementById(textId);
+
+            if (input.type === "password") {
+                input.type = "text";
+                text.textContent = "Gizle";
+            } else {
+                input.type = "password";
+                text.textContent = "Göster";
+            }
+        }
+    </script>
+}

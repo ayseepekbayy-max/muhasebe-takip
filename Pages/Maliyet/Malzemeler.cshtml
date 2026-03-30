@@ -1,0 +1,91 @@
+@page "/Maliyet/Malzemeler"
+@model MuhasebeTakip2.App.Pages.Maliyet.MalzemelerModel
+
+<h1>Malzemeler</h1>
+
+<p>
+    <a class="btn btn-outline-dark btn-sm" href="/Maliyet">← Maliyet</a>
+</p>
+
+@if (!string.IsNullOrWhiteSpace(Model.Hata))
+{
+    <div style="color:red; margin:10px 0;">@Model.Hata</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Mesaj))
+{
+    <div style="color:green; margin:10px 0;">@Model.Mesaj</div>
+}
+
+<div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:20px;">
+
+    <div style="border:1px solid #444; border-radius:10px; padding:16px; min-width:340px; max-width:420px;">
+        <h4>Malzeme Bilgileri</h4>
+
+        <form method="post">
+            <div style="margin-bottom:10px;">
+                <label><b>Stoktan Ürün Seç</b></label><br />
+                <select asp-for="SeciliStokUrunId" style="width:100%; padding:8px;">
+                    <option value="">-- Ürün Seçin --</option>
+                    @foreach (var item in Model.StokUrunleri)
+                    {
+                        <option value="@item.Id">@item.Ad (@item.Birim)</option>
+                    }
+                </select>
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label><b>1 Parça İçin Kullanım Miktarı</b></label><br />
+                <input asp-for="BirParcaKullanimMiktari" style="width:100%; padding:8px;" />
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label><b>1 Parça Malzeme Maliyeti</b></label><br />
+                <input asp-for="BirParcaMalzemeMaliyeti" style="width:100%; padding:8px;" />
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label><b>Üretim Adedi (Plaka'dan gelir)</b></label><br />
+                <input asp-for="Adet" style="width:100%; padding:8px;" readonly />
+            </div>
+
+            <button type="submit" class="btn btn-dark btn-sm">Hesapla</button>
+        </form>
+    </div>
+
+    <div style="border:1px solid #444; border-radius:10px; padding:16px; min-width:340px; max-width:620px;">
+        <h4>Sonuç</h4>
+
+        @if (Model.Hesaplandi)
+        {
+            <div style="margin-bottom:8px;"><b>Plaka 1 Parça Maliyeti:</b> @Model.PlakaBirParcaMaliyeti</div>
+            <div style="margin-bottom:8px;"><b>Bant 1 Parça Maliyeti:</b> @Model.BantBirParcaMaliyeti</div>
+
+            <hr />
+
+            <div style="margin-bottom:8px;"><b>Toplam Kullanılacak Malzeme:</b> @Model.ToplamKullanilacakMiktar</div>
+            <div style="margin-bottom:8px;"><b>Toplam Malzeme Maliyeti:</b> @Model.ToplamMalzemeMaliyeti</div>
+            <div style="margin-bottom:8px;"><b>1 Parça Malzeme Maliyeti:</b> @Model.BirParcaMalzemeMaliyeti</div>
+
+            <hr />
+
+            <div style="margin-bottom:8px;"><b>1 Parça Toplam Maliyet:</b> @Model.ToplamBirParcaMaliyet</div>
+            <div style="margin-bottom:8px;"><b>Toplam Genel Maliyet:</b> @Model.ToplamGenelMaliyet</div>
+
+            <form method="post" asp-page-handler="StoktanDus" style="margin-top:16px;">
+                <input type="hidden" asp-for="SeciliStokUrunId" />
+                <input type="hidden" asp-for="BirParcaKullanimMiktari" />
+                <input type="hidden" asp-for="BirParcaMalzemeMaliyeti" />
+                <input type="hidden" asp-for="Adet" />
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    Stoktan Düş
+                </button>
+            </form>
+        }
+        else
+        {
+            <div>Ürün seçip hesaplama yapın.</div>
+        }
+    </div>
+
+</div>

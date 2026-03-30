@@ -1,0 +1,59 @@
+@page "/Maliyet"
+@model MuhasebeTakip2.App.Pages.Maliyet.IndexModel
+
+<h1>Maliyet</h1>
+
+<div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:20px;">
+
+    <a href="/Maliyet/Plaka"
+       style="display:block; min-width:220px; padding:20px; border:1px solid #444; border-radius:10px; text-decoration:none; color:black;">
+        <h3 style="margin-top:0;">Plaka</h3>
+        <div>Plaka maliyet hesabı</div>
+    </a>
+
+    <a href="/Maliyet/Bantlama"
+       style="display:block; min-width:220px; padding:20px; border:1px solid #444; border-radius:10px; text-decoration:none; color:black;">
+        <h3 style="margin-top:0;">Bantlama</h3>
+        <div>Bantlama maliyet hesabı</div>
+    </a>
+
+    <a href="/Maliyet/Malzemeler"
+       style="display:block; min-width:220px; padding:20px; border:1px solid #444; border-radius:10px; text-decoration:none; color:black;">
+        <h3 style="margin-top:0;">Malzemeler</h3>
+        <div>Malzeme maliyet hesabı</div>
+    </a>
+
+</div>
+
+<div style="border:1px solid #444; border-radius:10px; padding:16px; margin-top:28px; max-width:760px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h3 style="margin:0;">Maliyet Özeti</h3>
+
+        <form method="post" asp-page-handler="Temizle" style="display:inline;">
+            <button type="submit"
+                    class="btn btn-outline-danger btn-sm"
+                    onclick="return confirm('Tüm maliyet hesabı verileri temizlensin mi?');">
+                Maliyet Hesabını Temizle
+            </button>
+        </form>
+    </div>
+
+    <div style="margin-top:16px;">
+        @if (Model.HesapVar)
+        {
+            <div style="margin-bottom:8px;"><b>Üretim Adedi:</b> @Model.Adet</div>
+            <div style="margin-bottom:8px;"><b>Plaka 1 Parça Maliyeti:</b> @Model.PlakaBirParcaMaliyeti</div>
+            <div style="margin-bottom:8px;"><b>Bant 1 Parça Maliyeti:</b> @Model.BantBirParcaMaliyeti</div>
+            <div style="margin-bottom:8px;"><b>Malzeme 1 Parça Maliyeti:</b> @Model.MalzemeBirParcaMaliyeti</div>
+
+            <hr />
+
+            <div style="margin-bottom:8px;"><b>1 Parça Toplam Maliyet:</b> @Model.ToplamBirParcaMaliyet</div>
+            <div style="margin-bottom:8px;"><b>Toplam Genel Maliyet:</b> @Model.ToplamGenelMaliyet</div>
+        }
+        else
+        {
+            <div>Henüz maliyet hesabı yapılmadı. Önce Plaka, sonra Bantlama ve Malzemeler bölümlerini doldurun.</div>
+        }
+    </div>
+</div>

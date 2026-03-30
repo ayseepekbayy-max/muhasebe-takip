@@ -1,0 +1,71 @@
+@page "/Maliyet/Bantlama"
+@model MuhasebeTakip2.App.Pages.Maliyet.BantlamaModel
+
+<h1>Bantlama</h1>
+
+<p>
+    <a class="btn btn-outline-dark btn-sm" href="/Maliyet">← Maliyet</a>
+</p>
+
+@if (!string.IsNullOrWhiteSpace(Model.Hata))
+{
+    <div style="color:red; margin:10px 0;">@Model.Hata</div>
+}
+
+<div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:20px;">
+
+    <div style="border:1px solid #444; border-radius:10px; padding:16px; min-width:340px; max-width:420px;">
+        <h4>Parça Bilgileri</h4>
+
+        <form method="post">
+            <div style="margin-bottom:10px;">
+                <label><b>Parça En (cm)</b></label><br />
+                <input asp-for="ParcaEn" style="width:100%; padding:8px;" />
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label><b>Parça Boy (cm)</b></label><br />
+                <input asp-for="ParcaBoy" style="width:100%; padding:8px;" />
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label><b>Adet</b></label><br />
+                <input asp-for="Adet" style="width:100%; padding:8px;" />
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label><b>Bant Metrekare Fiyatı</b></label><br />
+                <input asp-for="BantMetrekareFiyati" style="width:100%; padding:8px;" />
+            </div>
+
+            <button type="submit" class="btn btn-dark btn-sm">Hesapla</button>
+        </form>
+    </div>
+
+    <div style="border:1px solid #444; border-radius:10px; padding:16px; min-width:340px; max-width:620px;">
+        <h4>Sonuç</h4>
+
+        @if (Model.Hesaplandi)
+        {
+            <div style="margin-bottom:8px;"><b>Plaka'dan Gelen Adet:</b> @Model.PlakaAdet</div>
+            <div style="margin-bottom:8px;"><b>Plaka 1 Parça Maliyeti:</b> @Model.PlakaBirParcaMaliyeti</div>
+
+            <hr />
+
+            <div style="margin-bottom:8px;"><b>1 Parça Bant Alanı:</b> @Model.BirParcaBantAlani m²</div>
+            <div style="margin-bottom:8px;"><b>Toplam Bant Alanı:</b> @Model.ToplamBantAlani m²</div>
+            <div style="margin-bottom:8px;"><b>Toplam Bant Maliyeti:</b> @Model.ToplamBantMaliyeti</div>
+            <div style="margin-bottom:8px;"><b>1 Parça Bant Maliyeti:</b> @Model.BirParcaBantMaliyeti</div>
+
+            <hr />
+
+            <div style="margin-bottom:8px;"><b>1 Parça Toplam Maliyet (Plaka + Bant):</b> @Model.ToplamBirParcaMaliyet</div>
+            <div style="margin-bottom:8px;"><b>Toplam Genel Maliyet:</b> @Model.ToplamGenelMaliyet</div>
+        }
+        else
+        {
+            <div>Ölçüleri girip hesaplama yapın.</div>
+        }
+    </div>
+
+</div>

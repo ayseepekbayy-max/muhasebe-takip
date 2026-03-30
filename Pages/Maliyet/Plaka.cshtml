@@ -1,0 +1,84 @@
+@page "/Maliyet/Plaka"
+@model MuhasebeTakip2.App.Pages.Maliyet.PlakaModel
+
+<h1>Plaka</h1>
+
+<p>
+    <a class="btn btn-outline-dark btn-sm" href="/Maliyet">← Maliyet</a>
+</p>
+
+@if (!string.IsNullOrWhiteSpace(Model.Hata))
+{
+    <div style="color:red; margin:10px 0;">@Model.Hata</div>
+}
+
+<div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:20px;">
+
+    <div style="border:1px solid #444; border-radius:10px; padding:16px; min-width:340px; max-width:420px;">
+        <h4>Plaka Bilgileri</h4>
+
+        <form method="post">
+            <div style="margin-bottom:10px;">
+                <label><b>Plaka En (cm)</b></label><br />
+                <input asp-for="PlakaEn" style="width:100%; padding:8px;" />
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label><b>Plaka Boy (cm)</b></label><br />
+                <input asp-for="PlakaBoy" style="width:100%; padding:8px;" />
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label><b>Plaka Metrekare Fiyatı</b></label><br />
+                <input asp-for="PlakaMetrekareFiyati" style="width:100%; padding:8px;" />
+            </div>
+
+            <h4 style="margin-top:20px;">Parça Bilgileri</h4>
+
+            <div style="margin-bottom:10px;">
+                <label><b>Parça En (cm)</b></label><br />
+                <input asp-for="ParcaEn" style="width:100%; padding:8px;" />
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label><b>Parça Boy (cm)</b></label><br />
+                <input asp-for="ParcaBoy" style="width:100%; padding:8px;" />
+            </div>
+
+            <div style="margin-bottom:10px;">
+                <label><b>Adet</b></label><br />
+                <input asp-for="Adet" style="width:100%; padding:8px;" />
+            </div>
+
+            <button type="submit" class="btn btn-dark btn-sm">Hesapla</button>
+        </form>
+    </div>
+
+    <div style="border:1px solid #444; border-radius:10px; padding:16px; min-width:340px; max-width:560px;">
+        <h4>Sonuç</h4>
+
+        @if (Model.Hesaplandi)
+        {
+            <div style="margin-bottom:8px;"><b>Kullanılan Yerleşim:</b> @Model.KullanilanYerlesim</div>
+            <div style="margin-bottom:8px;"><b>Normal Yerleşim:</b> @Model.NormalToplam adet</div>
+            <div style="margin-bottom:8px;"><b>Döndürülmüş Yerleşim:</b> @Model.DonukToplam adet</div>
+
+            <hr />
+
+            <div style="margin-bottom:8px;"><b>Bir Plakadan Çıkan Parça:</b> @Model.BirPlakadanCikanAdet adet</div>
+            <div style="margin-bottom:8px;"><b>Gerekli Plaka Sayısı:</b> @Model.GerekliPlakaSayisi adet</div>
+            <div style="margin-bottom:8px;"><b>1 Plaka Alanı:</b> @Model.BirPlakaMetrekare m²</div>
+            <div style="margin-bottom:8px;"><b>1 Parça Alanı:</b> @Model.BirParcaMetrekare m²</div>
+            <div style="margin-bottom:8px;"><b>Toplam Ham Madde Maliyeti:</b> @Model.ToplamMaliyet</div>
+            <div style="margin-bottom:8px;"><b>1 Parça Ham Madde Maliyeti:</b> @Model.BirParcaMaliyeti</div>
+
+            <hr />
+            <div style="color:#0f5132;"><b>Bu sonuçlar Bantlama ve Malzemeler için kaydedildi.</b></div>
+        }
+        else
+        {
+            <div>Ölçüleri girip hesaplama yapın.</div>
+        }
+    </div>
+
+</div>

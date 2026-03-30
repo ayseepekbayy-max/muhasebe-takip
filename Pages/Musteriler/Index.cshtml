@@ -1,0 +1,85 @@
+@page
+@model MuhasebeTakip2.App.Pages.Musteriler.IndexModel
+
+<h1>Müşteriler</h1>
+
+@if (!ViewData.ModelState.IsValid)
+{
+  <div style="color:red; margin:10px 0;">
+    @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+    {
+      <div>@err.ErrorMessage</div>
+    }
+  </div>
+}
+
+<div style="margin:12px 0;">
+  <form method="post" asp-page-handler="DisaAktar" style="display:inline;">
+    <button type="submit" class="btn btn-outline-success btn-sm">Müşterileri Excel Olarak İndir</button>
+  </form>
+</div>
+
+<div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:720px;">
+  <h3>Yeni Müşteri Ekle</h3>
+
+  <form method="post" asp-page-handler="Ekle">
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:240px;">
+        <label><b>Ad Soyad</b></label><br />
+        <input asp-for="Yeni.AdSoyad" style="width:100%; padding:8px;" />
+      </div>
+
+      <div style="min-width:220px;">
+        <label><b>Telefon</b></label><br />
+        <input asp-for="Yeni.Telefon" style="width:100%; padding:8px;" />
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <label><b>Adres (opsiyonel)</b></label><br />
+      <input asp-for="Yeni.Adres" style="width:100%; padding:8px;" />
+    </div>
+
+    <div style="margin-top:10px;">
+      <button type="submit" class="btn btn-dark btn-sm">Ekle</button>
+      <a class="btn btn-outline-dark btn-sm" href="/">Kasa</a>
+    </div>
+  </form>
+</div>
+
+<h3>Müşteri Listesi</h3>
+
+<table style="width:100%; border-collapse:collapse;">
+  <thead>
+    <tr>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Ad Soyad</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Telefon</th>
+      <th style="border-bottom:1px solid #555; padding:8px; width:220px;">İşlem</th>
+    </tr>
+  </thead>
+  <tbody>
+    @if (Model.Liste.Count == 0)
+    {
+      <tr><td colspan="3" style="padding:8px;">Henüz müşteri yok.</td></tr>
+    }
+    else
+    {
+      @foreach (var m in Model.Liste)
+      {
+        <tr>
+          <td style="border-bottom:1px solid #333; padding:8px;">@m.AdSoyad</td>
+          <td style="border-bottom:1px solid #333; padding:8px;">@m.Telefon</td>
+          <td style="border-bottom:1px solid #333; padding:8px;">
+            <a class="btn btn-outline-primary btn-sm" href="/Musteriler/Detay/@m.Id">Detay</a>
+
+            <form method="post" asp-page-handler="Sil" style="display:inline;"
+                  onsubmit="return confirm('Müşteri silinsin mi?');">
+              <input type="hidden" name="id" value="@m.Id" />
+              <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
+            </form>
+          </td>
+        </tr>
+      }
+    }
+  </tbody>
+</table>

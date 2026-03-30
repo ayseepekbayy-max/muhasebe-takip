@@ -1,0 +1,697 @@
+html {
+    font-size: 14px;
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: 15px;
+    }
+}
+
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    margin-bottom: 60px;
+    background: #f6f7f9;
+    color: #1f2937;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* GENEL BAŞLIKLAR */
+h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1f2937;
+    margin-bottom: 16px;
+}
+
+h2, h3, h4 {
+    color: #1f2937;
+    font-weight: 700;
+}
+
+/* NAVBAR */
+.app-navbar {
+    background: linear-gradient(135deg, #1f1f20 0%, #2b2b2d 100%);
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+
+.app-brand {
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: #f3b35a !important;
+}
+
+.app-nav-list .nav-link {
+    color: #e5e7eb !important;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 8px 12px !important;
+    transition: 0.2s ease;
+}
+
+.app-nav-list .nav-link:hover {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.app-firma-badge {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(243, 179, 90, 0.16);
+    color: #f4c37d;
+    font-size: 13px;
+    font-weight: 700;
+    border: 1px solid rgba(243, 179, 90, 0.18);
+}
+
+.app-top-btn {
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #1f2937;
+    text-decoration: none;
+    font-weight: 700;
+    border: 1px solid #e5e7eb;
+    transition: 0.2s ease;
+}
+
+.app-top-btn:hover {
+    background: #f9fafb;
+    color: #111827;
+}
+
+.app-top-btn-danger {
+    background: #fff5f5;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.app-top-btn-danger:hover {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* ANA İÇERİK */
+.app-main-container {
+    padding-bottom: 24px;
+}
+
+/* FORM ALANLARI */
+input,
+select,
+textarea {
+    border-radius: 10px !important;
+    border: 1px solid #d5d9e0 !important;
+    padding: 9px 10px !important;
+    background: #ffffff;
+    transition: 0.2s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none !important;
+    border-color: #f3b35a !important;
+    box-shadow: 0 0 0 3px rgba(243, 179, 90, 0.18) !important;
+}
+
+/* BUTONLAR */
+.btn {
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+    padding: 8px 14px !important;
+}
+
+.btn-dark {
+    background: #1f1f20 !important;
+    border-color: #1f1f20 !important;
+}
+
+.btn-dark:hover {
+    background: #2d2d2f !important;
+    border-color: #2d2d2f !important;
+}
+
+.btn-outline-dark {
+    color: #1f2937 !important;
+    border-color: #d1d5db !important;
+    background: #ffffff !important;
+}
+
+.btn-outline-dark:hover {
+    background: #f9fafb !important;
+    color: #111827 !important;
+}
+
+.btn-outline-primary {
+    color: #c97a00 !important;
+    border-color: #f3b35a !important;
+    background: #fffaf2 !important;
+}
+
+.btn-outline-primary:hover {
+    background: #fef3df !important;
+    color: #9a6700 !important;
+    border-color: #eba53d !important;
+}
+
+.btn-outline-success {
+    color: #9a6700 !important;
+    border-color: #f3b35a !important;
+    background: #fffaf2 !important;
+}
+
+.btn-outline-success:hover {
+    background: #fef3df !important;
+    color: #9a6700 !important;
+}
+
+.btn-outline-danger {
+    color: #b91c1c !important;
+    border-color: #fecaca !important;
+    background: #fff5f5 !important;
+}
+
+.btn-outline-danger:hover {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+}
+
+/* KUTULAR / PANELLER */
+.panel-box,
+.card-box,
+.section-box {
+    background: #ffffff;
+    border: 1px solid #e8eaee;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 6px 18px rgba(17, 24, 39, 0.04);
+}
+
+/* TABLOLAR */
+table {
+    width: 100%;
+    background: #ffffff;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+thead tr {
+    background: #f4f5f7;
+}
+
+th {
+    color: #374151;
+    font-weight: 700;
+}
+
+th, td {
+    padding: 10px;
+}
+
+tbody tr:hover {
+    background: #fafafa;
+}
+
+/* KARTLAR */
+.kart {
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+/* ROZETLER */
+.soft-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.soft-badge-income {
+    background: #fff3dd;
+    color: #9a6700;
+}
+
+.soft-badge-expense {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-geldi {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-gelmedi {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-izinli {
+    background: #dbeafe;
+    color: #1e3a8a;
+}
+
+.badge-yarim {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-soft {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+/* FOOTER */
+.app-footer {
+    background: transparent;
+    font-size: 13px;
+}
+
+/* DASHBOARD KARTLARI */
+.dashboard-page {
+    padding: 10px 4px 30px 4px;
+}
+
+.dashboard-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+    padding: 22px;
+    background: linear-gradient(135deg, #1f1f20 0%, #2b2b2d 100%);
+    border-radius: 18px;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-title {
+    margin: 0;
+    color: #ffffff;
+    font-size: 32px;
+    font-weight: 800;
+}
+
+.dashboard-subtitle {
+    margin: 8px 0 0 0;
+    color: #e5e7eb;
+    font-size: 14px;
+}
+
+.dashboard-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.dashboard-btn {
+    display: inline-block;
+    padding: 10px 16px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 700;
+    transition: 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.dashboard-btn:hover {
+    transform: translateY(-1px);
+}
+
+.dashboard-btn-primary {
+    background: #f3b35a;
+    color: #1f1f20;
+}
+
+.dashboard-btn-primary:hover {
+    background: #f0bd78;
+    color: #1f1f20;
+}
+
+.dashboard-btn-secondary {
+    background: #ffffff;
+    color: #1f2937;
+    border-color: #e5e7eb;
+}
+
+.dashboard-btn-secondary:hover {
+    background: #f9fafb;
+    color: #111827;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.second-grid {
+    margin-bottom: 22px;
+}
+
+.stat-card {
+    background: #ffffff;
+    border: 1px solid #ececec;
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 6px 18px rgba(17, 24, 39, 0.04);
+}
+
+.stat-card-accent {
+    border-color: rgba(243, 179, 90, 0.30);
+    background: linear-gradient(180deg, #fffaf1 0%, #ffffff 100%);
+}
+
+.stat-card-dark {
+    background: linear-gradient(135deg, #2a2a2b 0%, #1f1f20 100%);
+    border-color: #2a2a2b;
+}
+
+.stat-card-dark .stat-label,
+.stat-card-dark .stat-value {
+    color: #ffffff;
+}
+
+.stat-label {
+    color: #6b7280;
+    font-size: 13px;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.stat-value {
+    color: #111827;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.dashboard-panel {
+    background: #ffffff;
+    border: 1px solid #ececec;
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 6px 18px rgba(17, 24, 39, 0.04);
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.panel-header h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+}
+
+.panel-header p {
+    margin: 6px 0 0 0;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 760px;
+}
+
+.dashboard-table thead tr {
+    background: #f8fafc;
+}
+
+.dashboard-table th {
+    padding: 12px;
+    text-align: left;
+    color: #374151;
+    font-size: 13px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.dashboard-table td {
+    padding: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #111827;
+    vertical-align: middle;
+}
+
+.dashboard-table tbody tr:hover {
+    background: #fcfcfd;
+}
+
+.empty-row {
+    color: #6b7280;
+    text-align: center;
+    padding: 24px !important;
+}
+
+.mini-danger-btn {
+    padding: 6px 10px;
+    border: 1px solid #fecaca;
+    background: #fff5f5;
+    color: #b91c1c;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.mini-danger-btn:hover {
+    background: #fee2e2;
+}
+
+/* MOBİL */
+@media (max-width: 768px) {
+    .dashboard-title {
+        font-size: 26px;
+    }
+
+    .stat-value {
+        font-size: 24px;
+    }
+
+    .app-brand {
+        font-size: 16px;
+    }
+}
+/* GENEL ARKA PLAN */
+body {
+    background: #fffaf5;
+}
+
+/* HEADER */
+.navbar, .topbar, header {
+    background: linear-gradient(135deg, #ea7a2f, #c65d1a);
+    color: white !important;
+}
+
+/* HEADER LINKLER */
+.navbar a, header a {
+    color: white !important;
+}
+
+/* BUTONLAR */
+.btn-dark, .btn-primary {
+    background: linear-gradient(135deg, #ea7a2f, #c65d1a) !important;
+    border: none !important;
+    color: white !important;
+}
+
+/* İKİNCİ BUTON */
+.btn-light {
+    background: #fffaf5 !important;
+    border: 1px solid #f3c4a3 !important;
+    color: #8a4b21 !important;
+}
+
+/* ANA PANEL */
+.kasa-header, .hero {
+    background: linear-gradient(135deg, #ea7a2f, #c65d1a);
+    color: white;
+}
+
+/* KARTLAR */
+.card, .box, .stat-box {
+    background: #ffffff;
+    border: 1px solid #f3d3bd;
+    border-radius: 16px;
+}
+
+/* KÜÇÜK KARTLAR */
+.stat-box {
+    background: #fffaf5;
+}
+
+/* KASA BAKİYE */
+.kasa-bakiye {
+    background: linear-gradient(135deg, #d96b2b, #b4531a);
+    color: white;
+}
+
+/* TABLO */
+table thead {
+    background: #fff4ec;
+}
+
+table th {
+    color: #8a4b21;
+}
+
+/* TEXT */
+h1, h2, h3 {
+    color: #8a4b21;
+}
+/* HEADER LINKLER DAHA NET OLSUN */
+.navbar a,
+header a {
+    color: #fff !important;
+    font-weight: 600;
+    opacity: 0.95;
+}
+
+/* HOVER DURUMU */
+.navbar a:hover,
+header a:hover {
+    color: #ffe7d6 !important;
+    opacity: 1;
+}
+
+/* AKTİF SAYFA (ÇOK ÖNEMLİ) */
+.navbar a.active {
+    background: rgba(255,255,255,0.15);
+    padding: 6px 12px;
+    border-radius: 10px;
+}
+.navbar {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+/* Menü yazıları daha kontrast */
+.navbar a {
+    text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+}
+/* HEADER SAĞ BUTONLAR DÜZELTME */
+.navbar .btn,
+header .btn {
+    background: #ffffff !important;
+    color: #8a4b21 !important;
+    border: none !important;
+    font-weight: 600;
+}
+
+/* HOVER */
+.navbar .btn:hover,
+header .btn:hover {
+    background: #fff4ec !important;
+    color: #c65d1a !important;
+}
+
+/* ÇIKIŞ BUTONU ÖZEL */
+.btn-danger {
+    background: #ef4444 !important;
+    color: white !important;
+}
+/* SAĞ ÜST BUTONLAR */
+.app-top-btn,
+a.app-top-btn,
+.app-top-btn:link,
+.app-top-btn:visited {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 14px;
+    background: #ffffff !important;
+    color: #8a4b21 !important;
+    border: 1px solid #f3c4a3 !important;
+    text-decoration: none !important;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(138, 75, 33, 0.08);
+    transition: all 0.2s ease;
+    opacity: 1 !important;
+}
+
+/* HOVER */
+.app-top-btn:hover,
+a.app-top-btn:hover {
+    background: #fff4ec !important;
+    color: #a14f1d !important;
+    border-color: #e7b48c !important;
+    text-decoration: none !important;
+}
+
+/* ÇIKIŞ BUTONU */
+.app-top-btn-danger,
+a.app-top-btn-danger,
+.app-top-btn-danger:link,
+.app-top-btn-danger:visited {
+    background: #b4531a !important;
+    color: #ffffff !important;
+    border: 1px solid #b4531a !important;
+}
+
+.app-top-btn-danger:hover,
+a.app-top-btn-danger:hover {
+    background: #9a3412 !important;
+    color: #ffffff !important;
+    border-color: #9a3412 !important;
+}
+
+/* FİRMA BADGE */
+.app-firma-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14) !important;
+    color: #fff3e8 !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    font-weight: 700;
+}
+.app-nav-list {
+    flex-wrap: nowrap !important;
+    white-space: nowrap;
+}
+
+.app-nav-list .nav-link {
+    white-space: nowrap;
+}
+
+.app-top-actions {
+    flex-wrap: nowrap !important;
+    white-space: nowrap;
+}
+
+.app-firma-badge,
+.app-top-btn,
+.app-top-btn-danger {
+    white-space: nowrap;
+}

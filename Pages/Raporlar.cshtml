@@ -1,0 +1,54 @@
+@page
+@model MuhasebeTakip2.App.Pages.RaporlarModel
+
+<h1>Raporlar</h1>
+
+<div style="margin:12px 0;">
+  <form method="post" asp-page-handler="DisaAktar" style="display:inline;">
+    <button type="submit" class="btn btn-outline-success btn-sm">Raporları Excel Olarak İndir</button>
+  </form>
+</div>
+
+<p>
+  <a class="btn btn-outline-dark btn-sm" href="/">← Kasa</a>
+</p>
+
+<div style="display:flex; gap:24px; flex-wrap:wrap; margin:16px 0;">
+
+  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:220px;">
+    <div><b>Bugün Giriş</b></div>
+    <div style="font-size:20px;">@Model.BugunGiris</div>
+  </div>
+
+  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:220px;">
+    <div><b>Bugün Çıkış</b></div>
+    <div style="font-size:20px;">@Model.BugunCikis</div>
+  </div>
+
+  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:220px;">
+    <div><b>Bu Ay Giriş</b></div>
+    <div style="font-size:20px;">@Model.AyGiris</div>
+  </div>
+
+  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:220px;">
+    <div><b>Bu Ay Çıkış</b></div>
+    <div style="font-size:20px;">@Model.AyCikis</div>
+  </div>
+
+  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:220px;">
+    <div><b>Kasa Bakiye (Toplam)</b></div>
+    <div style="font-size:20px;">@Model.KasaBakiye</div>
+  </div>
+
+  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:220px;">
+    <div><b>Cari Sayısı</b></div>
+    <div style="font-size:20px;">@Model.CariSayisi</div>
+    <div style="opacity:.8;">Alıcı: @Model.AliciSayisi / Satıcı: @Model.SaticiSayisi</div>
+  </div>
+
+  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:220px;">
+    <div><b>Çalışan Sayısı</b></div>
+    <div style="font-size:20px;">@Model.CalisanSayisi</div>
+  </div>
+
+</div>

@@ -1,0 +1,160 @@
+@page "/SuperAdmin/Index"
+@model MuhasebeTakip2.App.Pages.SuperAdmin.IndexModel
+@{
+    ViewData["Title"] = "Süper Admin";
+}
+
+<div style="max-width:1200px; margin:30px auto; padding:0 16px;">
+    <div style="margin-bottom:24px;">
+        <h2 style="margin:0; font-weight:800; color:#111827;">Süper Admin Paneli</h2>
+        <div style="color:#667085; margin-top:6px;">
+            Firma oluşturma, durum yönetimi ve yedek işlemleri
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Mesaj))
+    {
+        <div style="background:#ecfdf3; color:#027a48; border:1px solid #abefc6; padding:12px 14px; border-radius:12px; margin-bottom:18px;">
+            @Model.Mesaj
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.Hata))
+    {
+        <div style="background:#fff1f2; color:#b42318; border:1px solid #fecdd3; padding:12px 14px; border-radius:12px; margin-bottom:18px;">
+            @Model.Hata
+        </div>
+    }
+
+    <div style="display:grid; grid-template-columns:350px 1fr; gap:22px;">
+        <div style="display:flex; flex-direction:column; gap:20px;">
+
+            <div style="background:#fff; border:1px solid #eaecf0; border-radius:20px; padding:24px; box-shadow:0 10px 30px rgba(15,23,42,0.06);">
+                <h4 style="margin:0 0 18px 0; color:#111827; font-weight:700;">Yeni Firma Oluştur</h4>
+
+                <form method="post" asp-page-handler="FirmaEkle">
+                    <div style="margin-bottom:14px;">
+                        <label style="display:block; margin-bottom:6px; font-weight:600; color:#344054;">Firma Adı</label>
+                        <input asp-for="YeniFirmaAdi"
+                               style="width:100%; padding:12px 14px; border:1px solid #d0d5dd; border-radius:12px; outline:none;" />
+                    </div>
+
+                    <div style="margin-bottom:14px;">
+                        <label style="display:block; margin-bottom:6px; font-weight:600; color:#344054;">Kullanıcı Adı</label>
+                        <input asp-for="YeniKullaniciAdi"
+                               style="width:100%; padding:12px 14px; border:1px solid #d0d5dd; border-radius:12px; outline:none;" />
+                    </div>
+
+                    <div style="margin-bottom:18px;">
+                        <label style="display:block; margin-bottom:6px; font-weight:600; color:#344054;">Şifre</label>
+                        <input asp-for="YeniSifre" type="password"
+                               style="width:100%; padding:12px 14px; border:1px solid #d0d5dd; border-radius:12px; outline:none;" />
+                    </div>
+
+                    <button type="submit"
+                            style="width:100%; padding:12px; border:none; border-radius:12px; background:#111827; color:white; font-size:15px; font-weight:700; cursor:pointer;">
+                        Firma Oluştur
+                    </button>
+                </form>
+            </div>
+
+            <div style="background:#fff; border:1px solid #eaecf0; border-radius:20px; padding:24px; box-shadow:0 10px 30px rgba(15,23,42,0.06);">
+                <h4 style="margin:0 0 18px 0; color:#111827; font-weight:700;">Yedek İşlemleri</h4>
+
+                <form method="post" asp-page-handler="YedekAl" style="margin-bottom:16px;">
+                    <button type="submit"
+                            style="width:100%; padding:12px; border:none; border-radius:12px; background:#111827; color:white; font-size:15px; font-weight:700; cursor:pointer;">
+                        📥 Veritabanı Yedeğini İndir
+                    </button>
+                </form>
+
+                <form method="post" asp-page-handler="YedekYukle" enctype="multipart/form-data">
+                    <div style="margin-bottom:12px;">
+                        <label style="display:block; margin-bottom:6px; font-weight:600; color:#344054;">Yedek Dosyası (.db)</label>
+                        <input asp-for="YedekDosya" type="file"
+                               style="width:100%; padding:10px; border:1px solid #d0d5dd; border-radius:12px; background:#fff;" />
+                    </div>
+
+                    <div style="font-size:13px; color:#667085; margin-bottom:14px;">
+                        Yükleme sırasında mevcut veritabanının üstüne yazılır. Sistem otomatik olarak geri yükleme öncesi bir yedek de oluşturur.
+                    </div>
+
+                    <button type="submit"
+                            style="width:100%; padding:12px; border:none; border-radius:12px; background:#b42318; color:white; font-size:15px; font-weight:700; cursor:pointer;">
+                        ⬆ Yedeği Geri Yükle
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div style="background:#fff; border:1px solid #eaecf0; border-radius:20px; padding:24px; box-shadow:0 10px 30px rgba(15,23,42,0.06);">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+                <h4 style="margin:0; color:#111827; font-weight:700;">Firmalar</h4>
+                <div style="font-size:14px; color:#667085;">
+                    Toplam Firma: <strong>@Model.Firmalar.Count</strong>
+                </div>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f9fafb; color:#344054;">
+                            <th style="text-align:left; padding:12px; border-bottom:1px solid #eaecf0;">Firma</th>
+                            <th style="text-align:left; padding:12px; border-bottom:1px solid #eaecf0;">Durum</th>
+                            <th style="text-align:left; padding:12px; border-bottom:1px solid #eaecf0;">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var firma in Model.Firmalar)
+                        {
+                            <tr>
+                                <td style="padding:12px; border-bottom:1px solid #f2f4f7; font-weight:600; color:#111827;">
+                                    @firma.FirmaAdi
+                                </td>
+                                <td style="padding:12px; border-bottom:1px solid #f2f4f7;">
+                                    @if (firma.AktifMi)
+                                    {
+                                        <span style="display:inline-block; padding:5px 10px; border-radius:999px; background:#ecfdf3; color:#027a48; font-size:13px; font-weight:700;">
+                                            Aktif
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span style="display:inline-block; padding:5px 10px; border-radius:999px; background:#fff1f2; color:#b42318; font-size:13px; font-weight:700;">
+                                            Pasif
+                                        </span>
+                                    }
+                                </td>
+                                <td style="padding:12px; border-bottom:1px solid #f2f4f7;">
+                                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                        <form method="post" asp-page-handler="DurumDegistir" style="display:inline;">
+                                            <input type="hidden" name="firmaId" value="@firma.Id" />
+                                            <button type="submit"
+                                                    style="padding:8px 12px; border:none; border-radius:10px; background:@(firma.AktifMi ? "#f97316" : "#16a34a"); color:white; font-weight:600; cursor:pointer;">
+                                                @(firma.AktifMi ? "Pasif Yap" : "Aktif Yap")
+                                            </button>
+                                        </form>
+
+                                        <a href="/SuperAdmin/Detay?id=@firma.Id"
+                                           style="padding:8px 12px; border:1px solid #d0d5dd; border-radius:10px; background:#f9fafb; color:#111827; text-decoration:none; font-weight:600;">
+                                            Detay
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+
+                        @if (!Model.Firmalar.Any())
+                        {
+                            <tr>
+                                <td colspan="3" style="padding:18px; text-align:center; color:#667085;">
+                                    Henüz firma bulunmuyor.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,151 @@
+@page
+@using MuhasebeTakip2.App.Models
+@model MuhasebeTakip2.App.Pages.CariKartlar.IndexModel
+
+<h1>Cari Kartlar</h1>
+
+<div style="margin:12px 0;">
+  <form method="post" asp-page-handler="DisaAktar" style="display:inline;">
+    <button type="submit" class="btn btn-outline-success btn-sm">Cari Kartları Excel Olarak İndir</button>
+  </form>
+</div>
+
+@if (!ViewData.ModelState.IsValid)
+{
+  <div style="color:red; margin:10px 0;">
+    @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+    {
+      <div>@err.ErrorMessage</div>
+    }
+  </div>
+}
+
+<div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:650px;">
+  <h3>Yeni Cari Ekle</h3>
+
+  <form method="post" asp-page-handler="Ekle">
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div style="flex: 1; min-width:220px;">
+        <label><b>Ünvan</b></label><br />
+        <input asp-for="YeniCari.Unvan" style="width:100%; padding:8px;" />
+      </div>
+
+      <div style="min-width:180px;">
+        <label><b>Tip</b></label><br />
+        <select asp-for="YeniCari.Tip" style="width:100%; padding:8px;">
+          <option value="@((int)CariTip.Alici)">Alıcı</option>
+          <option value="@((int)CariTip.Satici)">Satıcı</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+      <div style="flex: 1; min-width:220px;">
+        <label><b>Telefon</b></label><br />
+        <input asp-for="YeniCari.Telefon" style="width:100%; padding:8px;" />
+      </div>
+
+      <div style="flex: 1; min-width:220px;">
+        <label><b>Vergi No (opsiyonel)</b></label><br />
+        <input asp-for="YeniCari.VergiNo" style="width:100%; padding:8px;" />
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+      <button type="submit" style="padding:10px 14px;">Ekle</button>
+      <a class="btn btn-outline-dark btn-sm" href="/">Kasa</a>
+    </div>
+  </form>
+</div>
+
+<div style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;">
+  <div style="flex:1; min-width:320px;">
+    <h3>Alıcılar</h3>
+
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Ünvan</th>
+          <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Telefon</th>
+          <th style="border-bottom:1px solid #555; padding:8px; width:110px;">İşlem</th>
+          <th style="border-bottom:1px solid #555; padding:8px; width:90px;">Detay</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        @if (Model.Alicilar.Count == 0)
+        {
+          <tr><td colspan="4" style="padding:8px;">Henüz alıcı yok.</td></tr>
+        }
+        else
+        {
+          @foreach (var c in Model.Alicilar)
+          {
+            <tr>
+              <td style="border-bottom:1px solid #333; padding:8px;">@c.Unvan</td>
+              <td style="border-bottom:1px solid #333; padding:8px;">@c.Telefon</td>
+
+              <td style="border-bottom:1px solid #333; padding:8px;">
+                <form method="post" asp-page-handler="Sil"
+                      style="display:inline;"
+                      onsubmit="return confirm('Cari silinsin mi?');">
+                  <input type="hidden" name="id" value="@c.Id" />
+                  <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
+                </form>
+              </td>
+
+              <td style="border-bottom:1px solid #333; padding:8px;">
+                <a class="btn btn-outline-primary btn-sm" href="/CariKartlar/Detay/@c.Id">Detay</a>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div style="flex:1; min-width:320px;">
+    <h3>Satıcılar</h3>
+
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Ünvan</th>
+          <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Telefon</th>
+          <th style="border-bottom:1px solid #555; padding:8px; width:110px;">İşlem</th>
+          <th style="border-bottom:1px solid #555; padding:8px; width:90px;">Detay</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        @if (Model.Saticilar.Count == 0)
+        {
+          <tr><td colspan="4" style="padding:8px;">Henüz satıcı yok.</td></tr>
+        }
+        else
+        {
+          @foreach (var c in Model.Saticilar)
+          {
+            <tr>
+              <td style="border-bottom:1px solid #333; padding:8px;">@c.Unvan</td>
+              <td style="border-bottom:1px solid #333; padding:8px;">@c.Telefon</td>
+
+              <td style="border-bottom:1px solid #333; padding:8px;">
+                <form method="post" asp-page-handler="Sil"
+                      style="display:inline;"
+                      onsubmit="return confirm('Cari silinsin mi?');">
+                  <input type="hidden" name="id" value="@c.Id" />
+                  <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
+                </form>
+              </td>
+
+              <td style="border-bottom:1px solid #333; padding:8px;">
+                <a class="btn btn-outline-primary btn-sm" href="/CariKartlar/Detay/@c.Id">Detay</a>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

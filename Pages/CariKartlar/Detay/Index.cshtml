@@ -1,0 +1,70 @@
+@page "{id:int}"
+@model MuhasebeTakip2.App.Pages.CariKartlar.Detay.IndexModel
+
+@if (Model.Cari == null)
+{
+  <h1>Cari bulunamadı</h1>
+  return;
+}
+
+<h1>Cari Detay</h1>
+
+<div style="margin-bottom:10px;">
+  <h2 style="margin-bottom:4px;">@Model.Cari.Unvan</h2>
+  <div><b>Tip:</b> @Model.Cari.Tip</div>
+  <div><b>Telefon:</b> @(string.IsNullOrWhiteSpace(Model.Cari.Telefon) ? "-" : Model.Cari.Telefon)</div>
+</div>
+
+<div style="display:flex; gap:24px; margin:16px 0; flex-wrap:wrap;">
+  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:180px;">
+    <div><b>Toplam Tahsilat (Giriş)</b></div>
+    <div style="font-size:20px;">@Model.ToplamGiris</div>
+  </div>
+
+  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:180px;">
+    <div><b>Toplam Ödeme (Çıkış)</b></div>
+    <div style="font-size:20px;">@Model.ToplamCikis</div>
+  </div>
+
+  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:180px;">
+    <div><b>Cari Bakiye</b></div>
+    <div style="font-size:20px;">@Model.Bakiye</div>
+  </div>
+</div>
+
+<a class="btn btn-dark btn-sm"
+   asp-page="/Kasa/HareketEkle"
+   asp-route-cariId="@Model.Cari.Id">
+   + Bu Cari İçin Kasa Hareket Ekle
+</a>
+
+<h3>Bu Cari’ye Ait Hareketler</h3>
+
+<table style="width:100%; border-collapse:collapse;">
+  <thead>
+    <tr>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Tarih</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Tip</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Tutar</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Açıklama</th>
+    </tr>
+  </thead>
+  <tbody>
+    @if (Model.Hareketler.Count == 0)
+    {
+      <tr><td colspan="4" style="padding:8px;">Bu cariye ait hareket yok.</td></tr>
+    }
+    else
+    {
+      @foreach (var h in Model.Hareketler)
+      {
+        <tr>
+          <td style="border-bottom:1px solid #333; padding:8px;">@h.Tarih.ToShortDateString()</td>
+          <td style="border-bottom:1px solid #333; padding:8px;">@h.Tip</td>
+          <td style="border-bottom:1px solid #333; padding:8px;">@h.Tutar</td>
+          <td style="border-bottom:1px solid #333; padding:8px;">@h.Aciklama</td>
+        </tr>
+      }
+    }
+  </tbody>
+</table>
