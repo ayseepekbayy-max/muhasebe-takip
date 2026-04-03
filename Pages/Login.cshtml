@@ -1,233 +1,88 @@
-@page
-@model MuhasebeTakip2.App.Pages.LoginModel
-@{
-    Layout = "_AuthLayout";
-    ViewData["Title"] = "Giriş Yap";
-}
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using MuhasebeTakip2.App.Data;
+using MuhasebeTakip2.App.Helpers;
 
-<div style="
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:32px;
-    background:
-        radial-gradient(circle at top left, rgba(249,115,22,0.12), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(234,88,12,0.10), transparent 30%),
-        linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-    position:relative;
-    overflow:hidden;
-">
+namespace MuhasebeTakip2.App.Pages;
 
-    <!-- Arka plan dekor -->
-    <div style="
-        position:absolute;
-        width:320px;
-        height:320px;
-        border-radius:50%;
-        background:rgba(249,115,22,0.12);
-        top:-80px;
-        left:-80px;
-        filter:blur(10px);
-    "></div>
+public class LoginModel : PageModel
+{
+    private readonly AppDbContext _db;
 
-    <div style="
-        position:absolute;
-        width:260px;
-        height:260px;
-        border-radius:50%;
-        background:rgba(234,88,12,0.10);
-        bottom:-70px;
-        right:-70px;
-        filter:blur(10px);
-    "></div>
+    public LoginModel(AppDbContext db)
+    {
+        _db = db;
+    }
 
-    <div style="
-        position:absolute;
-        inset:0;
-        background-image:
-            linear-gradient(rgba(15,23,42,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(15,23,42,0.03) 1px, transparent 1px);
-        background-size:32px 32px;
-        pointer-events:none;
-    "></div>
+    [BindProperty]
+    public string KullaniciAdi { get; set; } = "";
 
-    <div style="
-        width:100%;
-        max-width:460px;
-        background:rgba(255,255,255,0.95);
-        backdrop-filter:blur(8px);
-        padding:38px;
-        border-radius:28px;
-        box-shadow:0 24px 70px rgba(15,23,42,0.12);
-        border:1px solid rgba(226,232,240,0.95);
-        position:relative;
-        z-index:1;
-    ">
+    [BindProperty]
+    public string Sifre { get; set; } = "";
 
-        <div style="text-align:center; margin-bottom:30px;">
-            <h2 style="
-                margin:0 0 10px 0;
-                font-size:32px;
-                font-weight:800;
-                color:#0f172a;
-                letter-spacing:-0.5px;
-            ">
-                Giriş Yap
-            </h2>
+    public string Hata { get; set; } = "";
 
-            <div style="
-                color:#64748b;
-                font-size:15px;
-                line-height:1.6;
-                max-width:300px;
-                margin:0 auto;
-            ">
-                Muhasebe ve firma yönetim panelinize güvenli şekilde erişin.
-            </div>
-        </div>
+    public IActionResult OnGet()
+    {
+        return Page();
+    }
 
-        @if (!string.IsNullOrEmpty(Model.Hata))
+    public async Task<IActionResult> OnPostAsync()
+    {
+        KullaniciAdi = (KullaniciAdi ?? "").Trim();
+        Sifre = (Sifre ?? "").Trim();
+
+        var kullanici = await _db.Kullanicilar
+            .Include(x => x.Firma)
+            .FirstOrDefaultAsync(x => x.KullaniciAdi == KullaniciAdi);
+
+        if (kullanici == null)
         {
-            <div style="
-                background:#fff1f2;
-                color:#b42318;
-                border:1px solid #fecdd3;
-                padding:13px 14px;
-                border-radius:14px;
-                margin-bottom:20px;
-                font-size:14px;
-                font-weight:500;
-            ">
-                @Model.Hata
-            </div>
+            Hata = "Kullanıcı adı veya şifre yanlış.";
+            return Page();
         }
 
-        <form method="post">
-            <div style="margin-bottom:18px;">
-                <label asp-for="KullaniciAdi" style="
-                    display:block;
-                    margin-bottom:7px;
-                    font-weight:700;
-                    color:#334155;
-                    font-size:14px;
-                ">
-                    Kullanıcı Adı
-                </label>
+        bool sifreDogru = PasswordHelper.Verify(Sifre, kullanici.Sifre);
 
-                <input asp-for="KullaniciAdi" style="
-                    width:100%;
-                    padding:14px 15px;
-                    border:1px solid #cbd5e1;
-                    border-radius:14px;
-                    font-size:15px;
-                    outline:none;
-                    background:#ffffff;
-                " />
-            </div>
-
-            <div style="margin-bottom:22px;">
-                <label asp-for="Sifre" style="
-                    display:block;
-                    margin-bottom:7px;
-                    font-weight:700;
-                    color:#334155;
-                    font-size:14px;
-                ">
-                    Şifre
-                </label>
-
-                <div style="position:relative;">
-                    <input asp-for="Sifre" id="loginPassword" type="password" style="
-                        width:100%;
-                        padding:14px 48px 14px 15px;
-                        border:1px solid #cbd5e1;
-                        border-radius:14px;
-                        font-size:15px;
-                        outline:none;
-                        background:#ffffff;
-                    " />
-
-                    <button type="button"
-                            onclick="togglePassword('loginPassword', 'loginToggleText')"
-                            style="
-                                position:absolute;
-                                right:10px;
-                                top:50%;
-                                transform:translateY(-50%);
-                                border:none;
-                                background:#fff7ed;
-                                color:#9a3412;
-                                font-weight:700;
-                                font-size:12px;
-                                cursor:pointer;
-                                padding:6px 10px;
-                                border-radius:10px;
-                                border:1px solid #fed7aa;
-                            ">
-                        <span id="loginToggleText">Göster</span>
-                    </button>
-                </div>
-            </div>
-
-            <button type="submit" style="
-                width:100%;
-                padding:14px;
-                border:none;
-                border-radius:14px;
-                background:linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-                color:white;
-                font-size:16px;
-                font-weight:700;
-                cursor:pointer;
-                margin-bottom:14px;
-                box-shadow:0 12px 24px rgba(234,88,12,0.25);
-            ">
-                Giriş Yap
-            </button>
-
-            <a href="/Register" style="
-                display:block;
-                width:100%;
-                text-align:center;
-                padding:14px;
-                border:1px solid #fdba74;
-                border-radius:14px;
-                text-decoration:none;
-                color:#9a3412;
-                font-weight:700;
-                background:#fff7ed;
-            ">
-                Kayıt Ol
-            </a>
-        </form>
-
-        <div style="
-            margin-top:26px;
-            padding-top:18px;
-            border-top:1px solid #e2e8f0;
-            text-align:center;
-            color:#94a3b8;
-            font-size:13px;
-        ">
-            Kurumsal muhasebe ve firma yönetim sistemi
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    <script>
-        function togglePassword(inputId, textId) {
-            const input = document.getElementById(inputId);
-            const text = document.getElementById(textId);
-
-            if (input.type === "password") {
-                input.type = "text";
-                text.textContent = "Gizle";
-            } else {
-                input.type = "password";
-                text.textContent = "Göster";
-            }
+        if (!sifreDogru && kullanici.Sifre == Sifre)
+        {
+            kullanici.Sifre = PasswordHelper.Hash(Sifre);
+            await _db.SaveChangesAsync();
+            sifreDogru = true;
         }
-    </script>
+
+        if (!sifreDogru)
+        {
+            Hata = "Kullanıcı adı veya şifre yanlış.";
+            return Page();
+        }
+
+        if (kullanici.Firma == null || !kullanici.Firma.AktifMi)
+        {
+            Hata = "Bu firma hesabı pasif durumda.";
+            return Page();
+        }
+
+        HttpContext.Session.Clear();
+
+        HttpContext.Session.SetInt32("KullaniciId", kullanici.Id);
+        HttpContext.Session.SetInt32("FirmaId", kullanici.FirmaId);
+        HttpContext.Session.SetString("KullaniciAdi", kullanici.KullaniciAdi);
+        HttpContext.Session.SetString("FirmaAdi", kullanici.Firma?.FirmaAdi ?? "Firma");
+
+        var rol = (kullanici.Rol ?? "").Trim();
+        HttpContext.Session.SetString("Rol", rol);
+
+        HttpContext.Session.SetString("MenuCariKartlar", kullanici.Firma.MenuCariKartlar ? "1" : "0");
+        HttpContext.Session.SetString("MenuKasa", kullanici.Firma.MenuKasa ? "1" : "0");
+        HttpContext.Session.SetString("MenuRaporlar", kullanici.Firma.MenuRaporlar ? "1" : "0");
+        HttpContext.Session.SetString("MenuCalisanlar", kullanici.Firma.MenuCalisanlar ? "1" : "0");
+        HttpContext.Session.SetString("MenuMusteriler", kullanici.Firma.MenuMusteriler ? "1" : "0");
+        HttpContext.Session.SetString("MenuStoklar", kullanici.Firma.MenuStoklar ? "1" : "0");
+        HttpContext.Session.SetString("MenuMaliyet", kullanici.Firma.MenuMaliyet ? "1" : "0");
+        HttpContext.Session.SetString("MenuCekler", kullanici.Firma.MenuCekler ? "1" : "0");
+
+        return RedirectToPage("/Index");
+    }
 }
