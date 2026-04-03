@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="utf-8" />
@@ -17,6 +17,10 @@
         });
     </script>
 
+    @{
+        var rol = (Context.Session.GetString("Rol") ?? "").Trim().ToLower();
+    }
+
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark app-navbar border-bottom box-shadow mb-4">
             <div class="container">
@@ -30,89 +34,89 @@
                 </button>
 
                 <div class="navbar-collapse collapse d-sm-flex align-items-center">
-    <ul class="navbar-nav app-nav-list d-flex align-items-center gap-2">
-        @if (Context.Session.GetString("MenuCariKartlar") != "0")
-        {
-            <li class="nav-item">
-                <a class="nav-link" href="/CariKartlar">Cari Kartlar</a>
-            </li>
-        }
+                    <ul class="navbar-nav app-nav-list d-flex align-items-center gap-2">
+                        @if (Context.Session.GetString("MenuCariKartlar") != "0")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" href="/CariKartlar">Cari Kartlar</a>
+                            </li>
+                        }
 
-        @if (Context.Session.GetString("MenuKasa") != "0")
-        {
-            <li class="nav-item">
-                <a class="nav-link" asp-area="" asp-page="/Index">Kasa</a>
-            </li>
-        }
+                        @if (Context.Session.GetString("MenuKasa") != "0")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-page="/Index">Kasa</a>
+                            </li>
+                        }
 
-        @if (Context.Session.GetString("MenuRaporlar") != "0")
-        {
-            <li class="nav-item">
-                <a class="nav-link" href="/Raporlar">Raporlar</a>
-            </li>
-        }
+                        @if (Context.Session.GetString("MenuRaporlar") != "0")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" href="/Raporlar">Raporlar</a>
+                            </li>
+                        }
 
-        @if (Context.Session.GetString("MenuCalisanlar") != "0")
-        {
-            <li class="nav-item">
-                <a class="nav-link" href="/Calisanlar">Çalışanlar</a>
-            </li>
-        }
+                        @if (Context.Session.GetString("MenuCalisanlar") != "0")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" href="/Calisanlar">Çalışanlar</a>
+                            </li>
+                        }
 
-        @if (Context.Session.GetString("MenuMusteriler") != "0")
-        {
-            <li class="nav-item">
-                <a class="nav-link" href="/Musteriler">Müşteriler</a>
-            </li>
-        }
+                        @if (Context.Session.GetString("MenuMusteriler") != "0")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" href="/Musteriler">Müşteriler</a>
+                            </li>
+                        }
 
-        @if (Context.Session.GetString("MenuStoklar") != "0")
-        {
-            <li class="nav-item">
-                <a class="nav-link" href="/Stoklar">Stok</a>
-            </li>
-        }
+                        @if (Context.Session.GetString("MenuStoklar") != "0")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" href="/Stoklar">Stok</a>
+                            </li>
+                        }
 
-        @if (Context.Session.GetString("MenuMaliyet") != "0")
-        {
-            <li class="nav-item">
-                <a class="nav-link" href="/Maliyet">Maliyet</a>
-            </li>
-        }
+                        @if (Context.Session.GetString("MenuMaliyet") != "0")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" href="/Maliyet">Maliyet</a>
+                            </li>
+                        }
 
-        @if (Context.Session.GetString("MenuCekler") != "0")
-        {
-            <li class="nav-item">
-                <a class="nav-link" href="/Cekler">Çekler</a>
-            </li>
-        }
+                        @if (Context.Session.GetString("MenuCekler") != "0")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" href="/Cekler">Çekler</a>
+                            </li>
+                        }
 
-        @if (Context.Session.GetString("Rol") == "admin" || Context.Session.GetString("Rol") == "SuperAdmin")
-        {
-            <li class="nav-item">
-                <a class="nav-link" href="/SuperAdmin/Index">Süper Admin</a>
-            </li>
-        }
-    </ul>
+                        @if (rol == "admin" || rol == "superadmin")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" href="/SuperAdmin/Index">Süper Admin</a>
+                            </li>
+                        }
+                    </ul>
 
-    <div class="d-flex align-items-center gap-2 ms-auto app-top-actions">
-        @if (Context.Session.GetString("FirmaAdi") != null)
-        {
-            <span class="app-firma-badge">@Context.Session.GetString("FirmaAdi")</span>
-        }
+                    <div class="d-flex align-items-center gap-2 ms-auto app-top-actions">
+                        @if (Context.Session.GetString("FirmaAdi") != null)
+                        {
+                            <span class="app-firma-badge">@Context.Session.GetString("FirmaAdi")</span>
+                        }
 
-        @if (Context.Session.GetString("KullaniciAdi") != null)
-        {
-            <a class="app-top-btn" href="/Ayarlar">Ayarlar</a>
-            <a class="app-top-btn app-top-btn-danger" href="/Logout">Çıkış</a>
-        }
-        else
-        {
-            <a class="app-top-btn" href="/Login">Giriş</a>
-            <a class="app-top-btn" href="/Register">Kayıt Ol</a>
-        }
-    </div>
-</div>
+                        @if (Context.Session.GetString("KullaniciAdi") != null)
+                        {
+                            <a class="app-top-btn" href="/Ayarlar">Ayarlar</a>
+                            <a class="app-top-btn app-top-btn-danger" href="/Logout">Çıkış</a>
+                        }
+                        else
+                        {
+                            <a class="app-top-btn" href="/Login">Giriş</a>
+                            <a class="app-top-btn" href="/Register">Kayıt Ol</a>
+                        }
+                    </div>
+                </div>
             </div>
         </nav>
     </header>
