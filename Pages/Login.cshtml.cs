@@ -70,7 +70,9 @@ public class LoginModel : PageModel
         HttpContext.Session.SetInt32("FirmaId", kullanici.FirmaId);
         HttpContext.Session.SetString("KullaniciAdi", kullanici.KullaniciAdi);
         HttpContext.Session.SetString("FirmaAdi", kullanici.Firma?.FirmaAdi ?? "Firma");
-        HttpContext.Session.SetString("Rol", (kullanici.Rol ?? "").Trim());
+
+        var rol = (kullanici.Rol ?? "").Trim();
+        HttpContext.Session.SetString("Rol", rol);
 
         HttpContext.Session.SetString("MenuCariKartlar", kullanici.Firma.MenuCariKartlar ? "1" : "0");
         HttpContext.Session.SetString("MenuKasa", kullanici.Firma.MenuKasa ? "1" : "0");
