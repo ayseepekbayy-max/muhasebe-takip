@@ -24,4 +24,5 @@ public class AppDbContext : DbContext
     public DbSet<StokHareket> StokHareketleri { get; set; } = default!;
 
     public DbSet<Cek> Cekler { get; set; } = default!;
+    public DbSet<CalisanMaasArsiv> CalisanMaasArsivleri { get; set; }
 }

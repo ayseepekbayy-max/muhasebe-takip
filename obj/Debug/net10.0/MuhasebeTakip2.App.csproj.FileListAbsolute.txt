@@ -139,12 +139,14 @@ C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\Muhas
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\MuhasebeTakip2.App.MvcApplicationPartsAssemblyInfo.cache
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\MuhasebeTakip2.App.RazorAssemblyInfo.cache
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\MuhasebeTakip2.App.RazorAssemblyInfo.cs
+C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\MuhasebeTakip2.App.sourcelink.json
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\rjimswa.dswa.cache.json
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\rjsmrazor.dswa.cache.json
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\rjsmcshtml.dswa.cache.json
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\scopedcss\Pages\Shared\_Layout.cshtml.rz.scp.css
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\scopedcss\bundle\MuhasebeTakip2.App.styles.css
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\scopedcss\projectbundle\MuhasebeTakip2.App.bundle.scp.css
+C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\compressed\ofbx58ey1x-{0}-lrk5iereci-lrk5iereci.gz
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\compressed\tctdeb33dv-{0}-61n19gt1b8-61n19gt1b8.gz
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\compressed\gk8j1gud4z-{0}-xtxxf3hu2r-xtxxf3hu2r.gz
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\compressed\hchll0gisf-{0}-bqjiyaj88i-bqjiyaj88i.gz
@@ -219,4 +221,3 @@ C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\refin
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\MuhasebeTakip2.App.pdb
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\MuhasebeTakip2.App.genruntimeconfig.cache
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\ref\MuhasebeTakip2.App.dll
-C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\compressed\ofbx58ey1x-{0}-lrk5iereci-lrk5iereci.gz

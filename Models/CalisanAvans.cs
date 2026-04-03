@@ -31,4 +31,6 @@ public class CalisanAvans
     public string Aciklama { get; set; } = "";
 
     public CalisanHareketTipi Tip { get; set; } = CalisanHareketTipi.Avans;
+
+    public bool ArsivlendiMi { get; set; } = false;
 }
