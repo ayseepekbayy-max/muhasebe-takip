@@ -9,9 +9,10 @@ builder.Services.AddRazorPages();
 
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromHours(8);
+    options.Cookie.Name = ".MuhasebeTakip2.Session.v2";
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+    options.IdleTimeout = TimeSpan.FromHours(8);
 });
 
 builder.Services.AddHttpContextAccessor();
