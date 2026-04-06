@@ -36,7 +36,8 @@ using (var scope = app.Services.CreateScope())
     {
         db.Firmalar.Add(new Firma
         {
-            FirmaAdi = "Benim Firmam"
+            FirmaAdi = "Benim Firmam",
+            AktifMi = true
         });
 
         db.SaveChanges();
@@ -50,7 +51,8 @@ using (var scope = app.Services.CreateScope())
         {
             KullaniciAdi = "admin",
             Sifre = "1234",
-            FirmaId = firma.Id
+            FirmaId = firma.Id,
+            Rol = "SuperAdmin"
         });
 
         db.SaveChanges();
@@ -99,6 +101,26 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// Admin kullanıcısını düzelt
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    var admin = db.Kullanicilar
+        .Include(x => x.Firma)
+        .FirstOrDefault(x => x.KullaniciAdi == "admin");
+
+    if (admin != null)
+    {
+        admin.Rol = "SuperAdmin";
+
+        if (admin.Firma != null)
+            admin.Firma.AktifMi = true;
+
+        db.SaveChanges();
+    }
+}
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
@@ -106,6 +128,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// Render'da HTTPS yönlendirme sorun çıkarabildiği için
+// sadece local/development ortamında çalıştırıyoruz.
 if (app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
@@ -120,21 +144,5 @@ app.UseSession();
 app.UseAuthorization();
 
 app.MapRazorPages();
-
-// Admin firmasını aktif yap
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-    var admin = db.Kullanicilar
-        .Include(x => x.Firma)
-        .FirstOrDefault(x => x.KullaniciAdi == "admin");
-
-    if (admin?.Firma != null)
-    {
-        admin.Firma.AktifMi = true;
-        db.SaveChanges();
-    }
-}
 
 app.Run();
