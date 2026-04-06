@@ -25,12 +25,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
-// İlk firma ve kullanıcıyı ekle
+// Veritabanını migration ile güncelle
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
 
     if (!db.Firmalar.Any())
     {
@@ -106,8 +106,6 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-// Render'da HTTPS yönlendirme sorun çıkarabildiği için
-// sadece local/development ortamında çalıştırıyoruz.
 if (app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();

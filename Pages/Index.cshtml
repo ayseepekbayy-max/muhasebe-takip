@@ -1,10 +1,67 @@
 ﻿@page
 @model MuhasebeTakip2.App.Pages.IndexModel
+@{
+    ViewData["Title"] = "Kasa";
+}
 
-<h1>Ana Sayfa</h1>
+<h1>Kasa</h1>
 
-<div style="padding:20px; border:1px solid #ccc; border-radius:10px; margin-top:20px;">
-    <h3>Muhasebe Takip Sistemine Hoş Geldiniz</h3>
-    <p>Sistem şu anda çalışıyor.</p>
-    <p>Soldaki veya üstteki menülerden işlemlere devam edebilirsiniz.</p>
+<div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:20px;">
+
+    <div style="padding:16px; border:1px solid #444; border-radius:10px; min-width:220px;">
+        <div style="font-size:14px; color:#666;">Bugünkü Giriş</div>
+        <div style="font-size:26px; font-weight:bold;">@Model.BugunGiris.ToString("N2") TL</div>
+    </div>
+
+    <div style="padding:16px; border:1px solid #444; border-radius:10px; min-width:220px;">
+        <div style="font-size:14px; color:#666;">Bugünkü Çıkış</div>
+        <div style="font-size:26px; font-weight:bold;">@Model.BugunCikis.ToString("N2") TL</div>
+    </div>
+
+    <div style="padding:16px; border:1px solid #444; border-radius:10px; min-width:220px;">
+        <div style="font-size:14px; color:#666;">Cari Sayısı</div>
+        <div style="font-size:26px; font-weight:bold;">@Model.CariSayisi</div>
+    </div>
+
+    <div style="padding:16px; border:1px solid #444; border-radius:10px; min-width:220px;">
+        <div style="font-size:14px; color:#666;">Çalışan Sayısı</div>
+        <div style="font-size:26px; font-weight:bold;">@Model.CalisanSayisi</div>
+    </div>
+
+</div>
+
+<div style="margin-top:24px; padding:18px; border:1px solid #444; border-radius:10px; max-width:900px;">
+    <h3 style="margin-top:0;">Hızlı İşlem</h3>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        @if (HttpContext.Session.GetString("MenuCariKartlar") != "0")
+        {
+            <a href="/CariKartlar" class="btn btn-outline-dark">Cari Kartlar</a>
+        }
+
+        @if (HttpContext.Session.GetString("MenuCalisanlar") != "0")
+        {
+            <a href="/Calisanlar" class="btn btn-outline-dark">Çalışanlar</a>
+        }
+
+        @if (HttpContext.Session.GetString("MenuMusteriler") != "0")
+        {
+            <a href="/Musteriler" class="btn btn-outline-dark">Müşteriler</a>
+        }
+
+        @if (HttpContext.Session.GetString("MenuStoklar") != "0")
+        {
+            <a href="/Stoklar" class="btn btn-outline-dark">Stok</a>
+        }
+
+        @if (HttpContext.Session.GetString("MenuCekler") != "0")
+        {
+            <a href="/Cekler" class="btn btn-outline-dark">Çekler</a>
+        }
+
+        @if (HttpContext.Session.GetString("MenuRaporlar") != "0")
+        {
+            <a href="/Raporlar" class="btn btn-outline-dark">Raporlar</a>
+        }
+    </div>
 </div>
