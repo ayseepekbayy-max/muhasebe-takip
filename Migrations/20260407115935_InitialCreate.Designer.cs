@@ -11,14 +11,14 @@ using MuhasebeTakip2.App.Data;
 namespace MuhasebeTakip2.App.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260403081037_CalisanMaasArsivEkle")]
-    partial class CalisanMaasArsivEkle
+    [Migration("20260407115935_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.3");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.4");
 
             modelBuilder.Entity("MuhasebeTakip2.App.Models.Calisan", b =>
                 {
