@@ -148,31 +148,27 @@ public class IndexModel : PageModel
         if (calisan == null)
             return NotFound();
 
-        var donem = MaasDonemiHelper.GetDonem(DateTime.Today);
-        var donemBaslangic = donem.Baslangic;
-        var donemBitis = donem.Bitis;
-
-        var aktifDonemKayitlari = await _db.CalisanAvanslari
+        // ARTIK TARİHE GÖRE OTOMATİK DÖNEM YOK
+        // SADECE BUTONA BASILDIĞINDA TÜM AKTİF KAYITLAR ARŞİVLENİR
+        var aktifKayitlar = await _db.CalisanAvanslari
             .Where(x =>
                 x.CalisanId == id &&
                 x.FirmaId == firmaId.Value &&
-                !x.ArsivlendiMi &&
-                x.Tarih >= donemBaslangic &&
-                x.Tarih <= donemBitis)
+                !x.ArsivlendiMi)
             .ToListAsync();
 
-        if (aktifDonemKayitlari.Count == 0)
+        if (aktifKayitlar.Count == 0)
         {
             await YukleAsync(id, firmaId.Value, null);
-            ModelState.AddModelError("", "Arşivlenecek aktif kayıt bulunamadı.");
+            ModelState.AddModelError("", "Arşivlenecek kayıt yok.");
             return Page();
         }
 
-        var toplamMaas = aktifDonemKayitlari
+        var toplamMaas = aktifKayitlar
             .Where(x => x.Tip == CalisanHareketTipi.MaasOdeme)
             .Sum(x => x.Tutar);
 
-        var toplamAvans = aktifDonemKayitlari
+        var toplamAvans = aktifKayitlar
             .Where(x => x.Tip == CalisanHareketTipi.Avans)
             .Sum(x => x.Tutar);
 
@@ -184,18 +180,18 @@ public class IndexModel : PageModel
         {
             FirmaId = firmaId.Value,
             CalisanId = id,
-            DonemBaslangic = donemBaslangic,
-            DonemBitis = donemBitis,
+            DonemBaslangic = aktifKayitlar.Min(x => x.Tarih),
+            DonemBitis = aktifKayitlar.Max(x => x.Tarih),
             ToplamMaas = toplamMaas,
             ToplamAvans = toplamAvans,
             KalanMaas = kalan,
             OdemeTarihi = DateTime.Now,
-            Aciklama = "Maaş ödendi ve arşivlendi."
+            Aciklama = "Manuel arşivleme"
         };
 
         _db.CalisanMaasArsivleri.Add(arsiv);
 
-        foreach (var kayit in aktifDonemKayitlari)
+        foreach (var kayit in aktifKayitlar)
         {
             kayit.ArsivlendiMi = true;
         }
@@ -235,6 +231,8 @@ public class IndexModel : PageModel
         if (Calisan == null)
             return;
 
+        // GÖRÜNTÜLEMEDE DÖNEM BİLGİSİ KALSIN İSTERSEN DURSUN
+        // AMA ARŞİVLEMEYİ ETKİLEMEZ
         var donem = MaasDonemiHelper.GetDonem(DateTime.Today);
         DonemBaslangic = donem.Baslangic;
         DonemBitis = donem.Bitis;
@@ -254,14 +252,14 @@ public class IndexModel : PageModel
             .OrderByDescending(x => x.OdemeTarihi)
             .ToListAsync();
 
+        // ÜSTTEKİ ÖZETTE TÜM AKTİF KAYITLAR GÖZÜKSÜN
+        // ARTIK GÜNE/DÖNEME GÖRE AYRILMASIN
         ToplamMaas = await _db.CalisanAvanslari
             .Where(x =>
                 x.CalisanId == id &&
                 x.FirmaId == firmaId &&
                 !x.ArsivlendiMi &&
-                x.Tip == CalisanHareketTipi.MaasOdeme &&
-                x.Tarih >= DonemBaslangic &&
-                x.Tarih <= DonemBitis)
+                x.Tip == CalisanHareketTipi.MaasOdeme)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         ToplamAvans = await _db.CalisanAvanslari
@@ -269,9 +267,7 @@ public class IndexModel : PageModel
                 x.CalisanId == id &&
                 x.FirmaId == firmaId &&
                 !x.ArsivlendiMi &&
-                x.Tip == CalisanHareketTipi.Avans &&
-                x.Tarih >= DonemBaslangic &&
-                x.Tarih <= DonemBitis)
+                x.Tip == CalisanHareketTipi.Avans)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         SeciliArsivDetaylari = new List<CalisanAvans>();

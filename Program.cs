@@ -141,6 +141,32 @@ app.UseRouting();
 
 app.UseSession();
 
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value?.ToLower() ?? "";
+
+    var izinliSayfalar =
+        path == "/" ||
+        path.StartsWith("/login") ||
+        path.StartsWith("/register") ||
+        path.StartsWith("/error") ||
+        path.StartsWith("/css") ||
+        path.StartsWith("/js") ||
+        path.StartsWith("/lib") ||
+        path.StartsWith("/images") ||
+        path.StartsWith("/favicon");
+
+    var firmaId = context.Session.GetInt32("FirmaId");
+
+    if (!izinliSayfalar && firmaId == null)
+    {
+        context.Response.Redirect("/");
+        return;
+    }
+
+    await next();
+});
+
 app.UseAuthorization();
 
 app.MapRazorPages();
