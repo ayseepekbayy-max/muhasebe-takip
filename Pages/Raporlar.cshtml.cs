@@ -30,23 +30,34 @@ public class RaporlarModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        var today = DateTime.Today;
-        var monthStart = new DateTime(today.Year, today.Month, 1);
+        var today = DateTime.UtcNow.Date;
+        var tomorrow = today.AddDays(1);
+        var monthStart = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
         BugunGiris = await _db.KasaHareketleri
-            .Where(x => x.FirmaId == firmaId && x.Tarih == today && x.Tip == HareketTipi.Giris)
+            .Where(x => x.FirmaId == firmaId &&
+                        x.Tarih >= today &&
+                        x.Tarih < tomorrow &&
+                        x.Tip == HareketTipi.Giris)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         BugunCikis = await _db.KasaHareketleri
-            .Where(x => x.FirmaId == firmaId && x.Tarih == today && x.Tip == HareketTipi.Cikis)
+            .Where(x => x.FirmaId == firmaId &&
+                        x.Tarih >= today &&
+                        x.Tarih < tomorrow &&
+                        x.Tip == HareketTipi.Cikis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         AyGiris = await _db.KasaHareketleri
-            .Where(x => x.FirmaId == firmaId && x.Tarih >= monthStart && x.Tip == HareketTipi.Giris)
+            .Where(x => x.FirmaId == firmaId &&
+                        x.Tarih >= monthStart &&
+                        x.Tip == HareketTipi.Giris)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         AyCikis = await _db.KasaHareketleri
-            .Where(x => x.FirmaId == firmaId && x.Tarih >= monthStart && x.Tip == HareketTipi.Cikis)
+            .Where(x => x.FirmaId == firmaId &&
+                        x.Tarih >= monthStart &&
+                        x.Tip == HareketTipi.Cikis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         var toplamGiris = await _db.KasaHareketleri
@@ -74,23 +85,34 @@ public class RaporlarModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        var today = DateTime.Today;
-        var monthStart = new DateTime(today.Year, today.Month, 1);
+        var today = DateTime.UtcNow.Date;
+        var tomorrow = today.AddDays(1);
+        var monthStart = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
         var bugunGiris = await _db.KasaHareketleri
-            .Where(x => x.FirmaId == firmaId && x.Tarih == today && x.Tip == HareketTipi.Giris)
+            .Where(x => x.FirmaId == firmaId &&
+                        x.Tarih >= today &&
+                        x.Tarih < tomorrow &&
+                        x.Tip == HareketTipi.Giris)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         var bugunCikis = await _db.KasaHareketleri
-            .Where(x => x.FirmaId == firmaId && x.Tarih == today && x.Tip == HareketTipi.Cikis)
+            .Where(x => x.FirmaId == firmaId &&
+                        x.Tarih >= today &&
+                        x.Tarih < tomorrow &&
+                        x.Tip == HareketTipi.Cikis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         var ayGiris = await _db.KasaHareketleri
-            .Where(x => x.FirmaId == firmaId && x.Tarih >= monthStart && x.Tip == HareketTipi.Giris)
+            .Where(x => x.FirmaId == firmaId &&
+                        x.Tarih >= monthStart &&
+                        x.Tip == HareketTipi.Giris)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         var ayCikis = await _db.KasaHareketleri
-            .Where(x => x.FirmaId == firmaId && x.Tarih >= monthStart && x.Tip == HareketTipi.Cikis)
+            .Where(x => x.FirmaId == firmaId &&
+                        x.Tarih >= monthStart &&
+                        x.Tip == HareketTipi.Cikis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         var toplamGiris = await _db.KasaHareketleri
@@ -161,7 +183,7 @@ public class RaporlarModel : PageModel
         workbook.SaveAs(stream);
         stream.Position = 0;
 
-        var dosyaAdi = $"raporlar_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+        var dosyaAdi = $"raporlar_{DateTime.UtcNow:yyyyMMdd_HHmmss}.xlsx";
 
         return File(
             stream.ToArray(),
