@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -15,17 +16,17 @@ namespace MuhasebeTakip2.App.Migrations
                 name: "CalisanMaasArsivleri",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    FirmaId = table.Column<int>(type: "INTEGER", nullable: false),
-                    CalisanId = table.Column<int>(type: "INTEGER", nullable: false),
-                    DonemBaslangic = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    DonemBitis = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    ToplamMaas = table.Column<decimal>(type: "TEXT", nullable: false),
-                    ToplamAvans = table.Column<decimal>(type: "TEXT", nullable: false),
-                    KalanMaas = table.Column<decimal>(type: "TEXT", nullable: false),
-                    OdemeTarihi = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Aciklama = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FirmaId = table.Column<int>(type: "integer", nullable: false),
+                    CalisanId = table.Column<int>(type: "integer", nullable: false),
+                    DonemBaslangic = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DonemBitis = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ToplamMaas = table.Column<decimal>(type: "numeric", nullable: false),
+                    ToplamAvans = table.Column<decimal>(type: "numeric", nullable: false),
+                    KalanMaas = table.Column<decimal>(type: "numeric", nullable: false),
+                    OdemeTarihi = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Aciklama = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -36,18 +37,18 @@ namespace MuhasebeTakip2.App.Migrations
                 name: "Firmalar",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    FirmaAdi = table.Column<string>(type: "TEXT", nullable: false),
-                    AktifMi = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MenuCariKartlar = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MenuKasa = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MenuRaporlar = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MenuCalisanlar = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MenuMusteriler = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MenuStoklar = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MenuMaliyet = table.Column<bool>(type: "INTEGER", nullable: false),
-                    MenuCekler = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FirmaAdi = table.Column<string>(type: "text", nullable: false),
+                    AktifMi = table.Column<bool>(type: "boolean", nullable: false),
+                    MenuCariKartlar = table.Column<bool>(type: "boolean", nullable: false),
+                    MenuKasa = table.Column<bool>(type: "boolean", nullable: false),
+                    MenuRaporlar = table.Column<bool>(type: "boolean", nullable: false),
+                    MenuCalisanlar = table.Column<bool>(type: "boolean", nullable: false),
+                    MenuMusteriler = table.Column<bool>(type: "boolean", nullable: false),
+                    MenuStoklar = table.Column<bool>(type: "boolean", nullable: false),
+                    MenuMaliyet = table.Column<bool>(type: "boolean", nullable: false),
+                    MenuCekler = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -58,15 +59,15 @@ namespace MuhasebeTakip2.App.Migrations
                 name: "Calisanlar",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Maas = table.Column<decimal>(type: "TEXT", nullable: false),
-                    Avans = table.Column<decimal>(type: "TEXT", nullable: false),
-                    FirmaId = table.Column<int>(type: "INTEGER", nullable: true),
-                    Ad = table.Column<string>(type: "TEXT", nullable: false),
-                    AdSoyad = table.Column<string>(type: "TEXT", nullable: false),
-                    Telefon = table.Column<string>(type: "TEXT", nullable: true),
-                    IseGirisTarihi = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Maas = table.Column<decimal>(type: "numeric", nullable: false),
+                    Avans = table.Column<decimal>(type: "numeric", nullable: false),
+                    FirmaId = table.Column<int>(type: "integer", nullable: true),
+                    Ad = table.Column<string>(type: "text", nullable: false),
+                    AdSoyad = table.Column<string>(type: "text", nullable: false),
+                    Telefon = table.Column<string>(type: "text", nullable: true),
+                    IseGirisTarihi = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -82,15 +83,15 @@ namespace MuhasebeTakip2.App.Migrations
                 name: "CariKartlar",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    FirmaId = table.Column<int>(type: "INTEGER", nullable: true),
-                    Ad = table.Column<string>(type: "TEXT", nullable: false),
-                    Unvan = table.Column<string>(type: "TEXT", nullable: false),
-                    Telefon = table.Column<string>(type: "TEXT", nullable: true),
-                    VergiNo = table.Column<string>(type: "TEXT", nullable: true),
-                    Tip = table.Column<int>(type: "INTEGER", nullable: false),
-                    OlusturmaTarihi = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FirmaId = table.Column<int>(type: "integer", nullable: true),
+                    Ad = table.Column<string>(type: "text", nullable: false),
+                    Unvan = table.Column<string>(type: "text", nullable: false),
+                    Telefon = table.Column<string>(type: "text", nullable: true),
+                    VergiNo = table.Column<string>(type: "text", nullable: true),
+                    Tip = table.Column<int>(type: "integer", nullable: false),
+                    OlusturmaTarihi = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -106,16 +107,16 @@ namespace MuhasebeTakip2.App.Migrations
                 name: "Cekler",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    FirmaId = table.Column<int>(type: "INTEGER", nullable: false),
-                    No = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Tarih = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Tutar = table.Column<decimal>(type: "TEXT", nullable: false),
-                    Aciklama = table.Column<string>(type: "TEXT", maxLength: 300, nullable: false),
-                    Tip = table.Column<int>(type: "INTEGER", nullable: false),
-                    ResimYolu = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
-                    OlusturmaTarihi = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FirmaId = table.Column<int>(type: "integer", nullable: false),
+                    No = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Tarih = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Tutar = table.Column<decimal>(type: "numeric", nullable: false),
+                    Aciklama = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: false),
+                    Tip = table.Column<int>(type: "integer", nullable: false),
+                    ResimYolu = table.Column<string>(type: "character varying(300)", maxLength: 300, nullable: true),
+                    OlusturmaTarihi = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -132,12 +133,12 @@ namespace MuhasebeTakip2.App.Migrations
                 name: "Kullanicilar",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    KullaniciAdi = table.Column<string>(type: "TEXT", nullable: false),
-                    Sifre = table.Column<string>(type: "TEXT", nullable: false),
-                    FirmaId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Rol = table.Column<string>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    KullaniciAdi = table.Column<string>(type: "text", nullable: false),
+                    Sifre = table.Column<string>(type: "text", nullable: false),
+                    FirmaId = table.Column<int>(type: "integer", nullable: false),
+                    Rol = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -154,13 +155,13 @@ namespace MuhasebeTakip2.App.Migrations
                 name: "Musteriler",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    FirmaId = table.Column<int>(type: "INTEGER", nullable: true),
-                    Ad = table.Column<string>(type: "TEXT", nullable: false),
-                    AdSoyad = table.Column<string>(type: "TEXT", maxLength: 120, nullable: false),
-                    Telefon = table.Column<string>(type: "TEXT", maxLength: 30, nullable: false),
-                    Adres = table.Column<string>(type: "TEXT", maxLength: 250, nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FirmaId = table.Column<int>(type: "integer", nullable: true),
+                    Ad = table.Column<string>(type: "text", nullable: false),
+                    AdSoyad = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
+                    Telefon = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    Adres = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -176,12 +177,12 @@ namespace MuhasebeTakip2.App.Migrations
                 name: "StokUrunler",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    FirmaId = table.Column<int>(type: "INTEGER", nullable: true),
-                    Ad = table.Column<string>(type: "TEXT", maxLength: 120, nullable: false),
-                    Kod = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    Birim = table.Column<string>(type: "TEXT", maxLength: 30, nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FirmaId = table.Column<int>(type: "integer", nullable: true),
+                    Ad = table.Column<string>(type: "character varying(120)", maxLength: 120, nullable: false),
+                    Kod = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Birim = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -197,16 +198,16 @@ namespace MuhasebeTakip2.App.Migrations
                 name: "CalisanAvanslari",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Ad = table.Column<string>(type: "TEXT", nullable: false),
-                    FirmaId = table.Column<int>(type: "INTEGER", nullable: true),
-                    CalisanId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Tarih = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Tutar = table.Column<decimal>(type: "TEXT", nullable: false),
-                    Aciklama = table.Column<string>(type: "TEXT", maxLength: 250, nullable: false),
-                    Tip = table.Column<int>(type: "INTEGER", nullable: false),
-                    ArsivlendiMi = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Ad = table.Column<string>(type: "text", nullable: false),
+                    FirmaId = table.Column<int>(type: "integer", nullable: true),
+                    CalisanId = table.Column<int>(type: "integer", nullable: false),
+                    Tarih = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Tutar = table.Column<decimal>(type: "numeric", nullable: false),
+                    Aciklama = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: false),
+                    Tip = table.Column<int>(type: "integer", nullable: false),
+                    ArsivlendiMi = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -228,13 +229,13 @@ namespace MuhasebeTakip2.App.Migrations
                 name: "CalisanPuantajlari",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    FirmaId = table.Column<int>(type: "INTEGER", nullable: false),
-                    CalisanId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Tarih = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Durum = table.Column<int>(type: "INTEGER", nullable: false),
-                    Not = table.Column<string>(type: "TEXT", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FirmaId = table.Column<int>(type: "integer", nullable: false),
+                    CalisanId = table.Column<int>(type: "integer", nullable: false),
+                    Tarih = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Durum = table.Column<int>(type: "integer", nullable: false),
+                    Not = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -257,14 +258,14 @@ namespace MuhasebeTakip2.App.Migrations
                 name: "KasaHareketleri",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    FirmaId = table.Column<int>(type: "INTEGER", nullable: true),
-                    Tarih = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Tip = table.Column<int>(type: "INTEGER", nullable: false),
-                    Tutar = table.Column<decimal>(type: "TEXT", nullable: false),
-                    Aciklama = table.Column<string>(type: "TEXT", nullable: false),
-                    CariKartId = table.Column<int>(type: "INTEGER", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FirmaId = table.Column<int>(type: "integer", nullable: true),
+                    Tarih = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Tip = table.Column<int>(type: "integer", nullable: false),
+                    Tutar = table.Column<decimal>(type: "numeric", nullable: false),
+                    Aciklama = table.Column<string>(type: "text", nullable: false),
+                    CariKartId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -285,14 +286,14 @@ namespace MuhasebeTakip2.App.Migrations
                 name: "MusteriIsler",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    FirmaId = table.Column<int>(type: "INTEGER", nullable: true),
-                    Ad = table.Column<string>(type: "TEXT", nullable: false),
-                    MusteriId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Tarih = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    IsAdi = table.Column<string>(type: "TEXT", maxLength: 160, nullable: false),
-                    Gelir = table.Column<decimal>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FirmaId = table.Column<int>(type: "integer", nullable: true),
+                    Ad = table.Column<string>(type: "text", nullable: false),
+                    MusteriId = table.Column<int>(type: "integer", nullable: false),
+                    Tarih = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsAdi = table.Column<string>(type: "character varying(160)", maxLength: 160, nullable: false),
+                    Gelir = table.Column<decimal>(type: "numeric", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -314,15 +315,15 @@ namespace MuhasebeTakip2.App.Migrations
                 name: "StokHareketleri",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    FirmaId = table.Column<int>(type: "INTEGER", nullable: true),
-                    Ad = table.Column<string>(type: "TEXT", nullable: false),
-                    StokUrunId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Tarih = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Tip = table.Column<int>(type: "INTEGER", nullable: false),
-                    Miktar = table.Column<decimal>(type: "TEXT", nullable: false),
-                    Aciklama = table.Column<string>(type: "TEXT", maxLength: 250, nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FirmaId = table.Column<int>(type: "integer", nullable: true),
+                    Ad = table.Column<string>(type: "text", nullable: false),
+                    StokUrunId = table.Column<int>(type: "integer", nullable: false),
+                    Tarih = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Tip = table.Column<int>(type: "integer", nullable: false),
+                    Miktar = table.Column<decimal>(type: "numeric", nullable: false),
+                    Aciklama = table.Column<string>(type: "character varying(250)", maxLength: 250, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -344,14 +345,14 @@ namespace MuhasebeTakip2.App.Migrations
                 name: "MusteriMasraflar",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    FirmaId = table.Column<int>(type: "INTEGER", nullable: true),
-                    Ad = table.Column<string>(type: "TEXT", nullable: false),
-                    MusteriIsId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Tarih = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Aciklama = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    Tutar = table.Column<decimal>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FirmaId = table.Column<int>(type: "integer", nullable: true),
+                    Ad = table.Column<string>(type: "text", nullable: false),
+                    MusteriIsId = table.Column<int>(type: "integer", nullable: false),
+                    Tarih = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Aciklama = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Tutar = table.Column<decimal>(type: "numeric", nullable: false)
                 },
                 constraints: table =>
                 {
