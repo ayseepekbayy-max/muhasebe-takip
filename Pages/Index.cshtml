@@ -60,7 +60,7 @@
             </tr>
         </thead>
         <tbody>
-            @if (Model.SonHareketler.Count == 0)
+            @if (Model.SonHareketler == null || Model.SonHareketler.Count == 0)
             {
                 <tr>
                     <td colspan="5" style="padding:8px;">Henüz hareket yok.</td>
@@ -84,7 +84,7 @@
                             @(h.CariKart != null ? h.CariKart.Unvan : "-")
                         </td>
                         <td style="border-bottom:1px solid #ddd; padding:8px;">
-                            @h.Aciklama
+                            @(string.IsNullOrWhiteSpace(h.Aciklama) ? "-" : h.Aciklama)
                         </td>
                     </tr>
                 }
