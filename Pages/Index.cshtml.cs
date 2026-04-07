@@ -36,8 +36,8 @@ public class IndexModel : PageModel
 
         try
         {
-            var bugun = DateTime.Today;
-            var ayBaslangic = new DateTime(bugun.Year, bugun.Month, 1);
+            var bugun = DateTime.UtcNow.Date;
+            var ayBaslangic = new DateTime(bugun.Year, bugun.Month, 1, 0, 0, 0, DateTimeKind.Utc);
             var yarin = bugun.AddDays(1);
 
             BugunGiris = await _db.KasaHareketleri
