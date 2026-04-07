@@ -20,7 +20,19 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     var cs = builder.Configuration.GetConnectionString("Default");
-    options.UseSqlite(cs);
+
+    if (string.IsNullOrWhiteSpace(cs))
+        throw new Exception("ConnectionStrings:Default bulunamadı.");
+
+    if (cs.Contains("Host=", StringComparison.OrdinalIgnoreCase) &&
+        cs.Contains("Database=", StringComparison.OrdinalIgnoreCase))
+    {
+        options.UseNpgsql(cs);
+    }
+    else
+    {
+        options.UseSqlite(cs);
+    }
 });
 
 var app = builder.Build();
