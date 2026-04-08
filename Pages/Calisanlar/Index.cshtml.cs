@@ -61,6 +61,22 @@ public class IndexModel : PageModel
 
         YeniCalisan.FirmaId = firmaId.Value;
 
+        // PostgreSQL UTC istediği için tarihi UTC'ye çeviriyoruz
+        if (YeniCalisan.IseGirisTarihi == default)
+        {
+            YeniCalisan.IseGirisTarihi = DateTime.UtcNow;
+        }
+        else
+        {
+            var t = YeniCalisan.IseGirisTarihi;
+            YeniCalisan.IseGirisTarihi = t.Kind switch
+            {
+                DateTimeKind.Utc => t,
+                DateTimeKind.Local => t.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(t, DateTimeKind.Utc)
+            };
+        }
+
         _db.Calisanlar.Add(YeniCalisan);
         await _db.SaveChangesAsync();
 
@@ -196,7 +212,7 @@ public class IndexModel : PageModel
         workbook.SaveAs(stream);
         stream.Position = 0;
 
-        var dosyaAdi = $"calisanlar_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+        var dosyaAdi = $"calisanlar_{DateTime.UtcNow:yyyyMMdd_HHmmss}.xlsx";
 
         return File(
             stream.ToArray(),
