@@ -61,7 +61,6 @@ public class IndexModel : PageModel
 
         YeniCalisan.FirmaId = firmaId.Value;
 
-        // PostgreSQL UTC istediği için tarihi UTC'ye çeviriyoruz
         if (YeniCalisan.IseGirisTarihi == default)
         {
             YeniCalisan.IseGirisTarihi = DateTime.UtcNow;

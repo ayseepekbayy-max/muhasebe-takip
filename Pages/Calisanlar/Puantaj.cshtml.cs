@@ -24,7 +24,7 @@ public class PuantajModel : PageModel
     public int CalisanId { get; set; }
 
     [BindProperty]
-    public DateTime Tarih { get; set; } = DateTime.Today;
+    public DateTime Tarih { get; set; } = DateTime.UtcNow.Date;
 
     [BindProperty]
     public PuantajDurum Durum { get; set; } = PuantajDurum.Geldi;
@@ -53,8 +53,8 @@ public class PuantajModel : PageModel
             return RedirectToPage("/Login");
 
         CalisanId = id;
-        SeciliYil = yil ?? DateTime.Today.Year;
-        SeciliAy = ay ?? DateTime.Today.Month;
+        SeciliYil = yil ?? DateTime.UtcNow.Year;
+        SeciliAy = ay ?? DateTime.UtcNow.Month;
 
         await YukleAsync(firmaId.Value, id, SeciliYil, SeciliAy);
 
@@ -76,19 +76,28 @@ public class PuantajModel : PageModel
         if (calisan == null)
             return RedirectToPage("/Calisanlar");
 
-        if (Tarih.DayOfWeek == DayOfWeek.Sunday)
+        var utcTarih = Tarih.Kind switch
+        {
+            DateTimeKind.Utc => Tarih.Date,
+            DateTimeKind.Local => Tarih.ToUniversalTime().Date,
+            _ => DateTime.SpecifyKind(Tarih.Date, DateTimeKind.Utc)
+        };
+
+        if (utcTarih.DayOfWeek == DayOfWeek.Sunday)
             return RedirectToPage(new { id = CalisanId, yil = SeciliYil, ay = SeciliAy });
 
         var mevcut = await _db.CalisanPuantajlari
             .FirstOrDefaultAsync(x =>
                 x.CalisanId == CalisanId &&
                 x.FirmaId == firmaId &&
-                x.Tarih.Date == Tarih.Date);
+                x.Tarih >= utcTarih &&
+                x.Tarih < utcTarih.AddDays(1));
 
         if (mevcut != null)
         {
             mevcut.Durum = Durum;
             mevcut.Not = Not;
+            mevcut.Tarih = utcTarih;
         }
         else
         {
@@ -96,7 +105,7 @@ public class PuantajModel : PageModel
             {
                 FirmaId = firmaId.Value,
                 CalisanId = CalisanId,
-                Tarih = Tarih.Date,
+                Tarih = utcTarih,
                 Durum = Durum,
                 Not = Not
             });
@@ -204,15 +213,16 @@ public class PuantajModel : PageModel
         if (Calisan == null)
             return;
 
-        var ayBaslangic = new DateTime(yil, ay, 1);
-        var ayBitis = ayBaslangic.AddMonths(1).AddDays(-1);
+        var ayBaslangic = new DateTime(yil, ay, 1, 0, 0, 0, DateTimeKind.Utc);
+        var sonrakiAy = ayBaslangic.AddMonths(1);
+        var ayBitis = sonrakiAy.AddDays(-1);
 
         var kayitlar = await _db.CalisanPuantajlari
             .Where(x =>
                 x.CalisanId == calisanId &&
                 x.FirmaId == firmaId &&
                 x.Tarih >= ayBaslangic &&
-                x.Tarih <= ayBitis)
+                x.Tarih < sonrakiAy)
             .OrderBy(x => x.Tarih)
             .ToListAsync();
 
@@ -220,7 +230,9 @@ public class PuantajModel : PageModel
 
         for (var gun = ayBaslangic; gun <= ayBitis; gun = gun.AddDays(1))
         {
-            var kayit = kayitlar.FirstOrDefault(x => x.Tarih.Date == gun.Date);
+            var kayit = kayitlar.FirstOrDefault(x =>
+                x.Tarih >= gun &&
+                x.Tarih < gun.AddDays(1));
 
             AylikGunler.Add(new PuantajGunViewModel
             {
