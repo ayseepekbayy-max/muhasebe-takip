@@ -46,7 +46,7 @@
 
 <div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:900px;">
   <h3>Yeni İş Ekle</h3>
-  <form method="post" asp-page-handler="IsEkle">
+  <form method="post" asp-page-handler="IsEkle" asp-route-id="@Model.Musteri.Id">
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <div style="min-width:180px;">
         <label><b>Tarih</b></label><br />
@@ -115,7 +115,7 @@ else
                   <td style="border-bottom:1px solid #333; padding:8px;">@ms.Aciklama</td>
                   <td style="border-bottom:1px solid #333; padding:8px;">@ms.Tutar</td>
                   <td style="border-bottom:1px solid #333; padding:8px;">
-                    <form method="post" asp-page-handler="MasrafSil" style="display:inline;"
+                    <form method="post" asp-page-handler="MasrafSil" asp-route-id="@Model.Musteri.Id" style="display:inline;"
                           onsubmit="return confirm('Masraf silinsin mi?');">
                       <input type="hidden" name="isId" value="@isItem.Id" />
                       <input type="hidden" name="masrafId" value="@ms.Id" />
@@ -130,12 +130,12 @@ else
 
         <div style="margin-top:10px; padding:10px; border:1px dashed #666; border-radius:10px;">
           <b>Masraf Ekle</b>
-          <form method="post" asp-page-handler="MasrafEkle" style="margin-top:8px;">
+          <form method="post" asp-page-handler="MasrafEkle" asp-route-id="@Model.Musteri.Id" style="margin-top:8px;">
             <input type="hidden" name="isId" value="@isItem.Id" />
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
               <div style="min-width:180px;">
                 <label><b>Tarih</b></label><br />
-                <input name="MasrafTarih" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" style="padding:8px; width:180px;" />
+                <input name="MasrafTarih" type="date" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" style="padding:8px; width:180px;" />
               </div>
               <div style="flex:1; min-width:240px;">
                 <label><b>Açıklama</b></label><br />

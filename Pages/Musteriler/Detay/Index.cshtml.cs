@@ -18,21 +18,24 @@ public class IndexModel : PageModel
     public decimal ToplamMasraf { get; set; }
     public decimal ToplamKar => ToplamGelir - ToplamMasraf;
 
-    // İş bazlı hesaplar
     public Dictionary<int, decimal> IsMasrafToplamlari { get; set; } = new();
     public Dictionary<int, decimal> IsKarToplamlari { get; set; } = new();
 
-    // İş ekleme formu
-    [BindProperty] public DateTime IsTarih { get; set; } = DateTime.Today;
-    [BindProperty] public string? IsAdi { get; set; }
-    [BindProperty] public decimal IsGelir { get; set; }
+    [BindProperty]
+    public DateTime IsTarih { get; set; } = DateTime.UtcNow.Date;
+
+    [BindProperty]
+    public string? IsAdi { get; set; }
+
+    [BindProperty]
+    public decimal IsGelir { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
         await YukleAsync(id);
         if (Musteri == null) return NotFound();
 
-        IsTarih = DateTime.Today;
+        IsTarih = DateTime.UtcNow.Date;
         IsAdi = "";
         IsGelir = 0;
 
@@ -50,16 +53,24 @@ public class IndexModel : PageModel
             ModelState.AddModelError("", "İş adı boş olamaz.");
             return Page();
         }
+
         if (IsGelir < 0)
         {
             ModelState.AddModelError("", "Gelir 0'dan küçük olamaz.");
             return Page();
         }
 
+        var utcIsTarih = IsTarih.Kind switch
+        {
+            DateTimeKind.Utc => IsTarih.Date,
+            DateTimeKind.Local => IsTarih.ToUniversalTime().Date,
+            _ => DateTime.SpecifyKind(IsTarih.Date, DateTimeKind.Utc)
+        };
+
         _db.MusteriIsler.Add(new MusteriIs
         {
             MusteriId = id,
-            Tarih = IsTarih,
+            Tarih = utcIsTarih,
             IsAdi = ad,
             Gelir = IsGelir
         });
@@ -75,11 +86,9 @@ public class IndexModel : PageModel
         string? MasrafAciklama,
         decimal MasrafTutar)
     {
-        // müşteri var mı
         var musteriVar = await _db.Musteriler.AnyAsync(x => x.Id == id);
         if (!musteriVar) return NotFound();
 
-        // iş bu müşteriye ait mi
         var isVar = await _db.MusteriIsler.AnyAsync(x => x.Id == isId && x.MusteriId == id);
         if (!isVar) return NotFound();
 
@@ -90,10 +99,17 @@ public class IndexModel : PageModel
             return Page();
         }
 
+        var utcMasrafTarih = MasrafTarih.Kind switch
+        {
+            DateTimeKind.Utc => MasrafTarih.Date,
+            DateTimeKind.Local => MasrafTarih.ToUniversalTime().Date,
+            _ => DateTime.SpecifyKind(MasrafTarih.Date, DateTimeKind.Utc)
+        };
+
         _db.MusteriMasraflar.Add(new MusteriMasraf
         {
             MusteriIsId = isId,
-            Tarih = MasrafTarih,
+            Tarih = utcMasrafTarih,
             Aciklama = (MasrafAciklama ?? "").Trim(),
             Tutar = MasrafTutar
         });
