@@ -24,7 +24,7 @@
       <div style="font-size:18px;">@Model.ToplamGelir</div>
     </div>
     <div style="padding:10px; border:1px solid #444; border-radius:8px; min-width:220px;">
-      <b>Toplam Masraf</b>
+      <b>Toplam Gider</b>
       <div style="font-size:18px;">@Model.ToplamMasraf</div>
     </div>
     <div style="padding:10px; border:1px solid #444; border-radius:8px; min-width:220px;">
@@ -46,21 +46,25 @@
 
 <div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:900px;">
   <h3>Yeni İş Ekle</h3>
+
   <form method="post" asp-page-handler="IsEkle" asp-route-id="@Model.Musteri.Id">
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <div style="min-width:180px;">
         <label><b>Tarih</b></label><br />
         <input asp-for="IsTarih" type="date" style="padding:8px; width:180px;" />
       </div>
+
       <div style="flex:1; min-width:260px;">
         <label><b>İş Adı</b></label><br />
         <input asp-for="IsAdi" style="padding:8px; width:100%;" />
       </div>
+
       <div style="min-width:180px;">
         <label><b>Gelir</b></label><br />
         <input asp-for="IsGelir" type="number" step="0.01" style="padding:8px; width:180px;" />
       </div>
     </div>
+
     <div style="margin-top:10px;">
       <button type="submit" class="btn btn-dark btn-sm">İş Ekle</button>
     </div>
@@ -80,17 +84,19 @@ else
     <div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:900px;">
       <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
         <div>
-          <b>@isItem.IsAdi</b> <span style="opacity:.8;">(@isItem.Tarih.ToShortDateString())</span>
+          <b>@isItem.IsAdi</b>
+          <span style="opacity:.8;">(@isItem.Tarih.ToShortDateString())</span>
         </div>
+
         <div>
           <span style="margin-right:12px;"><b>Gelir:</b> @isItem.Gelir</span>
-          <span style="margin-right:12px;"><b>Masraf:</b> @Model.IsMasrafToplamlari[isItem.Id]</span>
+          <span style="margin-right:12px;"><b>Gider:</b> @Model.IsMasrafToplamlari[isItem.Id]</span>
           <span><b>Kâr:</b> @Model.IsKarToplamlari[isItem.Id]</span>
         </div>
       </div>
 
       <div style="margin-top:10px;">
-        <b>Masraf Kalemleri</b>
+        <b>Gider Kalemleri</b>
 
         <table style="width:100%; border-collapse:collapse; margin-top:6px;">
           <thead>
@@ -104,7 +110,9 @@ else
           <tbody>
             @if (isItem.Masraflar.Count == 0)
             {
-              <tr><td colspan="4" style="padding:8px;">Henüz masraf yok.</td></tr>
+              <tr>
+                <td colspan="4" style="padding:8px;">Henüz gider yok.</td>
+              </tr>
             }
             else
             {
@@ -115,8 +123,11 @@ else
                   <td style="border-bottom:1px solid #333; padding:8px;">@ms.Aciklama</td>
                   <td style="border-bottom:1px solid #333; padding:8px;">@ms.Tutar</td>
                   <td style="border-bottom:1px solid #333; padding:8px;">
-                    <form method="post" asp-page-handler="MasrafSil" asp-route-id="@Model.Musteri.Id" style="display:inline;"
-                          onsubmit="return confirm('Masraf silinsin mi?');">
+                    <form method="post"
+                          asp-page-handler="MasrafSil"
+                          asp-route-id="@Model.Musteri.Id"
+                          style="display:inline;"
+                          onsubmit="return confirm('Gider silinsin mi?');">
                       <input type="hidden" name="isId" value="@isItem.Id" />
                       <input type="hidden" name="masrafId" value="@ms.Id" />
                       <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
@@ -129,25 +140,30 @@ else
         </table>
 
         <div style="margin-top:10px; padding:10px; border:1px dashed #666; border-radius:10px;">
-          <b>Masraf Ekle</b>
+          <b>Gider Ekle</b>
+
           <form method="post" asp-page-handler="MasrafEkle" asp-route-id="@Model.Musteri.Id" style="margin-top:8px;">
             <input type="hidden" name="isId" value="@isItem.Id" />
+
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
               <div style="min-width:180px;">
                 <label><b>Tarih</b></label><br />
                 <input name="MasrafTarih" type="date" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" style="padding:8px; width:180px;" />
               </div>
+
               <div style="flex:1; min-width:240px;">
                 <label><b>Açıklama</b></label><br />
                 <input name="MasrafAciklama" style="padding:8px; width:100%;" />
               </div>
+
               <div style="min-width:180px;">
                 <label><b>Tutar</b></label><br />
                 <input name="MasrafTutar" type="number" step="0.01" style="padding:8px; width:180px;" />
               </div>
             </div>
+
             <div style="margin-top:10px;">
-              <button type="submit" class="btn btn-outline-dark btn-sm">Masraf Ekle</button>
+              <button type="submit" class="btn btn-outline-dark btn-sm">Gider Ekle</button>
             </div>
           </form>
         </div>

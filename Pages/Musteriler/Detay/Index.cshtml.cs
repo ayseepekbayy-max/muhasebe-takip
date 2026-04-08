@@ -124,7 +124,10 @@ public class IndexModel : PageModel
             .Include(x => x.MusteriIs)
             .FirstOrDefaultAsync(x => x.Id == masrafId);
 
-        if (masraf != null && masraf.MusteriIs != null && masraf.MusteriIs.MusteriId == id && masraf.MusteriIsId == isId)
+        if (masraf != null &&
+            masraf.MusteriIs != null &&
+            masraf.MusteriIs.MusteriId == id &&
+            masraf.MusteriIsId == isId)
         {
             _db.MusteriMasraflar.Remove(masraf);
             await _db.SaveChangesAsync();
