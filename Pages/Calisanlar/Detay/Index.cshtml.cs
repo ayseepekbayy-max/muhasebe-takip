@@ -42,7 +42,7 @@ public class IndexModel : PageModel
     public DateTime DonemBitis { get; set; }
 
     [BindProperty]
-    public DateTime Tarih { get; set; } = DateTime.Today;
+    public DateTime Tarih { get; set; } = DateTime.UtcNow.Date;
 
     [BindProperty]
     public decimal Tutar { get; set; }
@@ -61,7 +61,7 @@ public class IndexModel : PageModel
         if (Calisan == null)
             return NotFound();
 
-        Tarih = DateTime.Today;
+        Tarih = DateTime.UtcNow.Date;
         Tutar = 0;
         Aciklama = "";
 
@@ -85,11 +85,18 @@ public class IndexModel : PageModel
             return Page();
         }
 
+        var utcTarih = Tarih.Kind switch
+        {
+            DateTimeKind.Utc => Tarih.Date,
+            DateTimeKind.Local => Tarih.ToUniversalTime().Date,
+            _ => DateTime.SpecifyKind(Tarih.Date, DateTimeKind.Utc)
+        };
+
         var kayit = new CalisanAvans
         {
             FirmaId = firmaId.Value,
             CalisanId = id,
-            Tarih = Tarih,
+            Tarih = utcTarih,
             Tutar = Tutar,
             Aciklama = (Aciklama ?? "").Trim(),
             Tip = CalisanHareketTipi.Avans,
@@ -119,11 +126,18 @@ public class IndexModel : PageModel
             return Page();
         }
 
+        var utcTarih = Tarih.Kind switch
+        {
+            DateTimeKind.Utc => Tarih.Date,
+            DateTimeKind.Local => Tarih.ToUniversalTime().Date,
+            _ => DateTime.SpecifyKind(Tarih.Date, DateTimeKind.Utc)
+        };
+
         var kayit = new CalisanAvans
         {
             FirmaId = firmaId.Value,
             CalisanId = id,
-            Tarih = Tarih,
+            Tarih = utcTarih,
             Tutar = Tutar,
             Aciklama = (Aciklama ?? "").Trim(),
             Tip = CalisanHareketTipi.MaasOdeme,
@@ -148,8 +162,6 @@ public class IndexModel : PageModel
         if (calisan == null)
             return NotFound();
 
-        // ARTIK TARİHE GÖRE OTOMATİK DÖNEM YOK
-        // SADECE BUTONA BASILDIĞINDA TÜM AKTİF KAYITLAR ARŞİVLENİR
         var aktifKayitlar = await _db.CalisanAvanslari
             .Where(x =>
                 x.CalisanId == id &&
@@ -185,7 +197,7 @@ public class IndexModel : PageModel
             ToplamMaas = toplamMaas,
             ToplamAvans = toplamAvans,
             KalanMaas = kalan,
-            OdemeTarihi = DateTime.Now,
+            OdemeTarihi = DateTime.UtcNow,
             Aciklama = "Manuel arşivleme"
         };
 
@@ -231,11 +243,9 @@ public class IndexModel : PageModel
         if (Calisan == null)
             return;
 
-        // GÖRÜNTÜLEMEDE DÖNEM BİLGİSİ KALSIN İSTERSEN DURSUN
-        // AMA ARŞİVLEMEYİ ETKİLEMEZ
-        var donem = MaasDonemiHelper.GetDonem(DateTime.Today);
-        DonemBaslangic = donem.Baslangic;
-        DonemBitis = donem.Bitis;
+        var donem = MaasDonemiHelper.GetDonem(DateTime.UtcNow.Date);
+        DonemBaslangic = DateTime.SpecifyKind(donem.Baslangic, DateTimeKind.Utc);
+        DonemBitis = DateTime.SpecifyKind(donem.Bitis, DateTimeKind.Utc);
 
         Kayitlar = await _db.CalisanAvanslari
             .Where(x =>
@@ -252,8 +262,6 @@ public class IndexModel : PageModel
             .OrderByDescending(x => x.OdemeTarihi)
             .ToListAsync();
 
-        // ÜSTTEKİ ÖZETTE TÜM AKTİF KAYITLAR GÖZÜKSÜN
-        // ARTIK GÜNE/DÖNEME GÖRE AYRILMASIN
         ToplamMaas = await _db.CalisanAvanslari
             .Where(x =>
                 x.CalisanId == id &&
