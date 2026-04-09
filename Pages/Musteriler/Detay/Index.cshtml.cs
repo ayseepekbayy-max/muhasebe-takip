@@ -9,185 +9,26 @@ namespace MuhasebeTakip2.App.Pages.Musteriler.Detay;
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
-    public IndexModel(AppDbContext db) => _db = db;
+
+    public IndexModel(AppDbContext db)
+    {
+        _db = db;
+    }
 
     public Musteri? Musteri { get; set; }
-    public List<MusteriIs> Isler { get; set; } = new();
-
-    public decimal ToplamGelir { get; set; }
-    public decimal ToplamMasraf { get; set; }
-    public decimal ToplamKar => ToplamGelir - ToplamMasraf;
-
-    public Dictionary<int, decimal> IsMasrafToplamlari { get; set; } = new();
-    public Dictionary<int, decimal> IsKarToplamlari { get; set; } = new();
-
-    [BindProperty]
-    public DateTime IsTarih { get; set; } = DateTime.UtcNow.Date;
-
-    [BindProperty]
-    public string? IsAdi { get; set; }
-
-    [BindProperty]
-    public decimal IsGelir { get; set; }
-
-    [BindProperty]
-    public decimal IlkGiderTutar { get; set; }
-
-    [BindProperty]
-    public string? IlkGiderAciklama { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
-        await YukleAsync(id);
-        if (Musteri == null) return NotFound();
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
 
-        IsTarih = DateTime.UtcNow.Date;
-        IsAdi = "";
-        IsGelir = 0;
-        IlkGiderTutar = 0;
-        IlkGiderAciklama = "";
+        Musteri = await _db.Musteriler
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
+
+        if (Musteri == null)
+            return RedirectToPage("/Musteriler/Index");
 
         return Page();
-    }
-
-    public async Task<IActionResult> OnPostIsEkleAsync(int id)
-    {
-        await YukleAsync(id);
-        if (Musteri == null) return NotFound();
-
-        var ad = (IsAdi ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(ad))
-        {
-            ModelState.AddModelError("", "İş adı boş olamaz.");
-            return Page();
-        }
-
-        if (IsGelir < 0)
-        {
-            ModelState.AddModelError("", "Gelir 0'dan küçük olamaz.");
-            return Page();
-        }
-
-        if (IlkGiderTutar < 0)
-        {
-            ModelState.AddModelError("", "Gider 0'dan küçük olamaz.");
-            return Page();
-        }
-
-        var utcIsTarih = IsTarih.Kind switch
-        {
-            DateTimeKind.Utc => IsTarih.Date,
-            DateTimeKind.Local => IsTarih.ToUniversalTime().Date,
-            _ => DateTime.SpecifyKind(IsTarih.Date, DateTimeKind.Utc)
-        };
-
-        var yeniIs = new MusteriIs
-        {
-            MusteriId = id,
-            Tarih = utcIsTarih,
-            IsAdi = ad,
-            Gelir = IsGelir
-        };
-
-        _db.MusteriIsler.Add(yeniIs);
-        await _db.SaveChangesAsync();
-
-        if (IlkGiderTutar > 0)
-        {
-            _db.MusteriMasraflar.Add(new MusteriMasraf
-            {
-                MusteriIsId = yeniIs.Id,
-                Tarih = utcIsTarih,
-                Aciklama = (IlkGiderAciklama ?? "").Trim(),
-                Tutar = IlkGiderTutar
-            });
-
-            await _db.SaveChangesAsync();
-        }
-
-        return RedirectToPage(new { id });
-    }
-
-    public async Task<IActionResult> OnPostMasrafEkleAsync(
-        int id,
-        int isId,
-        DateTime MasrafTarih,
-        string? MasrafAciklama,
-        decimal MasrafTutar)
-    {
-        var musteriVar = await _db.Musteriler.AnyAsync(x => x.Id == id);
-        if (!musteriVar) return NotFound();
-
-        var isVar = await _db.MusteriIsler.AnyAsync(x => x.Id == isId && x.MusteriId == id);
-        if (!isVar) return NotFound();
-
-        if (MasrafTutar <= 0)
-        {
-            ModelState.AddModelError("", "Gider tutarı 0'dan büyük olmalı.");
-            await YukleAsync(id);
-            return Page();
-        }
-
-        var utcMasrafTarih = MasrafTarih.Kind switch
-        {
-            DateTimeKind.Utc => MasrafTarih.Date,
-            DateTimeKind.Local => MasrafTarih.ToUniversalTime().Date,
-            _ => DateTime.SpecifyKind(MasrafTarih.Date, DateTimeKind.Utc)
-        };
-
-        _db.MusteriMasraflar.Add(new MusteriMasraf
-        {
-            MusteriIsId = isId,
-            Tarih = utcMasrafTarih,
-            Aciklama = (MasrafAciklama ?? "").Trim(),
-            Tutar = MasrafTutar
-        });
-
-        await _db.SaveChangesAsync();
-        return RedirectToPage(new { id });
-    }
-
-    public async Task<IActionResult> OnPostMasrafSilAsync(int id, int isId, int masrafId)
-    {
-        var masraf = await _db.MusteriMasraflar
-            .Include(x => x.MusteriIs)
-            .FirstOrDefaultAsync(x => x.Id == masrafId);
-
-        if (masraf != null &&
-            masraf.MusteriIs != null &&
-            masraf.MusteriIs.MusteriId == id &&
-            masraf.MusteriIsId == isId)
-        {
-            _db.MusteriMasraflar.Remove(masraf);
-            await _db.SaveChangesAsync();
-        }
-
-        return RedirectToPage(new { id });
-    }
-
-    private async Task YukleAsync(int id)
-    {
-        Musteri = await _db.Musteriler.FirstOrDefaultAsync(x => x.Id == id);
-        if (Musteri == null) return;
-
-        Isler = await _db.MusteriIsler
-            .Where(x => x.MusteriId == id)
-            .Include(x => x.Masraflar)
-            .OrderByDescending(x => x.Tarih)
-            .ThenByDescending(x => x.Id)
-            .ToListAsync();
-
-        ToplamGelir = Isler.Sum(x => x.Gelir);
-        ToplamMasraf = Isler.Sum(x => x.Masraflar.Sum(m => m.Tutar));
-
-        IsMasrafToplamlari = Isler.ToDictionary(
-            x => x.Id,
-            x => x.Masraflar.Sum(m => m.Tutar)
-        );
-
-        IsKarToplamlari = Isler.ToDictionary(
-            x => x.Id,
-            x => x.Gelir - x.Masraflar.Sum(m => m.Tutar)
-        );
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
@@ -11,11 +12,16 @@ namespace MuhasebeTakip2.App.Pages.Musteriler;
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
-    public IndexModel(AppDbContext db) => _db = db;
+
+    public IndexModel(AppDbContext db)
+    {
+        _db = db;
+    }
 
     public List<Musteri> Liste { get; set; } = new();
 
     [BindProperty]
+    [ValidateNever]
     public Musteri Yeni { get; set; } = new();
 
     public string Hata { get; set; } = "";
@@ -67,6 +73,8 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostSilAsync(int id)
     {
+        ModelState.Clear();
+
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
         if (firmaId == null)
             return RedirectToPage("/Login");
@@ -94,8 +102,6 @@ public class IndexModel : PageModel
 
         _db.Musteriler.Remove(m);
         await _db.SaveChangesAsync();
-
-        Mesaj = "Müşteri silindi.";
 
         return RedirectToPage();
     }
@@ -147,7 +153,7 @@ public class IndexModel : PageModel
         workbook.SaveAs(stream);
         stream.Position = 0;
 
-        var dosyaAdi = $"musteriler_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+        var dosyaAdi = $"musteriler_{DateTime.UtcNow:yyyyMMdd_HHmmss}.xlsx";
 
         return File(
             stream.ToArray(),

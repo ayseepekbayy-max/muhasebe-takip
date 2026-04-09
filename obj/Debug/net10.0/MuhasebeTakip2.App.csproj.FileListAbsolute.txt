@@ -30,6 +30,8 @@ C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\Micro
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\Microsoft.VisualStudio.SolutionPersistence.dll
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\Mono.TextTemplating.dll
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\Newtonsoft.Json.dll
+C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\Npgsql.dll
+C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\RBush.dll
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\SixLabors.Fonts.dll
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\SQLitePCLRaw.batteries_v2.dll
@@ -221,5 +223,3 @@ C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\refin
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\MuhasebeTakip2.App.pdb
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\MuhasebeTakip2.App.genruntimeconfig.cache
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\ref\MuhasebeTakip2.App.dll
-C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\Npgsql.dll
-C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
