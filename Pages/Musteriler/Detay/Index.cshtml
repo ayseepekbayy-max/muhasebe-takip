@@ -13,7 +13,7 @@
   <a class="btn btn-outline-dark btn-sm" href="/Musteriler">← Müşteriler</a>
 </p>
 
-<div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:900px;">
+<div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:1100px;">
   <h3 style="margin-bottom:6px;">@Model.Musteri.AdSoyad</h3>
   <div><b>Telefon:</b> @Model.Musteri.Telefon</div>
   <div><b>Adres:</b> @(string.IsNullOrWhiteSpace(Model.Musteri.Adres) ? "-" : Model.Musteri.Adres)</div>
@@ -44,11 +44,12 @@
   </div>
 }
 
-<div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:900px;">
-  <h3>Yeni İş Ekle</h3>
+<div style="border:1px solid #444; border-radius:10px; padding:16px; margin:12px 0; max-width:1150px;">
+  <h3 style="margin-bottom:14px;">Yeni İş Ekle</h3>
 
   <form method="post" asp-page-handler="IsEkle" asp-route-id="@Model.Musteri.Id">
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:end;">
+
       <div style="min-width:180px;">
         <label><b>Tarih</b></label><br />
         <input asp-for="IsTarih" type="date" style="padding:8px; width:180px;" />
@@ -63,10 +64,20 @@
         <label><b>Gelir</b></label><br />
         <input asp-for="IsGelir" type="number" step="0.01" style="padding:8px; width:180px;" />
       </div>
+
+      <div style="min-width:180px;">
+        <label><b>İlk Gider</b></label><br />
+        <input asp-for="IlkGiderTutar" type="number" step="0.01" style="padding:8px; width:180px;" />
+      </div>
+
+      <div style="flex:1; min-width:260px;">
+        <label><b>Gider Açıklaması</b></label><br />
+        <input asp-for="IlkGiderAciklama" style="padding:8px; width:100%;" />
+      </div>
     </div>
 
-    <div style="margin-top:10px;">
-      <button type="submit" class="btn btn-dark btn-sm">İş Ekle</button>
+    <div style="margin-top:12px;">
+      <button type="submit" class="btn btn-dark btn-sm">İş + Gider Ekle</button>
     </div>
   </form>
 </div>
@@ -81,7 +92,7 @@ else
 {
   @foreach (var isItem in Model.Isler)
   {
-    <div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:900px;">
+    <div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:1100px;">
       <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
         <div>
           <b>@isItem.IsAdi</b>
@@ -140,7 +151,7 @@ else
         </table>
 
         <div style="margin-top:10px; padding:10px; border:1px dashed #666; border-radius:10px;">
-          <b>Gider Ekle</b>
+          <b>Ek Gider Ekle</b>
 
           <form method="post" asp-page-handler="MasrafEkle" asp-route-id="@Model.Musteri.Id" style="margin-top:8px;">
             <input type="hidden" name="isId" value="@isItem.Id" />
@@ -163,7 +174,7 @@ else
             </div>
 
             <div style="margin-top:10px;">
-              <button type="submit" class="btn btn-outline-dark btn-sm">Gider Ekle</button>
+              <button type="submit" class="btn btn-outline-dark btn-sm">Ek Gider Ekle</button>
             </div>
           </form>
         </div>

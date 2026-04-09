@@ -30,6 +30,12 @@ public class IndexModel : PageModel
     [BindProperty]
     public decimal IsGelir { get; set; }
 
+    [BindProperty]
+    public decimal IlkGiderTutar { get; set; }
+
+    [BindProperty]
+    public string? IlkGiderAciklama { get; set; }
+
     public async Task<IActionResult> OnGetAsync(int id)
     {
         await YukleAsync(id);
@@ -38,6 +44,8 @@ public class IndexModel : PageModel
         IsTarih = DateTime.UtcNow.Date;
         IsAdi = "";
         IsGelir = 0;
+        IlkGiderTutar = 0;
+        IlkGiderAciklama = "";
 
         return Page();
     }
@@ -60,6 +68,12 @@ public class IndexModel : PageModel
             return Page();
         }
 
+        if (IlkGiderTutar < 0)
+        {
+            ModelState.AddModelError("", "Gider 0'dan küçük olamaz.");
+            return Page();
+        }
+
         var utcIsTarih = IsTarih.Kind switch
         {
             DateTimeKind.Utc => IsTarih.Date,
@@ -67,15 +81,30 @@ public class IndexModel : PageModel
             _ => DateTime.SpecifyKind(IsTarih.Date, DateTimeKind.Utc)
         };
 
-        _db.MusteriIsler.Add(new MusteriIs
+        var yeniIs = new MusteriIs
         {
             MusteriId = id,
             Tarih = utcIsTarih,
             IsAdi = ad,
             Gelir = IsGelir
-        });
+        };
 
+        _db.MusteriIsler.Add(yeniIs);
         await _db.SaveChangesAsync();
+
+        if (IlkGiderTutar > 0)
+        {
+            _db.MusteriMasraflar.Add(new MusteriMasraf
+            {
+                MusteriIsId = yeniIs.Id,
+                Tarih = utcIsTarih,
+                Aciklama = (IlkGiderAciklama ?? "").Trim(),
+                Tutar = IlkGiderTutar
+            });
+
+            await _db.SaveChangesAsync();
+        }
+
         return RedirectToPage(new { id });
     }
 
@@ -94,7 +123,7 @@ public class IndexModel : PageModel
 
         if (MasrafTutar <= 0)
         {
-            ModelState.AddModelError("", "Masraf tutarı 0'dan büyük olmalı.");
+            ModelState.AddModelError("", "Gider tutarı 0'dan büyük olmalı.");
             await YukleAsync(id);
             return Page();
         }
