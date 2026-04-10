@@ -20,7 +20,6 @@ public class BantlamaModel : PageModel
 
     public bool Hesaplandi { get; set; }
 
-    public int PlakaAdet { get; set; }
     public decimal PlakaBirParcaMaliyeti { get; set; }
 
     public decimal BirParcaBantAlani { get; set; }
@@ -32,6 +31,7 @@ public class BantlamaModel : PageModel
     public decimal ToplamGenelMaliyet { get; set; }
 
     public string Hata { get; set; } = "";
+    public string Mesaj { get; set; } = "";
 
     public IActionResult OnGet()
     {
@@ -39,18 +39,14 @@ public class BantlamaModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        // Plaka'dan gelen adet varsa göster
-        PlakaAdet = HttpContext.Session.GetInt32("Maliyet_Adet") ?? 0;
+        Adet = HttpContext.Session.GetInt32($"Maliyet_{firmaId.Value}_Adet") ?? 0;
 
-        var plakaBirim = HttpContext.Session.GetString("Maliyet_PlakaBirParcaMaliyeti");
+        var plakaBirim = HttpContext.Session.GetString($"Maliyet_{firmaId.Value}_PlakaBirParcaMaliyeti");
         if (!string.IsNullOrWhiteSpace(plakaBirim))
         {
             decimal.TryParse(plakaBirim, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed);
             PlakaBirParcaMaliyeti = parsed;
         }
-
-        if (PlakaAdet > 0 && Adet == 0)
-            Adet = PlakaAdet;
 
         return Page();
     }
@@ -61,17 +57,16 @@ public class BantlamaModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        PlakaAdet = HttpContext.Session.GetInt32("Maliyet_Adet") ?? 0;
+        var sessionAdet = HttpContext.Session.GetInt32($"Maliyet_{firmaId.Value}_Adet") ?? 0;
+        if (Adet <= 0 && sessionAdet > 0)
+            Adet = sessionAdet;
 
-        var plakaBirim = HttpContext.Session.GetString("Maliyet_PlakaBirParcaMaliyeti");
+        var plakaBirim = HttpContext.Session.GetString($"Maliyet_{firmaId.Value}_PlakaBirParcaMaliyeti");
         if (!string.IsNullOrWhiteSpace(plakaBirim))
         {
             decimal.TryParse(plakaBirim, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed);
             PlakaBirParcaMaliyeti = parsed;
         }
-
-        if (PlakaAdet > 0)
-            Adet = PlakaAdet;
 
         if (ParcaEn <= 0 || ParcaBoy <= 0 || Adet <= 0 || BantMetrekareFiyati <= 0)
         {
@@ -79,14 +74,10 @@ public class BantlamaModel : PageModel
             return Page();
         }
 
-        // Bant genişliği sabit: 2.2 cm
         decimal bantGenisligiCm = 2.2m;
-
         decimal cevreCm = 2 * (ParcaEn + ParcaBoy);
 
-        // cm² -> m²
         BirParcaBantAlani = Math.Round((cevreCm * bantGenisligiCm) / 10000m, 4);
-
         ToplamBantAlani = Math.Round(BirParcaBantAlani * Adet, 4);
         ToplamBantMaliyeti = Math.Round(ToplamBantAlani * BantMetrekareFiyati, 2);
         BirParcaBantMaliyeti = Math.Round(ToplamBantMaliyeti / Adet, 2);
@@ -94,13 +85,14 @@ public class BantlamaModel : PageModel
         ToplamBirParcaMaliyet = Math.Round(PlakaBirParcaMaliyeti + BirParcaBantMaliyeti, 2);
         ToplamGenelMaliyet = Math.Round(ToplamBirParcaMaliyet * Adet, 2);
 
-        // Session'a kaydet
-        HttpContext.Session.SetString("Maliyet_BantBirParcaMaliyeti", BirParcaBantMaliyeti.ToString(CultureInfo.InvariantCulture));
-        HttpContext.Session.SetString("Maliyet_BantToplamMaliyeti", ToplamBantMaliyeti.ToString(CultureInfo.InvariantCulture));
-        HttpContext.Session.SetString("Maliyet_ToplamBirParcaMaliyet", ToplamBirParcaMaliyet.ToString(CultureInfo.InvariantCulture));
-        HttpContext.Session.SetString("Maliyet_ToplamGenelMaliyet", ToplamGenelMaliyet.ToString(CultureInfo.InvariantCulture));
+        HttpContext.Session.SetInt32($"Maliyet_{firmaId.Value}_Adet", Adet);
+        HttpContext.Session.SetString($"Maliyet_{firmaId.Value}_BantBirParcaMaliyeti", BirParcaBantMaliyeti.ToString(CultureInfo.InvariantCulture));
+        HttpContext.Session.SetString($"Maliyet_{firmaId.Value}_BantToplamMaliyeti", ToplamBantMaliyeti.ToString(CultureInfo.InvariantCulture));
+        HttpContext.Session.SetString($"Maliyet_{firmaId.Value}_ToplamBirParcaMaliyet_Tum", ToplamBirParcaMaliyet.ToString(CultureInfo.InvariantCulture));
+        HttpContext.Session.SetString($"Maliyet_{firmaId.Value}_ToplamGenelMaliyet_Tum", ToplamGenelMaliyet.ToString(CultureInfo.InvariantCulture));
 
         Hesaplandi = true;
+        Mesaj = "Bantlama hesabı kaydedildi.";
         return Page();
     }
 }

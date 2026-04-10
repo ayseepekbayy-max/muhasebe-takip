@@ -49,9 +49,7 @@ public class IndexModel : PageModel
         };
 
         foreach (var key in keys)
-        {
             HttpContext.Session.Remove(key);
-        }
 
         return RedirectToPage();
     }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Globalization;
 
 namespace MuhasebeTakip2.App.Pages.Maliyet;
 
@@ -47,6 +48,7 @@ public class PlakaModel : PageModel
     public decimal BirParcaMaliyeti { get; set; }
 
     public string Hata { get; set; } = "";
+    public string Mesaj { get; set; } = "";
 
     public IActionResult OnGet()
     {
@@ -107,14 +109,14 @@ public class PlakaModel : PageModel
         ToplamMaliyet = Math.Round(birPlakaMaliyeti * GerekliPlakaSayisi, 2);
         BirParcaMaliyeti = Math.Round(birPlakaMaliyeti / BirPlakadanCikanAdet, 2);
 
-        // Session'a kaydet
-        HttpContext.Session.SetInt32("Maliyet_Adet", Adet);
-        HttpContext.Session.SetInt32("Maliyet_BirPlakadanCikan", BirPlakadanCikanAdet);
-        HttpContext.Session.SetInt32("Maliyet_GerekliPlaka", GerekliPlakaSayisi);
-        HttpContext.Session.SetString("Maliyet_PlakaBirParcaMaliyeti", BirParcaMaliyeti.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        HttpContext.Session.SetString("Maliyet_PlakaToplamMaliyeti", ToplamMaliyet.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        HttpContext.Session.SetInt32($"Maliyet_{firmaId.Value}_Adet", Adet);
+        HttpContext.Session.SetInt32($"Maliyet_{firmaId.Value}_BirPlakadanCikan", BirPlakadanCikanAdet);
+        HttpContext.Session.SetInt32($"Maliyet_{firmaId.Value}_GerekliPlaka", GerekliPlakaSayisi);
+        HttpContext.Session.SetString($"Maliyet_{firmaId.Value}_PlakaBirParcaMaliyeti", BirParcaMaliyeti.ToString(CultureInfo.InvariantCulture));
+        HttpContext.Session.SetString($"Maliyet_{firmaId.Value}_PlakaToplamMaliyeti", ToplamMaliyet.ToString(CultureInfo.InvariantCulture));
 
         Hesaplandi = true;
+        Mesaj = "Plaka hesabı kaydedildi.";
         return Page();
     }
 }
