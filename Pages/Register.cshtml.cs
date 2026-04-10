@@ -95,7 +95,7 @@ public class RegisterModel : PageModel
                 KullaniciAdi = KullaniciAdi,
                 Sifre = PasswordHelper.Hash(Sifre),
                 FirmaId = firma.Id,
-                Rol = "Admin"
+                Rol = "Kullanici"
             };
 
             _db.Kullanicilar.Add(kullanici);
