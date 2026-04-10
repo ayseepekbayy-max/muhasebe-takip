@@ -83,42 +83,36 @@ public class IndexModel : PageModel
     }
 
     public async Task<IActionResult> OnPostSilAsync(int id)
-    {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+{
+    var firmaId = HttpContext.Session.GetInt32("FirmaId");
+    if (firmaId == null)
+        return RedirectToPage("/Login");
 
-        var calisan = await _db.Calisanlar
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
+    var calisan = await _db.Calisanlar
+        .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
 
-        if (calisan == null)
-            return RedirectToPage();
-
-        var avansVar = await _db.CalisanAvanslari
-            .AnyAsync(x => x.CalisanId == id && x.FirmaId == firmaId);
-
-        var puantajVar = await _db.CalisanPuantajlari
-            .AnyAsync(x => x.CalisanId == id && x.FirmaId == firmaId);
-
-        if (avansVar || puantajVar)
-        {
-            Hata = "Bu çalışana bağlı avans veya puantaj kaydı olduğu için silinemez.";
-
-            Liste = await _db.Calisanlar
-                .Where(x => x.FirmaId == firmaId)
-                .OrderByDescending(x => x.Id)
-                .ToListAsync();
-
-            return Page();
-        }
-
-        _db.Calisanlar.Remove(calisan);
-        await _db.SaveChangesAsync();
-
-        Mesaj = "Çalışan silindi.";
-
+    if (calisan == null)
         return RedirectToPage();
-    }
+
+    var avanslar = await _db.CalisanAvanslari
+        .Where(x => x.CalisanId == id && x.FirmaId == firmaId)
+        .ToListAsync();
+
+    var puantajlar = await _db.CalisanPuantajlari
+        .Where(x => x.CalisanId == id && x.FirmaId == firmaId)
+        .ToListAsync();
+
+    if (avanslar.Any())
+        _db.CalisanAvanslari.RemoveRange(avanslar);
+
+    if (puantajlar.Any())
+        _db.CalisanPuantajlari.RemoveRange(puantajlar);
+
+    _db.Calisanlar.Remove(calisan);
+    await _db.SaveChangesAsync();
+
+    return RedirectToPage();
+}
 
     public async Task<IActionResult> OnPostDisaAktarAsync()
     {
