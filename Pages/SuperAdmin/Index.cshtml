@@ -17,8 +17,82 @@
     </div>
 }
 
-<div style="border:1px solid #444; border-radius:12px; padding:16px; margin-top:16px; max-width:1100px;">
-    <h3>Kullanıcı Rol Yönetimi</h3>
+<div style="display:flex; gap:20px; flex-wrap:wrap; margin-top:16px;">
+
+    <div style="border:1px solid #444; border-radius:12px; padding:16px; min-width:320px;">
+        <div style="font-weight:700; margin-bottom:6px;">Toplam Firma</div>
+        <div style="font-size:24px;">@Model.Firmalar.Count</div>
+    </div>
+
+    <div style="border:1px solid #444; border-radius:12px; padding:16px; min-width:320px;">
+        <div style="font-weight:700; margin-bottom:6px;">Toplam Kullanıcı</div>
+        <div style="font-size:24px;">@Model.Kullanicilar.Count</div>
+    </div>
+
+    <div style="border:1px solid #444; border-radius:12px; padding:16px; min-width:320px;">
+        <div style="font-weight:700; margin-bottom:6px;">Aktif Firma</div>
+        <div style="font-size:24px;">@Model.Firmalar.Count(x => x.AktifMi)</div>
+    </div>
+
+</div>
+
+<div style="border:1px solid #444; border-radius:12px; padding:16px; margin-top:24px; max-width:1100px;">
+    <h3>Firma Listesi</h3>
+
+    <table style="width:100%; border-collapse:collapse; margin-top:12px;">
+        <thead>
+            <tr>
+                <th style="padding:8px; border-bottom:1px solid #555; text-align:left;">Firma Adı</th>
+                <th style="padding:8px; border-bottom:1px solid #555; text-align:left;">Durum</th>
+                <th style="padding:8px; border-bottom:1px solid #555; text-align:left;">İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Firmalar.Count == 0)
+            {
+                <tr>
+                    <td colspan="3" style="padding:8px;">Kayıtlı firma yok.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var f in Model.Firmalar)
+                {
+                    <tr>
+                        <td style="padding:8px; border-bottom:1px solid #333;">
+                            @f.FirmaAdi
+                        </td>
+
+                        <td style="padding:8px; border-bottom:1px solid #333;">
+                            @if (f.AktifMi)
+                            {
+                                <span style="color:green; font-weight:700;">Aktif</span>
+                            }
+                            else
+                            {
+                                <span style="color:red; font-weight:700;">Pasif</span>
+                            }
+                        </td>
+
+                        <td style="padding:8px; border-bottom:1px solid #333;">
+                            <form method="post" asp-page-handler="FirmaDurumDegistir" style="display:inline; margin:0;">
+                                <input type="hidden" name="id" value="@f.Id" />
+                                <button type="submit"
+                                        class="btn btn-outline-dark btn-sm"
+                                        onclick="return confirm('Firma durumu değiştirilsin mi?');">
+                                    @(f.AktifMi ? "Pasif Yap" : "Aktif Yap")
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div style="border:1px solid #444; border-radius:12px; padding:16px; margin-top:24px; max-width:1100px;">
+    <h3>Kullanıcı Listesi</h3>
 
     <table style="width:100%; border-collapse:collapse; margin-top:12px;">
         <thead>
@@ -27,13 +101,14 @@
                 <th style="padding:8px; border-bottom:1px solid #555; text-align:left;">Firma</th>
                 <th style="padding:8px; border-bottom:1px solid #555; text-align:left;">Mevcut Rol</th>
                 <th style="padding:8px; border-bottom:1px solid #555; text-align:left;">Rol Güncelle</th>
+                <th style="padding:8px; border-bottom:1px solid #555; text-align:left;">Sil</th>
             </tr>
         </thead>
         <tbody>
             @if (Model.Kullanicilar.Count == 0)
             {
                 <tr>
-                    <td colspan="4" style="padding:8px;">Kayıtlı kullanıcı yok.</td>
+                    <td colspan="5" style="padding:8px;">Kayıtlı kullanıcı yok.</td>
                 </tr>
             }
             else
@@ -102,6 +177,29 @@
                                     </button>
                                 }
                             </form>
+                        </td>
+
+                        <td style="padding:8px; border-bottom:1px solid #333;">
+                            @if (anaAdminMi)
+                            {
+                                <button type="button"
+                                        class="btn btn-outline-danger btn-sm"
+                                        disabled
+                                        title="Ana admin hesabı silinemez.">
+                                    Sil
+                                </button>
+                            }
+                            else
+                            {
+                                <form method="post" asp-page-handler="KullaniciSil" style="display:inline; margin:0;">
+                                    <input type="hidden" name="id" value="@k.Id" />
+                                    <button type="submit"
+                                            class="btn btn-outline-danger btn-sm"
+                                            onclick="return confirm('Kullanıcı silinsin mi?');">
+                                        Sil
+                                    </button>
+                                </form>
+                            }
                         </td>
                     </tr>
                 }
