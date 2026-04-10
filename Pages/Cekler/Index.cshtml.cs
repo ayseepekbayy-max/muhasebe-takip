@@ -68,49 +68,62 @@ public class IndexModel : PageModel
             return Page();
         }
 
-        YeniCek.FirmaId = firmaId.Value;
-
-        if (CekResmi != null && CekResmi.Length > 0)
+        try
         {
-            var izinliUzantilar = new[] { ".jpg", ".jpeg", ".png", ".webp", ".pdf" };
-            var ext = Path.GetExtension(CekResmi.FileName).ToLower();
+            YeniCek.FirmaId = firmaId.Value;
 
-            if (!izinliUzantilar.Contains(ext))
+            // PostgreSQL için tarihi UTC yap
+            YeniCek.Tarih = DateTime.SpecifyKind(YeniCek.Tarih.Date, DateTimeKind.Utc);
+
+            if (CekResmi != null && CekResmi.Length > 0)
             {
-                Hata = "Sadece jpg, jpeg, png, webp veya pdf dosyaları yüklenebilir.";
-                await YukleAsync(firmaId.Value);
-                return Page();
+                var izinliUzantilar = new[] { ".jpg", ".jpeg", ".png", ".webp", ".pdf" };
+                var ext = Path.GetExtension(CekResmi.FileName).ToLower();
+
+                if (!izinliUzantilar.Contains(ext))
+                {
+                    Hata = "Sadece jpg, jpeg, png, webp veya pdf dosyaları yüklenebilir.";
+                    await YukleAsync(firmaId.Value);
+                    return Page();
+                }
+
+                if (CekResmi.Length > 5 * 1024 * 1024)
+                {
+                    Hata = "Dosya boyutu en fazla 5 MB olabilir.";
+                    await YukleAsync(firmaId.Value);
+                    return Page();
+                }
+
+                var klasor = Path.Combine(_env.WebRootPath, "uploads", "cekler");
+                Directory.CreateDirectory(klasor);
+
+                var dosyaAdi = $"{Guid.NewGuid()}{ext}";
+                var tamYol = Path.Combine(klasor, dosyaAdi);
+
+                using (var stream = new FileStream(tamYol, FileMode.Create))
+                {
+                    await CekResmi.CopyToAsync(stream);
+                }
+
+                YeniCek.ResimYolu = $"/uploads/cekler/{dosyaAdi}";
             }
 
-            if (CekResmi.Length > 5 * 1024 * 1024)
-            {
-                Hata = "Dosya boyutu en fazla 5 MB olabilir.";
-                await YukleAsync(firmaId.Value);
-                return Page();
-            }
+            _db.Cekler.Add(YeniCek);
+            await _db.SaveChangesAsync();
 
-            var klasor = Path.Combine(_env.WebRootPath, "uploads", "cekler");
-            Directory.CreateDirectory(klasor);
+            Mesaj = "Çek kaydedildi.";
+            YeniCek = new Cek { Tarih = DateTime.Today };
 
-            var dosyaAdi = $"{Guid.NewGuid()}{ext}";
-            var tamYol = Path.Combine(klasor, dosyaAdi);
-
-            using (var stream = new FileStream(tamYol, FileMode.Create))
-            {
-                await CekResmi.CopyToAsync(stream);
-            }
-
-            YeniCek.ResimYolu = $"/uploads/cekler/{dosyaAdi}";
+            await YukleAsync(firmaId.Value);
+            return Page();
         }
-
-        _db.Cekler.Add(YeniCek);
-        await _db.SaveChangesAsync();
-
-        Mesaj = "Çek kaydedildi.";
-        YeniCek = new Cek { Tarih = DateTime.Today };
-
-        await YukleAsync(firmaId.Value);
-        return Page();
+        catch (Exception ex)
+        {
+            var detay = ex.InnerException?.Message ?? ex.Message;
+            Hata = "Çek kaydedilirken hata oluştu: " + detay;
+            await YukleAsync(firmaId.Value);
+            return Page();
+        }
     }
 
     public async Task<IActionResult> OnPostSilAsync(int id)
@@ -119,27 +132,37 @@ public class IndexModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        var cek = await _db.Cekler
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
-
-        if (cek != null)
+        try
         {
-            if (!string.IsNullOrWhiteSpace(cek.ResimYolu))
-            {
-                var fizikselYol = Path.Combine(
-                    _env.WebRootPath,
-                    cek.ResimYolu.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString())
-                );
+            var cek = await _db.Cekler
+                .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
 
-                if (System.IO.File.Exists(fizikselYol))
-                    System.IO.File.Delete(fizikselYol);
+            if (cek != null)
+            {
+                if (!string.IsNullOrWhiteSpace(cek.ResimYolu))
+                {
+                    var fizikselYol = Path.Combine(
+                        _env.WebRootPath,
+                        cek.ResimYolu.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString())
+                    );
+
+                    if (System.IO.File.Exists(fizikselYol))
+                        System.IO.File.Delete(fizikselYol);
+                }
+
+                _db.Cekler.Remove(cek);
+                await _db.SaveChangesAsync();
             }
 
-            _db.Cekler.Remove(cek);
-            await _db.SaveChangesAsync();
+            return RedirectToPage();
         }
-
-        return RedirectToPage();
+        catch (Exception ex)
+        {
+            var detay = ex.InnerException?.Message ?? ex.Message;
+            Hata = "Çek silinirken hata oluştu: " + detay;
+            await YukleAsync(firmaId.Value);
+            return Page();
+        }
     }
 
     private async Task YukleAsync(int firmaId)
