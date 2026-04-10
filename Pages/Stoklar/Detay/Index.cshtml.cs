@@ -79,7 +79,8 @@ public class IndexModel : PageModel
         }
         catch (Exception ex)
         {
-            Hata = "Stok giriş kaydı eklenirken hata oluştu: " + ex.Message;
+            var detay = ex.InnerException?.Message ?? ex.Message;
+            Hata = "Stok giriş kaydı eklenirken hata oluştu: " + detay;
             await YukleAsync(id, firmaId.Value);
             return Page();
         }
@@ -124,7 +125,8 @@ public class IndexModel : PageModel
         }
         catch (Exception ex)
         {
-            Hata = "Stok çıkış kaydı eklenirken hata oluştu: " + ex.Message;
+            var detay = ex.InnerException?.Message ?? ex.Message;
+            Hata = "Stok giriş kaydı eklenirken hata oluştu: " + detay;
             await YukleAsync(id, firmaId.Value);
             return Page();
         }
@@ -155,7 +157,8 @@ public class IndexModel : PageModel
         }
         catch (Exception ex)
         {
-            Hata = "Hareket silinirken hata oluştu: " + ex.Message;
+            var detay = ex.InnerException?.Message ?? ex.Message;
+            Hata = "Stok giriş kaydı eklenirken hata oluştu: " + detay;
             await YukleAsync(id, firmaId.Value);
             return Page();
         }
