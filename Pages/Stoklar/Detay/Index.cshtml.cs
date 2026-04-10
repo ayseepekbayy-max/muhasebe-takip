@@ -47,90 +47,94 @@ public class IndexModel : PageModel
     }
 
     public async Task<IActionResult> OnPostGirisAsync(int id)
+{
+    var firmaId = HttpContext.Session.GetInt32("FirmaId");
+    if (firmaId == null)
+        return RedirectToPage("/Login");
+
+    await YukleAsync(id, firmaId.Value);
+    if (Urun == null)
+        return NotFound();
+
+    if (Miktar <= 0)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
-
-        await YukleAsync(id, firmaId.Value);
-        if (Urun == null)
-            return NotFound();
-
-        if (Miktar <= 0)
-        {
-            ModelState.AddModelError("", "Miktar 0'dan büyük olmalı.");
-            return Page();
-        }
-
-        try
-        {
-            _db.StokHareketleri.Add(new StokHareket
-            {
-                FirmaId = firmaId.Value,
-                StokUrunId = id,
-                Tarih = Tarih,
-                Tip = StokHareketTipi.Giris,
-                Miktar = Miktar,
-                Aciklama = (Aciklama ?? "").Trim()
-            });
-
-            await _db.SaveChangesAsync();
-            return RedirectToPage(new { id });
-        }
-        catch (Exception ex)
-        {
-            var detay = ex.InnerException?.Message ?? ex.Message;
-            Hata = "Stok giriş kaydı eklenirken hata oluştu: " + detay;
-            await YukleAsync(id, firmaId.Value);
-            return Page();
-        }
+        ModelState.AddModelError("", "Miktar 0'dan büyük olmalı.");
+        return Page();
     }
+
+    try
+    {
+        var kayitTarihi = DateTime.SpecifyKind(Tarih.Date, DateTimeKind.Utc);
+
+        _db.StokHareketleri.Add(new StokHareket
+        {
+            FirmaId = firmaId.Value,
+            StokUrunId = id,
+            Tarih = kayitTarihi,
+            Tip = StokHareketTipi.Giris,
+            Miktar = Miktar,
+            Aciklama = (Aciklama ?? "").Trim()
+        });
+
+        await _db.SaveChangesAsync();
+        return RedirectToPage(new { id });
+    }
+    catch (Exception ex)
+    {
+        var detay = ex.InnerException?.Message ?? ex.Message;
+        Hata = "Stok giriş kaydı eklenirken hata oluştu: " + detay;
+        await YukleAsync(id, firmaId.Value);
+        return Page();
+    }
+}
 
     public async Task<IActionResult> OnPostCikisAsync(int id)
+{
+    var firmaId = HttpContext.Session.GetInt32("FirmaId");
+    if (firmaId == null)
+        return RedirectToPage("/Login");
+
+    await YukleAsync(id, firmaId.Value);
+    if (Urun == null)
+        return NotFound();
+
+    if (Miktar <= 0)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
-
-        await YukleAsync(id, firmaId.Value);
-        if (Urun == null)
-            return NotFound();
-
-        if (Miktar <= 0)
-        {
-            ModelState.AddModelError("", "Miktar 0'dan büyük olmalı.");
-            return Page();
-        }
-
-        if (Stok < Miktar)
-        {
-            ModelState.AddModelError("", "Mevcut stoktan fazla çıkış yapılamaz.");
-            return Page();
-        }
-
-        try
-        {
-            _db.StokHareketleri.Add(new StokHareket
-            {
-                FirmaId = firmaId.Value,
-                StokUrunId = id,
-                Tarih = Tarih,
-                Tip = StokHareketTipi.Cikis,
-                Miktar = Miktar,
-                Aciklama = (Aciklama ?? "").Trim()
-            });
-
-            await _db.SaveChangesAsync();
-            return RedirectToPage(new { id });
-        }
-        catch (Exception ex)
-        {
-            var detay = ex.InnerException?.Message ?? ex.Message;
-            Hata = "Stok giriş kaydı eklenirken hata oluştu: " + detay;
-            await YukleAsync(id, firmaId.Value);
-            return Page();
-        }
+        ModelState.AddModelError("", "Miktar 0'dan büyük olmalı.");
+        return Page();
     }
+
+    if (Stok < Miktar)
+    {
+        ModelState.AddModelError("", "Mevcut stoktan fazla çıkış yapılamaz.");
+        return Page();
+    }
+
+    try
+    {
+        var kayitTarihi = DateTime.SpecifyKind(Tarih.Date, DateTimeKind.Utc);
+
+        _db.StokHareketleri.Add(new StokHareket
+        {
+            FirmaId = firmaId.Value,
+            StokUrunId = id,
+            Tarih = kayitTarihi,
+            Tip = StokHareketTipi.Cikis,
+            Miktar = Miktar,
+            Aciklama = (Aciklama ?? "").Trim()
+        });
+
+        await _db.SaveChangesAsync();
+        return RedirectToPage(new { id });
+    }
+    catch (Exception ex)
+    {
+        var detay = ex.InnerException?.Message ?? ex.Message;
+        Hata = "Stok çıkış kaydı eklenirken hata oluştu: " + detay;
+        await YukleAsync(id, firmaId.Value);
+        return Page();
+    }
+}
 
     public async Task<IActionResult> OnPostSilAsync(int id, int id2)
     {
