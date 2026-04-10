@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using Microsoft.AspNetCore.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,9 +10,11 @@ builder.Services.AddRazorPages();
 
 builder.Services.AddSession(options =>
 {
-    options.Cookie.Name = ".MuhasebeTakip2.Session.v2";
+    options.Cookie.Name = ".MuhasebeTakip2.Session";
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.IdleTimeout = TimeSpan.FromHours(8);
 });
 
