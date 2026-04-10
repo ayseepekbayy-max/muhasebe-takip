@@ -70,10 +70,7 @@ public class IndexModel : PageModel
 
         try
         {
-            YeniCek.FirmaId = firmaId.Value;
-
-            // PostgreSQL için tarihi UTC yap
-            YeniCek.Tarih = DateTime.SpecifyKind(YeniCek.Tarih.Date, DateTimeKind.Utc);
+            string? resimYolu = null;
 
             if (CekResmi != null && CekResmi.Length > 0)
             {
@@ -105,10 +102,29 @@ public class IndexModel : PageModel
                     await CekResmi.CopyToAsync(stream);
                 }
 
-                YeniCek.ResimYolu = $"/uploads/cekler/{dosyaAdi}";
+                resimYolu = $"/uploads/cekler/{dosyaAdi}";
             }
 
-            _db.Cekler.Add(YeniCek);
+            var utcTarih = new DateTime(
+                YeniCek.Tarih.Year,
+                YeniCek.Tarih.Month,
+                YeniCek.Tarih.Day,
+                0, 0, 0,
+                DateTimeKind.Utc);
+
+             var kayit = new Cek
+                {
+                    FirmaId = firmaId.Value,
+                    No = YeniCek.No,
+                    Tarih = utcTarih,
+                    Tutar = YeniCek.Tutar,
+                    Tip = YeniCek.Tip,
+                    Aciklama = YeniCek.Aciklama ?? "",
+                    ResimYolu = resimYolu,
+                    OlusturmaTarihi = DateTime.UtcNow
+                };
+
+            _db.Cekler.Add(kayit);
             await _db.SaveChangesAsync();
 
             Mesaj = "Çek kaydedildi.";

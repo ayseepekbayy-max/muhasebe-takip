@@ -30,5 +30,5 @@ public class Cek
     [MaxLength(300)]
     public string? ResimYolu { get; set; }
 
-    public DateTime OlusturmaTarihi { get; set; } = DateTime.Now;
+    public DateTime OlusturmaTarihi { get; set; } = DateTime.UtcNow;
 }
