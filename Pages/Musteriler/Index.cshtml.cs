@@ -79,28 +79,36 @@ public class IndexModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        var m = await _db.Musteriler
+        var musteri = await _db.Musteriler
             .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
 
-        if (m == null)
+        if (musteri == null)
             return RedirectToPage();
 
-        var isVar = await _db.MusteriIsler
-            .AnyAsync(x => x.MusteriId == id && x.FirmaId == firmaId);
+        // 🔥 1. Müşteriye bağlı işleri al
+        var isler = await _db.MusteriIsler
+            .Where(x => x.MusteriId == id && x.FirmaId == firmaId)
+            .ToListAsync();
 
-        if (isVar)
+        var isIdleri = isler.Select(x => x.Id).ToList();
+
+        if (isIdleri.Any())
         {
-            Hata = "Bu müşteriye bağlı iş kaydı olduğu için silinemez.";
-
-            Liste = await _db.Musteriler
-                .Where(x => x.FirmaId == firmaId)
-                .OrderBy(x => x.AdSoyad)
+            // 🔥 2. İşlere bağlı masrafları sil
+            var masraflar = await _db.MusteriMasraflar
+                .Where(x => isIdleri.Contains(x.MusteriIsId) && x.FirmaId == firmaId)
                 .ToListAsync();
 
-            return Page();
+            if (masraflar.Any())
+                _db.MusteriMasraflar.RemoveRange(masraflar);
+
+            // 🔥 3. İşleri sil
+            _db.MusteriIsler.RemoveRange(isler);
         }
 
-        _db.Musteriler.Remove(m);
+        // 🔥 4. Müşteriyi sil
+        _db.Musteriler.Remove(musteri);
+
         await _db.SaveChangesAsync();
 
         return RedirectToPage();

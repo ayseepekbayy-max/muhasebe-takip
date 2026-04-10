@@ -94,10 +94,10 @@
                             Detay
                         </a>
 
-                        <form method="post"
-                              asp-page-handler="Sil"
-                              style="display:inline;"
-                              onsubmit="return confirm('Müşteri silinsin mi?');">
+                          <form method="post"
+                          asp-page-handler="Sil"
+                          style="display:inline;"
+                          onsubmit="return confirm('Bu müşteri silinirse bağlı işler ve masraflar da silinecek. Devam edilsin mi?');">
 
                             <input type="hidden" name="id" value="@m.Id" />
                             <button type="submit" class="btn btn-outline-danger btn-sm">
