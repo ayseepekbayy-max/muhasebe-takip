@@ -18,6 +18,8 @@ public class IndexModel : PageModel
     public decimal ToplamCikis { get; set; }
     public decimal Stok => ToplamGiris - ToplamCikis;
 
+    public string Hata { get; set; } = "";
+
     [BindProperty]
     public DateTime Tarih { get; set; } = DateTime.Today;
 
@@ -60,18 +62,27 @@ public class IndexModel : PageModel
             return Page();
         }
 
-        _db.StokHareketleri.Add(new StokHareket
+        try
         {
-            FirmaId = firmaId.Value,
-            StokUrunId = id,
-            Tarih = Tarih,
-            Tip = StokHareketTipi.Giris,
-            Miktar = Miktar,
-            Aciklama = (Aciklama ?? "").Trim()
-        });
+            _db.StokHareketleri.Add(new StokHareket
+            {
+                FirmaId = firmaId.Value,
+                StokUrunId = id,
+                Tarih = Tarih,
+                Tip = StokHareketTipi.Giris,
+                Miktar = Miktar,
+                Aciklama = (Aciklama ?? "").Trim()
+            });
 
-        await _db.SaveChangesAsync();
-        return RedirectToPage(new { id });
+            await _db.SaveChangesAsync();
+            return RedirectToPage(new { id });
+        }
+        catch (Exception ex)
+        {
+            Hata = "Stok giriş kaydı eklenirken hata oluştu: " + ex.Message;
+            await YukleAsync(id, firmaId.Value);
+            return Page();
+        }
     }
 
     public async Task<IActionResult> OnPostCikisAsync(int id)
@@ -96,18 +107,27 @@ public class IndexModel : PageModel
             return Page();
         }
 
-        _db.StokHareketleri.Add(new StokHareket
+        try
         {
-            FirmaId = firmaId.Value,
-            StokUrunId = id,
-            Tarih = Tarih,
-            Tip = StokHareketTipi.Cikis,
-            Miktar = Miktar,
-            Aciklama = (Aciklama ?? "").Trim()
-        });
+            _db.StokHareketleri.Add(new StokHareket
+            {
+                FirmaId = firmaId.Value,
+                StokUrunId = id,
+                Tarih = Tarih,
+                Tip = StokHareketTipi.Cikis,
+                Miktar = Miktar,
+                Aciklama = (Aciklama ?? "").Trim()
+            });
 
-        await _db.SaveChangesAsync();
-        return RedirectToPage(new { id });
+            await _db.SaveChangesAsync();
+            return RedirectToPage(new { id });
+        }
+        catch (Exception ex)
+        {
+            Hata = "Stok çıkış kaydı eklenirken hata oluştu: " + ex.Message;
+            await YukleAsync(id, firmaId.Value);
+            return Page();
+        }
     }
 
     public async Task<IActionResult> OnPostSilAsync(int id, int id2)
@@ -120,16 +140,25 @@ public class IndexModel : PageModel
         if (Urun == null)
             return NotFound();
 
-        var h = await _db.StokHareketleri
-            .FirstOrDefaultAsync(x => x.Id == id2 && x.StokUrunId == id && x.FirmaId == firmaId.Value);
-
-        if (h != null)
+        try
         {
-            _db.StokHareketleri.Remove(h);
-            await _db.SaveChangesAsync();
-        }
+            var h = await _db.StokHareketleri
+                .FirstOrDefaultAsync(x => x.Id == id2 && x.StokUrunId == id && x.FirmaId == firmaId.Value);
 
-        return RedirectToPage(new { id });
+            if (h != null)
+            {
+                _db.StokHareketleri.Remove(h);
+                await _db.SaveChangesAsync();
+            }
+
+            return RedirectToPage(new { id });
+        }
+        catch (Exception ex)
+        {
+            Hata = "Hareket silinirken hata oluştu: " + ex.Message;
+            await YukleAsync(id, firmaId.Value);
+            return Page();
+        }
     }
 
     private async Task YukleAsync(int id, int firmaId)

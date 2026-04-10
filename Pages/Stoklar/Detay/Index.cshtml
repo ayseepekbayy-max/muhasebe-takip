@@ -32,6 +32,13 @@
   </div>
 </div>
 
+@if (!string.IsNullOrWhiteSpace(Model.Hata))
+{
+  <div style="color:red; margin:10px 0;">
+    @Model.Hata
+  </div>
+}
+
 @if (!ViewData.ModelState.IsValid)
 {
   <div style="color:red; margin:10px 0;">
