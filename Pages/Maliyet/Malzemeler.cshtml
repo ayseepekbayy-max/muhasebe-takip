@@ -36,17 +36,17 @@
 
             <div style="margin-bottom:10px;">
                 <label><b>1 Parça İçin Kullanım Miktarı</b></label><br />
-                <input asp-for="BirParcaKullanimMiktari" style="width:100%; padding:8px;" />
+                <input asp-for="BirParcaKullanimMiktari" type="number" step="0.01" style="width:100%; padding:8px;" />
             </div>
 
             <div style="margin-bottom:10px;">
                 <label><b>1 Parça Malzeme Maliyeti</b></label><br />
-                <input asp-for="BirParcaMalzemeMaliyeti" style="width:100%; padding:8px;" />
+                <input asp-for="BirParcaMalzemeMaliyeti" type="number" step="0.01" style="width:100%; padding:8px;" />
             </div>
 
             <div style="margin-bottom:10px;">
-                <label><b>Üretim Adedi (Plaka'dan gelir)</b></label><br />
-                <input asp-for="Adet" style="width:100%; padding:8px;" readonly />
+                <label><b>Üretim Adedi</b></label><br />
+                <input asp-for="Adet" type="number" min="1" step="1" style="width:100%; padding:8px;" />
             </div>
 
             <button type="submit" class="btn btn-dark btn-sm">Hesapla</button>

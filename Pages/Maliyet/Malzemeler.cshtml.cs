@@ -53,8 +53,6 @@ public class MalzemelerModel : PageModel
         await YukleStoklariAsync(firmaId.Value);
         SessiondanMaliyetleriYukle(firmaId.Value);
 
-        Adet = HttpContext.Session.GetInt32($"Maliyet_{firmaId.Value}_Adet") ?? 0;
-
         return Page();
     }
 
@@ -66,8 +64,6 @@ public class MalzemelerModel : PageModel
 
         await YukleStoklariAsync(firmaId.Value);
         SessiondanMaliyetleriYukle(firmaId.Value);
-
-        Adet = HttpContext.Session.GetInt32($"Maliyet_{firmaId.Value}_Adet") ?? 0;
 
         if (SeciliStokUrunId == null || SeciliStokUrunId <= 0)
         {
@@ -88,6 +84,8 @@ public class MalzemelerModel : PageModel
             PlakaBirParcaMaliyeti + BantBirParcaMaliyeti + BirParcaMalzemeMaliyeti, 2);
 
         ToplamGenelMaliyet = Math.Round(ToplamBirParcaMaliyet * Adet, 2);
+
+        HttpContext.Session.SetInt32($"Maliyet_{firmaId.Value}_Adet", Adet);
 
         HttpContext.Session.SetString(
             $"Maliyet_{firmaId.Value}_MalzemeBirParcaMaliyeti",
@@ -117,8 +115,6 @@ public class MalzemelerModel : PageModel
 
         await YukleStoklariAsync(firmaId.Value);
         SessiondanMaliyetleriYukle(firmaId.Value);
-
-        Adet = HttpContext.Session.GetInt32($"Maliyet_{firmaId.Value}_Adet") ?? 0;
 
         if (SeciliStokUrunId == null || SeciliStokUrunId <= 0)
         {
@@ -162,6 +158,7 @@ public class MalzemelerModel : PageModel
         if (mevcutStok < ToplamKullanilacakMiktar)
         {
             Hata = $"Yetersiz stok! Mevcut: {mevcutStok}";
+            Hesaplandi = true;
             return Page();
         }
 
@@ -169,7 +166,7 @@ public class MalzemelerModel : PageModel
         {
             FirmaId = firmaId.Value,
             StokUrunId = urun.Id,
-            Tarih = DateTime.Today,
+            Tarih = DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc),
             Tip = StokHareketTipi.Cikis,
             Miktar = ToplamKullanilacakMiktar,
             Aciklama = "Malzemeler bölümünden otomatik stok düşümü"
@@ -177,6 +174,8 @@ public class MalzemelerModel : PageModel
 
         _db.StokHareketleri.Add(hareket);
         await _db.SaveChangesAsync();
+
+        HttpContext.Session.SetInt32($"Maliyet_{firmaId.Value}_Adet", Adet);
 
         Hesaplandi = true;
         Mesaj = "Stoktan düşüm başarıyla yapıldı.";
