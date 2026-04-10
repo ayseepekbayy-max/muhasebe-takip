@@ -5,81 +5,146 @@
     ViewData["Title"] = "Kayıt Ol";
 }
 
-<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;">
-    <div style="width:100%; max-width:460px; background:#ffffff; padding:36px; border-radius:24px; box-shadow:0 18px 50px rgba(15,23,42,0.10); border:1px solid #eaecf0;">
+<div style="
+    min-height:100vh; 
+    display:flex; 
+    align-items:center; 
+    justify-content:center; 
+    background: linear-gradient(to bottom, #ffffff 0%, #ffe3c5 50%, #f2a45a 100%);
+    background-attachment: fixed;
+    padding:30px;
+">
 
-        <div style="text-align:center; margin-bottom:28px;">
-            <div style="font-size:30px; font-weight:800; color:#111827; letter-spacing:0.5px; margin-bottom:8px;">
-                ANK
+    <div style="
+        width:430px; 
+        background:rgba(255,255,255,0.97); 
+        border-radius:20px; 
+        padding:34px; 
+        box-shadow:0 18px 40px rgba(0,0,0,0.12); 
+        border:1px solid #f0e1d4;
+    ">
+
+        <div style="text-align:center; margin-bottom:26px;">
+            <div style="font-size:28px; font-weight:800; color:#8a4d1a;">
+                ANK Mobilya Sistemleri
             </div>
-            <h2 style="margin:0 0 8px 0; font-weight:700; color:#111827;">Kayıt Ol</h2>
-            <div style="color:#667085; font-size:15px;">Yeni firma hesabınızı oluşturun</div>
+
+            <div style="font-size:18px; font-weight:700; color:#6a3b12; margin-top:6px;">
+                Kayıt Ol
+            </div>
+
+            <div style="margin-top:10px; font-size:14px; color:#777;">
+                Yeni firma hesabınızı oluşturun
+            </div>
         </div>
 
         @if (!string.IsNullOrEmpty(Model.Hata))
         {
-            <div style="background:#fff1f2; color:#b42318; border:1px solid #fecdd3; padding:12px; border-radius:12px; margin-bottom:18px;">
+            <div style="
+                color:#a40000; 
+                border:1px solid #e0b4b4; 
+                background:#fff3f3; 
+                padding:10px 12px; 
+                border-radius:10px; 
+                margin-bottom:16px;">
                 @Model.Hata
             </div>
         }
 
         <form method="post">
+
             <div style="margin-bottom:16px;">
-                <label asp-for="FirmaAdi" style="display:block; margin-bottom:6px; font-weight:600; color:#344054;">Firma Adı</label>
+                <label asp-for="FirmaAdi" style="display:block; font-weight:700; margin-bottom:6px; color:#6a3b12;">
+                    Firma Adı
+                </label>
+
                 <input asp-for="FirmaAdi"
-                       style="width:100%; padding:13px 14px; border:1px solid #d0d5dd; border-radius:12px; font-size:15px; outline:none; background:#fff;" />
+                       style="width:100%; padding:12px; border:1px solid #d6c3b3; border-radius:12px;" />
             </div>
 
             <div style="margin-bottom:16px;">
-                <label asp-for="KullaniciAdi" style="display:block; margin-bottom:6px; font-weight:600; color:#344054;">Kullanıcı Adı</label>
+                <label asp-for="KullaniciAdi" style="display:block; font-weight:700; margin-bottom:6px; color:#6a3b12;">
+                    Kullanıcı Adı
+                </label>
+
                 <input asp-for="KullaniciAdi"
-                       style="width:100%; padding:13px 14px; border:1px solid #d0d5dd; border-radius:12px; font-size:15px; outline:none; background:#fff;" />
+                       style="width:100%; padding:12px; border:1px solid #d6c3b3; border-radius:12px;" />
             </div>
 
             <div style="margin-bottom:20px;">
-                <label asp-for="Sifre" style="display:block; margin-bottom:6px; font-weight:600; color:#344054;">Şifre</label>
+                <label asp-for="Sifre" style="display:block; font-weight:700; margin-bottom:6px; color:#6a3b12;">
+                    Şifre
+                </label>
 
-                <div style="position:relative;">
-                    <input asp-for="Sifre" id="registerPassword" type="password"
-                           style="width:100%; padding:13px 44px 13px 14px; border:1px solid #d0d5dd; border-radius:12px; font-size:15px; outline:none; background:#fff;" />
+                <div style="display:flex; gap:8px;">
+                    <input asp-for="Sifre"
+                           id="registerPassword"
+                           type="password"
+                           style="flex:1; padding:12px; border:1px solid #d6c3b3; border-radius:12px;" />
 
                     <button type="button"
-                            onclick="togglePassword('registerPassword', 'registerToggleText')"
-                            style="position:absolute; right:10px; top:50%; transform:translateY(-50%); border:none; background:none; color:#475467; font-weight:600; font-size:13px; cursor:pointer;">
+                            onclick="togglePassword()"
+                            style="
+                                padding:12px 14px; 
+                                border:1px solid #d6c3b3; 
+                                border-radius:12px; 
+                                background:#fff7ef; 
+                                color:#8a4d1a; 
+                                font-weight:700;">
                         <span id="registerToggleText">Göster</span>
                     </button>
                 </div>
             </div>
 
-            <button type="submit"
-                    style="width:100%; padding:13px; border:none; border-radius:12px; background:#111827; color:white; font-size:16px; font-weight:700; cursor:pointer; margin-bottom:14px;">
-                Kayıt Ol
-            </button>
+            <div style="display:flex; gap:10px; margin-top:10px;">
 
-            <a href="/Login"
-               style="display:block; width:100%; text-align:center; padding:13px; border:1px solid #d0d5dd; border-radius:12px; text-decoration:none; color:#1f2937; font-weight:600; background:#fff;">
-                Giriş Sayfasına Dön
-            </a>
+                <button type="submit"
+                        style="
+                            flex:1;
+                            padding:13px; 
+                            border:none; 
+                            border-radius:14px; 
+                            background:#d67a2f; 
+                            color:white; 
+                            font-size:16px; 
+                            font-weight:800;">
+                    Kayıt Ol
+                </button>
+
+                <a href="/Login"
+                   style="
+                        flex:1;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        padding:13px;
+                        border-radius:14px;
+                        background:#8a4d1a;
+                        color:white;
+                        font-size:16px;
+                        font-weight:800;
+                        text-decoration:none;">
+                    Giriş Yap
+                </a>
+
+            </div>
+
         </form>
-
-        <div style="text-align:center; margin-top:22px; color:#98a2b3; font-size:13px;">
-            Kayıt sonrası giriş yaparak devam edin
-        </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        function togglePassword(inputId, textId) {
-            const input = document.getElementById(inputId);
-            const text = document.getElementById(textId);
+        function togglePassword() {
+            var input = document.getElementById("registerPassword");
+            var text = document.getElementById("registerToggleText");
 
             if (input.type === "password") {
                 input.type = "text";
-                text.textContent = "Gizle";
+                text.innerText = "Gizle";
             } else {
                 input.type = "password";
-                text.textContent = "Göster";
+                text.innerText = "Göster";
             }
         }
     </script>
