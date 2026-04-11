@@ -1,14 +1,14 @@
 :root {
-    --bg-main: #f8fafc;
-    --bg-soft: #eef2ff;
+    --bg-main: #f1f5f9;
+    --bg-soft: #f8fafc;
     --card-bg: #ffffff;
 
     --primary: #6366f1;
     --primary-hover: #4f46e5;
-    --primary-dark: #312e81;
+    --primary-dark: #1e293b;
 
-    --nav-start: #312e81;
-    --nav-end: #4338ca;
+    --nav-start: #1e293b;
+    --nav-end: #334155;
 
     --text-main: #0f172a;
     --text-soft: #64748b;
@@ -19,6 +19,176 @@
 
     --danger: #dc2626;
     --success: #16a34a;
+}
+
+html, body {
+    background: var(--bg-main);
+    color: var(--text-main);
+}
+
+/* Navbar */
+.app-navbar {
+    background: linear-gradient(90deg, var(--nav-start), var(--nav-end)) !important;
+    border-bottom: none !important;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.10);
+}
+
+.app-brand {
+    color: var(--text-white) !important;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+}
+
+.app-nav-list .nav-link {
+    color: rgba(255, 255, 255, 0.92) !important;
+    font-weight: 600;
+    border-radius: 12px;
+    padding: 8px 12px !important;
+    transition: all 0.2s ease;
+}
+
+.app-nav-list .nav-link:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff !important;
+}
+
+.app-firma-badge {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.app-top-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 18px;
+    border-radius: 14px;
+    text-decoration: none;
+    font-weight: 700;
+    background: #ffffff;
+    color: var(--primary-dark);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    transition: all 0.2s ease;
+}
+
+.app-top-btn:hover {
+    background: #eef2ff;
+    color: var(--primary-dark);
+}
+
+.app-top-btn-danger {
+    background: rgba(15, 23, 42, 0.18);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.app-top-btn-danger:hover {
+    background: rgba(15, 23, 42, 0.28);
+    color: #ffffff;
+}
+
+.app-main-container {
+    padding-top: 8px;
+}
+
+.app-footer {
+    background: transparent;
+    color: var(--text-soft) !important;
+}
+
+h1, h2, h3, h4, h5 {
+    color: var(--primary-dark);
+    font-weight: 800;
+}
+
+/* Butonlar */
+.btn-dark,
+.btn-primary {
+    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+    border: none !important;
+    color: #ffffff !important;
+    border-radius: 12px !important;
+    font-weight: 700;
+}
+
+.btn-dark:hover,
+.btn-primary:hover {
+    background: linear-gradient(135deg, #4f46e5, #4338ca) !important;
+}
+
+.btn-outline-dark,
+.btn-outline-primary {
+    color: var(--primary-dark) !important;
+    border-color: var(--border-soft) !important;
+    background: #ffffff !important;
+    border-radius: 12px !important;
+    font-weight: 700;
+}
+
+.btn-outline-dark:hover,
+.btn-outline-primary:hover {
+    background: #eef2ff !important;
+    color: var(--primary-dark) !important;
+    border-color: #c7d2fe !important;
+}
+
+.btn-outline-danger {
+    border-radius: 12px !important;
+    font-weight: 700;
+}
+
+/* Form elemanları */
+input,
+select,
+textarea {
+    border: 1px solid var(--border-soft) !important;
+    border-radius: 12px !important;
+    color: var(--text-main) !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: #a5b4fc !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
+}
+
+/* Genel kart stili */
+.theme-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-soft);
+    border-radius: 18px;
+    box-shadow: var(--shadow-soft);
+}
+
+.theme-panel {
+    background: #ffffff;
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    box-shadow: var(--shadow-soft);
+}
+
+/* Tablolar */
+table {
+    background: #ffffff;
+}
+
+th {
+    color: var(--primary-dark);
+    background: #f8fafc;
+}
+
+/* Linkler */
+a {
+    transition: all 0.2s ease;
 }
 
 html, body {
@@ -98,11 +268,7 @@ h1, h2, h3, h4, h5 {
 
 .btn-dark,
 .btn-primary {
-    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
-    border: none !important;
-    color: #ffffff !important;
-    border-radius: 12px !important;
-    font-weight: 700;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
 }
 
 .btn-dark:hover,
