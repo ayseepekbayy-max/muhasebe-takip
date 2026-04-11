@@ -61,7 +61,7 @@
 
                 <tr style="border-bottom:1px solid #e5e7eb;">
                     <td style="padding:10px;">@gun.Tarih.ToString("dd.MM.yyyy")</td>
-                    <td>@gun.Tarih.ToString("dddd")</td>
+                    <td>@gun.Tarih.ToString("dddd", new System.Globalization.CultureInfo("tr-TR"))</td>
                     <td style="padding:8px;">
                         @if (haftaSonu)
                         {

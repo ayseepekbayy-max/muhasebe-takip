@@ -164,7 +164,7 @@ public class PuantajModel : PageModel
 
             ws.Cell(row, 1).Value = gun.Tarih;
             ws.Cell(row, 1).Style.DateFormat.Format = "dd.MM.yyyy";
-            ws.Cell(row, 2).Value = gun.Tarih.ToString("dddd");
+            ws.Cell(row, 2).Value = gun.Tarih.ToString("dddd", new System.Globalization.CultureInfo("tr-TR"));
             ws.Cell(row, 3).Value = durumText;
             ws.Cell(row, 4).Value = gun.Not ?? "";
             row++;
