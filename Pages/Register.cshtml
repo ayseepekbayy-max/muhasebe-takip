@@ -10,7 +10,7 @@
     display:flex; 
     align-items:center; 
     justify-content:center; 
-    background: linear-gradient(to bottom, #ffffff 0%, #ffe3c5 50%, #f2a45a 100%);
+    background: linear-gradient(to bottom, #f8fbff 0%, #dbeafe 55%, #bfdbfe 100%);
     background-attachment: fixed;
     padding:30px;
 ">
@@ -20,20 +20,20 @@
         background:rgba(255,255,255,0.97); 
         border-radius:20px; 
         padding:34px; 
-        box-shadow:0 18px 40px rgba(0,0,0,0.12); 
-        border:1px solid #f0e1d4;
+        box-shadow:0 18px 40px rgba(15,23,42,0.12); 
+        border:1px solid #dbe4ee;
     ">
 
         <div style="text-align:center; margin-bottom:26px;">
-            <div style="font-size:28px; font-weight:800; color:#8a4d1a;">
+            <div style="font-size:28px; font-weight:800; color:#1e3a8a;">
                 ANK Mobilya Sistemleri
             </div>
 
-            <div style="font-size:18px; font-weight:700; color:#6a3b12; margin-top:6px;">
+            <div style="font-size:18px; font-weight:700; color:#334155; margin-top:6px;">
                 Kayıt Ol
             </div>
 
-            <div style="margin-top:10px; font-size:14px; color:#777;">
+            <div style="margin-top:10px; font-size:14px; color:#64748b;">
                 Yeni firma hesabınızı oluşturun
             </div>
         </div>
@@ -41,9 +41,9 @@
         @if (!string.IsNullOrEmpty(Model.Hata))
         {
             <div style="
-                color:#a40000; 
-                border:1px solid #e0b4b4; 
-                background:#fff3f3; 
+                color:#b42318; 
+                border:1px solid #fecaca; 
+                background:#fef2f2; 
                 padding:10px 12px; 
                 border-radius:10px; 
                 margin-bottom:16px;">
@@ -54,25 +54,25 @@
         <form method="post">
 
             <div style="margin-bottom:16px;">
-                <label asp-for="FirmaAdi" style="display:block; font-weight:700; margin-bottom:6px; color:#6a3b12;">
+                <label asp-for="FirmaAdi" style="display:block; font-weight:700; margin-bottom:6px; color:#334155;">
                     Firma Adı
                 </label>
 
                 <input asp-for="FirmaAdi"
-                       style="width:100%; padding:12px; border:1px solid #d6c3b3; border-radius:12px;" />
+                       style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:12px;" />
             </div>
 
             <div style="margin-bottom:16px;">
-                <label asp-for="KullaniciAdi" style="display:block; font-weight:700; margin-bottom:6px; color:#6a3b12;">
+                <label asp-for="KullaniciAdi" style="display:block; font-weight:700; margin-bottom:6px; color:#334155;">
                     Kullanıcı Adı
                 </label>
 
                 <input asp-for="KullaniciAdi"
-                       style="width:100%; padding:12px; border:1px solid #d6c3b3; border-radius:12px;" />
+                       style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:12px;" />
             </div>
 
             <div style="margin-bottom:20px;">
-                <label asp-for="Sifre" style="display:block; font-weight:700; margin-bottom:6px; color:#6a3b12;">
+                <label asp-for="Sifre" style="display:block; font-weight:700; margin-bottom:6px; color:#334155;">
                     Şifre
                 </label>
 
@@ -80,16 +80,16 @@
                     <input asp-for="Sifre"
                            id="registerPassword"
                            type="password"
-                           style="flex:1; padding:12px; border:1px solid #d6c3b3; border-radius:12px;" />
+                           style="flex:1; padding:12px; border:1px solid #cbd5e1; border-radius:12px;" />
 
                     <button type="button"
                             onclick="togglePassword()"
                             style="
                                 padding:12px 14px; 
-                                border:1px solid #d6c3b3; 
+                                border:1px solid #cbd5e1; 
                                 border-radius:12px; 
-                                background:#fff7ef; 
-                                color:#8a4d1a; 
+                                background:#eff6ff; 
+                                color:#1e3a8a; 
                                 font-weight:700;">
                         <span id="registerToggleText">Göster</span>
                     </button>
@@ -97,14 +97,13 @@
             </div>
 
             <div style="display:flex; gap:10px; margin-top:10px;">
-
                 <button type="submit"
                         style="
                             flex:1;
                             padding:13px; 
                             border:none; 
                             border-radius:14px; 
-                            background:#d67a2f; 
+                            background:#2563eb; 
                             color:white; 
                             font-size:16px; 
                             font-weight:800;">
@@ -119,14 +118,13 @@
                         justify-content:center;
                         padding:13px;
                         border-radius:14px;
-                        background:#8a4d1a;
+                        background:#1e3a8a;
                         color:white;
                         font-size:16px;
                         font-weight:800;
                         text-decoration:none;">
                     Giriş Yap
                 </a>
-
             </div>
 
         </form>

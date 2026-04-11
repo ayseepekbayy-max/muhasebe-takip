@@ -4,35 +4,35 @@
     ViewData["Title"] = "Giriş";
 }
 
-    <div style="
+<div style="
     min-height:100vh; 
     display:flex; 
     align-items:center; 
     justify-content:center; 
-    background: linear-gradient(to bottom, #ffffff 0%, #ffe3c5 50%, #f2a45a 100%);
+    background: linear-gradient(to bottom, #f8fbff 0%, #dbeafe 55%, #bfdbfe 100%);
     background-attachment: fixed;
     padding:30px;
-    ">
+">
 
     <div style="
-    width:430px; 
-    background:rgba(255,255,255,0.97); 
-    border-radius:20px; 
-    padding:34px; 
-    box-shadow:0 18px 40px rgba(0,0,0,0.12); 
-    border:1px solid #f0e1d4;
+        width:430px; 
+        background:rgba(255,255,255,0.97); 
+        border-radius:20px; 
+        padding:34px; 
+        box-shadow:0 18px 40px rgba(15,23,42,0.12); 
+        border:1px solid #dbe4ee;
     ">
 
         <div style="text-align:center; margin-bottom:26px;">
-            <div style="font-size:28px; font-weight:800; color:#8a4d1a;">
+            <div style="font-size:28px; font-weight:800; color:#1e3a8a;">
                 ANK Mobilya Sistemleri
             </div>
 
-            <div style="font-size:18px; font-weight:700; color:#6a3b12; margin-top:6px;">
+            <div style="font-size:18px; font-weight:700; color:#334155; margin-top:6px;">
                 Muhasebe Takip
             </div>
 
-            <div style="margin-top:10px; font-size:14px; color:#777;">
+            <div style="margin-top:10px; font-size:14px; color:#64748b;">
                 Lütfen kullanıcı bilgileriniz ile giriş yapın
             </div>
         </div>
@@ -40,12 +40,12 @@
         @if (!string.IsNullOrEmpty(Model.Hata))
         {
             <div style="
-            color:#a40000; 
-            border:1px solid #e0b4b4; 
-            background:#fff3f3; 
-            padding:10px 12px; 
-            border-radius:10px; 
-            margin-bottom:16px;">
+                color:#b42318; 
+                border:1px solid #fecaca; 
+                background:#fef2f2; 
+                padding:10px 12px; 
+                border-radius:10px; 
+                margin-bottom:16px;">
                 @Model.Hata
             </div>
         }
@@ -53,16 +53,16 @@
         <form method="post">
 
             <div style="margin-bottom:16px;">
-                <label style="display:block; font-weight:700; margin-bottom:6px; color:#6a3b12;">
+                <label style="display:block; font-weight:700; margin-bottom:6px; color:#334155;">
                     Kullanıcı Adı
                 </label>
 
                 <input asp-for="KullaniciAdi"
-                       style="width:100%; padding:12px; border:1px solid #d6c3b3; border-radius:12px;" />
+                       style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:12px;" />
             </div>
 
             <div style="margin-bottom:20px;">
-                <label style="display:block; font-weight:700; margin-bottom:6px; color:#6a3b12;">
+                <label style="display:block; font-weight:700; margin-bottom:6px; color:#334155;">
                     Şifre
                 </label>
 
@@ -70,68 +70,67 @@
                     <input asp-for="Sifre"
                            id="sifreInput"
                            type="password"
-                           style="flex:1; padding:12px; border:1px solid #d6c3b3; border-radius:12px;" />
+                           style="flex:1; padding:12px; border:1px solid #cbd5e1; border-radius:12px;" />
 
                     <button type="button"
-                            onclick="sifreGosterGizle()"
+                            onclick="sifreGosterGizle(event)"
                             style="
-                            padding:12px 14px; 
-                            border:1px solid #d6c3b3; 
-                            border-radius:12px; 
-                            background:#fff7ef; 
-                            color:#8a4d1a; 
-                            font-weight:700;">
+                                padding:12px 14px; 
+                                border:1px solid #cbd5e1; 
+                                border-radius:12px; 
+                                background:#eff6ff; 
+                                color:#1e3a8a; 
+                                font-weight:700;">
                         Göster
                     </button>
                 </div>
             </div>
 
             <div style="display:flex; gap:10px; margin-top:10px;">
+                <button type="submit"
+                        style="
+                            flex:1;
+                            padding:13px; 
+                            border:none; 
+                            border-radius:14px; 
+                            background:#2563eb; 
+                            color:white; 
+                            font-size:16px; 
+                            font-weight:800;">
+                    Giriş Yap
+                </button>
 
-    <button type="submit"
-            style="
-            flex:1;
-            padding:13px; 
-            border:none; 
-            border-radius:14px; 
-            background:#d67a2f; 
-            color:white; 
-            font-size:16px; 
-            font-weight:800;">
-        Giriş Yap
-    </button>
+                <a href="/Register"
+                   style="
+                       flex:1;
+                       display:flex;
+                       align-items:center;
+                       justify-content:center;
+                       padding:13px;
+                       border-radius:14px;
+                       background:#1e3a8a;
+                       color:white;
+                       font-size:16px;
+                       font-weight:800;
+                       text-decoration:none;">
+                    Kayıt Ol
+                </a>
+            </div>
 
-    <a href="/Register"
-       style="
-       flex:1;
-       display:flex;
-       align-items:center;
-       justify-content:center;
-       padding:13px;
-       border-radius:14px;
-       background:#8a4d1a;
-       color:white;
-       font-size:16px;
-       font-weight:800;
-       text-decoration:none;">
-        Kayıt Ol
-    </a>
-
-</div>
-
-     <div style="margin-top:14px;">
-    <div style="text-align:center; font-size:13px; color:#777; margin-bottom:8px;">
-        Hesabın yok mu?
-    </div>
+            <div style="margin-top:14px;">
+                <div style="text-align:center; font-size:13px; color:#64748b; margin-bottom:8px;">
+                    Hesabın yok mu?
+                </div>
+            </div>
 
         </form>
     </div>
 </div>
 
 <script>
-    function sifreGosterGizle() {
+    function sifreGosterGizle(e) {
         var input = document.getElementById("sifreInput");
-        var button = event.target;
+        var button = e.target;
 
         if (input.type === "password") {
             input.type = "text";

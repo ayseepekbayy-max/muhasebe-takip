@@ -28,14 +28,11 @@
         <header>
             <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark app-navbar border-bottom box-shadow mb-4">
                 <div class="container">
-                   <a class="navbar-brand app-brand" asp-area="" asp-page="/Index">
-               <a class="navbar-brand app-brand" asp-area="" asp-page="/Index">
-            @(string.IsNullOrWhiteSpace(Context.Session.GetString("FirmaAdi"))
-                ? "Muhasebe Takip"
-                : Context.Session.GetString("FirmaAdi"))
-        </a>
-        </a>
-                    
+                    <a class="navbar-brand app-brand" asp-area="" asp-page="/Index">
+                        @(string.IsNullOrWhiteSpace(Context.Session.GetString("FirmaAdi"))
+                            ? "Muhasebe Takip"
+                            : Context.Session.GetString("FirmaAdi"))
+                    </a>
 
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
                             aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -100,7 +97,7 @@
                                 </li>
                             }
 
-                            @if (rol == "admin" || rol == "superadmin")
+                            @if (rol == "superadmin")
                             {
                                 <li class="nav-item">
                                     <a class="nav-link" href="/SuperAdmin/Index">Süper Admin</a>
