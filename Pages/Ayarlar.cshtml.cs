@@ -28,6 +28,9 @@ public class AyarlarModel : PageModel
     public string YeniSifreTekrar { get; set; } = "";
 
     [BindProperty]
+    public string FirmaAdi { get; set; } = "";
+
+    [BindProperty]
     public bool MenuCariKartlar { get; set; } = true;
 
     [BindProperty]
@@ -69,6 +72,7 @@ public class AyarlarModel : PageModel
             return RedirectToPage("/Login");
 
         KullaniciAdi = kullanici.KullaniciAdi;
+        FirmaAdi = firma.FirmaAdi;
 
         MenuCariKartlar = firma.MenuCariKartlar;
         MenuKasa = firma.MenuKasa;
@@ -163,6 +167,45 @@ public class AyarlarModel : PageModel
         return Page();
     }
 
+    public async Task<IActionResult> OnPostFirmaGuncelleAsync()
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        FirmaAdi = (FirmaAdi ?? "").Trim();
+
+        if (string.IsNullOrWhiteSpace(FirmaAdi))
+        {
+            Hata = "Firma adı boş olamaz.";
+            await MenuBilgileriniYukle();
+            return Page();
+        }
+
+        var firma = await _db.Firmalar.FirstOrDefaultAsync(x => x.Id == firmaId.Value);
+        if (firma == null)
+            return RedirectToPage("/Login");
+
+        var ayniAdliFirmaVar = await _db.Firmalar
+            .AnyAsync(x => x.Id != firma.Id && x.FirmaAdi == FirmaAdi);
+
+        if (ayniAdliFirmaVar)
+        {
+            Hata = "Bu firma adı zaten kullanılıyor.";
+            await MenuBilgileriniYukle();
+            return Page();
+        }
+
+        firma.FirmaAdi = FirmaAdi;
+        await _db.SaveChangesAsync();
+
+        HttpContext.Session.SetString("FirmaAdi", firma.FirmaAdi);
+
+        Mesaj = "Firma adı güncellendi.";
+        await MenuBilgileriniYukle();
+        return Page();
+    }
+
     public async Task<IActionResult> OnPostMenuKaydetAsync()
     {
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
@@ -207,6 +250,7 @@ public class AyarlarModel : PageModel
         if (firma == null)
             return;
 
+        FirmaAdi = firma.FirmaAdi;
         MenuCariKartlar = firma.MenuCariKartlar;
         MenuKasa = firma.MenuKasa;
         MenuRaporlar = firma.MenuRaporlar;
