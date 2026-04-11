@@ -1,104 +1,115 @@
 @page
 @model MuhasebeTakip2.App.Pages.AyarlarModel
 
-<h1>Ayarlar</h1>
+<h1 style="color:#0f172a; font-size:2.1rem; margin-bottom:6px;">Ayarlar</h1>
+<div style="color:#64748b; font-size:14px; margin-bottom:18px;">
+    Firma, kullanıcı ve menü görünürlüğü ayarlarınızı buradan yönetebilirsiniz.
+</div>
 
 @if (!string.IsNullOrWhiteSpace(Model.Mesaj))
 {
-    <div style="color:green; margin:10px 0;">@Model.Mesaj</div>
+    <div style="color:#166534; margin:10px 0; padding:12px; border:1px solid #bbf7d0; background:#f0fdf4; border-radius:12px;">
+        @Model.Mesaj
+    </div>
 }
 
 @if (!string.IsNullOrWhiteSpace(Model.Hata))
 {
-    <div style="color:red; margin:10px 0;">@Model.Hata</div>
+    <div style="color:#b42318; margin:10px 0; padding:12px; border:1px solid #fecaca; background:#fef2f2; border-radius:12px;">
+        @Model.Hata
+    </div>
 }
 
-<div style="display:grid; gap:20px; max-width:760px;">
+<div style="display:grid; gap:20px; max-width:860px;">
 
-    <div style="border:1px solid #444; border-radius:12px; padding:16px; background:white;">
-        <h3>Firma Bilgileri</h3>
+    <div style="border:1px solid #e2e8f0; border-radius:18px; padding:22px; background:white; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
+        <h3 style="margin-top:0; color:#0f172a;">Firma Bilgileri</h3>
+        <p style="color:#64748b; margin-top:6px; margin-bottom:18px;">Giriş yapan firmanın görünen adını buradan güncelleyebilirsiniz.</p>
 
         <form method="post" asp-page-handler="FirmaGuncelle">
-            <div style="margin-bottom:12px;">
-                <label><b>Firma Adı</b></label><br />
-                <input asp-for="FirmaAdi" style="width:100%; padding:8px;" />
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;"><b>Firma Adı</b></label>
+                <input asp-for="FirmaAdi" style="width:100%; padding:10px;" />
             </div>
 
             <button type="submit" class="btn btn-dark btn-sm">Firma Adını Güncelle</button>
         </form>
     </div>
 
-    <div style="border:1px solid #444; border-radius:12px; padding:16px; background:white;">
-        <h3>Kullanıcı Bilgileri</h3>
+    <div style="border:1px solid #e2e8f0; border-radius:18px; padding:22px; background:white; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
+        <h3 style="margin-top:0; color:#0f172a;">Kullanıcı Bilgileri</h3>
+        <p style="color:#64748b; margin-top:6px; margin-bottom:18px;">Kullanıcı adınızı ve isterseniz şifrenizi güvenli şekilde güncelleyebilirsiniz.</p>
 
         <form method="post" asp-page-handler="KullaniciGuncelle">
-            <div style="margin-bottom:12px;">
-                <label><b>Kullanıcı Adı</b></label><br />
-                <input asp-for="KullaniciAdi" style="width:100%; padding:8px;" />
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;"><b>Kullanıcı Adı</b></label>
+                <input asp-for="KullaniciAdi" style="width:100%; padding:10px;" />
             </div>
 
-            <div style="margin-bottom:12px;">
-                <label><b>Mevcut Şifre</b></label><br />
-                <input asp-for="MevcutSifre" type="password" style="width:100%; padding:8px;" />
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;"><b>Mevcut Şifre</b></label>
+                <input asp-for="MevcutSifre" type="password" style="width:100%; padding:10px;" />
             </div>
 
-            <div style="margin-bottom:12px;">
-                <label><b>Yeni Şifre</b></label><br />
-                <input asp-for="YeniSifre" type="password" style="width:100%; padding:8px;" />
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;"><b>Yeni Şifre</b></label>
+                <input asp-for="YeniSifre" type="password" style="width:100%; padding:10px;" />
             </div>
 
-            <div style="margin-bottom:12px;">
-                <label><b>Yeni Şifre Tekrar</b></label><br />
-                <input asp-for="YeniSifreTekrar" type="password" style="width:100%; padding:8px;" />
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;"><b>Yeni Şifre Tekrar</b></label>
+                <input asp-for="YeniSifreTekrar" type="password" style="width:100%; padding:10px;" />
             </div>
 
             <button type="submit" class="btn btn-dark btn-sm">Kullanıcı Bilgilerini Güncelle</button>
         </form>
     </div>
 
-    <div style="border:1px solid #444; border-radius:12px; padding:16px; background:white;">
-        <h3>Menü Görünürlük Ayarları</h3>
-        <p style="color:#666;">Firmanız için hangi kategorilerin görüneceğini buradan açıp kapatabilirsiniz.</p>
+    <div style="border:1px solid #e2e8f0; border-radius:18px; padding:22px; background:white; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
+        <h3 style="margin-top:0; color:#0f172a;">Menü Görünürlük Ayarları</h3>
+        <p style="color:#64748b; margin-top:6px; margin-bottom:18px;">
+            Firmanız için hangi kategorilerin görüneceğini buradan açıp kapatabilirsiniz.
+        </p>
 
         <form method="post" asp-page-handler="MenuKaydet">
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px;">
 
-                <label>
+                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
                     <input asp-for="MenuCariKartlar" type="checkbox" />
                     Cari Kartlar
                 </label>
 
-                <label>
+                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
                     <input asp-for="MenuKasa" type="checkbox" />
                     Kasa
                 </label>
 
-                <label>
+                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
                     <input asp-for="MenuRaporlar" type="checkbox" />
                     Raporlar
                 </label>
 
-                <label>
+                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
                     <input asp-for="MenuCalisanlar" type="checkbox" />
                     Çalışanlar
                 </label>
 
-                <label>
+                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
                     <input asp-for="MenuMusteriler" type="checkbox" />
                     Müşteriler
                 </label>
 
-                <label>
+                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
                     <input asp-for="MenuStoklar" type="checkbox" />
                     Stok
                 </label>
 
-                <label>
+                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
                     <input asp-for="MenuMaliyet" type="checkbox" />
                     Maliyet
                 </label>
 
-                <label>
+                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
                     <input asp-for="MenuCekler" type="checkbox" />
                     Çekler
                 </label>
