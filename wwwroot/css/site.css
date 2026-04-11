@@ -1,25 +1,26 @@
 :root {
-    --bg-main: #f4f8fc;
-    --bg-soft: #eaf1f8;
+    --bg-main: #f8fafc;
+    --bg-soft: #eef2ff;
     --card-bg: #ffffff;
 
-    --primary: #2563eb;
-    --primary-hover: #1d4ed8;
-    --primary-dark: #1e3a8a;
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --primary-dark: #312e81;
 
-    --nav-start: #1e3a8a;
-    --nav-end: #2563eb;
+    --nav-start: #312e81;
+    --nav-end: #4338ca;
 
     --text-main: #0f172a;
-    --text-soft: #475569;
+    --text-soft: #64748b;
     --text-white: #ffffff;
 
-    --border-soft: #dbe4ee;
+    --border-soft: #e2e8f0;
     --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.08);
 
     --danger: #dc2626;
     --success: #16a34a;
 }
+
 html, body {
     background: var(--bg-main);
     color: var(--text-main);
@@ -75,7 +76,7 @@ html, body {
 }
 
 .app-top-btn:hover {
-    background: #eef4ff;
+    background: #eef2ff;
     color: var(--primary-dark);
 }
 
@@ -90,15 +91,6 @@ html, body {
     color: #ffffff;
 }
 
-.app-main-container {
-    padding-top: 8px;
-}
-
-.app-footer {
-    background: transparent;
-    color: var(--text-soft) !important;
-}
-
 h1, h2, h3, h4, h5 {
     color: var(--primary-dark);
     font-weight: 800;
@@ -106,8 +98,8 @@ h1, h2, h3, h4, h5 {
 
 .btn-dark,
 .btn-primary {
-    background: var(--primary) !important;
-    border-color: var(--primary) !important;
+    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+    border: none !important;
     color: #ffffff !important;
     border-radius: 12px !important;
     font-weight: 700;
@@ -115,8 +107,7 @@ h1, h2, h3, h4, h5 {
 
 .btn-dark:hover,
 .btn-primary:hover {
-    background: var(--primary-hover) !important;
-    border-color: var(--primary-hover) !important;
+    background: linear-gradient(135deg, #4f46e5, #4338ca) !important;
 }
 
 .btn-outline-dark,
@@ -130,14 +121,9 @@ h1, h2, h3, h4, h5 {
 
 .btn-outline-dark:hover,
 .btn-outline-primary:hover {
-    background: #eef4ff !important;
+    background: #eef2ff !important;
     color: var(--primary-dark) !important;
-    border-color: #c9d9ee !important;
-}
-
-.btn-outline-danger {
-    border-radius: 12px !important;
-    font-weight: 700;
+    border-color: #c7d2fe !important;
 }
 
 input,
@@ -153,9 +139,9 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-    border-color: #93c5fd !important;
+    border-color: #a5b4fc !important;
     outline: none !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12) !important;
 }
 
 table {
