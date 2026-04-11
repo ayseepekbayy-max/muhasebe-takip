@@ -2,35 +2,38 @@
 @using MuhasebeTakip2.App.Models
 @model MuhasebeTakip2.App.Pages.IndexModel
 
-<h1>Dashboard</h1>
+<h1 style="color:#0f172a; font-size:2.3rem; margin-bottom:6px;">Dashboard</h1>
+<div style="color:#64748b; font-size:14px; margin-bottom:18px;">
+    Güncel finans ve işlem özetinizi buradan takip edebilirsiniz.
+</div>
 
 @if (!string.IsNullOrWhiteSpace(Model.SayfaHata))
 {
-    <div style="color:red; margin:10px 0; padding:12px; border:1px solid #fecaca; background:#fef2f2; border-radius:12px;">
+    <div style="color:#b42318; margin:10px 0; padding:12px; border:1px solid #fecaca; background:#fef2f2; border-radius:12px;">
         @Model.SayfaHata
     </div>
 }
 
 <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:18px; margin-top:20px;">
 
-    <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(15,23,42,0.06);">
+    <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
         <div style="font-size:14px; color:#64748b; margin-bottom:8px;">Bugünkü Giriş</div>
-        <div style="font-size:28px; font-weight:800; color:#312e81;">@Model.BugunGiris</div>
+        <div style="font-size:30px; font-weight:800; color:#1e293b;">@Model.BugunGiris</div>
     </div>
 
-    <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(15,23,42,0.06);">
+    <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
         <div style="font-size:14px; color:#64748b; margin-bottom:8px;">Bugünkü Çıkış</div>
-        <div style="font-size:28px; font-weight:800; color:#dc2626;">@Model.BugunCikis</div>
+        <div style="font-size:30px; font-weight:800; color:#dc2626;">@Model.BugunCikis</div>
     </div>
 
-    <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(15,23,42,0.06);">
+    <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
         <div style="font-size:14px; color:#64748b; margin-bottom:8px;">Bu Ay Giriş</div>
-        <div style="font-size:28px; font-weight:800; color:#312e81;">@Model.BuAyGiris</div>
+        <div style="font-size:30px; font-weight:800; color:#1e293b;">@Model.BuAyGiris</div>
     </div>
 
-    <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(15,23,42,0.06);">
+    <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
         <div style="font-size:14px; color:#64748b; margin-bottom:8px;">Bu Ay Çıkış</div>
-        <div style="font-size:28px; font-weight:800; color:#dc2626;">@Model.BuAyCikis</div>
+        <div style="font-size:30px; font-weight:800; color:#dc2626;">@Model.BuAyCikis</div>
     </div>
 
 </div>
@@ -39,29 +42,29 @@
 
     <div style="display:grid; gap:20px;">
 
-        <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:20px; box-shadow:0 10px 30px rgba(15,23,42,0.06);">
-            <h3 style="margin-top:0;">Kasa Özeti</h3>
+        <div style="background:white; border:1px solid #e2e8f0; border-radius:20px; padding:22px; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
+            <h3 style="margin-top:0; color:#0f172a;">Kasa Özeti</h3>
 
-            <div style="margin-top:18px; padding:18px; border-radius:16px; background:linear-gradient(135deg,#6366f1,#4f46e5); color:white;">
-                <div style="font-size:14px; opacity:0.95;">Güncel Kasa Bakiye</div>
-                <div style="font-size:30px; font-weight:800; margin-top:8px;">@Model.KasaBakiye</div>
+            <div style="margin-top:18px; padding:22px; border-radius:18px; background:linear-gradient(135deg,#4f46e5,#3730a3); color:white; box-shadow:0 10px 24px rgba(79,70,229,0.22);">
+                <div style="font-size:14px; opacity:0.92;">Güncel Kasa Bakiye</div>
+                <div style="font-size:34px; font-weight:800; margin-top:10px;">@Model.KasaBakiye</div>
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px;">
-                <div style="padding:16px; border:1px solid #e2e8f0; border-radius:14px; background:#f8fafc;">
+                <div style="padding:18px; border:1px solid #e2e8f0; border-radius:16px; background:#f8fafc;">
                     <div style="font-size:14px; color:#64748b; margin-bottom:6px;">Cari Sayısı</div>
-                    <div style="font-size:24px; font-weight:800; color:#312e81;">@Model.CariSayisi</div>
+                    <div style="font-size:26px; font-weight:800; color:#1e293b;">@Model.CariSayisi</div>
                 </div>
 
-                <div style="padding:16px; border:1px solid #e2e8f0; border-radius:14px; background:#f8fafc;">
+                <div style="padding:18px; border:1px solid #e2e8f0; border-radius:16px; background:#f8fafc;">
                     <div style="font-size:14px; color:#64748b; margin-bottom:6px;">Çalışan Sayısı</div>
-                    <div style="font-size:24px; font-weight:800; color:#312e81;">@Model.CalisanSayisi</div>
+                    <div style="font-size:26px; font-weight:800; color:#1e293b;">@Model.CalisanSayisi</div>
                 </div>
             </div>
         </div>
 
-        <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:20px; box-shadow:0 10px 30px rgba(15,23,42,0.06);">
-            <h3 style="margin-top:0;">Son Kasa Hareketleri</h3>
+        <div style="background:white; border:1px solid #e2e8f0; border-radius:20px; padding:22px; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
+            <h3 style="margin-top:0; color:#0f172a;">Son Kasa Hareketleri</h3>
 
             @if (Model.SonHareketler.Count == 0)
             {
@@ -69,14 +72,14 @@
             }
             else
             {
-                <table style="width:100%; border-collapse:collapse; margin-top:14px;">
+                <table style="width:100%; border-collapse:collapse; margin-top:14px; background:white;">
                     <thead>
                         <tr>
-                            <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">Tarih</th>
-                            <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">Tip</th>
-                            <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">Tutar</th>
-                            <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">Cari</th>
-                            <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">Açıklama</th>
+                            <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left; color:#334155;">Tarih</th>
+                            <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left; color:#334155;">Tip</th>
+                            <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left; color:#334155;">Tutar</th>
+                            <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left; color:#334155;">Cari</th>
+                            <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left; color:#334155;">Açıklama</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -101,33 +104,33 @@
 
     </div>
 
-    <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:20px; box-shadow:0 10px 30px rgba(15,23,42,0.06);">
-        <h3 style="margin-top:0;">Hızlı İşlemler</h3>
+    <div style="background:white; border:1px solid #e2e8f0; border-radius:20px; padding:22px; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
+        <h3 style="margin-top:0; color:#0f172a;">Hızlı İşlemler</h3>
 
         <div style="display:grid; gap:12px; margin-top:16px;">
 
             <a href="/Kasa/HareketEkle"
-               style="display:block; text-decoration:none; background:linear-gradient(135deg,#6366f1,#4f46e5); color:white; padding:14px 16px; border-radius:14px; font-weight:700;">
+               style="display:block; text-decoration:none; background:linear-gradient(135deg,#4f46e5,#3730a3); color:white; padding:15px 16px; border-radius:16px; font-weight:700; box-shadow:0 8px 20px rgba(79,70,229,0.18);">
                 + Kasa Hareketi Ekle
             </a>
 
             <a href="/CariKartlar"
-               style="display:block; text-decoration:none; background:#ffffff; color:#312e81; padding:14px 16px; border-radius:14px; font-weight:700; border:1px solid #e2e8f0;">
+               style="display:block; text-decoration:none; background:#ffffff; color:#1e293b; padding:15px 16px; border-radius:16px; font-weight:700; border:1px solid #e2e8f0;">
                 Cari Kartlara Git
             </a>
 
             <a href="/Calisanlar"
-               style="display:block; text-decoration:none; background:#ffffff; color:#312e81; padding:14px 16px; border-radius:14px; font-weight:700; border:1px solid #e2e8f0;">
+               style="display:block; text-decoration:none; background:#ffffff; color:#1e293b; padding:15px 16px; border-radius:16px; font-weight:700; border:1px solid #e2e8f0;">
                 Çalışanlara Git
             </a>
 
             <a href="/Musteriler"
-               style="display:block; text-decoration:none; background:#ffffff; color:#312e81; padding:14px 16px; border-radius:14px; font-weight:700; border:1px solid #e2e8f0;">
+               style="display:block; text-decoration:none; background:#ffffff; color:#1e293b; padding:15px 16px; border-radius:16px; font-weight:700; border:1px solid #e2e8f0;">
                 Müşterilere Git
             </a>
 
             <a href="/Raporlar"
-               style="display:block; text-decoration:none; background:#ffffff; color:#312e81; padding:14px 16px; border-radius:14px; font-weight:700; border:1px solid #e2e8f0;">
+               style="display:block; text-decoration:none; background:#ffffff; color:#1e293b; padding:15px 16px; border-radius:16px; font-weight:700; border:1px solid #e2e8f0;">
                 Raporları Aç
             </a>
 
