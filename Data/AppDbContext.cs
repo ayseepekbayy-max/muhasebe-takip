@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<MusteriIs> MusteriIsler { get; set; } = default!;
     public DbSet<MusteriMasraf> MusteriMasraflar { get; set; } = default!;
     public DbSet<CalisanPuantaj> CalisanPuantajlari { get; set; } = default!;
+    public DbSet<CalisanArsiv> CalisanArsivleri { get; set; } = default!;
 
     public DbSet<StokUrun> StokUrunler { get; set; } = default!;
     public DbSet<StokHareket> StokHareketleri { get; set; } = default!;

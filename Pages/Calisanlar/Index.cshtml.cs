@@ -94,6 +94,20 @@ public class IndexModel : PageModel
     if (calisan == null)
         return RedirectToPage();
 
+    var arsivKaydi = new CalisanArsiv
+    {
+        FirmaId = firmaId.Value,
+        EskiCalisanId = calisan.Id,
+        AdSoyad = calisan.AdSoyad ?? "",
+        Telefon = calisan.Telefon ?? "",
+        Maas = calisan.Maas,
+        IseGirisTarihi = calisan.IseGirisTarihi,
+        AyrilisTarihi = DateTime.UtcNow,
+        AyrilisNotu = "Çalışan aktif listeden arşive taşındı."
+    };
+
+    _db.CalisanArsivleri.Add(arsivKaydi);
+
     var avanslar = await _db.CalisanAvanslari
         .Where(x => x.CalisanId == id && x.FirmaId == firmaId)
         .ToListAsync();
@@ -109,6 +123,7 @@ public class IndexModel : PageModel
         _db.CalisanPuantajlari.RemoveRange(puantajlar);
 
     _db.Calisanlar.Remove(calisan);
+
     await _db.SaveChangesAsync();
 
     return RedirectToPage();

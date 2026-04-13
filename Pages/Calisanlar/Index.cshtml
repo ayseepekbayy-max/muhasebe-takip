@@ -3,10 +3,12 @@
 
 <h1>Çalışanlar</h1>
 
-<div style="margin:12px 0;">
+<div style="margin:12px 0; display:flex; gap:8px; flex-wrap:wrap;">
   <form method="post" asp-page-handler="DisaAktar" style="display:inline;">
     <button type="submit" class="btn btn-outline-success btn-sm">Çalışanları Excel Olarak İndir</button>
   </form>
+
+  <a class="btn btn-outline-dark btn-sm" href="/Calisanlar/Arsiv">Çalışan Arşivi</a>
 </div>
 
 @if (!ViewData.ModelState.IsValid)
@@ -65,7 +67,7 @@
           <td style="border-bottom:1px solid #333; padding:8px;">@c.Telefon</td>
           <td style="border-bottom:1px solid #333; padding:8px;">
             <form method="post" asp-page-handler="Sil"
-                  onsubmit="return confirm('Çalışan silinsin mi?');"
+                  onsubmit="return confirm('Bu çalışan aktif listeden çıkarılıp arşive taşınacak. Devam edilsin mi?');"
                   style="display:inline;">
               <input type="hidden" name="id" value="@c.Id" />
               <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>

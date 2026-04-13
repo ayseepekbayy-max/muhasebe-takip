@@ -1,0 +1,47 @@
+@page
+@model MuhasebeTakip2.App.Pages.Calisanlar.ArsivModel
+
+<h1>Çalışan Arşivi</h1>
+
+<p>
+    <a class="btn btn-outline-dark btn-sm" href="/Calisanlar">← Çalışanlar</a>
+</p>
+
+<div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:20px; box-shadow:0 10px 30px rgba(15,23,42,0.05); margin-top:20px;">
+    <h3 style="margin-top:0;">Arşivlenen Çalışanlar</h3>
+
+    <table style="width:100%; border-collapse:collapse; margin-top:16px;">
+        <thead>
+            <tr>
+                <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">Ad Soyad</th>
+                <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">Telefon</th>
+                <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">Maaş</th>
+                <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">İşe Giriş</th>
+                <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">Ayrılış</th>
+                <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">Not</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Liste.Count == 0)
+            {
+                <tr>
+                    <td colspan="6" style="padding:12px; color:#64748b;">Henüz arşivlenen çalışan yok.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var c in Model.Liste)
+                {
+                    <tr>
+                        <td style="padding:10px; border-bottom:1px solid #eef2f7;">@c.AdSoyad</td>
+                        <td style="padding:10px; border-bottom:1px solid #eef2f7;">@c.Telefon</td>
+                        <td style="padding:10px; border-bottom:1px solid #eef2f7;">@c.Maas</td>
+                        <td style="padding:10px; border-bottom:1px solid #eef2f7;">@c.IseGirisTarihi.ToString("dd.MM.yyyy")</td>
+                        <td style="padding:10px; border-bottom:1px solid #eef2f7;">@c.AyrilisTarihi.ToString("dd.MM.yyyy")</td>
+                        <td style="padding:10px; border-bottom:1px solid #eef2f7;">@c.AyrilisNotu</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
