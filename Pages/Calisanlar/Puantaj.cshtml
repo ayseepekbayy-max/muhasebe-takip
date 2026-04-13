@@ -71,9 +71,7 @@
                         }
                         else if (gun.GelecekTarihMi)
                         {
-                            <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#f8fafc; color:#64748b; font-weight:600; border:1px solid #e2e8f0;">
-                                Gelecek Tarih
-                            </span>
+                            <!-- boş bırak -->
                         }
                         else
                         {
@@ -127,20 +125,26 @@
                                        placeholder="Not..."
                                        style="padding:6px; width:180px;" />
 
-                                @switch (gun.Durum ?? MuhasebeTakip2.App.Models.PuantajDurum.Gelmedi)
+                                @if (gun.Durum != null)
                                 {
-                                    case MuhasebeTakip2.App.Models.PuantajDurum.Geldi:
-                                        <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#d1fae5; color:#065f46; font-weight:600;">Geldi</span>
-                                        break;
-                                    case MuhasebeTakip2.App.Models.PuantajDurum.Gelmedi:
-                                        <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#fee2e2; color:#991b1b; font-weight:600;">Gelmedi</span>
-                                        break;
-                                    case MuhasebeTakip2.App.Models.PuantajDurum.Izinli:
-                                        <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#dbeafe; color:#1e3a8a; font-weight:600;">İzinli</span>
-                                        break;
-                                    case MuhasebeTakip2.App.Models.PuantajDurum.YarimGun:
-                                        <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#fef3c7; color:#92400e; font-weight:600;">Yarım Gün</span>
-                                        break;
+                                    @switch (gun.Durum)
+                                    {
+                                        case MuhasebeTakip2.App.Models.PuantajDurum.Geldi:
+                                            <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#d1fae5; color:#065f46; font-weight:600;">Geldi</span>
+                                            break;
+
+                                        case MuhasebeTakip2.App.Models.PuantajDurum.Gelmedi:
+                                            <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#fee2e2; color:#991b1b; font-weight:600;">Gelmedi</span>
+                                            break;
+
+                                        case MuhasebeTakip2.App.Models.PuantajDurum.Izinli:
+                                            <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#dbeafe; color:#1e3a8a; font-weight:600;">İzinli</span>
+                                            break;
+
+                                        case MuhasebeTakip2.App.Models.PuantajDurum.YarimGun:
+                                            <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#fef3c7; color:#92400e; font-weight:600;">Yarım Gün</span>
+                                            break;
+                                    }
                                 }
 
                                 <button class="btn btn-outline-primary btn-sm" type="submit">Kaydet</button>
