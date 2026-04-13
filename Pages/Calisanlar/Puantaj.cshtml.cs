@@ -151,9 +151,19 @@ public class PuantajModel : PageModel
 
         foreach (var gun in AylikGunler)
         {
-            string durumText = gun.Tarih.DayOfWeek == DayOfWeek.Sunday
-                ? "Hafta Sonu"
-                : gun.Durum switch
+            string durumText;
+
+            if (gun.Tarih.DayOfWeek == DayOfWeek.Sunday)
+            {
+                durumText = "Hafta Sonu";
+            }
+            else if (gun.GelecekTarihMi)
+            {
+                durumText = "Gelecek Tarih";
+            }
+            else
+            {
+                durumText = gun.Durum switch
                 {
                     PuantajDurum.Geldi => "Geldi",
                     PuantajDurum.Gelmedi => "Gelmedi",
@@ -161,6 +171,7 @@ public class PuantajModel : PageModel
                     PuantajDurum.YarimGun => "Yarım Gün",
                     _ => ""
                 };
+            }
 
             ws.Cell(row, 1).Value = gun.Tarih;
             ws.Cell(row, 1).Style.DateFormat.Format = "dd.MM.yyyy";
@@ -228,22 +239,28 @@ public class PuantajModel : PageModel
 
         AylikGunler = new List<PuantajGunViewModel>();
 
+        var bugun = DateTime.UtcNow.Date;
+
         for (var gun = ayBaslangic; gun <= ayBitis; gun = gun.AddDays(1))
         {
             var kayit = kayitlar.FirstOrDefault(x =>
                 x.Tarih >= gun &&
                 x.Tarih < gun.AddDays(1));
 
+            var gunTarihi = gun.Date;
+            var gelecekTarihMi = gunTarihi > bugun;
+
             AylikGunler.Add(new PuantajGunViewModel
             {
                 Tarih = gun,
-                Durum = kayit?.Durum ?? PuantajDurum.Gelmedi,
-                Not = kayit?.Not
+                Durum = kayit != null ? kayit.Durum : (gelecekTarihMi ? null : PuantajDurum.Gelmedi),
+                Not = kayit?.Not,
+                GelecekTarihMi = gelecekTarihMi
             });
         }
 
         var sayilacakGunler = AylikGunler
-            .Where(x => x.Tarih.DayOfWeek != DayOfWeek.Sunday)
+            .Where(x => x.Tarih.DayOfWeek != DayOfWeek.Sunday && !x.GelecekTarihMi)
             .ToList();
 
         ToplamGeldi = sayilacakGunler.Count(x => x.Durum == PuantajDurum.Geldi);
@@ -255,7 +272,8 @@ public class PuantajModel : PageModel
     public class PuantajGunViewModel
     {
         public DateTime Tarih { get; set; }
-        public PuantajDurum Durum { get; set; }
+        public PuantajDurum? Durum { get; set; }
         public string? Not { get; set; }
+        public bool GelecekTarihMi { get; set; }
     }
 }
