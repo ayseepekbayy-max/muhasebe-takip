@@ -28,7 +28,7 @@ public class IndexModel : PageModel
             return RedirectToPage("/Login");
 
         Liste = await _db.Calisanlar
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .OrderByDescending(x => x.Id)
             .ToListAsync();
 
@@ -46,7 +46,7 @@ public class IndexModel : PageModel
             Hata = "Ad Soyad zorunludur.";
 
             Liste = await _db.Calisanlar
-                .Where(x => x.FirmaId == firmaId)
+                .Where(x => x.FirmaId == firmaId && x.AktifMi)
                 .OrderByDescending(x => x.Id)
                 .ToListAsync();
 
@@ -60,6 +60,9 @@ public class IndexModel : PageModel
         if (YeniCalisan.Avans < 0) YeniCalisan.Avans = 0;
 
         YeniCalisan.FirmaId = firmaId.Value;
+        YeniCalisan.AktifMi = true;
+        YeniCalisan.AyrilisTarihi = null;
+        YeniCalisan.AyrilisNotu = null;
 
         if (YeniCalisan.IseGirisTarihi == default)
         {
@@ -83,51 +86,25 @@ public class IndexModel : PageModel
     }
 
     public async Task<IActionResult> OnPostSilAsync(int id)
-{
-    var firmaId = HttpContext.Session.GetInt32("FirmaId");
-    if (firmaId == null)
-        return RedirectToPage("/Login");
-
-    var calisan = await _db.Calisanlar
-        .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
-
-    if (calisan == null)
-        return RedirectToPage();
-
-    var arsivKaydi = new CalisanArsiv
     {
-        FirmaId = firmaId.Value,
-        EskiCalisanId = calisan.Id,
-        AdSoyad = calisan.AdSoyad ?? "",
-        Telefon = calisan.Telefon ?? "",
-        Maas = calisan.Maas,
-        IseGirisTarihi = calisan.IseGirisTarihi,
-        AyrilisTarihi = DateTime.UtcNow,
-        AyrilisNotu = "Çalışan aktif listeden arşive taşındı."
-    };
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
 
-    _db.CalisanArsivleri.Add(arsivKaydi);
+        var calisan = await _db.Calisanlar
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
 
-    var avanslar = await _db.CalisanAvanslari
-        .Where(x => x.CalisanId == id && x.FirmaId == firmaId)
-        .ToListAsync();
+        if (calisan == null)
+            return RedirectToPage();
 
-    var puantajlar = await _db.CalisanPuantajlari
-        .Where(x => x.CalisanId == id && x.FirmaId == firmaId)
-        .ToListAsync();
+        calisan.AktifMi = false;
+        calisan.AyrilisTarihi = DateTime.UtcNow;
+        calisan.AyrilisNotu = "Çalışan aktif listeden arşive taşındı.";
 
-    if (avanslar.Any())
-        _db.CalisanAvanslari.RemoveRange(avanslar);
+        await _db.SaveChangesAsync();
 
-    if (puantajlar.Any())
-        _db.CalisanPuantajlari.RemoveRange(puantajlar);
-
-    _db.Calisanlar.Remove(calisan);
-
-    await _db.SaveChangesAsync();
-
-    return RedirectToPage();
-}
+        return RedirectToPage();
+    }
 
     public async Task<IActionResult> OnPostDisaAktarAsync()
     {
@@ -136,7 +113,7 @@ public class IndexModel : PageModel
             return RedirectToPage("/Login");
 
         var calisanlar = await _db.Calisanlar
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .OrderBy(x => x.AdSoyad)
             .ToListAsync();
 

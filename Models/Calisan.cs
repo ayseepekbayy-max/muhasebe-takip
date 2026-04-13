@@ -3,15 +3,15 @@ namespace MuhasebeTakip2.App.Models;
 public class Calisan
 {
     public decimal Maas { get; set; }      // Aylık maaş
-    
+
     public List<CalisanAvans> Avanslar { get; set; } = new();
-    
+
     public decimal Avans { get; set; }     // Toplam avans
-    
+
     public int Id { get; set; }
 
     public int? FirmaId { get; set; }
-    
+
     public Firma? Firma { get; set; }
 
     public string Ad { get; set; } = "";
@@ -21,4 +21,10 @@ public class Calisan
     public string? Telefon { get; set; }
 
     public DateTime IseGirisTarihi { get; set; } = DateTime.Now;
+
+    public bool AktifMi { get; set; } = true;
+
+    public DateTime? AyrilisTarihi { get; set; }
+
+    public string? AyrilisNotu { get; set; }
 }

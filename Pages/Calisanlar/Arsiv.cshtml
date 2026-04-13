@@ -7,6 +7,20 @@
     <a class="btn btn-outline-dark btn-sm" href="/Calisanlar">← Çalışanlar</a>
 </p>
 
+@if (!string.IsNullOrWhiteSpace(Model.Mesaj))
+{
+    <div style="color:green; margin:10px 0; padding:12px; border:1px solid #bbf7d0; background:#f0fdf4; border-radius:12px;">
+        @Model.Mesaj
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Hata))
+{
+    <div style="color:red; margin:10px 0; padding:12px; border:1px solid #fecaca; background:#fef2f2; border-radius:12px;">
+        @Model.Hata
+    </div>
+}
+
 <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:20px; box-shadow:0 10px 30px rgba(15,23,42,0.05); margin-top:20px;">
     <h3 style="margin-top:0;">Arşivlenen Çalışanlar</h3>
 
@@ -19,13 +33,14 @@
                 <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">İşe Giriş</th>
                 <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">Ayrılış</th>
                 <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">Not</th>
+                <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left;">İşlem</th>
             </tr>
         </thead>
         <tbody>
             @if (Model.Liste.Count == 0)
             {
                 <tr>
-                    <td colspan="6" style="padding:12px; color:#64748b;">Henüz arşivlenen çalışan yok.</td>
+                    <td colspan="7" style="padding:12px; color:#64748b;">Henüz arşivlenen çalışan yok.</td>
                 </tr>
             }
             else
@@ -37,8 +52,22 @@
                         <td style="padding:10px; border-bottom:1px solid #eef2f7;">@c.Telefon</td>
                         <td style="padding:10px; border-bottom:1px solid #eef2f7;">@c.Maas</td>
                         <td style="padding:10px; border-bottom:1px solid #eef2f7;">@c.IseGirisTarihi.ToString("dd.MM.yyyy")</td>
-                        <td style="padding:10px; border-bottom:1px solid #eef2f7;">@c.AyrilisTarihi.ToString("dd.MM.yyyy")</td>
+                        <td style="padding:10px; border-bottom:1px solid #eef2f7;">
+                            @(c.AyrilisTarihi.HasValue ? c.AyrilisTarihi.Value.ToString("dd.MM.yyyy") : "-")
+                        </td>
                         <td style="padding:10px; border-bottom:1px solid #eef2f7;">@c.AyrilisNotu</td>
+                        <td style="padding:10px; border-bottom:1px solid #eef2f7;">
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                <form method="post" asp-page-handler="GeriAl" style="display:inline;"
+                                      onsubmit="return confirm('Bu çalışan tekrar aktif listeye alınsın mı?');">
+                                    <input type="hidden" name="id" value="@c.Id" />
+                                    <button type="submit" class="btn btn-outline-primary btn-sm">Geri Al</button>
+                                </form>
+
+                                <a class="btn btn-outline-dark btn-sm" href="/Calisanlar/Detay/@c.Id">Detay</a>
+                                <a class="btn btn-outline-success btn-sm" href="/Calisanlar/Puantaj/@c.Id">Puantaj</a>
+                            </div>
+                        </td>
                     </tr>
                 }
             }

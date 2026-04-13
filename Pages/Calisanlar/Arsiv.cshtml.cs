@@ -15,7 +15,10 @@ public class ArsivModel : PageModel
         _db = db;
     }
 
-    public List<CalisanArsiv> Liste { get; set; } = new();
+    public List<Calisan> Liste { get; set; } = new();
+
+    public string Mesaj { get; set; } = "";
+    public string Hata { get; set; } = "";
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -23,11 +26,43 @@ public class ArsivModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        Liste = await _db.CalisanArsivleri
-            .Where(x => x.FirmaId == firmaId.Value)
-            .OrderByDescending(x => x.AyrilisTarihi)
-            .ToListAsync();
-
+        await YukleAsync(firmaId.Value);
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostGeriAlAsync(int id)
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var calisan = await _db.Calisanlar
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value && !x.AktifMi);
+
+        if (calisan == null)
+        {
+            Hata = "Arşiv kaydı bulunamadı.";
+            await YukleAsync(firmaId.Value);
+            return Page();
+        }
+
+        calisan.AktifMi = true;
+        calisan.AyrilisTarihi = null;
+        calisan.AyrilisNotu = null;
+
+        await _db.SaveChangesAsync();
+
+        Mesaj = "Çalışan tekrar aktif listeye alındı.";
+        await YukleAsync(firmaId.Value);
+        return Page();
+    }
+
+    private async Task YukleAsync(int firmaId)
+    {
+        Liste = await _db.Calisanlar
+            .Where(x => x.FirmaId == firmaId && !x.AktifMi)
+            .OrderByDescending(x => x.AyrilisTarihi)
+            .ThenByDescending(x => x.Id)
+            .ToListAsync();
     }
 }
