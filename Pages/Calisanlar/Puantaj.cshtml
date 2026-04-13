@@ -69,10 +69,6 @@
                                 Hafta Sonu
                             </span>
                         }
-                        else if (gun.GelecekTarihMi)
-                        {
-                            <!-- boş bırak -->
-                        }
                         else
                         {
                             <form method="post" asp-page-handler="Kaydet" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0;">
@@ -124,6 +120,28 @@
                                        value="@gun.Not"
                                        placeholder="Not..."
                                        style="padding:6px; width:180px;" />
+
+                                @if (gun.Durum != null)
+                                {
+                                    @switch (gun.Durum)
+                                    {
+                                        case MuhasebeTakip2.App.Models.PuantajDurum.Geldi:
+                                            <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#d1fae5; color:#065f46; font-weight:600;">Geldi</span>
+                                            break;
+
+                                        case MuhasebeTakip2.App.Models.PuantajDurum.Gelmedi:
+                                            <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#fee2e2; color:#991b1b; font-weight:600;">Gelmedi</span>
+                                            break;
+
+                                        case MuhasebeTakip2.App.Models.PuantajDurum.Izinli:
+                                            <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#dbeafe; color:#1e3a8a; font-weight:600;">İzinli</span>
+                                            break;
+
+                                        case MuhasebeTakip2.App.Models.PuantajDurum.YarimGun:
+                                            <span style="display:inline-block; padding:4px 10px; border-radius:8px; background:#fef3c7; color:#92400e; font-weight:600;">Yarım Gün</span>
+                                            break;
+                                    }
+                                }
 
                                 <button class="btn btn-outline-primary btn-sm" type="submit">Kaydet</button>
                             </form>
