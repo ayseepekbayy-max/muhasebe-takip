@@ -85,7 +85,7 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostSilAsync(int id)
+    public async Task<IActionResult> OnPostArsivleAsync(int id)
     {
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
         if (firmaId == null)
@@ -100,6 +100,46 @@ public class IndexModel : PageModel
         calisan.AktifMi = false;
         calisan.AyrilisTarihi = DateTime.UtcNow;
         calisan.AyrilisNotu = "Çalışan aktif listeden arşive taşındı.";
+
+        await _db.SaveChangesAsync();
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostSilAsync(int id)
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var calisan = await _db.Calisanlar
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
+
+        if (calisan == null)
+            return RedirectToPage();
+
+        var avanslar = await _db.CalisanAvanslari
+            .Where(x => x.CalisanId == id && x.FirmaId == firmaId)
+            .ToListAsync();
+
+        var puantajlar = await _db.CalisanPuantajlari
+            .Where(x => x.CalisanId == id && x.FirmaId == firmaId)
+            .ToListAsync();
+
+        var maasArsivleri = await _db.CalisanMaasArsivleri
+            .Where(x => x.CalisanId == id && x.FirmaId == firmaId)
+            .ToListAsync();
+
+        if (avanslar.Any())
+            _db.CalisanAvanslari.RemoveRange(avanslar);
+
+        if (puantajlar.Any())
+            _db.CalisanPuantajlari.RemoveRange(puantajlar);
+
+        if (maasArsivleri.Any())
+            _db.CalisanMaasArsivleri.RemoveRange(maasArsivleri);
+
+        _db.Calisanlar.Remove(calisan);
 
         await _db.SaveChangesAsync();
 

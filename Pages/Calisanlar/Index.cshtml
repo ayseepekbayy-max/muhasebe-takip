@@ -47,7 +47,7 @@
     <tr>
       <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Ad Soyad</th>
       <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Telefon</th>
-      <th style="border-bottom:1px solid #555; padding:8px; width:260px;">İşlem</th>
+      <th style="border-bottom:1px solid #555; padding:8px; width:360px;">İşlem</th>
     </tr>
   </thead>
 
@@ -67,10 +67,17 @@
           <td style="border-bottom:1px solid #333; padding:8px;">@c.Telefon</td>
           <td style="border-bottom:1px solid #333; padding:8px;">
             <form method="post" asp-page-handler="Sil"
-                  onsubmit="return confirm('Bu çalışan aktif listeden çıkarılıp arşive taşınacak. Devam edilsin mi?');"
+                  onsubmit="return confirm('Bu çalışan kalıcı olarak silinecek. Devam edilsin mi?');"
                   style="display:inline;">
               <input type="hidden" name="id" value="@c.Id" />
               <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
+            </form>
+
+            <form method="post" asp-page-handler="Arsivle"
+                  onsubmit="return confirm('Bu çalışan arşive taşınacak. Devam edilsin mi?');"
+                  style="display:inline;">
+              <input type="hidden" name="id" value="@c.Id" />
+              <button type="submit" class="btn btn-outline-secondary btn-sm">Arşivle</button>
             </form>
 
             <a class="btn btn-outline-primary btn-sm" href="/Calisanlar/Detay/@c.Id">Detay</a>
