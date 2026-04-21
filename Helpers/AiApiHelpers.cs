@@ -23,10 +23,9 @@ public static class AiApiHelpers
 
         var query = db.CalisanAvanslari
             .Include(x => x.Calisan)
-            .Where(x => x.Tip == CalisanHareketTipi.Avans)
+            .Where(x => x.Tip == CalisanHareketTipi.Avans && !x.ArsivlendiMi)
             .AsQueryable();
-
-        query = ApplyDateFilter(query, dateRange);
+                query = ApplyDateFilter(query, dateRange);
 
         var liste = await query
             .OrderByDescending(x => x.Tarih)
