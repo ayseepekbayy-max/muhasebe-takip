@@ -32,34 +32,30 @@ public static class AiApiHelpers
             .OrderByDescending(x => x.Tarih)
             .ToListAsync();
 
-        // 1. Tüm çalışan isimlerini çek
-var tumCalisanlar = liste
-    .Select(x => x.Calisan?.AdSoyad)
-    .Where(x => !string.IsNullOrWhiteSpace(x))
-    .Distinct()
-    .ToList();
+        var tumCalisanlar = liste
+            .Select(x => x.Calisan?.AdSoyad)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct()
+            .ToList();
 
-// 2. En doğru çalışanı bul
-var bulunanAd = tumCalisanlar
-    .FirstOrDefault(x => NormalizeText(x!) == NormalizeText(calisanAdi));
+        var bulunanAd = FindBestEmployeeName(calisanAdi, tumCalisanlar);
 
-if (string.IsNullOrWhiteSpace(bulunanAd))
-{
-    return new CalisanAvansToplamResponse
-    {
-        Success = true,
-        EmployeeName = calisanAdi,
-        Total = 0,
-        Message = $"{calisanAdi} için kayıt bulunamadı."
-    };
-}
+        if (string.IsNullOrWhiteSpace(bulunanAd))
+        {
+            return new CalisanAvansToplamResponse
+            {
+                Success = true,
+                EmployeeName = calisanAdi,
+                Total = 0,
+                Message = $"{calisanAdi} için kayıt bulunamadı."
+            };
+        }
 
-// 3. SADECE o çalışanın verisini al
-var filtered = liste
-    .Where(x => x.Calisan?.AdSoyad == bulunanAd)
-    .ToList();
+        var filtered = liste
+            .Where(x => string.Equals(x.Calisan?.AdSoyad, bulunanAd, StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
-var toplam = filtered.Sum(x => x.Tutar);
+        var toplam = filtered.Sum(x => x.Tutar);
 
         return new CalisanAvansToplamResponse
         {
@@ -71,81 +67,146 @@ var toplam = filtered.Sum(x => x.Tutar);
     }
 
     private static IQueryable<CalisanAvans> ApplyDateFilter(IQueryable<CalisanAvans> query, string? dateRange)
-{
-    var today = DateTime.UtcNow;
-
-    switch (dateRange)
     {
-        case "Today":
+        var now = DateTime.UtcNow;
+
+        switch (dateRange)
         {
-            var start = today.Date;
-            var end = start.AddDays(1);
-
-            query = query.Where(x => x.Tarih >= start && x.Tarih < end);
-            break;
-        }
-
-        case "ThisMonth":
-        {
-            var start = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            var end = start.AddMonths(1);
-
-            query = query.Where(x => x.Tarih >= start && x.Tarih < end);
-            break;
-        }
-
-        case "LastMonth":
-        {
-            var start = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
-            var end = start.AddMonths(1);
-
-            query = query.Where(x => x.Tarih >= start && x.Tarih < end);
-            break;
-        }
-    }
-
-    return query;
-}
-
-    private static bool IsNameMatch(string rawInput, string? fullName, string? shortName)
-    {
-        var input = NormalizeText(rawInput);
-        var full = NormalizeText(fullName ?? "");
-        var shortn = NormalizeText(shortName ?? "");
-
-        if (string.IsNullOrWhiteSpace(input))
-            return true;
-
-        if (!string.IsNullOrWhiteSpace(full))
-        {
-            var first = full.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
-
-            if (full.Contains(input) || input.Contains(full))
-                return true;
-
-            if (!string.IsNullOrWhiteSpace(first))
+            case "Today":
             {
-                if (first.Contains(input) || input.Contains(first))
-                    return true;
+                var start = now.Date;
+                var end = start.AddDays(1);
 
-                if (LevenshteinDistance(first, input) <= 2)
-                    return true;
+                query = query.Where(x => x.Tarih >= start && x.Tarih < end);
+                break;
             }
 
-            if (LevenshteinDistance(full, input) <= 3)
-                return true;
+            case "ThisMonth":
+            {
+                var start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                var end = start.AddMonths(1);
+
+                query = query.Where(x => x.Tarih >= start && x.Tarih < end);
+                break;
+            }
+
+            case "LastMonth":
+            {
+                var start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
+                var end = start.AddMonths(1);
+
+                query = query.Where(x => x.Tarih >= start && x.Tarih < end);
+                break;
+            }
         }
 
-        if (!string.IsNullOrWhiteSpace(shortn))
-        {
-            if (shortn.Contains(input) || input.Contains(shortn))
-                return true;
+        return query;
+    }
 
-            if (LevenshteinDistance(shortn, input) <= 2)
-                return true;
-        }
+    private static string? FindBestEmployeeName(string rawInput, List<string?> employeeNames)
+    {
+        var input = NormalizeText(rawInput);
 
-        return false;
+        var adaylar = employeeNames
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => new
+            {
+                Original = x!,
+                Full = NormalizeText(x!),
+                First = NormalizeText(x!).Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? ""
+            })
+            .ToList();
+
+        // 1) İlk ad birebir eşleşme
+        var exactFirstNameMatches = adaylar
+            .Where(x => x.First == input)
+            .Select(x => x.Original)
+            .Distinct()
+            .ToList();
+
+        if (exactFirstNameMatches.Count == 1)
+            return exactFirstNameMatches[0];
+
+        if (exactFirstNameMatches.Count > 1)
+            return null;
+
+        // 2) İlk ad startswith eşleşme
+        var startsWithMatches = adaylar
+            .Where(x => x.First.StartsWith(input) || input.StartsWith(x.First))
+            .Select(x => x.Original)
+            .Distinct()
+            .ToList();
+
+        if (startsWithMatches.Count == 1)
+            return startsWithMatches[0];
+
+        if (startsWithMatches.Count > 1)
+            return null;
+
+        // 3) Tam ad contains
+        var fullContainsMatches = adaylar
+            .Where(x => x.Full.Contains(input) || input.Contains(x.Full))
+            .Select(x => x.Original)
+            .Distinct()
+            .ToList();
+
+        if (fullContainsMatches.Count == 1)
+            return fullContainsMatches[0];
+
+        if (fullContainsMatches.Count > 1)
+            return null;
+
+        // 4) En iyi aday (sadece tek açık fark varsa)
+        var scored = adaylar
+            .Select(x => new
+            {
+                x.Original,
+                Score = CalculateScore(input, x.First, x.Full)
+            })
+            .Where(x => x.Score > 0)
+            .OrderByDescending(x => x.Score)
+            .ToList();
+
+        if (!scored.Any())
+            return null;
+
+        if (scored.Count == 1)
+            return scored[0].Original;
+
+        // En iyi aday ikinciye göre belirgin öndeyse seç
+        if (scored[0].Score >= scored[1].Score + 100)
+            return scored[0].Original;
+
+        return null;
+    }
+
+    private static int CalculateScore(string input, string firstName, string fullName)
+    {
+        int score = 0;
+
+        if (firstName == input)
+            score += 1000;
+
+        if (fullName == input)
+            score += 900;
+
+        if (firstName.StartsWith(input))
+            score += 700;
+
+        if (fullName.StartsWith(input))
+            score += 500;
+
+        if (firstName.Contains(input))
+            score += 300;
+
+        if (fullName.Contains(input))
+            score += 200;
+
+        var firstDistance = LevenshteinDistance(firstName, input);
+        if (firstDistance <= 1)
+            score += 150;
+
+        return score;
     }
 
     private static string NormalizeText(string text)
