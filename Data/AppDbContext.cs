@@ -18,12 +18,11 @@ public class AppDbContext : DbContext
     public DbSet<Musteri> Musteriler { get; set; } = default!;
     public DbSet<MusteriIs> MusteriIsler { get; set; } = default!;
     public DbSet<MusteriMasraf> MusteriMasraflar { get; set; } = default!;
-    public DbSet<CalisanPuantaj> CalisanPuantajlari { get; set; } = default!;
-    public DbSet<CalisanArsiv> CalisanArsivleri { get; set; } = default!;
-
     public DbSet<StokUrun> StokUrunler { get; set; } = default!;
     public DbSet<StokHareket> StokHareketleri { get; set; } = default!;
 
+    // Eksik olanlar
     public DbSet<Cek> Cekler { get; set; } = default!;
-    public DbSet<CalisanMaasArsiv> CalisanMaasArsivleri { get; set; }
+    public DbSet<CalisanPuantaj> CalisanPuantajlari { get; set; } = default!;
+    public DbSet<CalisanMaasArsiv> CalisanMaasArsivleri { get; set; } = default!;
 }
