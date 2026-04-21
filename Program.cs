@@ -3,7 +3,7 @@ using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using Microsoft.AspNetCore.Http;
 using MuhasebeTakip2.App.Helpers;
-using MuhasebeTakip2.App.Data;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -190,7 +190,7 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansToplamRequest req
 {
     var result = await AiApiHelpers.GetCalisanAvansToplamAsync(db, request.CalisanAdi, request.DateRange);
     return Results.Json(result);
-});
+}).AllowAnonymous();
 
 app.MapRazorPages();
 
