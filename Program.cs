@@ -158,6 +158,12 @@ app.UseRouting();
 
 app.UseSession();
 
+if (context.Request.Path.StartsWithSegments("/api"))
+{
+    await next();
+    return;
+}
+
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value?.ToLower() ?? "";
