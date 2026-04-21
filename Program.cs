@@ -4,7 +4,6 @@ using MuhasebeTakip2.App.Models;
 using Microsoft.AspNetCore.Http;
 using MuhasebeTakip2.App.Helpers;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -158,15 +157,16 @@ app.UseRouting();
 
 app.UseSession();
 
-if (context.Request.Path.StartsWithSegments("/api"))
-{
-    await next();
-    return;
-}
-
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value?.ToLower() ?? "";
+
+    // API isteklerini login kontrolünden çıkar
+    if (path.StartsWith("/api"))
+    {
+        await next();
+        return;
+    }
 
     var izinliSayfalar =
         path == "/" ||
@@ -196,7 +196,7 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansToplamRequest req
 {
     var result = await AiApiHelpers.GetCalisanAvansToplamAsync(db, request.CalisanAdi, request.DateRange);
     return Results.Json(result);
-}).AllowAnonymous();
+});
 
 app.MapRazorPages();
 
