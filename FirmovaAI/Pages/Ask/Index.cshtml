@@ -1,0 +1,17 @@
+@page
+@model FirmovaAI.Pages.Ask.IndexModel
+
+<h2>FirmovaAI Asistan</h2>
+
+<form method="post">
+    <textarea asp-for="Soru" rows="5" style="width:100%;"></textarea>
+    <button type="submit">Sor</button>
+</form>
+
+@if (!string.IsNullOrWhiteSpace(Model.Cevap))
+{
+    <div style="margin-top:20px; padding:15px; border:1px solid #ccc;">
+        <strong>Cevap:</strong>
+        <div style="margin-top:10px;">@Html.Raw(Model.Cevap)</div>
+    </div>
+}
