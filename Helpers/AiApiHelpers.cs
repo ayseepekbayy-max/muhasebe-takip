@@ -32,26 +32,34 @@ public static class AiApiHelpers
             .OrderByDescending(x => x.Tarih)
             .ToListAsync();
 
-        var filtered = liste
-            .Where(x => IsNameMatch(calisanAdi, x.Calisan?.AdSoyad, x.Ad))
-            .ToList();
+        // 1. Tüm çalışan isimlerini çek
+var tumCalisanlar = liste
+    .Select(x => x.Calisan?.AdSoyad)
+    .Where(x => !string.IsNullOrWhiteSpace(x))
+    .Distinct()
+    .ToList();
 
-        var toplam = filtered.Sum(x => x.Tutar);
+// 2. En doğru çalışanı bul
+var bulunanAd = tumCalisanlar
+    .FirstOrDefault(x => NormalizeText(x!) == NormalizeText(calisanAdi));
 
-        if (!filtered.Any())
-        {
-            return new CalisanAvansToplamResponse
-            {
-                Success = true,
-                EmployeeName = calisanAdi,
-                Total = 0,
-                Message = $"{calisanAdi} için kayıt bulunamadı."
-            };
-        }
+if (string.IsNullOrWhiteSpace(bulunanAd))
+{
+    return new CalisanAvansToplamResponse
+    {
+        Success = true,
+        EmployeeName = calisanAdi,
+        Total = 0,
+        Message = $"{calisanAdi} için kayıt bulunamadı."
+    };
+}
 
-        var bulunanAd = filtered
-            .Select(x => x.Calisan?.AdSoyad)
-            .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? calisanAdi;
+// 3. SADECE o çalışanın verisini al
+var filtered = liste
+    .Where(x => x.Calisan?.AdSoyad == bulunanAd)
+    .ToList();
+
+var toplam = filtered.Sum(x => x.Tutar);
 
         return new CalisanAvansToplamResponse
         {

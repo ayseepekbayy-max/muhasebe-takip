@@ -31,10 +31,9 @@ public class QueryExecutor
         if (string.IsNullOrWhiteSpace(intent.CalisanAdi))
             return "Çalışan adı anlaşılamadı.";
 
-        var result = await _apiClient.GetCalisanAvansToplamAsync(intent.CalisanAdi, intent.DateRange ?? "ThisMonth");
-
-        if (!result.Success)
-            return result.Message;
+        var result = await _apiClient.GetCalisanAvansToplamAsync(
+            intent.CalisanAdi,
+            intent.DateRange ?? "ThisMonth");
 
         return result.Message;
     }
