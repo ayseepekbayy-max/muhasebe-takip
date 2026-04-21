@@ -29,6 +29,25 @@ public class MuhasebeApiClient
             Message = "API cevabı okunamadı."
         };
     }
+
+    public async Task<CalisanAvansApiResponse> GetToplamAvansAsync(string dateRange)
+    {
+        var request = new CalisanAvansApiRequest
+        {
+            CalisanAdi = "",
+            DateRange = dateRange
+        };
+
+        var response = await _httpClient.PostAsJsonAsync("/api/ai/toplam-avans", request);
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<CalisanAvansApiResponse>();
+        return result ?? new CalisanAvansApiResponse
+        {
+            Success = false,
+            Message = "API cevabı okunamadı."
+        };
+    }
 }
 
 public class CalisanAvansApiRequest

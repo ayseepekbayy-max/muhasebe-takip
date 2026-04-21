@@ -17,6 +17,15 @@ public class QueryInterpreter
             RequestType = DetectRequestType(lower)
         };
 
+        if (ContainsAny(lower, "avans", "maaş avansı", "aldığı avans") &&
+            ContainsAny(lower, "toplam", "ne kadar", "kaç tl", "kaç para") &&
+            !HasPersonName(text))
+        {
+            result.Intent = "ToplamAvans";
+            result.IsSuccess = true;
+            return result;
+        }
+
         if (ContainsAny(lower, "avans", "maaş avansı", "aldığı avans"))
         {
             result.CalisanAdi = ExtractPersonName(text);
@@ -26,38 +35,6 @@ public class QueryInterpreter
             else
                 result.Intent = "CalisanAvansListele";
 
-            result.IsSuccess = true;
-            return result;
-        }
-
-        if (ContainsAny(lower, "kasa", "kasada", "nakit"))
-        {
-            if (ContainsAny(lower, "giriş", "giren", "tahsilat"))
-                result.Intent = "KasaGirisToplam";
-            else if (ContainsAny(lower, "çıkış", "çıkan", "ödeme", "gider"))
-                result.Intent = "KasaCikisToplam";
-            else
-                result.Intent = "KasaDurumu";
-
-            result.IsSuccess = true;
-            return result;
-        }
-
-        if (ContainsAny(lower, "stok", "ürün", "malzeme"))
-        {
-            if (ContainsAny(lower, "azalan", "az", "bitmek üzere", "bitiyor"))
-                result.Intent = "AzalanStoklar";
-            else
-                result.Intent = "StokListele";
-
-            result.IsSuccess = true;
-            return result;
-        }
-
-        if (ContainsAny(lower, "borç", "alacak", "cari"))
-        {
-            result.CariAdi = ExtractPersonName(text);
-            result.Intent = "CariDurumu";
             result.IsSuccess = true;
             return result;
         }
@@ -82,7 +59,7 @@ public class QueryInterpreter
         if (ContainsAny(text, "geçen ay", "önceki ay"))
             return "LastMonth";
 
-        return "All";
+        return "ThisMonth";
     }
 
     private static string DetectRequestType(string text)
@@ -94,6 +71,33 @@ public class QueryInterpreter
             return "Detail";
 
         return "List";
+    }
+
+    private static bool HasPersonName(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        text = text.Trim();
+        var lower = text.ToLowerInvariant();
+
+        var keywords = new[]
+        {
+            "bu ay", "bugün", "geçen ay", "avans", "borç", "maaş",
+            "ne kadar", "kaç tl", "kaç para", "kaç", "göster", "listele", "toplam"
+        };
+
+        foreach (var keyword in keywords)
+        {
+            var index = lower.IndexOf(keyword);
+            if (index > 0)
+            {
+                var before = text[..index].Trim();
+                return !string.IsNullOrWhiteSpace(before);
+            }
+        }
+
+        return false;
     }
 
     private static string? ExtractPersonName(string text)

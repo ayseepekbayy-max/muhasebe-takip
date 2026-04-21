@@ -144,8 +144,6 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-// Render'da HTTPS yönlendirme sorun çıkarabildiği için
-// sadece local/development ortamında çalıştırıyoruz.
 if (app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
@@ -161,7 +159,6 @@ app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value?.ToLower() ?? "";
 
-    // API isteklerini login kontrolünden çıkar
     if (path.StartsWith("/api"))
     {
         await next();
@@ -197,6 +194,25 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansToplamRequest req
     try
     {
         var result = await AiApiHelpers.GetCalisanAvansToplamAsync(db, request.CalisanAdi, request.DateRange);
+        return Results.Json(result);
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            error = ex.Message,
+            detail = ex.InnerException?.Message,
+            stack = ex.StackTrace
+        }, statusCode: 500);
+    }
+});
+
+app.MapPost("/api/ai/toplam-avans", async (CalisanAvansToplamRequest request, AppDbContext db) =>
+{
+    try
+    {
+        var result = await AiApiHelpers.GetToplamAvansAsync(db, request.DateRange);
         return Results.Json(result);
     }
     catch (Exception ex)

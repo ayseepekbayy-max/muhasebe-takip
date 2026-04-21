@@ -25,7 +25,8 @@ public static class AiApiHelpers
             .Include(x => x.Calisan)
             .Where(x => x.Tip == CalisanHareketTipi.Avans && !x.ArsivlendiMi)
             .AsQueryable();
-                query = ApplyDateFilter(query, dateRange);
+
+        query = ApplyDateFilter(query, dateRange);
 
         var liste = await query
             .OrderByDescending(x => x.Tarih)
@@ -65,6 +66,28 @@ public static class AiApiHelpers
         };
     }
 
+    public static async Task<CalisanAvansToplamResponse> GetToplamAvansAsync(
+        AppDbContext db,
+        string? dateRange)
+    {
+        var query = db.CalisanAvanslari
+            .Include(x => x.Calisan)
+            .Where(x => x.Tip == CalisanHareketTipi.Avans && !x.ArsivlendiMi)
+            .AsQueryable();
+
+        query = ApplyDateFilter(query, dateRange);
+
+        var toplam = await query.SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        return new CalisanAvansToplamResponse
+        {
+            Success = true,
+            EmployeeName = "",
+            Total = toplam,
+            Message = $"Bu ay toplam avans: {toplam:N2} TL"
+        };
+    }
+
     private static IQueryable<CalisanAvans> ApplyDateFilter(IQueryable<CalisanAvans> query, string? dateRange)
     {
         var now = DateTime.UtcNow;
@@ -75,7 +98,6 @@ public static class AiApiHelpers
             {
                 var start = now.Date;
                 var end = start.AddDays(1);
-
                 query = query.Where(x => x.Tarih >= start && x.Tarih < end);
                 break;
             }
@@ -84,7 +106,6 @@ public static class AiApiHelpers
             {
                 var start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
                 var end = start.AddMonths(1);
-
                 query = query.Where(x => x.Tarih >= start && x.Tarih < end);
                 break;
             }
@@ -93,7 +114,6 @@ public static class AiApiHelpers
             {
                 var start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
                 var end = start.AddMonths(1);
-
                 query = query.Where(x => x.Tarih >= start && x.Tarih < end);
                 break;
             }
@@ -116,7 +136,6 @@ public static class AiApiHelpers
             })
             .ToList();
 
-        // 1) İlk ad birebir eşleşme
         var exactFirstNameMatches = adaylar
             .Where(x => x.First == input)
             .Select(x => x.Original)
@@ -129,7 +148,6 @@ public static class AiApiHelpers
         if (exactFirstNameMatches.Count > 1)
             return null;
 
-        // 2) İlk ad startswith eşleşme
         var startsWithMatches = adaylar
             .Where(x => x.First.StartsWith(input) || input.StartsWith(x.First))
             .Select(x => x.Original)
@@ -142,7 +160,6 @@ public static class AiApiHelpers
         if (startsWithMatches.Count > 1)
             return null;
 
-        // 3) Tam ad contains
         var fullContainsMatches = adaylar
             .Where(x => x.Full.Contains(input) || input.Contains(x.Full))
             .Select(x => x.Original)
@@ -155,7 +172,6 @@ public static class AiApiHelpers
         if (fullContainsMatches.Count > 1)
             return null;
 
-        // 4) En iyi aday (sadece tek açık fark varsa)
         var scored = adaylar
             .Select(x => new
             {
@@ -172,7 +188,6 @@ public static class AiApiHelpers
         if (scored.Count == 1)
             return scored[0].Original;
 
-        // En iyi aday ikinciye göre belirgin öndeyse seç
         if (scored[0].Score >= scored[1].Score + 100)
             return scored[0].Original;
 
