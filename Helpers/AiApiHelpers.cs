@@ -63,35 +63,41 @@ public static class AiApiHelpers
     }
 
     private static IQueryable<CalisanAvans> ApplyDateFilter(IQueryable<CalisanAvans> query, string? dateRange)
+{
+    var today = DateTime.UtcNow;
+
+    switch (dateRange)
     {
-        var today = DateTime.Today;
-
-        switch (dateRange)
+        case "Today":
         {
-            case "Today":
-                query = query.Where(x => x.Tarih.Date == today);
-                break;
+            var start = today.Date;
+            var end = start.AddDays(1);
 
-            case "ThisMonth":
-            {
-                var startOfMonth = new DateTime(today.Year, today.Month, 1);
-                query = query.Where(x => x.Tarih.Date >= startOfMonth && x.Tarih.Date <= today);
-                break;
-            }
-
-            case "LastMonth":
-            {
-                var lastMonth = today.AddMonths(-1);
-                var startOfLastMonth = new DateTime(lastMonth.Year, lastMonth.Month, 1);
-                var endOfLastMonth = new DateTime(today.Year, today.Month, 1).AddDays(-1);
-
-                query = query.Where(x => x.Tarih.Date >= startOfLastMonth && x.Tarih.Date <= endOfLastMonth);
-                break;
-            }
+            query = query.Where(x => x.Tarih >= start && x.Tarih < end);
+            break;
         }
 
-        return query;
+        case "ThisMonth":
+        {
+            var start = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var end = start.AddMonths(1);
+
+            query = query.Where(x => x.Tarih >= start && x.Tarih < end);
+            break;
+        }
+
+        case "LastMonth":
+        {
+            var start = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
+            var end = start.AddMonths(1);
+
+            query = query.Where(x => x.Tarih >= start && x.Tarih < end);
+            break;
+        }
     }
+
+    return query;
+}
 
     private static bool IsNameMatch(string rawInput, string? fullName, string? shortName)
     {
