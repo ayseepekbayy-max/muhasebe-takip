@@ -194,8 +194,21 @@ app.UseAuthorization();
 
 app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansToplamRequest request, AppDbContext db) =>
 {
-    var result = await AiApiHelpers.GetCalisanAvansToplamAsync(db, request.CalisanAdi, request.DateRange);
-    return Results.Json(result);
+    try
+    {
+        var result = await AiApiHelpers.GetCalisanAvansToplamAsync(db, request.CalisanAdi, request.DateRange);
+        return Results.Json(result);
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            error = ex.Message,
+            detail = ex.InnerException?.Message,
+            stack = ex.StackTrace
+        }, statusCode: 500);
+    }
 });
 
 app.MapRazorPages();
