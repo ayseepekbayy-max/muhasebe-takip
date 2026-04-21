@@ -227,6 +227,25 @@ app.MapPost("/api/ai/toplam-avans", async (CalisanAvansToplamRequest request, Ap
     }
 });
 
+app.MapPost("/api/ai/son-avans-verilen-kisi", async (AppDbContext db) =>
+{
+    try
+    {
+        var result = await AiApiHelpers.GetSonAvansVerilenKisiAsync(db);
+        return Results.Json(result);
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            error = ex.Message,
+            detail = ex.InnerException?.Message,
+            stack = ex.StackTrace
+        }, statusCode: 500);
+    }
+});
+
 app.MapRazorPages();
 
 app.Run();

@@ -88,6 +88,37 @@ public static class AiApiHelpers
         };
     }
 
+    public static async Task<CalisanAvansToplamResponse> GetSonAvansVerilenKisiAsync(AppDbContext db)
+    {
+        var kayit = await db.CalisanAvanslari
+            .Include(x => x.Calisan)
+            .Where(x => x.Tip == CalisanHareketTipi.Avans && !x.ArsivlendiMi)
+            .OrderByDescending(x => x.Tarih)
+            .ThenByDescending(x => x.Id)
+            .FirstOrDefaultAsync();
+
+        if (kayit == null)
+        {
+            return new CalisanAvansToplamResponse
+            {
+                Success = true,
+                EmployeeName = "",
+                Total = 0,
+                Message = "Hiç avans kaydı bulunamadı."
+            };
+        }
+
+        var ad = kayit.Calisan?.AdSoyad ?? kayit.Ad ?? "Bilinmiyor";
+
+        return new CalisanAvansToplamResponse
+        {
+            Success = true,
+            EmployeeName = ad,
+            Total = kayit.Tutar,
+            Message = $"En son avans verilen kişi: {ad} - {kayit.Tutar:N2} TL ({kayit.Tarih:dd.MM.yyyy})"
+        };
+    }
+
     private static IQueryable<CalisanAvans> ApplyDateFilter(IQueryable<CalisanAvans> query, string? dateRange)
     {
         var now = DateTime.UtcNow;

@@ -17,6 +17,13 @@ public class QueryInterpreter
             RequestType = DetectRequestType(lower)
         };
 
+        if (ContainsAny(lower, "en son kime avans verildi", "son avans verilen kişi kim", "en son avans kime verildi"))
+        {
+            result.Intent = "SonAvansVerilenKisi";
+            result.IsSuccess = true;
+            return result;
+        }
+
         if (ContainsAny(lower, "avans", "maaş avansı", "aldığı avans") &&
             ContainsAny(lower, "toplam", "ne kadar", "kaç tl", "kaç para") &&
             !HasPersonName(text))
@@ -78,8 +85,25 @@ public class QueryInterpreter
         if (string.IsNullOrWhiteSpace(text))
             return false;
 
-        text = text.Trim();
-        var lower = text.ToLowerInvariant();
+        text = text.Trim().ToLowerInvariant();
+
+        if (text.StartsWith("bu ay toplam"))
+            return false;
+
+        if (text.StartsWith("bu ay çalışanlara toplam"))
+            return false;
+
+        if (text.StartsWith("bu ay verilen avans"))
+            return false;
+
+        if (text.StartsWith("toplam avans"))
+            return false;
+
+        if (text.StartsWith("bugün toplam"))
+            return false;
+
+        if (text.StartsWith("geçen ay toplam"))
+            return false;
 
         var keywords = new[]
         {
@@ -89,10 +113,17 @@ public class QueryInterpreter
 
         foreach (var keyword in keywords)
         {
-            var index = lower.IndexOf(keyword);
+            var index = text.IndexOf(keyword);
             if (index > 0)
             {
                 var before = text[..index].Trim();
+
+                if (before == "bu ay" || before == "bugün" || before == "geçen ay")
+                    return false;
+
+                if (before == "bu ay toplam" || before == "bugün toplam" || before == "geçen ay toplam")
+                    return false;
+
                 return !string.IsNullOrWhiteSpace(before);
             }
         }

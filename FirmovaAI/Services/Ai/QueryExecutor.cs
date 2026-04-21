@@ -24,6 +24,9 @@ public class QueryExecutor
             case "ToplamAvans":
                 return await GetToplamAvansAsync(intent);
 
+            case "SonAvansVerilenKisi":
+                return await GetSonAvansVerilenKisiAsync();
+
             default:
                 return "Bu sorgu tipi henüz desteklenmiyor.";
         }
@@ -44,6 +47,12 @@ public class QueryExecutor
     private async Task<string> GetToplamAvansAsync(QueryIntent intent)
     {
         var result = await _apiClient.GetToplamAvansAsync(intent.DateRange ?? "ThisMonth");
+        return result.Message;
+    }
+
+    private async Task<string> GetSonAvansVerilenKisiAsync()
+    {
+        var result = await _apiClient.GetSonAvansVerilenKisiAsync();
         return result.Message;
     }
 }

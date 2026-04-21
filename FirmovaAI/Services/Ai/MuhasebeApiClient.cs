@@ -48,6 +48,19 @@ public class MuhasebeApiClient
             Message = "API cevabı okunamadı."
         };
     }
+
+    public async Task<CalisanAvansApiResponse> GetSonAvansVerilenKisiAsync()
+    {
+        var response = await _httpClient.PostAsync("/api/ai/son-avans-verilen-kisi", null);
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<CalisanAvansApiResponse>();
+        return result ?? new CalisanAvansApiResponse
+        {
+            Success = false,
+            Message = "API cevabı okunamadı."
+        };
+    }
 }
 
 public class CalisanAvansApiRequest
