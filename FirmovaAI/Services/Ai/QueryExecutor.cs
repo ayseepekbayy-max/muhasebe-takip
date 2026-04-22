@@ -27,6 +27,11 @@ public class QueryExecutor
             case "SonAvansVerilenKisi":
                 return await GetSonAvansVerilenKisiAsync();
 
+            case "BugunKasa":
+            case "BugunKasaGiris":
+            case "BugunKasaCikis":
+                return await GetBugunKasaAsync(intent);
+
             default:
                 return "Bu sorgu tipi henüz desteklenmiyor.";
         }
@@ -53,6 +58,12 @@ public class QueryExecutor
     private async Task<string> GetSonAvansVerilenKisiAsync()
     {
         var result = await _apiClient.GetSonAvansVerilenKisiAsync();
+        return result.Message;
+    }
+
+    private async Task<string> GetBugunKasaAsync(QueryIntent intent)
+    {
+        var result = await _apiClient.GetBugunKasaDurumuAsync(intent.Intent ?? "BugunKasa");
         return result.Message;
     }
 }

@@ -61,6 +61,25 @@ public class MuhasebeApiClient
             Message = "API cevabı okunamadı."
         };
     }
+
+    public async Task<CalisanAvansApiResponse> GetBugunKasaDurumuAsync(string kasaIntent)
+    {
+        var request = new CalisanAvansApiRequest
+        {
+            CalisanAdi = kasaIntent,
+            DateRange = "Today"
+        };
+
+        var response = await _httpClient.PostAsJsonAsync("/api/ai/bugun-kasa-durumu", request);
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<CalisanAvansApiResponse>();
+        return result ?? new CalisanAvansApiResponse
+        {
+            Success = false,
+            Message = "API cevabı okunamadı."
+        };
+    }
 }
 
 public class CalisanAvansApiRequest

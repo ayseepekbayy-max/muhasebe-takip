@@ -119,6 +119,41 @@ public static class AiApiHelpers
         };
     }
 
+    public static async Task<CalisanAvansToplamResponse> GetBugunKasaDurumuAsync(AppDbContext db, string? kasaIntent)
+    {
+        var bugun = DateTime.UtcNow.Date;
+        var yarin = bugun.AddDays(1);
+
+        var giris = await db.KasaHareketleri
+            .Where(x => x.Tarih >= bugun && x.Tarih < yarin && x.Tip == KasaHareketTipi.Giris)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        var cikis = await db.KasaHareketleri
+            .Where(x => x.Tarih >= bugun && x.Tarih < yarin && x.Tip == KasaHareketTipi.Cikis)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        return kasaIntent switch
+        {
+            "BugunKasaGiris" => new CalisanAvansToplamResponse
+            {
+                Success = true,
+                Message = $"Bugün kasa girişi: {giris:N2} TL"
+            },
+
+            "BugunKasaCikis" => new CalisanAvansToplamResponse
+            {
+                Success = true,
+                Message = $"Bugün kasa çıkışı: {cikis:N2} TL"
+            },
+
+            _ => new CalisanAvansToplamResponse
+            {
+                Success = true,
+                Message = $"Bugün kasa girişi: {giris:N2} TL | kasa çıkışı: {cikis:N2} TL"
+            }
+        };
+    }
+
     private static IQueryable<CalisanAvans> ApplyDateFilter(IQueryable<CalisanAvans> query, string? dateRange)
     {
         var now = DateTime.UtcNow;

@@ -17,6 +17,27 @@ public class QueryInterpreter
             RequestType = DetectRequestType(lower)
         };
 
+        if (ContainsAny(lower, "bugün kasa çıkışı", "bugün kasadan ne kadar çıktı", "bugün toplam çıkış"))
+        {
+            result.Intent = "BugunKasaCikis";
+            result.IsSuccess = true;
+            return result;
+        }
+
+        if (ContainsAny(lower, "bugün kasa girişi", "bugün kasaya ne kadar para girdi", "bugün toplam giriş"))
+        {
+            result.Intent = "BugunKasaGiris";
+            result.IsSuccess = true;
+            return result;
+        }
+
+        if (ContainsAny(lower, "bugün kasa", "bugün kasa durumu", "kasa durumu"))
+        {
+            result.Intent = "BugunKasa";
+            result.IsSuccess = true;
+            return result;
+        }
+
         if (ContainsAny(lower, "en son kime avans verildi", "son avans verilen kişi kim", "en son avans kime verildi"))
         {
             result.Intent = "SonAvansVerilenKisi";

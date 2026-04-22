@@ -246,6 +246,25 @@ app.MapPost("/api/ai/son-avans-verilen-kisi", async (AppDbContext db) =>
     }
 });
 
+app.MapPost("/api/ai/bugun-kasa-durumu", async (CalisanAvansToplamRequest request, AppDbContext db) =>
+{
+    try
+    {
+        var result = await AiApiHelpers.GetBugunKasaDurumuAsync(db, request.CalisanAdi);
+        return Results.Json(result);
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            error = ex.Message,
+            detail = ex.InnerException?.Message,
+            stack = ex.StackTrace
+        }, statusCode: 500);
+    }
+});
+
 app.MapRazorPages();
 
 app.Run();
