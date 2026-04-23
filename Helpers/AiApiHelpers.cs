@@ -125,11 +125,11 @@ public static class AiApiHelpers
         var yarin = bugun.AddDays(1);
 
         var giris = await db.KasaHareketleri
-            .Where(x => x.Tarih >= bugun && x.Tarih < yarin && x.Tip == KasaHareketTipi.Giris)
+            .Where(x => x.Tarih >= bugun && x.Tarih < yarin && x.Tip == HareketTipi.Giris)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         var cikis = await db.KasaHareketleri
-            .Where(x => x.Tarih >= bugun && x.Tarih < yarin && x.Tip == KasaHareketTipi.Cikis)
+            .Where(x => x.Tarih >= bugun && x.Tarih < yarin && x.Tip == HareketTipi.Cikis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         return kasaIntent switch
