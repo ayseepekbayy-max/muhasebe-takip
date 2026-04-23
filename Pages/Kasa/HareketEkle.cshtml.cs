@@ -27,7 +27,7 @@ public class HareketEkleModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        Hareket.Tarih = DateTime.Today;
+        Hareket.Tarih = DateTime.UtcNow.Date;
         Hareket.Tip = HareketTipi.Giris;
         Hareket.Tutar = 0;
         Hareket.Aciklama = "";
@@ -55,64 +55,82 @@ public class HareketEkleModel : PageModel
 
         await YukleCariSecenekleriAsync(firmaId.Value);
 
-        decimal tutar;
-        var girilen = (TutarText ?? "").Trim();
-
-        if (string.IsNullOrWhiteSpace(girilen))
+        try
         {
-            ModelState.AddModelError("", "Tutar boş olamaz.");
-            return Page();
-        }
+            decimal tutar;
+            var girilen = (TutarText ?? "").Trim();
 
-        string temizTutar = girilen;
-
-        if (temizTutar.Contains(",") && temizTutar.Contains("."))
-        {
-            temizTutar = temizTutar.Replace(".", "").Replace(",", ".");
-        }
-        else if (temizTutar.Contains(","))
-        {
-            temizTutar = temizTutar.Replace(",", ".");
-        }
-        else
-        {
-            temizTutar = temizTutar.Replace(".", "");
-        }
-
-        if (!decimal.TryParse(
-                temizTutar,
-                NumberStyles.Any,
-                CultureInfo.InvariantCulture,
-                out tutar) || tutar <= 0)
-        {
-            ModelState.AddModelError("", "Geçerli bir tutar girin.");
-            return Page();
-        }
-
-        Hareket.Tutar = tutar;
-        Hareket.Aciklama = (Hareket.Aciklama ?? "").Trim();
-
-        if (Hareket.CariKartId == 0)
-            Hareket.CariKartId = null;
-
-        if (Hareket.CariKartId.HasValue)
-        {
-            var secilenCari = await _db.CariKartlar
-                .AnyAsync(x => x.Id == Hareket.CariKartId.Value && x.FirmaId == firmaId);
-
-            if (!secilenCari)
+            if (string.IsNullOrWhiteSpace(girilen))
             {
-                ModelState.AddModelError("", "Geçersiz cari seçimi.");
+                ModelState.AddModelError("", "Tutar boş olamaz.");
                 return Page();
             }
+
+            string temizTutar = girilen;
+
+            if (temizTutar.Contains(",") && temizTutar.Contains("."))
+            {
+                temizTutar = temizTutar.Replace(".", "").Replace(",", ".");
+            }
+            else if (temizTutar.Contains(","))
+            {
+                temizTutar = temizTutar.Replace(",", ".");
+            }
+            else
+            {
+                temizTutar = temizTutar.Replace(".", "");
+            }
+
+            if (!decimal.TryParse(
+                    temizTutar,
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture,
+                    out tutar) || tutar <= 0)
+            {
+                ModelState.AddModelError("", "Geçerli bir tutar girin.");
+                return Page();
+            }
+
+            Hareket.Tutar = tutar;
+            Hareket.Aciklama = (Hareket.Aciklama ?? "").Trim();
+
+            if (Hareket.CariKartId == 0)
+                Hareket.CariKartId = null;
+
+            if (Hareket.CariKartId.HasValue)
+            {
+                var secilenCari = await _db.CariKartlar
+                    .AnyAsync(x => x.Id == Hareket.CariKartId.Value && x.FirmaId == firmaId);
+
+                if (!secilenCari)
+                {
+                    ModelState.AddModelError("", "Geçersiz cari seçimi.");
+                    return Page();
+                }
+            }
+
+            Hareket.FirmaId = firmaId.Value;
+
+            // PostgreSQL timestamptz için UTC tarih gönder
+            var secilenTarih = Hareket.Tarih.Date;
+            Hareket.Tarih = DateTime.SpecifyKind(secilenTarih, DateTimeKind.Utc);
+
+            _db.KasaHareketleri.Add(Hareket);
+            await _db.SaveChangesAsync();
+
+            return RedirectToPage("/Kasa/Hareketler");
         }
-
-        Hareket.FirmaId = firmaId.Value;
-
-        _db.KasaHareketleri.Add(Hareket);
-        await _db.SaveChangesAsync();
-
-        return RedirectToPage("/Kasa/Hareketler");
+        catch (DbUpdateException ex)
+        {
+            var detay = ex.InnerException?.Message ?? ex.Message;
+            ModelState.AddModelError("", $"Veritabanı hatası: {detay}");
+            return Page();
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError("", $"Genel hata: {ex.Message}");
+            return Page();
+        }
     }
 
     private async Task YukleCariSecenekleriAsync(int firmaId)
