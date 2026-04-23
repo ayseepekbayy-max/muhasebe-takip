@@ -56,15 +56,15 @@ public class IndexModel : PageModel
             if ((int)YeniCari.Tip == 0)
                 YeniCari.Tip = CariTip.Alici;
 
-            // Formda Ad alanı yok, boş kalmasın
             YeniCari.Ad = string.IsNullOrWhiteSpace(YeniCari.Ad)
                 ? YeniCari.Unvan
                 : YeniCari.Ad.Trim();
 
             YeniCari.FirmaId = firmaId.Value;
-            YeniCari.OlusturmaTarihi = DateTime.Now;
 
-            // Takip edilen eski nesne varsa karışmasın
+            // PostgreSQL timestamptz için UTC gönder
+            YeniCari.OlusturmaTarihi = DateTime.UtcNow;
+
             _db.Entry(YeniCari).State = EntityState.Added;
 
             await _db.SaveChangesAsync();
