@@ -80,6 +80,70 @@ public class MuhasebeApiClient
             Message = "API cevabı okunamadı."
         };
     }
+
+    public async Task<CalisanAvansApiResponse> GetEnBorcluMusteriAsync()
+    {
+        var response = await _httpClient.PostAsync("/api/ai/en-borclu-musteri", null);
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<CalisanAvansApiResponse>();
+        return result ?? new CalisanAvansApiResponse
+        {
+            Success = false,
+            Message = "API cevabı okunamadı."
+        };
+    }
+
+    public async Task<CalisanAvansApiResponse> GetEnAlacakliSaticiAsync()
+    {
+        var response = await _httpClient.PostAsync("/api/ai/en-alacakli-satici", null);
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<CalisanAvansApiResponse>();
+        return result ?? new CalisanAvansApiResponse
+        {
+            Success = false,
+            Message = "API cevabı okunamadı."
+        };
+    }
+
+    public async Task<CalisanAvansApiResponse> GetToplamMusteriTahsilatiAsync(string dateRange)
+    {
+        var request = new CalisanAvansApiRequest
+        {
+            CalisanAdi = "",
+            DateRange = dateRange
+        };
+
+        var response = await _httpClient.PostAsJsonAsync("/api/ai/toplam-musteri-tahsilati", request);
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<CalisanAvansApiResponse>();
+        return result ?? new CalisanAvansApiResponse
+        {
+            Success = false,
+            Message = "API cevabı okunamadı."
+        };
+    }
+
+    public async Task<CalisanAvansApiResponse> GetToplamSaticiOdemesiAsync(string dateRange)
+    {
+        var request = new CalisanAvansApiRequest
+        {
+            CalisanAdi = "",
+            DateRange = dateRange
+        };
+
+        var response = await _httpClient.PostAsJsonAsync("/api/ai/toplam-satici-odemesi", request);
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<CalisanAvansApiResponse>();
+        return result ?? new CalisanAvansApiResponse
+        {
+            Success = false,
+            Message = "API cevabı okunamadı."
+        };
+    }
 }
 
 public class CalisanAvansApiRequest

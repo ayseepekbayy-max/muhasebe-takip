@@ -17,6 +17,42 @@ public class QueryInterpreter
             RequestType = DetectRequestType(lower)
         };
 
+        // =========================
+        // CARİ / MÜŞTERİ / SATICI
+        // =========================
+
+        if (ContainsAny(lower, "en borçlu müşteri", "en çok borçlu müşteri", "kim bana en çok borçlu"))
+        {
+            result.Intent = "EnBorcluMusteri";
+            result.IsSuccess = true;
+            return result;
+        }
+
+        if (ContainsAny(lower, "en alacaklı satıcı", "en çok alacaklı satıcı", "en çok ödeme yapılan satıcı"))
+        {
+            result.Intent = "EnAlacakliSatici";
+            result.IsSuccess = true;
+            return result;
+        }
+
+        if (ContainsAny(lower, "toplam müşteri tahsilatı", "müşterilerden toplam tahsilat", "toplam tahsilat"))
+        {
+            result.Intent = "ToplamMusteriTahsilati";
+            result.IsSuccess = true;
+            return result;
+        }
+
+        if (ContainsAny(lower, "toplam satıcı ödemesi", "satıcılara toplam ödeme", "toplam satıcıya ödeme", "toplam ödeme"))
+        {
+            result.Intent = "ToplamSaticiOdemesi";
+            result.IsSuccess = true;
+            return result;
+        }
+
+        // =========================
+        // KASA
+        // =========================
+
         if (ContainsAny(lower, "bugün kasa çıkışı", "bugün kasadan ne kadar çıktı", "bugün toplam çıkış"))
         {
             result.Intent = "BugunKasaCikis";
@@ -38,6 +74,10 @@ public class QueryInterpreter
             return result;
         }
 
+        // =========================
+        // AVANS
+        // =========================
+
         if (ContainsAny(lower, "en son kime avans verildi", "son avans verilen kişi kim", "en son avans kime verildi"))
         {
             result.Intent = "SonAvansVerilenKisi";
@@ -45,6 +85,7 @@ public class QueryInterpreter
             return result;
         }
 
+        // Çalışan adı OLMADAN sorulan toplam avans
         if (ContainsAny(lower, "avans", "maaş avansı", "aldığı avans") &&
             ContainsAny(lower, "toplam", "ne kadar", "kaç tl", "kaç para") &&
             !HasPersonName(text))
@@ -54,6 +95,7 @@ public class QueryInterpreter
             return result;
         }
 
+        // Çalışan adı geçen avans soruları
         if (ContainsAny(lower, "avans", "maaş avansı", "aldığı avans"))
         {
             result.CalisanAdi = ExtractPersonName(text);
@@ -126,6 +168,18 @@ public class QueryInterpreter
         if (text.StartsWith("geçen ay toplam"))
             return false;
 
+        if (text.StartsWith("toplam müşteri tahsilatı"))
+            return false;
+
+        if (text.StartsWith("müşterilerden toplam tahsilat"))
+            return false;
+
+        if (text.StartsWith("toplam satıcı ödemesi"))
+            return false;
+
+        if (text.StartsWith("satıcılara toplam ödeme"))
+            return false;
+
         var keywords = new[]
         {
             "bu ay", "bugün", "geçen ay", "avans", "borç", "maaş",
@@ -143,6 +197,9 @@ public class QueryInterpreter
                     return false;
 
                 if (before == "bu ay toplam" || before == "bugün toplam" || before == "geçen ay toplam")
+                    return false;
+
+                if (before == "toplam müşteri" || before == "müşterilerden toplam" || before == "toplam satıcı" || before == "satıcılara toplam")
                     return false;
 
                 return !string.IsNullOrWhiteSpace(before);

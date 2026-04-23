@@ -25,17 +25,10 @@ public class IndexModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        Alicilar = await _db.CariKartlar
-            .Where(x => x.FirmaId == firmaId && x.Tip == CariTip.Alici)
-            .OrderByDescending(x => x.Id)
-            .ToListAsync();
+        await ListeleriYukleAsync(firmaId.Value);
 
-        Saticilar = await _db.CariKartlar
-            .Where(x => x.FirmaId == firmaId && x.Tip == CariTip.Satici)
-            .OrderByDescending(x => x.Id)
-            .ToListAsync();
-
-        if (YeniCari.Tip == 0) YeniCari.Tip = CariTip.Alici;
+        if (YeniCari.Tip == 0)
+            YeniCari.Tip = CariTip.Alici;
 
         return Page();
     }
@@ -46,27 +39,22 @@ public class IndexModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
+        YeniCari.Unvan = (YeniCari.Unvan ?? "").Trim();
+        YeniCari.Telefon = string.IsNullOrWhiteSpace(YeniCari.Telefon) ? null : YeniCari.Telefon.Trim();
+        YeniCari.VergiNo = string.IsNullOrWhiteSpace(YeniCari.VergiNo) ? null : YeniCari.VergiNo.Trim();
+
         if (string.IsNullOrWhiteSpace(YeniCari.Unvan))
         {
             ModelState.AddModelError("", "Ünvan zorunludur.");
-
-            Alicilar = await _db.CariKartlar
-                .Where(x => x.FirmaId == firmaId && x.Tip == CariTip.Alici)
-                .OrderByDescending(x => x.Id)
-                .ToListAsync();
-
-            Saticilar = await _db.CariKartlar
-                .Where(x => x.FirmaId == firmaId && x.Tip == CariTip.Satici)
-                .OrderByDescending(x => x.Id)
-                .ToListAsync();
-
+            await ListeleriYukleAsync(firmaId.Value);
             return Page();
         }
 
-        YeniCari.Unvan = YeniCari.Unvan.Trim();
-        YeniCari.Telefon = (YeniCari.Telefon ?? "").Trim();
-        YeniCari.VergiNo = (YeniCari.VergiNo ?? "").Trim();
+        // CariKart modelinde Ad alanı da bulunduğu için boş kalmasını engelliyoruz.
+        // Kullanıcı ayrıca Ad girmediği durumda Ünvan ile dolduruyoruz.
+        YeniCari.Ad = YeniCari.Unvan;
         YeniCari.FirmaId = firmaId.Value;
+        YeniCari.OlusturmaTarihi = DateTime.Now;
 
         _db.CariKartlar.Add(YeniCari);
         await _db.SaveChangesAsync();
@@ -148,5 +136,18 @@ public class IndexModel : PageModel
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             dosyaAdi
         );
+    }
+
+    private async Task ListeleriYukleAsync(int firmaId)
+    {
+        Alicilar = await _db.CariKartlar
+            .Where(x => x.FirmaId == firmaId && x.Tip == CariTip.Alici)
+            .OrderByDescending(x => x.Id)
+            .ToListAsync();
+
+        Saticilar = await _db.CariKartlar
+            .Where(x => x.FirmaId == firmaId && x.Tip == CariTip.Satici)
+            .OrderByDescending(x => x.Id)
+            .ToListAsync();
     }
 }
