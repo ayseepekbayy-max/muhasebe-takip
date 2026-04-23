@@ -144,21 +144,22 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// Render'da HTTPS yönlendirme sorun çıkarabildiği için
+// sadece local/development ortamında çalıştırıyoruz.
 if (app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
 
 app.UseStaticFiles();
-
 app.UseRouting();
-
 app.UseSession();
 
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value?.ToLower() ?? "";
 
+    // API isteklerini login kontrolünden çıkar
     if (path.StartsWith("/api"))
     {
         await next();
@@ -251,6 +252,82 @@ app.MapPost("/api/ai/bugun-kasa-durumu", async (CalisanAvansToplamRequest reques
     try
     {
         var result = await AiApiHelpers.GetBugunKasaDurumuAsync(db, request.CalisanAdi);
+        return Results.Json(result);
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            error = ex.Message,
+            detail = ex.InnerException?.Message,
+            stack = ex.StackTrace
+        }, statusCode: 500);
+    }
+});
+
+app.MapPost("/api/ai/en-borclu-musteri", async (AppDbContext db) =>
+{
+    try
+    {
+        var result = await AiApiHelpers.GetEnBorcluMusteriAsync(db);
+        return Results.Json(result);
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            error = ex.Message,
+            detail = ex.InnerException?.Message,
+            stack = ex.StackTrace
+        }, statusCode: 500);
+    }
+});
+
+app.MapPost("/api/ai/en-alacakli-satici", async (AppDbContext db) =>
+{
+    try
+    {
+        var result = await AiApiHelpers.GetEnAlacakliSaticiAsync(db);
+        return Results.Json(result);
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            error = ex.Message,
+            detail = ex.InnerException?.Message,
+            stack = ex.StackTrace
+        }, statusCode: 500);
+    }
+});
+
+app.MapPost("/api/ai/toplam-musteri-tahsilati", async (CalisanAvansToplamRequest request, AppDbContext db) =>
+{
+    try
+    {
+        var result = await AiApiHelpers.GetToplamMusteriTahsilatiAsync(db, request.DateRange);
+        return Results.Json(result);
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            error = ex.Message,
+            detail = ex.InnerException?.Message,
+            stack = ex.StackTrace
+        }, statusCode: 500);
+    }
+});
+
+app.MapPost("/api/ai/toplam-satici-odemesi", async (CalisanAvansToplamRequest request, AppDbContext db) =>
+{
+    try
+    {
+        var result = await AiApiHelpers.GetToplamSaticiOdemesiAsync(db, request.DateRange);
         return Results.Json(result);
     }
     catch (Exception ex)

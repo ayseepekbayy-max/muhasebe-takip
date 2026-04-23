@@ -154,7 +154,147 @@ public static class AiApiHelpers
         };
     }
 
+    public static async Task<CalisanAvansToplamResponse> GetEnBorcluMusteriAsync(AppDbContext db)
+    {
+        var sonuc = await db.KasaHareketleri
+            .Include(x => x.CariKart)
+            .Where(x => x.CariKartId != null && x.CariKart != null && x.CariKart.Tip == CariTip.Alici)
+            .GroupBy(x => new { x.CariKartId, x.CariKart!.Unvan, x.CariKart.Ad })
+            .Select(g => new
+            {
+                Ad = !string.IsNullOrWhiteSpace(g.Key.Unvan) ? g.Key.Unvan : g.Key.Ad,
+                Net = g.Sum(x => x.Tip == HareketTipi.Giris ? x.Tutar : -x.Tutar)
+            })
+            .OrderByDescending(x => x.Net)
+            .FirstOrDefaultAsync();
+
+        if (sonuc == null)
+        {
+            return new CalisanAvansToplamResponse
+            {
+                Success = true,
+                Message = "Cariye bağlı müşteri hareketi bulunamadı."
+            };
+        }
+
+        return new CalisanAvansToplamResponse
+        {
+            Success = true,
+            EmployeeName = sonuc.Ad,
+            Total = sonuc.Net,
+            Message = $"En borçlu müşteri: {sonuc.Ad} - {sonuc.Net:N2} TL"
+        };
+    }
+
+    public static async Task<CalisanAvansToplamResponse> GetEnAlacakliSaticiAsync(AppDbContext db)
+    {
+        var sonuc = await db.KasaHareketleri
+            .Include(x => x.CariKart)
+            .Where(x => x.CariKartId != null && x.CariKart != null && x.CariKart.Tip == CariTip.Satici)
+            .GroupBy(x => new { x.CariKartId, x.CariKart!.Unvan, x.CariKart.Ad })
+            .Select(g => new
+            {
+                Ad = !string.IsNullOrWhiteSpace(g.Key.Unvan) ? g.Key.Unvan : g.Key.Ad,
+                Net = g.Sum(x => x.Tip == HareketTipi.Cikis ? x.Tutar : -x.Tutar)
+            })
+            .OrderByDescending(x => x.Net)
+            .FirstOrDefaultAsync();
+
+        if (sonuc == null)
+        {
+            return new CalisanAvansToplamResponse
+            {
+                Success = true,
+                Message = "Cariye bağlı satıcı hareketi bulunamadı."
+            };
+        }
+
+        return new CalisanAvansToplamResponse
+        {
+            Success = true,
+            EmployeeName = sonuc.Ad,
+            Total = sonuc.Net,
+            Message = $"En alacaklı satıcı: {sonuc.Ad} - {sonuc.Net:N2} TL"
+        };
+    }
+
+    public static async Task<CalisanAvansToplamResponse> GetToplamMusteriTahsilatiAsync(AppDbContext db, string? dateRange)
+    {
+        var query = db.KasaHareketleri
+            .Include(x => x.CariKart)
+            .Where(x => x.CariKartId != null && x.CariKart != null &&
+                        x.CariKart.Tip == CariTip.Alici &&
+                        x.Tip == HareketTipi.Giris)
+            .AsQueryable();
+
+        query = ApplyKasaDateFilter(query, dateRange);
+
+        var toplam = await query.SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        return new CalisanAvansToplamResponse
+        {
+            Success = true,
+            Total = toplam,
+            Message = $"Toplam müşteri tahsilatı: {toplam:N2} TL"
+        };
+    }
+
+    public static async Task<CalisanAvansToplamResponse> GetToplamSaticiOdemesiAsync(AppDbContext db, string? dateRange)
+    {
+        var query = db.KasaHareketleri
+            .Include(x => x.CariKart)
+            .Where(x => x.CariKartId != null && x.CariKart != null &&
+                        x.CariKart.Tip == CariTip.Satici &&
+                        x.Tip == HareketTipi.Cikis)
+            .AsQueryable();
+
+        query = ApplyKasaDateFilter(query, dateRange);
+
+        var toplam = await query.SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        return new CalisanAvansToplamResponse
+        {
+            Success = true,
+            Total = toplam,
+            Message = $"Toplam satıcı ödemesi: {toplam:N2} TL"
+        };
+    }
+
     private static IQueryable<CalisanAvans> ApplyDateFilter(IQueryable<CalisanAvans> query, string? dateRange)
+    {
+        var now = DateTime.UtcNow;
+
+        switch (dateRange)
+        {
+            case "Today":
+            {
+                var start = now.Date;
+                var end = start.AddDays(1);
+                query = query.Where(x => x.Tarih >= start && x.Tarih < end);
+                break;
+            }
+
+            case "ThisMonth":
+            {
+                var start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                var end = start.AddMonths(1);
+                query = query.Where(x => x.Tarih >= start && x.Tarih < end);
+                break;
+            }
+
+            case "LastMonth":
+            {
+                var start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
+                var end = start.AddMonths(1);
+                query = query.Where(x => x.Tarih >= start && x.Tarih < end);
+                break;
+            }
+        }
+
+        return query;
+    }
+
+    private static IQueryable<KasaHareket> ApplyKasaDateFilter(IQueryable<KasaHareket> query, string? dateRange)
     {
         var now = DateTime.UtcNow;
 
