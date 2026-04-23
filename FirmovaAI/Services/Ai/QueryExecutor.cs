@@ -44,6 +44,15 @@ public class QueryExecutor
             case "ToplamSaticiOdemesi":
                 return await GetToplamSaticiOdemesiAsync(intent);
 
+            case "ToplamGelir":
+                return await GetToplamGelirAsync(intent);
+
+            case "ToplamGider":
+                return await GetToplamGiderAsync(intent);
+
+            case "KasaBakiye":
+                return await GetKasaBakiyeAsync(intent);
+
             default:
                 return "Bu sorgu tipi henüz desteklenmiyor.";
         }
@@ -100,6 +109,24 @@ public class QueryExecutor
     private async Task<string> GetToplamSaticiOdemesiAsync(QueryIntent intent)
     {
         var result = await _apiClient.GetToplamSaticiOdemesiAsync(intent.DateRange ?? "ThisMonth");
+        return result.Message;
+    }
+
+    private async Task<string> GetToplamGelirAsync(QueryIntent intent)
+    {
+        var result = await _apiClient.GetToplamGelirAsync(intent.DateRange ?? "ThisMonth");
+        return result.Message;
+    }
+
+    private async Task<string> GetToplamGiderAsync(QueryIntent intent)
+    {
+        var result = await _apiClient.GetToplamGiderAsync(intent.DateRange ?? "ThisMonth");
+        return result.Message;
+    }
+
+    private async Task<string> GetKasaBakiyeAsync(QueryIntent intent)
+    {
+        var result = await _apiClient.GetKasaBakiyeAsync(intent.DateRange ?? "ThisMonth");
         return result.Message;
     }
 }

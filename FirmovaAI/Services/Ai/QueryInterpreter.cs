@@ -18,6 +18,34 @@ public class QueryInterpreter
         };
 
         // =========================
+        // 🔥 YENİ AKILLI KASA SİSTEMİ
+        // =========================
+
+        // GELİR (giriş)
+        if (ContainsAny(lower, "gelir", "giriş", "para girdi", "kasa girişi"))
+        {
+            result.Intent = "ToplamGelir";
+            result.IsSuccess = true;
+            return result;
+        }
+
+        // GİDER (çıkış)
+        if (ContainsAny(lower, "gider", "çıkış", "para çıktı", "kasa çıkışı"))
+        {
+            result.Intent = "ToplamGider";
+            result.IsSuccess = true;
+            return result;
+        }
+
+        // BAKİYE
+        if (ContainsAny(lower, "bakiye", "kasa ne kadar", "kasada ne kadar var"))
+        {
+            result.Intent = "KasaBakiye";
+            result.IsSuccess = true;
+            return result;
+        }
+
+        // =========================
         // CARİ / MÜŞTERİ / SATICI
         // =========================
 
@@ -42,34 +70,9 @@ public class QueryInterpreter
             return result;
         }
 
-        if (ContainsAny(lower, "toplam satıcı ödemesi", "satıcılara toplam ödeme", "toplam satıcıya ödeme", "toplam ödeme"))
+        if (ContainsAny(lower, "toplam satıcı ödemesi", "satıcılara toplam ödeme", "toplam ödeme"))
         {
             result.Intent = "ToplamSaticiOdemesi";
-            result.IsSuccess = true;
-            return result;
-        }
-
-        // =========================
-        // KASA
-        // =========================
-
-        if (ContainsAny(lower, "bugün kasa çıkışı", "bugün kasadan ne kadar çıktı", "bugün toplam çıkış"))
-        {
-            result.Intent = "BugunKasaCikis";
-            result.IsSuccess = true;
-            return result;
-        }
-
-        if (ContainsAny(lower, "bugün kasa girişi", "bugün kasaya ne kadar para girdi", "bugün toplam giriş"))
-        {
-            result.Intent = "BugunKasaGiris";
-            result.IsSuccess = true;
-            return result;
-        }
-
-        if (ContainsAny(lower, "bugün kasa", "bugün kasa durumu", "kasa durumu"))
-        {
-            result.Intent = "BugunKasa";
             result.IsSuccess = true;
             return result;
         }
@@ -78,16 +81,15 @@ public class QueryInterpreter
         // AVANS
         // =========================
 
-        if (ContainsAny(lower, "en son kime avans verildi", "son avans verilen kişi kim", "en son avans kime verildi"))
+        if (ContainsAny(lower, "en son kime avans verildi", "son avans verilen kişi kim"))
         {
             result.Intent = "SonAvansVerilenKisi";
             result.IsSuccess = true;
             return result;
         }
 
-        // Çalışan adı OLMADAN sorulan toplam avans
-        if (ContainsAny(lower, "avans", "maaş avansı", "aldığı avans") &&
-            ContainsAny(lower, "toplam", "ne kadar", "kaç tl", "kaç para") &&
+        if (ContainsAny(lower, "avans") &&
+            ContainsAny(lower, "toplam", "ne kadar") &&
             !HasPersonName(text))
         {
             result.Intent = "ToplamAvans";
@@ -95,16 +97,10 @@ public class QueryInterpreter
             return result;
         }
 
-        // Çalışan adı geçen avans soruları
-        if (ContainsAny(lower, "avans", "maaş avansı", "aldığı avans"))
+        if (ContainsAny(lower, "avans"))
         {
             result.CalisanAdi = ExtractPersonName(text);
-
-            if (ContainsAny(lower, "ne kadar", "toplam", "kaç tl", "kaç para", "kaç"))
-                result.Intent = "CalisanAvansToplam";
-            else
-                result.Intent = "CalisanAvansListele";
-
+            result.Intent = "CalisanAvansToplam";
             result.IsSuccess = true;
             return result;
         }
@@ -120,13 +116,13 @@ public class QueryInterpreter
 
     private static string DetectDateRange(string text)
     {
-        if (ContainsAny(text, "bugün", "bugünkü"))
+        if (ContainsAny(text, "bugün"))
             return "Today";
 
-        if (ContainsAny(text, "bu ay", "bu ayki"))
+        if (ContainsAny(text, "bu ay"))
             return "ThisMonth";
 
-        if (ContainsAny(text, "geçen ay", "önceki ay"))
+        if (ContainsAny(text, "geçen ay"))
             return "LastMonth";
 
         return "ThisMonth";
@@ -134,11 +130,8 @@ public class QueryInterpreter
 
     private static string DetectRequestType(string text)
     {
-        if (ContainsAny(text, "ne kadar", "toplam", "kaç tl", "kaç para", "kaç"))
+        if (ContainsAny(text, "ne kadar", "toplam"))
             return "Total";
-
-        if (ContainsAny(text, "detay", "ayrıntı"))
-            return "Detail";
 
         return "List";
     }
@@ -148,65 +141,9 @@ public class QueryInterpreter
         if (string.IsNullOrWhiteSpace(text))
             return false;
 
-        text = text.Trim().ToLowerInvariant();
+        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-        if (text.StartsWith("bu ay toplam"))
-            return false;
-
-        if (text.StartsWith("bu ay çalışanlara toplam"))
-            return false;
-
-        if (text.StartsWith("bu ay verilen avans"))
-            return false;
-
-        if (text.StartsWith("toplam avans"))
-            return false;
-
-        if (text.StartsWith("bugün toplam"))
-            return false;
-
-        if (text.StartsWith("geçen ay toplam"))
-            return false;
-
-        if (text.StartsWith("toplam müşteri tahsilatı"))
-            return false;
-
-        if (text.StartsWith("müşterilerden toplam tahsilat"))
-            return false;
-
-        if (text.StartsWith("toplam satıcı ödemesi"))
-            return false;
-
-        if (text.StartsWith("satıcılara toplam ödeme"))
-            return false;
-
-        var keywords = new[]
-        {
-            "bu ay", "bugün", "geçen ay", "avans", "borç", "maaş",
-            "ne kadar", "kaç tl", "kaç para", "kaç", "göster", "listele", "toplam"
-        };
-
-        foreach (var keyword in keywords)
-        {
-            var index = text.IndexOf(keyword);
-            if (index > 0)
-            {
-                var before = text[..index].Trim();
-
-                if (before == "bu ay" || before == "bugün" || before == "geçen ay")
-                    return false;
-
-                if (before == "bu ay toplam" || before == "bugün toplam" || before == "geçen ay toplam")
-                    return false;
-
-                if (before == "toplam müşteri" || before == "müşterilerden toplam" || before == "toplam satıcı" || before == "satıcılara toplam")
-                    return false;
-
-                return !string.IsNullOrWhiteSpace(before);
-            }
-        }
-
-        return false;
+        return words.Length >= 2;
     }
 
     private static string? ExtractPersonName(string text)
@@ -214,36 +151,10 @@ public class QueryInterpreter
         if (string.IsNullOrWhiteSpace(text))
             return null;
 
-        text = text.Trim();
-        var lower = text.ToLowerInvariant();
+        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-        var keywords = new[]
-        {
-            "bu ay", "bugün", "geçen ay", "avans", "borç", "maaş",
-            "ne kadar", "kaç tl", "kaç para", "kaç", "göster", "listele"
-        };
-
-        foreach (var keyword in keywords)
-        {
-            var index = lower.IndexOf(keyword);
-            if (index > 0)
-            {
-                var before = text[..index].Trim();
-
-                if (!string.IsNullOrWhiteSpace(before))
-                {
-                    before = before
-                        .Replace("'", "")
-                        .Replace("’", "")
-                        .Trim();
-
-                    var parts = before.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-                    if (parts.Length > 0)
-                        return parts[0].Trim().ToLowerInvariant();
-                }
-            }
-        }
+        if (words.Length > 0)
+            return words[0].ToLower();
 
         return null;
     }

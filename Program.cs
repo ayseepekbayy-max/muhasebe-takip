@@ -360,3 +360,108 @@ app.MapPost("/api/ai/toplam-satici-odemesi", async (CalisanAvansToplamRequest re
 app.MapRazorPages();
 
 app.Run();
+// =========================
+// 🔥 YENİ: GELİR
+// =========================
+app.MapPost("/api/ai/toplam-gelir", async (CalisanAvansToplamRequest request, AppDbContext db) =>
+{
+    try
+    {
+        var (baslangic, bitis) = AiApiHelpers.GetDateRange(request.DateRange);
+
+        var toplam = await db.KasaHareketleri
+            .Where(x => x.Tip == HareketTipi.Giris &&
+                        x.Tarih >= baslangic &&
+                        x.Tarih <= bitis)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        return Results.Json(new
+        {
+            success = true,
+            total = toplam,
+            message = $"Toplam gelir: {toplam:N2} TL"
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            error = ex.Message
+        }, statusCode: 500);
+    }
+});
+
+
+// =========================
+// 🔥 YENİ: GİDER
+// =========================
+app.MapPost("/api/ai/toplam-gider", async (CalisanAvansToplamRequest request, AppDbContext db) =>
+{
+    try
+    {
+        var (baslangic, bitis) = AiApiHelpers.GetDateRange(request.DateRange);
+
+        var toplam = await db.KasaHareketleri
+            .Where(x => x.Tip == HareketTipi.Cikis &&
+                        x.Tarih >= baslangic &&
+                        x.Tarih <= bitis)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        return Results.Json(new
+        {
+            success = true,
+            total = toplam,
+            message = $"Toplam gider: {toplam:N2} TL"
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            error = ex.Message
+        }, statusCode: 500);
+    }
+});
+
+
+// =========================
+// 🔥 YENİ: BAKİYE
+// =========================
+app.MapPost("/api/ai/kasa-bakiye", async (CalisanAvansToplamRequest request, AppDbContext db) =>
+{
+    try
+    {
+        var (baslangic, bitis) = AiApiHelpers.GetDateRange(request.DateRange);
+
+        var giris = await db.KasaHareketleri
+            .Where(x => x.Tip == HareketTipi.Giris &&
+                        x.Tarih >= baslangic &&
+                        x.Tarih <= bitis)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        var cikis = await db.KasaHareketleri
+            .Where(x => x.Tip == HareketTipi.Cikis &&
+                        x.Tarih >= baslangic &&
+                        x.Tarih <= bitis)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        var bakiye = giris - cikis;
+
+        return Results.Json(new
+        {
+            success = true,
+            total = bakiye,
+            message = $"Kasa bakiyesi: {bakiye:N2} TL"
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            error = ex.Message
+        }, statusCode: 500);
+    }
+});
