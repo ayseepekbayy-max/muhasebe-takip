@@ -27,7 +27,7 @@ public class IndexModel : PageModel
 
         await ListeleriYukleAsync(firmaId.Value);
 
-        if (YeniCari.Tip == 0)
+        if ((int)YeniCari.Tip == 0)
             YeniCari.Tip = CariTip.Alici;
 
         return Page();
@@ -39,27 +39,53 @@ public class IndexModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        YeniCari.Unvan = (YeniCari.Unvan ?? "").Trim();
-        YeniCari.Telefon = string.IsNullOrWhiteSpace(YeniCari.Telefon) ? null : YeniCari.Telefon.Trim();
-        YeniCari.VergiNo = string.IsNullOrWhiteSpace(YeniCari.VergiNo) ? null : YeniCari.VergiNo.Trim();
-
-        if (string.IsNullOrWhiteSpace(YeniCari.Unvan))
+        try
         {
-            ModelState.AddModelError("", "Ünvan zorunludur.");
+            await ListeleriYukleAsync(firmaId.Value);
+
+            YeniCari.Unvan = (YeniCari.Unvan ?? "").Trim();
+            YeniCari.Telefon = string.IsNullOrWhiteSpace(YeniCari.Telefon) ? null : YeniCari.Telefon.Trim();
+            YeniCari.VergiNo = string.IsNullOrWhiteSpace(YeniCari.VergiNo) ? null : YeniCari.VergiNo.Trim();
+
+            if (string.IsNullOrWhiteSpace(YeniCari.Unvan))
+            {
+                ModelState.AddModelError("", "Ünvan zorunludur.");
+                return Page();
+            }
+
+            if ((int)YeniCari.Tip == 0)
+                YeniCari.Tip = CariTip.Alici;
+
+            // Formda Ad alanı yok, boş kalmasın
+            YeniCari.Ad = string.IsNullOrWhiteSpace(YeniCari.Ad)
+                ? YeniCari.Unvan
+                : YeniCari.Ad.Trim();
+
+            YeniCari.FirmaId = firmaId.Value;
+            YeniCari.OlusturmaTarihi = DateTime.Now;
+
+            // Takip edilen eski nesne varsa karışmasın
+            _db.Entry(YeniCari).State = EntityState.Added;
+
+            await _db.SaveChangesAsync();
+
+            return RedirectToPage();
+        }
+        catch (DbUpdateException ex)
+        {
+            var detay = ex.InnerException?.Message ?? ex.Message;
+            ModelState.AddModelError("", $"Veritabanı hatası: {detay}");
+
             await ListeleriYukleAsync(firmaId.Value);
             return Page();
         }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError("", $"Genel hata: {ex.Message}");
 
-        // CariKart modelinde Ad alanı da bulunduğu için boş kalmasını engelliyoruz.
-        // Kullanıcı ayrıca Ad girmediği durumda Ünvan ile dolduruyoruz.
-        YeniCari.Ad = YeniCari.Unvan;
-        YeniCari.FirmaId = firmaId.Value;
-        YeniCari.OlusturmaTarihi = DateTime.Now;
-
-        _db.CariKartlar.Add(YeniCari);
-        await _db.SaveChangesAsync();
-
-        return RedirectToPage();
+            await ListeleriYukleAsync(firmaId.Value);
+            return Page();
+        }
     }
 
     public async Task<IActionResult> OnPostSilAsync(int id)
