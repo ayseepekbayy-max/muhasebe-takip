@@ -357,22 +357,37 @@ app.MapPost("/api/ai/toplam-satici-odemesi", async (CalisanAvansToplamRequest re
     }
 });
 
-app.MapRazorPages();
-
-app.Run();
 // =========================
-// 🔥 YENİ: GELİR
+// YENİ: TOPLAM GELİR
 // =========================
 app.MapPost("/api/ai/toplam-gelir", async (CalisanAvansToplamRequest request, AppDbContext db) =>
 {
     try
     {
-        var (baslangic, bitis) = AiApiHelpers.GetDateRange(request.DateRange);
+        DateTime baslangic;
+        DateTime bitis;
+        var now = DateTime.UtcNow;
+
+        if (request.DateRange == "Today")
+        {
+            baslangic = now.Date;
+            bitis = baslangic.AddDays(1);
+        }
+        else if (request.DateRange == "LastMonth")
+        {
+            baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
+            bitis = baslangic.AddMonths(1);
+        }
+        else
+        {
+            baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            bitis = baslangic.AddMonths(1);
+        }
 
         var toplam = await db.KasaHareketleri
             .Where(x => x.Tip == HareketTipi.Giris &&
                         x.Tarih >= baslangic &&
-                        x.Tarih <= bitis)
+                        x.Tarih < bitis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         return Results.Json(new
@@ -392,20 +407,37 @@ app.MapPost("/api/ai/toplam-gelir", async (CalisanAvansToplamRequest request, Ap
     }
 });
 
-
 // =========================
-// 🔥 YENİ: GİDER
+// YENİ: TOPLAM GİDER
 // =========================
 app.MapPost("/api/ai/toplam-gider", async (CalisanAvansToplamRequest request, AppDbContext db) =>
 {
     try
     {
-        var (baslangic, bitis) = AiApiHelpers.GetDateRange(request.DateRange);
+        DateTime baslangic;
+        DateTime bitis;
+        var now = DateTime.UtcNow;
+
+        if (request.DateRange == "Today")
+        {
+            baslangic = now.Date;
+            bitis = baslangic.AddDays(1);
+        }
+        else if (request.DateRange == "LastMonth")
+        {
+            baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
+            bitis = baslangic.AddMonths(1);
+        }
+        else
+        {
+            baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            bitis = baslangic.AddMonths(1);
+        }
 
         var toplam = await db.KasaHareketleri
             .Where(x => x.Tip == HareketTipi.Cikis &&
                         x.Tarih >= baslangic &&
-                        x.Tarih <= bitis)
+                        x.Tarih < bitis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         return Results.Json(new
@@ -425,26 +457,43 @@ app.MapPost("/api/ai/toplam-gider", async (CalisanAvansToplamRequest request, Ap
     }
 });
 
-
 // =========================
-// 🔥 YENİ: BAKİYE
+// YENİ: KASA BAKİYE
 // =========================
 app.MapPost("/api/ai/kasa-bakiye", async (CalisanAvansToplamRequest request, AppDbContext db) =>
 {
     try
     {
-        var (baslangic, bitis) = AiApiHelpers.GetDateRange(request.DateRange);
+        DateTime baslangic;
+        DateTime bitis;
+        var now = DateTime.UtcNow;
+
+        if (request.DateRange == "Today")
+        {
+            baslangic = now.Date;
+            bitis = baslangic.AddDays(1);
+        }
+        else if (request.DateRange == "LastMonth")
+        {
+            baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
+            bitis = baslangic.AddMonths(1);
+        }
+        else
+        {
+            baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            bitis = baslangic.AddMonths(1);
+        }
 
         var giris = await db.KasaHareketleri
             .Where(x => x.Tip == HareketTipi.Giris &&
                         x.Tarih >= baslangic &&
-                        x.Tarih <= bitis)
+                        x.Tarih < bitis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         var cikis = await db.KasaHareketleri
             .Where(x => x.Tip == HareketTipi.Cikis &&
                         x.Tarih >= baslangic &&
-                        x.Tarih <= bitis)
+                        x.Tarih < bitis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         var bakiye = giris - cikis;
@@ -465,3 +514,7 @@ app.MapPost("/api/ai/kasa-bakiye", async (CalisanAvansToplamRequest request, App
         }, statusCode: 500);
     }
 });
+
+app.MapRazorPages();
+
+app.Run();
