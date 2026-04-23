@@ -75,7 +75,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Eski verileri mevcut firmaya bağla
+// Eski verileri sadece ilk kurulumda mevcut firmaya bağla
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -83,37 +83,52 @@ using (var scope = app.Services.CreateScope())
 
     if (firma != null)
     {
-        foreach (var x in db.CariKartlar.Where(x => x.FirmaId == null))
-            x.FirmaId = firma.Id;
+        var baglanacakVeriVarMi =
+            db.CariKartlar.Any(x => x.FirmaId == null) ||
+            db.Calisanlar.Any(x => x.FirmaId == null) ||
+            db.CalisanAvanslari.Any(x => x.FirmaId == null) ||
+            db.KasaHareketleri.Any(x => x.FirmaId == null) ||
+            db.Musteriler.Any(x => x.FirmaId == null) ||
+            db.MusteriIsler.Any(x => x.FirmaId == null) ||
+            db.MusteriMasraflar.Any(x => x.FirmaId == null) ||
+            db.StokHareketleri.Any(x => x.FirmaId == null) ||
+            db.StokUrunler.Any(x => x.FirmaId == null) ||
+            db.Cekler.Any(x => x.FirmaId == null);
 
-        foreach (var x in db.Calisanlar.Where(x => x.FirmaId == null))
-            x.FirmaId = firma.Id;
+        if (baglanacakVeriVarMi)
+        {
+            foreach (var x in db.CariKartlar.Where(x => x.FirmaId == null))
+                x.FirmaId = firma.Id;
 
-        foreach (var x in db.CalisanAvanslari.Where(x => x.FirmaId == null))
-            x.FirmaId = firma.Id;
+            foreach (var x in db.Calisanlar.Where(x => x.FirmaId == null))
+                x.FirmaId = firma.Id;
 
-        foreach (var x in db.KasaHareketleri.Where(x => x.FirmaId == null))
-            x.FirmaId = firma.Id;
+            foreach (var x in db.CalisanAvanslari.Where(x => x.FirmaId == null))
+                x.FirmaId = firma.Id;
 
-        foreach (var x in db.Musteriler.Where(x => x.FirmaId == null))
-            x.FirmaId = firma.Id;
+            foreach (var x in db.KasaHareketleri.Where(x => x.FirmaId == null))
+                x.FirmaId = firma.Id;
 
-        foreach (var x in db.MusteriIsler.Where(x => x.FirmaId == null))
-            x.FirmaId = firma.Id;
+            foreach (var x in db.Musteriler.Where(x => x.FirmaId == null))
+                x.FirmaId = firma.Id;
 
-        foreach (var x in db.MusteriMasraflar.Where(x => x.FirmaId == null))
-            x.FirmaId = firma.Id;
+            foreach (var x in db.MusteriIsler.Where(x => x.FirmaId == null))
+                x.FirmaId = firma.Id;
 
-        foreach (var x in db.StokHareketleri.Where(x => x.FirmaId == null))
-            x.FirmaId = firma.Id;
+            foreach (var x in db.MusteriMasraflar.Where(x => x.FirmaId == null))
+                x.FirmaId = firma.Id;
 
-        foreach (var x in db.StokUrunler.Where(x => x.FirmaId == null))
-            x.FirmaId = firma.Id;
+            foreach (var x in db.StokHareketleri.Where(x => x.FirmaId == null))
+                x.FirmaId = firma.Id;
 
-        foreach (var x in db.Cekler.Where(x => x.FirmaId == null))
-            x.FirmaId = firma.Id;
+            foreach (var x in db.StokUrunler.Where(x => x.FirmaId == null))
+                x.FirmaId = firma.Id;
 
-        db.SaveChanges();
+            foreach (var x in db.Cekler.Where(x => x.FirmaId == null))
+                x.FirmaId = firma.Id;
+
+            db.SaveChanges();
+        }
     }
 }
 
