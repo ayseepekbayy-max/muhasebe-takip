@@ -28,9 +28,7 @@ public static class AiApiHelpers
 
         query = ApplyDateFilter(query, dateRange);
 
-        var liste = await query
-            .OrderByDescending(x => x.Tarih)
-            .ToListAsync();
+        var liste = await query.OrderByDescending(x => x.Tarih).ToListAsync();
 
         var tumCalisanlar = liste
             .Select(x => x.Calisan?.AdSoyad)
@@ -51,11 +49,9 @@ public static class AiApiHelpers
             };
         }
 
-        var filtered = liste
+        var toplam = liste
             .Where(x => string.Equals(x.Calisan?.AdSoyad, bulunanAd, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        var toplam = filtered.Sum(x => x.Tutar);
+            .Sum(x => x.Tutar);
 
         return new CalisanAvansToplamResponse
         {
@@ -66,9 +62,7 @@ public static class AiApiHelpers
         };
     }
 
-    public static async Task<CalisanAvansToplamResponse> GetToplamAvansAsync(
-        AppDbContext db,
-        string? dateRange)
+    public static async Task<CalisanAvansToplamResponse> GetToplamAvansAsync(AppDbContext db, string? dateRange)
     {
         var query = db.CalisanAvanslari
             .Include(x => x.Calisan)
@@ -82,7 +76,6 @@ public static class AiApiHelpers
         return new CalisanAvansToplamResponse
         {
             Success = true,
-            EmployeeName = "",
             Total = toplam,
             Message = $"Bu ay toplam avans: {toplam:N2} TL"
         };
@@ -102,8 +95,6 @@ public static class AiApiHelpers
             return new CalisanAvansToplamResponse
             {
                 Success = true,
-                EmployeeName = "",
-                Total = 0,
                 Message = "Hiç avans kaydı bulunamadı."
             };
         }
@@ -134,23 +125,9 @@ public static class AiApiHelpers
 
         return kasaIntent switch
         {
-            "BugunKasaGiris" => new CalisanAvansToplamResponse
-            {
-                Success = true,
-                Message = $"Bugün kasa girişi: {giris:N2} TL"
-            },
-
-            "BugunKasaCikis" => new CalisanAvansToplamResponse
-            {
-                Success = true,
-                Message = $"Bugün kasa çıkışı: {cikis:N2} TL"
-            },
-
-            _ => new CalisanAvansToplamResponse
-            {
-                Success = true,
-                Message = $"Bugün kasa girişi: {giris:N2} TL | kasa çıkışı: {cikis:N2} TL"
-            }
+            "BugunKasaGiris" => new CalisanAvansToplamResponse { Success = true, Message = $"Bugün kasa girişi: {giris:N2} TL" },
+            "BugunKasaCikis" => new CalisanAvansToplamResponse { Success = true, Message = $"Bugün kasa çıkışı: {cikis:N2} TL" },
+            _ => new CalisanAvansToplamResponse { Success = true, Message = $"Bugün kasa girişi: {giris:N2} TL | kasa çıkışı: {cikis:N2} TL" }
         };
     }
 
@@ -169,13 +146,7 @@ public static class AiApiHelpers
             .FirstOrDefaultAsync();
 
         if (sonuc == null)
-        {
-            return new CalisanAvansToplamResponse
-            {
-                Success = true,
-                Message = "Cariye bağlı müşteri hareketi bulunamadı."
-            };
-        }
+            return new CalisanAvansToplamResponse { Success = true, Message = "Cariye bağlı müşteri hareketi bulunamadı." };
 
         return new CalisanAvansToplamResponse
         {
@@ -201,13 +172,7 @@ public static class AiApiHelpers
             .FirstOrDefaultAsync();
 
         if (sonuc == null)
-        {
-            return new CalisanAvansToplamResponse
-            {
-                Success = true,
-                Message = "Cariye bağlı satıcı hareketi bulunamadı."
-            };
-        }
+            return new CalisanAvansToplamResponse { Success = true, Message = "Cariye bağlı satıcı hareketi bulunamadı." };
 
         return new CalisanAvansToplamResponse
         {
@@ -260,6 +225,68 @@ public static class AiApiHelpers
         };
     }
 
+    public static async Task<CalisanAvansToplamResponse> GetMusteriBorcAsync(AppDbContext db, string? musteriAdi)
+    {
+        if (string.IsNullOrWhiteSpace(musteriAdi))
+        {
+            return new CalisanAvansToplamResponse
+            {
+                Success = false,
+                Message = "Müşteri adı boş olamaz."
+            };
+        }
+
+        var aranan = NormalizeText(musteriAdi);
+
+        var liste = await db.KasaHareketleri
+            .Include(x => x.CariKart)
+            .Where(x => x.CariKartId != null &&
+                        x.CariKart != null &&
+                        x.CariKart.Tip == CariTip.Alici)
+            .ToListAsync();
+
+        var bulunanCari = liste
+            .Select(x => x.CariKart)
+            .Where(x => x != null)
+            .Distinct()
+            .FirstOrDefault(x =>
+            {
+                var unvan = NormalizeText(x!.Unvan ?? "");
+                var ad = NormalizeText(x.Ad ?? "");
+
+                return unvan.Contains(aranan) ||
+                       ad.Contains(aranan) ||
+                       aranan.Contains(unvan) ||
+                       aranan.Contains(ad);
+            });
+
+        if (bulunanCari == null)
+        {
+            return new CalisanAvansToplamResponse
+            {
+                Success = true,
+                Total = 0,
+                Message = $"{musteriAdi} için müşteri kaydı bulunamadı."
+            };
+        }
+
+        var cariAdi = !string.IsNullOrWhiteSpace(bulunanCari.Unvan)
+            ? bulunanCari.Unvan
+            : bulunanCari.Ad;
+
+        var toplam = liste
+            .Where(x => x.CariKartId == bulunanCari.Id)
+            .Sum(x => x.Tip == HareketTipi.Giris ? x.Tutar : -x.Tutar);
+
+        return new CalisanAvansToplamResponse
+        {
+            Success = true,
+            EmployeeName = cariAdi,
+            Total = toplam,
+            Message = $"{cariAdi} için hesaplanan borç: {toplam:N2} TL"
+        };
+    }
+
     private static IQueryable<CalisanAvans> ApplyDateFilter(IQueryable<CalisanAvans> query, string? dateRange)
     {
         var now = DateTime.UtcNow;
@@ -267,28 +294,22 @@ public static class AiApiHelpers
         switch (dateRange)
         {
             case "Today":
-            {
-                var start = now.Date;
-                var end = start.AddDays(1);
-                query = query.Where(x => x.Tarih >= start && x.Tarih < end);
+                var todayStart = now.Date;
+                var todayEnd = todayStart.AddDays(1);
+                query = query.Where(x => x.Tarih >= todayStart && x.Tarih < todayEnd);
                 break;
-            }
 
-            case "ThisMonth":
-            {
+            case "LastMonth":
+                var lastStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
+                var lastEnd = lastStart.AddMonths(1);
+                query = query.Where(x => x.Tarih >= lastStart && x.Tarih < lastEnd);
+                break;
+
+            default:
                 var start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
                 var end = start.AddMonths(1);
                 query = query.Where(x => x.Tarih >= start && x.Tarih < end);
                 break;
-            }
-
-            case "LastMonth":
-            {
-                var start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
-                var end = start.AddMonths(1);
-                query = query.Where(x => x.Tarih >= start && x.Tarih < end);
-                break;
-            }
         }
 
         return query;
@@ -301,28 +322,22 @@ public static class AiApiHelpers
         switch (dateRange)
         {
             case "Today":
-            {
-                var start = now.Date;
-                var end = start.AddDays(1);
-                query = query.Where(x => x.Tarih >= start && x.Tarih < end);
+                var todayStart = now.Date;
+                var todayEnd = todayStart.AddDays(1);
+                query = query.Where(x => x.Tarih >= todayStart && x.Tarih < todayEnd);
                 break;
-            }
 
-            case "ThisMonth":
-            {
+            case "LastMonth":
+                var lastStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
+                var lastEnd = lastStart.AddMonths(1);
+                query = query.Where(x => x.Tarih >= lastStart && x.Tarih < lastEnd);
+                break;
+
+            default:
                 var start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
                 var end = start.AddMonths(1);
                 query = query.Where(x => x.Tarih >= start && x.Tarih < end);
                 break;
-            }
-
-            case "LastMonth":
-            {
-                var start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
-                var end = start.AddMonths(1);
-                query = query.Where(x => x.Tarih >= start && x.Tarih < end);
-                break;
-            }
         }
 
         return query;
@@ -351,21 +366,6 @@ public static class AiApiHelpers
         if (exactFirstNameMatches.Count == 1)
             return exactFirstNameMatches[0];
 
-        if (exactFirstNameMatches.Count > 1)
-            return null;
-
-        var startsWithMatches = adaylar
-            .Where(x => x.First.StartsWith(input) || input.StartsWith(x.First))
-            .Select(x => x.Original)
-            .Distinct()
-            .ToList();
-
-        if (startsWithMatches.Count == 1)
-            return startsWithMatches[0];
-
-        if (startsWithMatches.Count > 1)
-            return null;
-
         var fullContainsMatches = adaylar
             .Where(x => x.Full.Contains(input) || input.Contains(x.Full))
             .Select(x => x.Original)
@@ -375,58 +375,7 @@ public static class AiApiHelpers
         if (fullContainsMatches.Count == 1)
             return fullContainsMatches[0];
 
-        if (fullContainsMatches.Count > 1)
-            return null;
-
-        var scored = adaylar
-            .Select(x => new
-            {
-                x.Original,
-                Score = CalculateScore(input, x.First, x.Full)
-            })
-            .Where(x => x.Score > 0)
-            .OrderByDescending(x => x.Score)
-            .ToList();
-
-        if (!scored.Any())
-            return null;
-
-        if (scored.Count == 1)
-            return scored[0].Original;
-
-        if (scored[0].Score >= scored[1].Score + 100)
-            return scored[0].Original;
-
         return null;
-    }
-
-    private static int CalculateScore(string input, string firstName, string fullName)
-    {
-        int score = 0;
-
-        if (firstName == input)
-            score += 1000;
-
-        if (fullName == input)
-            score += 900;
-
-        if (firstName.StartsWith(input))
-            score += 700;
-
-        if (fullName.StartsWith(input))
-            score += 500;
-
-        if (firstName.Contains(input))
-            score += 300;
-
-        if (fullName.Contains(input))
-            score += 200;
-
-        var firstDistance = LevenshteinDistance(firstName, input);
-        if (firstDistance <= 1)
-            score += 150;
-
-        return score;
     }
 
     private static string NormalizeText(string text)
@@ -456,38 +405,6 @@ public static class AiApiHelpers
         }
 
         return sb.ToString().Trim();
-    }
-
-    private static int LevenshteinDistance(string s, string t)
-    {
-        if (string.IsNullOrEmpty(s))
-            return t?.Length ?? 0;
-
-        if (string.IsNullOrEmpty(t))
-            return s.Length;
-
-        var d = new int[s.Length + 1, t.Length + 1];
-
-        for (int i = 0; i <= s.Length; i++)
-            d[i, 0] = i;
-
-        for (int j = 0; j <= t.Length; j++)
-            d[0, j] = j;
-
-        for (int i = 1; i <= s.Length; i++)
-        {
-            for (int j = 1; j <= t.Length; j++)
-            {
-                int cost = s[i - 1] == t[j - 1] ? 0 : 1;
-
-                d[i, j] = Math.Min(
-                    Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
-                    d[i - 1, j - 1] + cost
-                );
-            }
-        }
-
-        return d[s.Length, t.Length];
     }
 }
 

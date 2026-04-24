@@ -149,6 +149,19 @@ public class MuhasebeApiClient
         return await ReadResponseAsync(response);
     }
 
+    public async Task<CalisanAvansApiResponse> GetMusteriBorcAsync(string ad)
+    {
+        var request = new CalisanAvansApiRequest
+        {
+            CalisanAdi = ad
+        };
+
+        var response = await _httpClient.PostAsJsonAsync("/api/ai/musteri-borc", request);
+        response.EnsureSuccessStatusCode();
+
+        return await ReadResponseAsync(response);
+    }
+
     private static async Task<CalisanAvansApiResponse> ReadResponseAsync(HttpResponseMessage response)
     {
         var result = await response.Content.ReadFromJsonAsync<CalisanAvansApiResponse>();

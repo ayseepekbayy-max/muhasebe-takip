@@ -117,6 +117,13 @@ public class QueryInterpreter
             result.IsSuccess = true;
             return result;
         }
+        if (lower.Contains("borcu") && !lower.Contains("en çok"))
+        {
+            result.Intent = "MusteriBorc";
+            result.CalisanAdi = text.Split(' ')[0];
+            result.IsSuccess = true;
+            return result;
+        }
 
         result.ErrorMessage = "Soru anlaşılamadı.";
         return result;

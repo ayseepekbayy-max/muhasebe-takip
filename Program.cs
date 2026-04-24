@@ -569,7 +569,11 @@ app.MapPost("/api/ai/son-kasa-hareketleri", async (AppDbContext db) =>
         }, statusCode: 500);
     }
 });
-
+app.MapPost("/api/ai/musteri-borc", async (AppDbContext db, CalisanAvansToplamRequest req) =>
+{
+    var result = await AiApiHelpers.GetMusteriBorcAsync(db, req.CalisanAdi);
+    return Results.Json(result);
+});
 app.MapRazorPages();
 
 app.Run();

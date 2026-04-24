@@ -58,6 +58,8 @@ public class QueryExecutor
 
             case "SonKasaHareketleri":
                  return await GetSonKasaHareketleriAsync();
+            case "MusteriBorc":
+                return await GetMusteriBorcAsync(intent);
                 }
     }
 
@@ -135,6 +137,11 @@ public class QueryExecutor
     private async Task<string> GetSonKasaHareketleriAsync()
     {
         var result = await _apiClient.GetSonKasaHareketleriAsync();
+        return result.Message;
+    }
+    private async Task<string> GetMusteriBorcAsync(QueryIntent intent)
+    {
+        var result = await _apiClient.GetMusteriBorcAsync(intent.CalisanAdi ?? "");
         return result.Message;
     }
 }
