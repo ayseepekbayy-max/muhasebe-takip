@@ -55,7 +55,10 @@ public class QueryExecutor
 
             default:
                 return "Bu sorgu tipi henüz desteklenmiyor.";
-        }
+
+            case "SonKasaHareketleri":
+                 return await GetSonKasaHareketleriAsync();
+                }
     }
 
     private async Task<string> GetCalisanAvansToplamAsync(QueryIntent intent)
@@ -127,6 +130,11 @@ public class QueryExecutor
     private async Task<string> GetKasaBakiyeAsync(QueryIntent intent)
     {
         var result = await _apiClient.GetKasaBakiyeAsync(intent.DateRange ?? "ThisMonth");
+        return result.Message;
+    }
+    private async Task<string> GetSonKasaHareketleriAsync()
+    {
+        var result = await _apiClient.GetSonKasaHareketleriAsync();
         return result.Message;
     }
 }
