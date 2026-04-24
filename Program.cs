@@ -515,6 +515,61 @@ app.MapPost("/api/ai/kasa-bakiye", async (CalisanAvansToplamRequest request, App
     }
 });
 
+app.MapPost("/api/ai/son-kasa-hareketleri", async (AppDbContext db) =>
+{
+    try
+    {
+        var liste = await db.KasaHareketleri
+            .OrderByDescending(x => x.Tarih)
+            .ThenByDescending(x => x.Id)
+            .Take(10)
+            .Select(x => new
+            {
+                x.Tarih,
+                x.Tip,
+                x.Tutar,
+                x.Aciklama
+            })
+            .ToListAsync();
+
+        if (!liste.Any())
+        {
+            return Results.Json(new
+            {
+                success = true,
+                message = "Kasa hareketi bulunamadı."
+            });
+        }
+
+        var metin = "Son 10 kasa hareketi:\n\n";
+
+        int i = 1;
+        foreach (var item in liste)
+        {
+            var tip = item.Tip == HareketTipi.Giris ? "Giriş" : "Çıkış";
+            var aciklama = string.IsNullOrWhiteSpace(item.Aciklama) ? "" : $" - {item.Aciklama}";
+
+            metin += $"{i}. {item.Tarih:dd.MM.yyyy} - {tip} - {item.Tutar:N2} TL{aciklama}\n";
+            i++;
+        }
+
+        return Results.Json(new
+        {
+            success = true,
+            message = metin
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            error = ex.Message,
+            detail = ex.InnerException?.Message
+        }, statusCode: 500);
+    }
+});
+
 app.MapRazorPages();
 
 app.Run();
