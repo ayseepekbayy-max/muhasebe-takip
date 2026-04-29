@@ -17,19 +17,22 @@ public class QueryInterpreter
             RequestType = DetectRequestType(lower)
         };
 
-        // =========================
         // GENEL ÖZET / DURUM
-        // =========================
-        if (ContainsAny(lower, "genel durum", "durum nasıl", "genel özet", "özet ver", "firma durumu", "işletme durumu"))
+        if (ContainsAny(lower,
+        "genel durum", "durum nasıl", "genel özet", "özet ver",
+        "firma durumu", "işletme durumu", "şirket durumu",
+        "işler nasıl gidiyor", "işler iyi mi gidiyor",
+        "şirket nasıl gidiyor", "firma nasıl",
+        "durumumuz nasıl", "işler ne durumda",
+        "kasa iyi mi kötü mü", "param artıyor mu azalıyor mu",
+        "durum kötü mü", "işler iyi mi"))
         {
             result.Intent = "GenelOzet";
             result.IsSuccess = true;
             return result;
         }
 
-        // =========================
         // SAYISAL GENEL SORGULAR
-        // =========================
         if (ContainsAny(lower, "kaç müşteri", "müşteri sayısı", "müşterim var", "toplam müşteri"))
         {
             result.Intent = "MusteriSayisi";
@@ -65,17 +68,18 @@ public class QueryInterpreter
             return result;
         }
 
-        if (ContainsAny(lower, "stokta kaç ürün", "ürün sayısı", "stok ürün sayısı", "kaç ürün var", "toplam ürün"))
+        // STOK
+        if (ContainsAny(lower, "stokta kaç ürün", "ürün sayısı", "stok ürün sayısı", "kaç ürün var", "toplam ürün", "stok sayısı"))
         {
             result.Intent = "StokSayisi";
             result.IsSuccess = true;
             return result;
         }
 
-        // =========================
-        // STOK ANALİZLERİ
-        // =========================
-        if (ContainsAny(lower, "biten stok", "stokta biten", "biten ürün", "stok bitti", "stokta olmayan", "tükenen ürün"))
+        if (ContainsAny(lower,
+            "biten stok", "stokta biten", "biten ürün", "stok bitti",
+            "stokta olmayan", "tükenen ürün", "hangi ürün bitmiş",
+            "hangi ürünler bitmiş", "stokta kalmayan"))
         {
             result.Intent = "BitenStoklar";
             result.IsSuccess = true;
@@ -89,9 +93,7 @@ public class QueryInterpreter
             return result;
         }
 
-        // =========================
         // SON AVANS
-        // =========================
         if (ContainsAny(lower, "son", "en son") && ContainsAny(lower, "avans"))
         {
             result.Intent = "SonAvansVerilenKisi";
@@ -99,9 +101,26 @@ public class QueryInterpreter
             return result;
         }
 
-        // =========================
+        // ÇALIŞAN BAZLI AVANS - TOPLAM AVANSTAN ÖNCE OLMALI
+        if (ContainsAny(lower, "avans"))
+        {
+            var ad = ExtractFirstWord(text);
+
+            if (!string.IsNullOrWhiteSpace(ad) &&
+                !ContainsAny(lower, "toplam avans", "toplam", "herkes", "tüm çalışan", "bütün çalışan"))
+            {
+                result.CalisanAdi = ad;
+                result.Intent = "CalisanAvansToplam";
+                result.IsSuccess = true;
+                return result;
+            }
+
+            result.Intent = "ToplamAvans";
+            result.IsSuccess = true;
+            return result;
+        }
+
         // KASA HAREKETLERİ
-        // =========================
         if (ContainsAny(lower, "son", "son 10", "son işlemler") &&
             ContainsAny(lower, "kasa", "hareket"))
         {
@@ -117,9 +136,7 @@ public class QueryInterpreter
             return result;
         }
 
-        // =========================
         // BUGÜN KASA
-        // =========================
         if (ContainsAny(lower, "bugün") && ContainsAny(lower, "giriş", "gelir", "para girdi"))
         {
             result.Intent = "BugunKasaGiris";
@@ -141,27 +158,17 @@ public class QueryInterpreter
             return result;
         }
 
-        // =========================
         // KASA BAKİYE
-        // =========================
-        if (ContainsAny(lower, "kasa") &&
-            ContainsAny(lower, "ne kadar", "kaç", "para", "bakiye", "durum", "var mı"))
+        if ((ContainsAny(lower, "kasa") &&
+             ContainsAny(lower, "ne kadar", "kaç", "para", "bakiye", "durum", "var mı")) ||
+            ContainsAny(lower, "kasada kaç", "kasada ne kadar", "kasada para"))
         {
             result.Intent = "KasaBakiye";
             result.IsSuccess = true;
             return result;
         }
 
-        if (ContainsAny(lower, "bakiye", "kasada kaç", "kasada ne kadar", "kasada para"))
-        {
-            result.Intent = "KasaBakiye";
-            result.IsSuccess = true;
-            return result;
-        }
-
-        // =========================
         // GELİR / GİDER
-        // =========================
         if (ContainsAny(lower, "gelir", "giriş", "kazanç", "tahsilat") ||
             (ContainsAny(lower, "kasa") && ContainsAny(lower, "girdi")))
         {
@@ -178,9 +185,7 @@ public class QueryInterpreter
             return result;
         }
 
-        // =========================
-        // MÜŞTERİ / SATICI TAHSİLAT ÖDEME
-        // =========================
+        // MÜŞTERİ / SATICI
         if (ContainsAny(lower, "müşteri tahsilatı", "müşterilerden", "müşteriden ne kadar", "toplam tahsilat"))
         {
             result.Intent = "ToplamMusteriTahsilati";
@@ -195,27 +200,6 @@ public class QueryInterpreter
             return result;
         }
 
-        // =========================
-        // AVANS
-        // =========================
-        if (ContainsAny(lower, "avans"))
-        {
-            if (ContainsAny(lower, "toplam", "ne kadar", "kaç"))
-            {
-                result.Intent = "ToplamAvans";
-                result.IsSuccess = true;
-                return result;
-            }
-
-            result.CalisanAdi = ExtractFirstWord(text);
-            result.Intent = "CalisanAvansToplam";
-            result.IsSuccess = true;
-            return result;
-        }
-
-        // =========================
-        // EN BORÇLU / ALACAKLI
-        // =========================
         if (ContainsAny(lower, "en borçlu", "en çok borçlu", "kim bana en çok borçlu"))
         {
             result.Intent = "EnBorcluMusteri";
@@ -230,9 +214,6 @@ public class QueryInterpreter
             return result;
         }
 
-        // =========================
-        // MÜŞTERİ BORCU
-        // =========================
         if (ContainsAny(lower, "borç", "borcu", "borçlu"))
         {
             result.CalisanAdi = ExtractFirstWord(text);
