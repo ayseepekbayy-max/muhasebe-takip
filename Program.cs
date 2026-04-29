@@ -782,38 +782,6 @@ app.MapPost("/api/ai/stok-sayisi", async (AppDbContext db) =>
 // ==========================
 // CORE AI API'LER
 // ==========================
-
-// GENEL ÖZET
-app.MapPost("/api/ai/genel-ozet", async (AppDbContext db) =>
-{
-    var musteri = await db.Musteriler.CountAsync();
-    var calisan = await db.Calisanlar.CountAsync();
-    var cari = await db.CariKartlar.CountAsync();
-    var stok = await db.StokUrunler.CountAsync();
-
-    var giris = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Giris)
-        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
-
-    var cikis = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Cikis)
-        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
-
-    var bakiye = giris - cikis;
-
-    return Results.Json(new
-    {
-        message =
-            $"Genel durum:\n" +
-            $"- Kasa: {bakiye:N2} TL\n" +
-            $"- Müşteri: {musteri}\n" +
-            $"- Çalışan: {calisan}\n" +
-            $"- Cari: {cari}\n" +
-            $"- Stok ürün: {stok}"
-    });
-});
-
-
 // KASA BAKİYE
 app.MapPost("/api/ai/kasa-bakiye", async (AppDbContext db) =>
 {
