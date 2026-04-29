@@ -58,29 +58,30 @@ public class LoginModel : PageModel
             return Page();
         }
 
-        if (kullanici.Firma == null || !kullanici.Firma.AktifMi)
-        {
-            Hata = "Bu firma hesabı pasif durumda.";
-            return Page();
-        }
+        var firma = kullanici.Firma;
 
-        HttpContext.Session.Clear();
+            if (firma == null || !firma.AktifMi)
+            {
+                Hata = "Bu firma hesabı pasif durumda.";
+                return Page();
+            }
 
-        HttpContext.Session.SetInt32("KullaniciId", kullanici.Id);
-        HttpContext.Session.SetInt32("FirmaId", kullanici.FirmaId);
-        HttpContext.Session.SetString("KullaniciAdi", kullanici.KullaniciAdi);
-        HttpContext.Session.SetString("FirmaAdi", kullanici.Firma?.FirmaAdi ?? "Firma");
-        HttpContext.Session.SetString("Rol", (kullanici.Rol ?? "").Trim());
+            HttpContext.Session.Clear();
 
-        HttpContext.Session.SetString("MenuCariKartlar", kullanici.Firma.MenuCariKartlar ? "1" : "0");
-        HttpContext.Session.SetString("MenuKasa", kullanici.Firma.MenuKasa ? "1" : "0");
-        HttpContext.Session.SetString("MenuRaporlar", kullanici.Firma.MenuRaporlar ? "1" : "0");
-        HttpContext.Session.SetString("MenuCalisanlar", kullanici.Firma.MenuCalisanlar ? "1" : "0");
-        HttpContext.Session.SetString("MenuMusteriler", kullanici.Firma.MenuMusteriler ? "1" : "0");
-        HttpContext.Session.SetString("MenuStoklar", kullanici.Firma.MenuStoklar ? "1" : "0");
-        HttpContext.Session.SetString("MenuMaliyet", kullanici.Firma.MenuMaliyet ? "1" : "0");
-        HttpContext.Session.SetString("MenuCekler", kullanici.Firma.MenuCekler ? "1" : "0");
+            HttpContext.Session.SetInt32("KullaniciId", kullanici.Id);
+            HttpContext.Session.SetInt32("FirmaId", kullanici.FirmaId);
+            HttpContext.Session.SetString("KullaniciAdi", kullanici.KullaniciAdi);
+            HttpContext.Session.SetString("FirmaAdi", firma.FirmaAdi ?? "Firma");
+            HttpContext.Session.SetString("Rol", (kullanici.Rol ?? "").Trim());
 
-        return RedirectToPage("/Index");
+            HttpContext.Session.SetString("MenuCariKartlar", firma.MenuCariKartlar ? "1" : "0");
+            HttpContext.Session.SetString("MenuKasa", firma.MenuKasa ? "1" : "0");
+            HttpContext.Session.SetString("MenuRaporlar", firma.MenuRaporlar ? "1" : "0");
+            HttpContext.Session.SetString("MenuCalisanlar", firma.MenuCalisanlar ? "1" : "0");
+            HttpContext.Session.SetString("MenuMusteriler", firma.MenuMusteriler ? "1" : "0");
+            HttpContext.Session.SetString("MenuStoklar", firma.MenuStoklar ? "1" : "0");
+            HttpContext.Session.SetString("MenuMaliyet", firma.MenuMaliyet ? "1" : "0");
+            HttpContext.Session.SetString("MenuCekler", firma.MenuCekler ? "1" : "0");
+                    return RedirectToPage("/Index");
     }
 }

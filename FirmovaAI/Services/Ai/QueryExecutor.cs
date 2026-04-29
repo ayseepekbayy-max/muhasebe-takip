@@ -53,14 +53,45 @@ public class QueryExecutor
             case "KasaBakiye":
                 return await GetKasaBakiyeAsync(intent);
 
-            default:
-                return "Bu sorgu tipi henüz desteklenmiyor.";
-
             case "SonKasaHareketleri":
-                 return await GetSonKasaHareketleriAsync();
+                return await GetSonKasaHareketleriAsync();
+
             case "MusteriBorc":
                 return await GetMusteriBorcAsync(intent);
-                }
+
+            case "MusteriSayisi":
+                return (await _apiClient.GetMusteriSayisiAsync()).Message;
+
+            case "CalisanSayisi":
+                return (await _apiClient.GetCalisanSayisiAsync()).Message;
+
+            case "CariSayisi":
+                return (await _apiClient.GetCariSayisiAsync()).Message;
+
+            case "AliciSayisi":
+                return (await _apiClient.GetAliciSayisiAsync()).Message;
+
+            case "SaticiSayisi":
+                return (await _apiClient.GetSaticiSayisiAsync()).Message;
+
+            case "StokSayisi":
+                return (await _apiClient.GetStokSayisiAsync()).Message;
+
+            case "BitenStoklar":
+                return (await _apiClient.GetBitenStoklarAsync()).Message;
+
+            case "EnCokStoktaOlanUrun":
+                return (await _apiClient.GetEnCokStoktaOlanUrunAsync()).Message;
+
+            case "BugunKasaIslemSayisi":
+                return (await _apiClient.GetBugunKasaIslemSayisiAsync()).Message;
+
+            case "GenelOzet":
+                return (await _apiClient.GetGenelOzetAsync()).Message;
+
+            default:
+                return "Bu sorgu tipi henüz desteklenmiyor.";
+        }
     }
 
     private async Task<string> GetCalisanAvansToplamAsync(QueryIntent intent)
@@ -134,11 +165,13 @@ public class QueryExecutor
         var result = await _apiClient.GetKasaBakiyeAsync(intent.DateRange ?? "ThisMonth");
         return result.Message;
     }
+
     private async Task<string> GetSonKasaHareketleriAsync()
     {
         var result = await _apiClient.GetSonKasaHareketleriAsync();
         return result.Message;
     }
+
     private async Task<string> GetMusteriBorcAsync(QueryIntent intent)
     {
         var result = await _apiClient.GetMusteriBorcAsync(intent.CalisanAdi ?? "");

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 
 namespace FirmovaAI.Services.Ai;
@@ -11,153 +12,48 @@ public class MuhasebeApiClient
         _httpClient = httpClient;
     }
 
-    public async Task<CalisanAvansApiResponse> GetCalisanAvansToplamAsync(string calisanAdi, string dateRange)
+    // =======================
+    // GENEL METHODLAR
+    // =======================
+
+    private async Task<CalisanAvansApiResponse> PostEmptyAsync(string url)
     {
-        var request = new CalisanAvansApiRequest
+        try
         {
-            CalisanAdi = calisanAdi,
-            DateRange = dateRange
-        };
-
-        var response = await _httpClient.PostAsJsonAsync("/api/ai/calisan-avans-toplam", request);
-        response.EnsureSuccessStatusCode();
-
-        return await ReadResponseAsync(response);
-    }
-
-    public async Task<CalisanAvansApiResponse> GetToplamAvansAsync(string dateRange)
-    {
-        var request = new CalisanAvansApiRequest
+            var response = await _httpClient.PostAsync(url, null);
+            return await HandleResponseAsync(response, url);
+        }
+        catch (Exception ex)
         {
-            DateRange = dateRange
-        };
-
-        var response = await _httpClient.PostAsJsonAsync("/api/ai/toplam-avans", request);
-        response.EnsureSuccessStatusCode();
-
-        return await ReadResponseAsync(response);
+            return Error($"Muhasebe API bağlantı hatası: {ex.Message}");
+        }
     }
 
-    public async Task<CalisanAvansApiResponse> GetSonAvansVerilenKisiAsync()
+    private async Task<CalisanAvansApiResponse> PostJsonAsync(string url, CalisanAvansApiRequest request)
     {
-        var response = await _httpClient.PostAsync("/api/ai/son-avans-verilen-kisi", null);
-        response.EnsureSuccessStatusCode();
-
-        return await ReadResponseAsync(response);
-    }
-
-    public async Task<CalisanAvansApiResponse> GetBugunKasaDurumuAsync(string kasaIntent)
-    {
-        var request = new CalisanAvansApiRequest
+        try
         {
-            CalisanAdi = kasaIntent,
-            DateRange = "Today"
-        };
-
-        var response = await _httpClient.PostAsJsonAsync("/api/ai/bugun-kasa-durumu", request);
-        response.EnsureSuccessStatusCode();
-
-        return await ReadResponseAsync(response);
-    }
-
-    public async Task<CalisanAvansApiResponse> GetEnBorcluMusteriAsync()
-    {
-        var response = await _httpClient.PostAsync("/api/ai/en-borclu-musteri", null);
-        response.EnsureSuccessStatusCode();
-
-        return await ReadResponseAsync(response);
-    }
-
-    public async Task<CalisanAvansApiResponse> GetEnAlacakliSaticiAsync()
-    {
-        var response = await _httpClient.PostAsync("/api/ai/en-alacakli-satici", null);
-        response.EnsureSuccessStatusCode();
-
-        return await ReadResponseAsync(response);
-    }
-
-    public async Task<CalisanAvansApiResponse> GetToplamMusteriTahsilatiAsync(string dateRange)
-    {
-        var request = new CalisanAvansApiRequest
+            var response = await _httpClient.PostAsJsonAsync(url, request);
+            return await HandleResponseAsync(response, url);
+        }
+        catch (Exception ex)
         {
-            DateRange = dateRange
-        };
-
-        var response = await _httpClient.PostAsJsonAsync("/api/ai/toplam-musteri-tahsilati", request);
-        response.EnsureSuccessStatusCode();
-
-        return await ReadResponseAsync(response);
+            return Error($"Muhasebe API bağlantı hatası: {ex.Message}");
+        }
     }
 
-    public async Task<CalisanAvansApiResponse> GetToplamSaticiOdemesiAsync(string dateRange)
+    private static async Task<CalisanAvansApiResponse> HandleResponseAsync(HttpResponseMessage response, string url)
     {
-        var request = new CalisanAvansApiRequest
+        if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            DateRange = dateRange
-        };
+            return Error($"Bu özellik henüz bağlı değil: {url}");
+        }
 
-        var response = await _httpClient.PostAsJsonAsync("/api/ai/toplam-satici-odemesi", request);
-        response.EnsureSuccessStatusCode();
-
-        return await ReadResponseAsync(response);
-    }
-
-    public async Task<CalisanAvansApiResponse> GetToplamGelirAsync(string dateRange)
-    {
-        var request = new CalisanAvansApiRequest
+        if (!response.IsSuccessStatusCode)
         {
-            DateRange = dateRange
-        };
-
-        var response = await _httpClient.PostAsJsonAsync("/api/ai/toplam-gelir", request);
-        response.EnsureSuccessStatusCode();
-
-        return await ReadResponseAsync(response);
-    }
-
-    public async Task<CalisanAvansApiResponse> GetToplamGiderAsync(string dateRange)
-    {
-        var request = new CalisanAvansApiRequest
-        {
-            DateRange = dateRange
-        };
-
-        var response = await _httpClient.PostAsJsonAsync("/api/ai/toplam-gider", request);
-        response.EnsureSuccessStatusCode();
-
-        return await ReadResponseAsync(response);
-    }
-
-    public async Task<CalisanAvansApiResponse> GetKasaBakiyeAsync(string dateRange)
-    {
-        var request = new CalisanAvansApiRequest
-        {
-            DateRange = dateRange
-        };
-
-        var response = await _httpClient.PostAsJsonAsync("/api/ai/kasa-bakiye", request);
-        response.EnsureSuccessStatusCode();
-
-        return await ReadResponseAsync(response);
-    }
-
-    public async Task<CalisanAvansApiResponse> GetSonKasaHareketleriAsync()
-    {
-        var response = await _httpClient.PostAsync("/api/ai/son-kasa-hareketleri", null);
-        response.EnsureSuccessStatusCode();
-
-        return await ReadResponseAsync(response);
-    }
-
-    public async Task<CalisanAvansApiResponse> GetMusteriBorcAsync(string ad)
-    {
-        var request = new CalisanAvansApiRequest
-        {
-            CalisanAdi = ad
-        };
-
-        var response = await _httpClient.PostAsJsonAsync("/api/ai/musteri-borc", request);
-        response.EnsureSuccessStatusCode();
+            var detay = await response.Content.ReadAsStringAsync();
+            return Error($"API hata verdi ({(int)response.StatusCode}): {detay}");
+        }
 
         return await ReadResponseAsync(response);
     }
@@ -172,7 +68,97 @@ public class MuhasebeApiClient
             Message = "API cevabı okunamadı."
         };
     }
+
+    private static CalisanAvansApiResponse Error(string message)
+    {
+        return new CalisanAvansApiResponse
+        {
+            Success = false,
+            Message = message
+        };
+    }
+
+    // =======================
+    // API ÇAĞRILARI
+    // =======================
+
+    public async Task<CalisanAvansApiResponse> GetMusteriSayisiAsync()
+        => await PostEmptyAsync("/api/ai/musteri-sayisi");
+
+    public async Task<CalisanAvansApiResponse> GetCalisanSayisiAsync()
+        => await PostEmptyAsync("/api/ai/calisan-sayisi");
+
+    public async Task<CalisanAvansApiResponse> GetCariSayisiAsync()
+        => await PostEmptyAsync("/api/ai/cari-sayisi");
+
+    public async Task<CalisanAvansApiResponse> GetAliciSayisiAsync()
+        => await PostEmptyAsync("/api/ai/alici-sayisi");
+
+    public async Task<CalisanAvansApiResponse> GetSaticiSayisiAsync()
+        => await PostEmptyAsync("/api/ai/satici-sayisi");
+
+    public async Task<CalisanAvansApiResponse> GetStokSayisiAsync()
+        => await PostEmptyAsync("/api/ai/stok-sayisi");
+
+    public async Task<CalisanAvansApiResponse> GetBitenStoklarAsync()
+        => await PostEmptyAsync("/api/ai/biten-stoklar");
+
+    public async Task<CalisanAvansApiResponse> GetEnCokStoktaOlanUrunAsync()
+        => await PostEmptyAsync("/api/ai/en-cok-stokta-olan-urun");
+
+    public async Task<CalisanAvansApiResponse> GetBugunKasaIslemSayisiAsync()
+        => await PostEmptyAsync("/api/ai/bugun-kasa-islem-sayisi");
+
+    public async Task<CalisanAvansApiResponse> GetGenelOzetAsync()
+        => await PostEmptyAsync("/api/ai/genel-ozet");
+
+    public async Task<CalisanAvansApiResponse> GetSonKasaHareketleriAsync()
+        => await PostEmptyAsync("/api/ai/son-kasa-hareketleri");
+
+    public async Task<CalisanAvansApiResponse> GetSonAvansVerilenKisiAsync()
+        => await PostEmptyAsync("/api/ai/son-avans-verilen-kisi");
+
+    public async Task<CalisanAvansApiResponse> GetEnBorcluMusteriAsync()
+        => await PostEmptyAsync("/api/ai/en-borclu-musteri");
+
+    public async Task<CalisanAvansApiResponse> GetEnAlacakliSaticiAsync()
+        => await PostEmptyAsync("/api/ai/en-alacakli-satici");
+
+    public async Task<CalisanAvansApiResponse> GetMusteriBorcAsync(string ad)
+        => await PostJsonAsync("/api/ai/musteri-borc", new CalisanAvansApiRequest { CalisanAdi = ad });
+
+    public async Task<CalisanAvansApiResponse> GetToplamAvansAsync(string dateRange)
+        => await PostJsonAsync("/api/ai/toplam-avans", new CalisanAvansApiRequest { DateRange = dateRange });
+
+    public async Task<CalisanAvansApiResponse> GetToplamGelirAsync(string dateRange)
+        => await PostJsonAsync("/api/ai/toplam-gelir", new CalisanAvansApiRequest { DateRange = dateRange });
+
+    public async Task<CalisanAvansApiResponse> GetToplamGiderAsync(string dateRange)
+        => await PostJsonAsync("/api/ai/toplam-gider", new CalisanAvansApiRequest { DateRange = dateRange });
+
+    public async Task<CalisanAvansApiResponse> GetKasaBakiyeAsync(string dateRange)
+        => await PostJsonAsync("/api/ai/kasa-bakiye", new CalisanAvansApiRequest { DateRange = dateRange });
+
+    public async Task<CalisanAvansApiResponse> GetBugunKasaDurumuAsync(string kasaIntent)
+        => await PostJsonAsync("/api/ai/bugun-kasa-durumu",
+            new CalisanAvansApiRequest { CalisanAdi = kasaIntent, DateRange = "Today" });
+
+    public async Task<CalisanAvansApiResponse> GetToplamMusteriTahsilatiAsync(string dateRange)
+        => await PostJsonAsync("/api/ai/toplam-musteri-tahsilati",
+            new CalisanAvansApiRequest { DateRange = dateRange });
+
+    public async Task<CalisanAvansApiResponse> GetToplamSaticiOdemesiAsync(string dateRange)
+        => await PostJsonAsync("/api/ai/toplam-satici-odemesi",
+            new CalisanAvansApiRequest { DateRange = dateRange });
+
+    public async Task<CalisanAvansApiResponse> GetCalisanAvansToplamAsync(string ad, string dateRange)
+        => await PostJsonAsync("/api/ai/calisan-avans-toplam",
+            new CalisanAvansApiRequest { CalisanAdi = ad, DateRange = dateRange });
 }
+
+// =======================
+// MODELLER
+// =======================
 
 public class CalisanAvansApiRequest
 {

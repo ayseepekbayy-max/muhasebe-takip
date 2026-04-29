@@ -1,17 +1,529 @@
 @page
 @model FirmovaAI.Pages.Ask.IndexModel
 
-<h2>FirmovaAI Asistan</h2>
+<div class="ai-page">
+    <div class="ai-card">
 
-<form method="post">
-    <textarea asp-for="Soru" rows="5" style="width:100%;"></textarea>
-    <button type="submit">Sor</button>
-</form>
+        <div class="ai-header">
+            <div>
+                <h2>FirmovaAI</h2>
+                <p>Sesli ve yazılı muhasebe asistanı</p>
+            </div>
 
-@if (!string.IsNullOrWhiteSpace(Model.Cevap))
-{
-    <div style="margin-top:20px; padding:15px; border:1px solid #ccc;">
-        <strong>Cevap:</strong>
-        <div style="margin-top:10px;">@Html.Raw(Model.Cevap)</div>
+            <div class="ai-status">
+                <span></span>
+                Aktif
+            </div>
+        </div>
+
+        <div class="chat-area">
+
+            <div class="message bot">
+                <div class="bubble">
+                    Merhaba, ben FirmovaAI. Bana kasa, avans, müşteri borcu veya son hareketleri sorabilirsin.
+                </div>
+            </div>
+
+            @foreach (var mesaj in Model.Mesajlar)
+            {
+                if (mesaj.Role == "user")
+                {
+                    <div class="message user">
+                        <div class="bubble">@mesaj.Text</div>
+                    </div>
+                }
+                else
+                {
+                    <div class="message bot">
+                        <div class="bubble @(mesaj == Model.Mesajlar.LastOrDefault() ? "son-cevap" : "")">
+                            @Html.Raw(mesaj.Text.Replace("\n", "<br />"))
+                        </div>
+                    </div>
+                }
+            }
+
+            <div id="aiDusunuyor" class="message bot" style="display:none;">
+                <div class="bubble typing">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    FirmovaAI düşünüyor...
+                </div>
+            </div>
+
+        </div>
+
+        <form method="post" class="input-area" id="soruFormu">
+
+            <textarea id="soruKutusu"
+                      asp-for="Soru"
+                      rows="2"
+                      placeholder="Örn: Bu ay gelir ne kadar?"
+                      class="chat-input"></textarea>
+
+            <div class="button-row">
+                <button id="sorButonu" type="submit" class="btn primary" onclick="cevapGelinceOku(); aiDusunuyorGoster()">Sor</button>
+                <button type="button" onclick="sesliSor()" class="btn">🎤 Sesli Sor</button>
+                <button type="button" onclick="cevabiOku()" class="btn">🔊 Oku</button>
+                <button type="button" onclick="sesiDurdur()" class="btn danger">⏹ Durdur</button>
+                <button type="submit" formaction="?handler=Temizle" class="btn danger">🧹 Sohbeti Temizle</button>
+            </div>
+
+            <div id="novaDurum" style="margin-top:10px; font-size:14px; color:#475569;">
+                Nova dinleme hazırlanıyor...
+            </div>
+
+        </form>
+
     </div>
+</div>
+
+<style>
+.ai-page {
+    min-height: 80vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 30px 12px;
+    background: linear-gradient(180deg, #f8fafc, #eef2ff);
 }
+
+.ai-card {
+    width: 100%;
+    max-width: 820px;
+    background: white;
+    border-radius: 22px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.ai-header {
+    padding: 22px 24px;
+    background: linear-gradient(135deg, #312e81, #6366f1);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ai-header h2 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.ai-header p {
+    margin: 6px 0 0;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.ai-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.16);
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+}
+
+.ai-status span {
+    width: 9px;
+    height: 9px;
+    background: #22c55e;
+    border-radius: 50%;
+}
+
+.chat-area {
+    padding: 24px;
+    min-height: 340px;
+    max-height: 520px;
+    overflow-y: auto;
+    background: #f8fafc;
+}
+
+.message {
+    display: flex;
+    margin-bottom: 14px;
+}
+
+.message.user {
+    justify-content: flex-end;
+}
+
+.message.bot {
+    justify-content: flex-start;
+}
+
+.bubble {
+    max-width: 75%;
+    padding: 13px 15px;
+    border-radius: 18px;
+    line-height: 1.45;
+    font-size: 15px;
+}
+
+.message.user .bubble {
+    background: #4f46e5;
+    color: white;
+    border-bottom-right-radius: 6px;
+}
+
+.message.bot .bubble {
+    background: white;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    border-bottom-left-radius: 6px;
+}
+
+.input-area {
+    padding: 18px;
+    border-top: 1px solid #e5e7eb;
+    background: white;
+}
+
+.chat-input {
+    width: 100%;
+    min-height: 58px;
+    resize: vertical;
+    padding: 13px 14px;
+    border-radius: 16px;
+    border: 1px solid #cbd5e1;
+    font-size: 15px;
+    outline: none;
+}
+
+.chat-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+
+.button-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.btn {
+    border: none;
+    border-radius: 14px;
+    padding: 11px 14px;
+    background: #e2e8f0;
+    color: #0f172a;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn.primary {
+    background: #4f46e5;
+    color: white;
+}
+
+.btn.danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.typing {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #475569;
+    font-style: italic;
+}
+
+.typing span {
+    width: 7px;
+    height: 7px;
+    background: #6366f1;
+    border-radius: 50%;
+    animation: blink 1.2s infinite;
+}
+
+.typing span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@@keyframes blink {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 1; }
+}
+
+.nova-active {
+    color: #15803d !important;
+    font-weight: 700;
+}
+
+.nova-passive {
+    color: #475569 !important;
+}
+</style>
+
+<script>
+let novaRecognition = null;
+let novaDinliyor = false;
+let novaAktif = false;
+let isSpeaking = false;
+let soruGonderiliyor = false;
+let novaTimer = null;
+
+function cevapGelinceOku(){
+    localStorage.setItem("cevapOtomatikOku", "1");
+}
+
+function aiDusunuyorGoster(){
+    const kutu = document.getElementById("soruKutusu");
+    const dusunuyor = document.getElementById("aiDusunuyor");
+
+    if(kutu && kutu.value.trim() && dusunuyor){
+        dusunuyor.style.display = "flex";
+    }
+}
+
+function novaDurumYaz(metin, aktifMi){
+    const durum = document.getElementById("novaDurum");
+    if (!durum) return;
+
+    durum.innerText = metin;
+    durum.className = aktifMi ? "nova-active" : "nova-passive";
+}
+
+function novaAktifEt(){
+    novaAktif = true;
+    novaDurumYaz("🟢 Nova aktif. Sorunu söyleyebilirsin.", true);
+
+    clearTimeout(novaTimer);
+    novaTimer = setTimeout(() => {
+        novaAktif = false;
+        novaDurumYaz("Nova beklemede. Başlatmak için 'Hey Nova' de.", false);
+    }, 20000);
+}
+
+function novaDinlemeyiDurdur(){
+    if(novaRecognition){
+        try {
+            novaRecognition.onend = null;
+            novaRecognition.stop();
+        } catch {}
+    }
+
+    novaRecognition = null;
+    novaDinliyor = false;
+}
+
+function novaDinlemeyiBaslat(){
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if(!SpeechRecognition){
+        novaDurumYaz("Tarayıcı sesli komutu desteklemiyor. Google Chrome kullan.", false);
+        return;
+    }
+
+    if(novaDinliyor) return;
+
+    novaDinliyor = true;
+
+    novaRecognition = new SpeechRecognition();
+    novaRecognition.lang = "tr-TR";
+    novaRecognition.continuous = true;
+    novaRecognition.interimResults = false;
+
+    novaDurumYaz("Nova dinlemede. 'Hey Nova' de.", false);
+
+    novaRecognition.onresult = function(e){
+        if(isSpeaking || soruGonderiliyor) return;
+
+        const sonIndex = e.results.length - 1;
+        let metin = e.results[sonIndex][0].transcript.toLowerCase().trim();
+
+        novaDurumYaz("Duydum: " + metin, novaAktif);
+
+        const novaDendi =
+            metin.includes("hey nova") ||
+            metin.includes("ey nova") ||
+            metin.includes("hey noba") ||
+            metin === "nova" ||
+            metin.includes("nova");
+
+        if(!novaAktif && novaDendi){
+            let kalanSoru = metin
+                .replace("hey nova", "")
+                .replace("ey nova", "")
+                .replace("hey noba", "")
+                .replace("nova", "")
+                .trim();
+
+            novaAktifEt();
+
+            if(kalanSoru.length > 5){
+                soruyuGonder(kalanSoru);
+                return;
+            }
+
+            novaCevapVer("Dinliyorum");
+            return;
+        }
+
+        if(novaAktif && metin.length > 5 && metin.split(" ").length >= 2){
+            soruyuGonder(metin);
+        }
+    };
+
+    novaRecognition.onerror = function(){
+        novaDinliyor = false;
+        novaDurumYaz("Nova kısa süre durdu. Sayfaya bir kez tıkla veya yenile.", false);
+    };
+
+    novaRecognition.onend = function(){
+        novaDinliyor = false;
+
+        if(!soruGonderiliyor && !isSpeaking){
+            setTimeout(() => {
+                novaDinlemeyiBaslat();
+            }, 700);
+        }
+    };
+
+    try {
+        novaRecognition.start();
+    } catch {
+        novaDinliyor = false;
+    }
+}
+
+function novaCevapVer(metin){
+    novaDinlemeyiDurdur();
+
+    speechSynthesis.cancel();
+
+    const t = new SpeechSynthesisUtterance(metin);
+    t.lang = "tr-TR";
+    t.rate = 0.95;
+
+    t.onstart = () => {
+        isSpeaking = true;
+    };
+
+    t.onend = () => {
+        isSpeaking = false;
+        setTimeout(() => {
+            novaDinlemeyiBaslat();
+        }, 500);
+    };
+
+    speechSynthesis.speak(t);
+}
+
+function soruyuGonder(soru){
+    const kutu = document.getElementById("soruKutusu");
+    const buton = document.getElementById("sorButonu");
+
+    if(!kutu || !buton) return;
+
+    soruGonderiliyor = true;
+
+    kutu.value = soru;
+    cevapGelinceOku();
+    aiDusunuyorGoster();
+
+    novaDinlemeyiDurdur();
+
+    setTimeout(() => {
+        buton.click();
+    }, 400);
+}
+
+function sesliSor(){
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if(!SpeechRecognition){
+        alert("Tarayıcınız sesli komutu desteklemiyor. Google Chrome kullanın.");
+        return;
+    }
+
+    const rec = new SpeechRecognition();
+    rec.lang = "tr-TR";
+    rec.continuous = false;
+    rec.interimResults = false;
+
+    rec.start();
+
+    rec.onresult = e => {
+        document.getElementById("soruKutusu").value = e.results[0][0].transcript;
+    };
+
+    rec.onerror = () => {
+        alert("Ses algılanamadı. Mikrofon iznini kontrol edin.");
+    };
+}
+
+function cevabiOku(){
+    const cevap = document.querySelector(".son-cevap");
+    if(!cevap) return;
+
+    novaDinlemeyiDurdur();
+    speechSynthesis.cancel();
+
+    const t = new SpeechSynthesisUtterance(cevap.innerText);
+    t.lang = "tr-TR";
+    t.rate = 0.95;
+
+    t.onstart = () => {
+        isSpeaking = true;
+    };
+
+    t.onend = () => {
+        isSpeaking = false;
+        soruGonderiliyor = false;
+        novaAktifEt();
+
+        setTimeout(() => {
+            novaDinlemeyiBaslat();
+        }, 700);
+    };
+
+    speechSynthesis.speak(t);
+}
+
+function sesiDurdur(){
+    speechSynthesis.cancel();
+    isSpeaking = false;
+    soruGonderiliyor = false;
+    novaDinlemeyiBaslat();
+}
+
+window.addEventListener("load", function(){
+    soruGonderiliyor = false;
+
+    const otomatikOku = localStorage.getItem("cevapOtomatikOku");
+    const cevap = document.querySelector(".son-cevap");
+
+    if(otomatikOku === "1" && cevap && cevap.innerText.trim()){
+        localStorage.removeItem("cevapOtomatikOku");
+
+        setTimeout(() => {
+            cevabiOku();
+        }, 800);
+    }
+
+    const chatArea = document.querySelector(".chat-area");
+    if(chatArea){
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    novaDinlemeyiBaslat();
+});
+
+document.addEventListener("click", function(){
+    if(!novaDinliyor && !isSpeaking && !soruGonderiliyor){
+        novaDinlemeyiBaslat();
+    }
+});
+</script>
