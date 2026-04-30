@@ -222,6 +222,20 @@ public class QueryInterpreter
             return result;
         }
 
+        // PUANTAJ
+        if (ContainsAny(lower, "puantaj", "geldi", "gelmedi", "izinli", "yarım gün"))
+        {
+            var ad = ExtractFirstWord(text);
+
+            if (!string.IsNullOrWhiteSpace(ad))
+            {
+                result.CalisanAdi = ad;
+                result.Intent = "CalisanPuantaj";
+                result.IsSuccess = true;
+                return result;
+            }
+        }
+
         result.ErrorMessage = "Soru anlaşılamadı.";
         return result;
     }

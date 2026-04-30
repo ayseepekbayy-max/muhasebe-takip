@@ -89,9 +89,22 @@ public class QueryExecutor
             case "GenelOzet":
                 return (await _apiClient.GetGenelOzetAsync()).Message;
 
+            case "CalisanPuantaj":
+                return await GetCalisanPuantajAsync(intent);
+
             default:
                 return "Bu sorgu tipi henüz desteklenmiyor.";
         }
+    }
+
+    private async Task<string> GetCalisanPuantajAsync(QueryIntent intent)
+    {
+        await Task.CompletedTask;
+
+        if (string.IsNullOrWhiteSpace(intent.CalisanAdi))
+            return "Çalışan adı anlaşılamadı.";
+
+        return "Çalışan puantaj sorgusu için API tarafındaki bağlantı henüz tamamlanmadı. Önce derleme hatasını kaldırdım; sonraki adımda MuhasebeApiClient içine puantaj metodunu eklememiz gerekiyor.";
     }
 
     private async Task<string> GetCalisanAvansToplamAsync(QueryIntent intent)

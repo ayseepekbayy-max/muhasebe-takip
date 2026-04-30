@@ -778,7 +778,57 @@ app.MapPost("/api/ai/genel-ozet", async (AppDbContext db) =>
         Message = mesaj
     });
 });
+app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansToplamRequest req) =>
+{
+    try
+    {
+        if (string.IsNullOrWhiteSpace(req.CalisanAdi))
+        {
+            return Results.Json(new { success = false, message = "Çalışan adı gerekli." });
+        }
 
+        var ad = req.CalisanAdi.ToLower();
+
+        var calisan = await db.Calisanlar
+            .FirstOrDefaultAsync(x => x.Ad.ToLower().Contains(ad) || x.AdSoyad.ToLower().Contains(ad));
+
+        if (calisan == null)
+        {
+            return Results.Json(new { success = false, message = "Çalışan bulunamadı." });
+        }
+
+        var baslangic = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+        var bitis = baslangic.AddMonths(1);
+
+        var kayitlar = await db.Set<CalisanPuantaj>()
+        .Where(x => x.CalisanId == calisan.Id && x.Tarih >= baslangic && x.Tarih < bitis)
+        .ToListAsync();
+
+        var geldi = kayitlar.Count(x => x.Durum == PuantajDurum.Geldi);
+        var gelmedi = kayitlar.Count(x => x.Durum == PuantajDurum.Gelmedi);
+        var izinli = kayitlar.Count(x => x.Durum == PuantajDurum.Izinli);
+        var yarim = kayitlar.Count(x => x.Durum == PuantajDurum.YarimGun);
+
+        return Results.Json(new
+        {
+            success = true,
+            message = $"{calisan.AdSoyad} bu ay:\n" +
+                      $"Geldi: {geldi}\n" +
+                      $"Gelmedi: {gelmedi}\n" +
+                      $"İzinli: {izinli}\n" +
+                      $"Yarım Gün: {yarim}"
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            message = "Puantaj alınırken hata oluştu.",
+            error = ex.Message
+        });
+    }
+});
 app.MapRazorPages();
 
 app.Run();
