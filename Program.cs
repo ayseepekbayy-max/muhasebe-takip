@@ -375,9 +375,6 @@ app.MapPost("/api/ai/toplam-satici-odemesi", async (CalisanAvansToplamRequest re
     }
 });
 
-// =========================
-// YENİ: TOPLAM GELİR
-// =========================
 app.MapPost("/api/ai/toplam-gelir", async (CalisanAvansToplamRequest request, AppDbContext db) =>
 {
     try
@@ -425,9 +422,6 @@ app.MapPost("/api/ai/toplam-gelir", async (CalisanAvansToplamRequest request, Ap
     }
 });
 
-// =========================
-// YENİ: TOPLAM GİDER
-// =========================
 app.MapPost("/api/ai/toplam-gider", async (CalisanAvansToplamRequest request, AppDbContext db) =>
 {
     try
@@ -475,9 +469,6 @@ app.MapPost("/api/ai/toplam-gider", async (CalisanAvansToplamRequest request, Ap
     }
 });
 
-// =========================
-// YENİ: KASA BAKİYE
-// =========================
 app.MapPost("/api/ai/kasa-bakiye", async (CalisanAvansToplamRequest request, AppDbContext db) =>
 {
     try
@@ -587,11 +578,13 @@ app.MapPost("/api/ai/son-kasa-hareketleri", async (AppDbContext db) =>
         }, statusCode: 500);
     }
 });
+
 app.MapPost("/api/ai/musteri-borc", async (AppDbContext db, CalisanAvansToplamRequest req) =>
 {
     var result = await AiApiHelpers.GetMusteriBorcAsync(db, req.CalisanAdi);
     return Results.Json(result);
 });
+
 app.MapPost("/api/ai/musteri-sayisi", async (AppDbContext db) =>
 {
     try
@@ -643,8 +636,9 @@ app.MapPost("/api/ai/satici-sayisi", async (AppDbContext db) =>
 app.MapPost("/api/ai/stok-sayisi", async (AppDbContext db) =>
 {
     var count = await db.StokUrunler.CountAsync();
-    return Results.Json(new { success = true, message = $"Toplam ürün sayısı: {count}" });
+    return Results.Json(new { success = true, message = $"Toplam stok ürün sayısı: {count}" });
 });
+
 app.MapPost("/api/ai/bugun-kasa-islem-sayisi", async (AppDbContext db) =>
 {
     var bugun = DateTime.UtcNow.Date;
@@ -663,67 +657,93 @@ app.MapPost("/api/ai/bugun-kasa-islem-sayisi", async (AppDbContext db) =>
 
 app.MapPost("/api/ai/biten-stoklar", async (AppDbContext db) =>
 {
-    var stoklar = await db.StokUrunler
-        .Select(u => new
-        {
-            Urun = u.Ad,
-            Miktar = db.StokHareketleri
-                .Where(h => h.StokUrunId == u.Id)
-                .Sum(h => h.Tip == StokHareketTipi.Giris ? h.Miktar : -h.Miktar)
-        })
-        .Where(x => x.Miktar <= 0)
-        .ToListAsync();
-
-    if (!stoklar.Any())
+    try
     {
+        var stoklar = await db.StokUrunler
+            .Select(u => new
+            {
+                Urun = u.Ad,
+                Miktar = db.StokHareketleri
+                    .Where(h => h.StokUrunId == u.Id)
+                    .Sum(h => h.Tip == StokHareketTipi.Giris ? h.Miktar : -h.Miktar)
+            })
+            .Where(x => x.Miktar <= 0)
+            .ToListAsync();
+
+        if (!stoklar.Any())
+        {
+            return Results.Json(new CalisanAvansToplamResponse
+            {
+                Success = true,
+                Message = "Stokta biten ürün bulunmuyor."
+            });
+        }
+
+        var metin = "Stokta biten ürünler:\n\n";
+
+        foreach (var item in stoklar)
+            metin += $"- {item.Urun}\n";
+
         return Results.Json(new CalisanAvansToplamResponse
         {
             Success = true,
-            Message = "Stokta biten ürün bulunmuyor."
+            Total = stoklar.Count,
+            Message = metin
         });
     }
-
-    var metin = "Stokta biten ürünler:\n\n";
-
-    foreach (var item in stoklar)
-        metin += $"- {item.Urun}\n";
-
-    return Results.Json(new CalisanAvansToplamResponse
+    catch (Exception ex)
     {
-        Success = true,
-        Total = stoklar.Count,
-        Message = metin
-    });
+        return Results.Json(new
+        {
+            success = false,
+            message = "Biten stoklar alınırken hata oluştu.",
+            error = ex.Message,
+            detail = ex.InnerException?.Message
+        });
+    }
 });
 
 app.MapPost("/api/ai/en-cok-stokta-olan-urun", async (AppDbContext db) =>
 {
-    var urun = await db.StokUrunler
-        .Select(u => new
-        {
-            Urun = u.Ad,
-            Miktar = db.StokHareketleri
-                .Where(h => h.StokUrunId == u.Id)
-                .Sum(h => h.Tip == StokHareketTipi.Giris ? h.Miktar : -h.Miktar)
-        })
-        .OrderByDescending(x => x.Miktar)
-        .FirstOrDefaultAsync();
-
-    if (urun == null)
+    try
     {
+        var urun = await db.StokUrunler
+            .Select(u => new
+            {
+                Urun = u.Ad,
+                Miktar = db.StokHareketleri
+                    .Where(h => h.StokUrunId == u.Id)
+                    .Sum(h => h.Tip == StokHareketTipi.Giris ? h.Miktar : -h.Miktar)
+            })
+            .OrderByDescending(x => x.Miktar)
+            .FirstOrDefaultAsync();
+
+        if (urun == null)
+        {
+            return Results.Json(new CalisanAvansToplamResponse
+            {
+                Success = true,
+                Message = "Stok ürünü bulunamadı."
+            });
+        }
+
         return Results.Json(new CalisanAvansToplamResponse
         {
             Success = true,
-            Message = "Stok ürünü bulunamadı."
+            Total = urun.Miktar,
+            Message = $"Stokta en çok bulunan ürün: {urun.Urun} - {urun.Miktar:N2}"
         });
     }
-
-    return Results.Json(new CalisanAvansToplamResponse
+    catch (Exception ex)
     {
-        Success = true,
-        Total = urun.Miktar,
-        Message = $"Stokta en çok bulunan ürün: {urun.Urun} - {urun.Miktar:N2}"
-    });
+        return Results.Json(new
+        {
+            success = false,
+            message = "En çok stokta olan ürün alınırken hata oluştu.",
+            error = ex.Message,
+            detail = ex.InnerException?.Message
+        });
+    }
 });
 
 app.MapPost("/api/ai/genel-ozet", async (AppDbContext db) =>
@@ -756,186 +776,6 @@ app.MapPost("/api/ai/genel-ozet", async (AppDbContext db) =>
         Success = true,
         Total = bakiye,
         Message = mesaj
-    });
-});
-
-app.MapPost("/api/ai/en-cok-stokta-olan-urun", async (AppDbContext db) =>
-{
-    var urun = await db.StokUrunler
-        .Select(u => new
-        {
-            u.Ad,
-            Miktar = db.StokHareketleri
-                .Where(h => h.StokUrunId == u.Id)
-                .Sum(h => h.Tip == StokHareketTipi.Giris ? h.Miktar : -h.Miktar)
-        })
-        .OrderByDescending(x => x.Miktar)
-        .FirstOrDefaultAsync();
-
-    if (urun == null)
-        return Results.Json(new { message = "Ürün bulunamadı." });
-
-    return Results.Json(new
-    {
-        message = $"En çok stokta olan ürün: {urun.Ad} ({urun.Miktar})"
-    });
-});
-
-app.MapPost("/api/ai/biten-stoklar", async (AppDbContext db) =>
-{
-    var liste = await db.StokUrunler
-        .Select(u => new
-        {
-            u.Ad,
-            Miktar = db.StokHareketleri
-                .Where(h => h.StokUrunId == u.Id)
-                .Sum(h => h.Tip == StokHareketTipi.Giris ? h.Miktar : -h.Miktar)
-        })
-        .Where(x => x.Miktar <= 0)
-        .ToListAsync();
-
-    if (!liste.Any())
-        return Results.Json(new { message = "Biten stok yok" });
-
-    var metin = string.Join(", ", liste.Select(x => x.Ad));
-
-    return Results.Json(new
-    {
-        message = $"Biten ürünler: {metin}"
-    });
-});
-
-app.MapPost("/api/ai/stok-sayisi", async (AppDbContext db) =>
-{
-    var count = await db.StokUrunler.CountAsync();
-
-    return Results.Json(new
-    {
-        message = $"Toplam stok ürün sayısı: {count}"
-    });
-});
-
-// ==========================
-// CORE AI API'LER
-// ==========================
-// KASA BAKİYE
-app.MapPost("/api/ai/kasa-bakiye", async (AppDbContext db) =>
-{
-    var giris = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Giris)
-        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
-
-    var cikis = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Cikis)
-        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
-
-    return Results.Json(new
-    {
-        message = $"Kasa bakiyesi: {(giris - cikis):N2} TL"
-    });
-});
-
-
-// BUGÜN KASA İŞLEM SAYISI
-app.MapPost("/api/ai/bugun-kasa-islem-sayisi", async (AppDbContext db) =>
-{
-    var bugun = DateTime.Today;
-    var yarin = bugun.AddDays(1);
-
-    var count = await db.KasaHareketleri
-        .CountAsync(x => x.Tarih >= bugun && x.Tarih < yarin);
-
-    return Results.Json(new
-    {
-        message = $"Bugün {count} işlem yapıldı"
-    });
-});
-
-
-// MÜŞTERİ SAYISI
-app.MapPost("/api/ai/musteri-sayisi", async (AppDbContext db) =>
-{
-    return Results.Json(new
-    {
-        message = $"Toplam müşteri: {await db.Musteriler.CountAsync()}"
-    });
-});
-
-  
-// ÇALIŞAN SAYISI
-app.MapPost("/api/ai/calisan-sayisi", async (AppDbContext db) =>
-{
-    return Results.Json(new
-    {
-        message = $"Toplam çalışan: {await db.Calisanlar.CountAsync()}"
-    });
-});
-
-
-// CARİ SAYISI
-app.MapPost("/api/ai/cari-sayisi", async (AppDbContext db) =>
-{
-    return Results.Json(new
-    {
-        message = $"Toplam cari: {await db.CariKartlar.CountAsync()}"
-    });
-});
-
-
-// STOK SAYISI
-app.MapPost("/api/ai/stok-sayisi", async (AppDbContext db) =>
-{
-    return Results.Json(new
-    {
-        message = $"Toplam ürün: {await db.StokUrunler.CountAsync()}"
-    });
-});
-
-
-// BİTEN STOK
-app.MapPost("/api/ai/biten-stoklar", async (AppDbContext db) =>
-{
-    var liste = await db.StokUrunler
-        .Select(u => new
-        {
-            u.Ad,
-            Miktar = db.StokHareketleri
-                .Where(h => h.StokUrunId == u.Id)
-                .Sum(h => h.Tip == StokHareketTipi.Giris ? h.Miktar : -h.Miktar)
-        })
-        .Where(x => x.Miktar <= 0)
-        .ToListAsync();
-
-    if (!liste.Any())
-        return Results.Json(new { message = "Biten stok yok" });
-
-    return Results.Json(new
-    {
-        message = "Biten ürünler: " + string.Join(", ", liste.Select(x => x.Ad))
-    });
-});
-
-
-// EN ÇOK STOK
-app.MapPost("/api/ai/en-cok-stokta-olan-urun", async (AppDbContext db) =>
-{
-    var urun = await db.StokUrunler
-        .Select(u => new
-        {
-            u.Ad,
-            Miktar = db.StokHareketleri
-                .Where(h => h.StokUrunId == u.Id)
-                .Sum(h => h.Tip == StokHareketTipi.Giris ? h.Miktar : -h.Miktar)
-        })
-        .OrderByDescending(x => x.Miktar)
-        .FirstOrDefaultAsync();
-
-    if (urun == null)
-        return Results.Json(new { message = "Ürün yok" });
-
-    return Results.Json(new
-    {
-        message = $"En çok stokta: {urun.Ad} ({urun.Miktar})"
     });
 });
 
