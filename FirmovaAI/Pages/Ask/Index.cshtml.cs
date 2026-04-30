@@ -42,8 +42,18 @@ public class IndexModel : PageModel
             Text = Soru
         });
 
-        var sonuc = _interpreter.Interpret(Soru);
-        Cevap = await _executor.ExecuteAsync(sonuc);
+        try
+        {
+            var sonuc = _interpreter.Interpret(Soru);
+            Cevap = await _executor.ExecuteAsync(sonuc);
+        }
+        catch (Exception ex)
+        {
+            Cevap =
+                "İşlem sırasında hata oluştu.\n\n" +
+                $"Hata: {ex.Message}\n\n" +
+                $"Detay: {ex.InnerException?.Message}";
+        }
 
         Mesajlar.Add(new ChatMessage
         {
@@ -69,7 +79,15 @@ public class IndexModel : PageModel
         if (string.IsNullOrWhiteSpace(json))
             return new List<ChatMessage>();
 
-        return JsonSerializer.Deserialize<List<ChatMessage>>(json) ?? new List<ChatMessage>();
+        try
+        {
+            return JsonSerializer.Deserialize<List<ChatMessage>>(json) ?? new List<ChatMessage>();
+        }
+        catch
+        {
+            HttpContext.Session.Remove("FirmovaChatHistory");
+            return new List<ChatMessage>();
+        }
     }
 
     private void SaveMessages(List<ChatMessage> messages)
