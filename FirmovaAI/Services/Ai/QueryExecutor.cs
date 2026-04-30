@@ -89,6 +89,24 @@ public class QueryExecutor
             case "GenelOzet":
                 return (await _apiClient.GetGenelOzetAsync()).Message;
 
+            case "KarDurumu":
+                return (await _apiClient.GetKarDurumuAsync()).Message;
+
+            case "AylikKarsilastirma":
+                return (await _apiClient.GetAylikKarsilastirmaAsync()).Message;
+
+            case "EnCokGider":
+                return (await _apiClient.GetEnCokGiderAsync()).Message;
+
+            case "EnCokKazandiranMusteri":
+                return (await _apiClient.GetEnCokKazandiranMusteriAsync()).Message;
+
+            case "StokDurumu":
+                return (await _apiClient.GetStokDurumuAsync()).Message;
+
+            case "MaasOdemeKontrol":
+                return (await _apiClient.GetMaasOdemeKontrolAsync()).Message;
+
             case "CalisanPuantaj":
                 return await GetCalisanPuantajAsync(intent);
 

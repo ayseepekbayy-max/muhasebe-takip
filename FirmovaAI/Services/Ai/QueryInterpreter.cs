@@ -17,6 +17,65 @@ public class QueryInterpreter
             RequestType = DetectRequestType(lower)
         };
 
+        
+if (ContainsAny(lower, "kâr", "kar") &&
+    ContainsAny(lower, "ettim", "var mı", "ediyor muyum"))
+{
+    result.Intent = "KarDurumu";
+    result.IsSuccess = true;
+    return result;
+}
+
+if (ContainsAny(lower, "geçen aya göre", "önceki aya göre", "geçen ayla karşılaştır"))
+{
+    result.Intent = "AylikKarsilastirma";
+    result.IsSuccess = true;
+    return result;
+}
+
+if (ContainsAny(lower, "en çok gider", "en fazla gider", "gider nereden", "gider kalemi"))
+{
+    result.Intent = "EnCokGider";
+    result.IsSuccess = true;
+    return result;
+}
+
+if (ContainsAny(lower, "en çok kazandığım müşteri", "en çok kazandıran müşteri", "en fazla kazandıran müşteri"))
+{
+    result.Intent = "EnCokKazandiranMusteri";
+    result.IsSuccess = true;
+    return result;
+}
+
+if (ContainsAny(lower, "stok durumu", "stoklar nasıl", "stoklarda durum"))
+{
+    result.Intent = "StokDurumu";
+    result.IsSuccess = true;
+    return result;
+}
+
+if (ContainsAny(lower, "bu ay nasıl gidiyoruz", "bu ay nasıl", "nasıl gidiyoruz"))
+{
+    result.Intent = "GenelOzet";
+    result.IsSuccess = true;
+    return result;
+}
+
+if (ContainsAny(lower, "şirketin durumu", "şirket durumu", "firma durumu"))
+{
+    result.Intent = "GenelOzet";
+    result.IsSuccess = true;
+    return result;
+}
+
+if (ContainsAny(lower, "maaş") &&
+    ContainsAny(lower, "ödedim", "ödeme yaptım", "ödemesi yaptım", "maaş ödemesi"))
+{
+    result.Intent = "MaasOdemeKontrol";
+    result.IsSuccess = true;
+    return result;
+}
+
         // GENEL ÖZET / DURUM
         if (ContainsAny(lower,
         "genel durum", "durum nasıl", "genel özet", "özet ver",
@@ -54,15 +113,13 @@ public class QueryInterpreter
             return result;
         }
 
-        if (ContainsAny(lower, "kaç alıcı", "alıcı sayısı", "toplam alıcı"))
-        {
+        if (ContainsAny(lower, "kaç alıcı", "kaç tane alıcı", "alıcı sayısı", "toplam alıcı"))        {
             result.Intent = "AliciSayisi";
             result.IsSuccess = true;
             return result;
         }
 
-        if (ContainsAny(lower, "kaç satıcı", "satıcı sayısı", "toplam satıcı"))
-        {
+        if (ContainsAny(lower, "kaç satıcı", "kaç tane satıcı", "satıcı sayısı", "toplam satıcı"))        {
             result.Intent = "SaticiSayisi";
             result.IsSuccess = true;
             return result;
@@ -223,18 +280,18 @@ public class QueryInterpreter
         }
 
         // PUANTAJ
-        if (ContainsAny(lower, "puantaj", "geldi", "gelmedi", "izinli", "yarım gün"))
-        {
-            var ad = ExtractFirstWord(text);
+    if (ContainsAny(lower, "puantaj", "geldi", "gelmedi", "izinli", "yarım gün"))
+    {
+        var ad = ExtractFirstWord(text);
 
-            if (!string.IsNullOrWhiteSpace(ad))
-            {
-                result.CalisanAdi = ad;
-                result.Intent = "CalisanPuantaj";
-                result.IsSuccess = true;
-                return result;
-            }
+        if (!string.IsNullOrWhiteSpace(ad))
+        {
+            result.CalisanAdi = ad;
+            result.Intent = "CalisanPuantaj";
+            result.IsSuccess = true;
+            return result;
         }
+    }
 
         result.ErrorMessage = "Soru anlaşılamadı.";
         return result;

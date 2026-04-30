@@ -124,6 +124,24 @@ public class MuhasebeApiClient
     public async Task<CalisanAvansApiResponse> GetEnAlacakliSaticiAsync()
         => await PostEmptyAsync("/api/ai/en-alacakli-satici");
 
+    public async Task<CalisanAvansApiResponse> GetKarDurumuAsync()
+        => await PostEmptyAsync("/api/ai/kar-durumu");
+
+    public async Task<CalisanAvansApiResponse> GetAylikKarsilastirmaAsync()
+        => await PostEmptyAsync("/api/ai/aylik-karsilastirma");
+
+    public async Task<CalisanAvansApiResponse> GetEnCokGiderAsync()
+        => await PostEmptyAsync("/api/ai/en-cok-gider");
+
+    public async Task<CalisanAvansApiResponse> GetEnCokKazandiranMusteriAsync()
+        => await PostEmptyAsync("/api/ai/en-cok-kazandiran-musteri");
+
+    public async Task<CalisanAvansApiResponse> GetStokDurumuAsync()
+        => await PostEmptyAsync("/api/ai/stok-durumu");
+
+    public async Task<CalisanAvansApiResponse> GetMaasOdemeKontrolAsync()
+        => await PostEmptyAsync("/api/ai/maas-odeme-kontrol");
+
     public async Task<CalisanAvansApiResponse> GetMusteriBorcAsync(string ad)
         => await PostJsonAsync("/api/ai/musteri-borc", new CalisanAvansApiRequest { CalisanAdi = ad });
 

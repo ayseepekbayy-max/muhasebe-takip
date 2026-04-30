@@ -829,6 +829,188 @@ app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansTopla
         });
     }
 });
+app.MapPost("/api/ai/kar-durumu", async (AppDbContext db) =>
+{
+    var baslangic = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+    var bitis = baslangic.AddMonths(1);
+
+    var gelir = await db.KasaHareketleri
+        .Where(x => x.Tip == HareketTipi.Giris && x.Tarih >= baslangic && x.Tarih < bitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var gider = await db.KasaHareketleri
+        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var kar = gelir - gider;
+
+    var mesaj = kar >= 0
+        ? $"Bu ay kâr etmiş görünüyorsun. Gelir: {gelir:N2} TL, gider: {gider:N2} TL, kâr: {kar:N2} TL"
+        : $"Bu ay zarar etmiş görünüyorsun. Gelir: {gelir:N2} TL, gider: {gider:N2} TL, zarar: {Math.Abs(kar):N2} TL";
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = kar,
+        Message = mesaj
+    });
+});
+
+app.MapPost("/api/ai/aylik-karsilastirma", async (AppDbContext db) =>
+{
+    var buAyBaslangic = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+    var buAyBitis = buAyBaslangic.AddMonths(1);
+
+    var gecenAyBaslangic = buAyBaslangic.AddMonths(-1);
+    var gecenAyBitis = buAyBaslangic;
+
+    var buAyGelir = await db.KasaHareketleri
+        .Where(x => x.Tip == HareketTipi.Giris && x.Tarih >= buAyBaslangic && x.Tarih < buAyBitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var buAyGider = await db.KasaHareketleri
+        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= buAyBaslangic && x.Tarih < buAyBitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var gecenAyGelir = await db.KasaHareketleri
+        .Where(x => x.Tip == HareketTipi.Giris && x.Tarih >= gecenAyBaslangic && x.Tarih < gecenAyBitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var gecenAyGider = await db.KasaHareketleri
+        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= gecenAyBaslangic && x.Tarih < gecenAyBitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var buAyKar = buAyGelir - buAyGider;
+    var gecenAyKar = gecenAyGelir - gecenAyGider;
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = buAyKar,
+        Message =
+            $"Geçen aya göre durum:\n\n" +
+            $"Bu ay gelir: {buAyGelir:N2} TL\n" +
+            $"Bu ay gider: {buAyGider:N2} TL\n" +
+            $"Bu ay sonuç: {buAyKar:N2} TL\n\n" +
+            $"Geçen ay gelir: {gecenAyGelir:N2} TL\n" +
+            $"Geçen ay gider: {gecenAyGider:N2} TL\n" +
+            $"Geçen ay sonuç: {gecenAyKar:N2} TL"
+    });
+});
+
+app.MapPost("/api/ai/en-cok-gider", async (AppDbContext db) =>
+{
+    var baslangic = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+    var bitis = baslangic.AddMonths(1);
+
+    var gider = await db.KasaHareketleri
+        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
+        .GroupBy(x => string.IsNullOrWhiteSpace(x.Aciklama) ? "Açıklamasız gider" : x.Aciklama)
+        .Select(g => new
+        {
+            Aciklama = g.Key,
+            Toplam = g.Sum(x => x.Tutar)
+        })
+        .OrderByDescending(x => x.Toplam)
+        .FirstOrDefaultAsync();
+
+    if (gider == null)
+    {
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = true,
+            Message = "Bu ay gider kaydı bulunamadı."
+        });
+    }
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = gider.Toplam,
+        Message = $"Bu ay en çok gider: {gider.Aciklama} - {gider.Toplam:N2} TL"
+    });
+});
+
+app.MapPost("/api/ai/en-cok-kazandiran-musteri", async (AppDbContext db) =>
+{
+    var musteri = await db.MusteriIsler
+        .Include(x => x.Musteri)
+        .GroupBy(x => new
+        {
+            x.MusteriId,
+            MusteriAdi = x.Musteri != null ? x.Musteri.AdSoyad : "Bilinmeyen müşteri"
+        })
+        .Select(g => new
+        {
+            Musteri = g.Key.MusteriAdi,
+            Toplam = g.Sum(x => x.Gelir)
+        })
+        .OrderByDescending(x => x.Toplam)
+        .FirstOrDefaultAsync();
+
+    if (musteri == null)
+    {
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = true,
+            Message = "Müşteri geliri bulunamadı."
+        });
+    }
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = musteri.Toplam,
+        Message = $"En çok kazandıran müşteri: {musteri.Musteri} - {musteri.Toplam:N2} TL"
+    });
+});
+
+app.MapPost("/api/ai/stok-durumu", async (AppDbContext db) =>
+{
+    var urunSayisi = await db.StokUrunler.CountAsync();
+
+    var bitenStokSayisi = await db.StokUrunler
+        .Select(u => new
+        {
+            Miktar = db.StokHareketleri
+                .Where(h => h.StokUrunId == u.Id)
+                .Sum(h => h.Tip == StokHareketTipi.Giris ? h.Miktar : -h.Miktar)
+        })
+        .CountAsync(x => x.Miktar <= 0);
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = urunSayisi,
+        Message =
+            $"Stok durumu:\n\n" +
+            $"Toplam ürün sayısı: {urunSayisi}\n" +
+            $"Biten stok sayısı: {bitenStokSayisi}"
+    });
+});
+
+app.MapPost("/api/ai/maas-odeme-kontrol", async (AppDbContext db) =>
+{
+    var baslangic = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+    var bitis = baslangic.AddMonths(1);
+
+    var toplam = await db.CalisanAvanslari
+        .Where(x => x.Tip == CalisanHareketTipi.MaasOdeme &&
+                    x.Tarih >= baslangic &&
+                    x.Tarih < bitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var mesaj = toplam > 0
+        ? $"Bu ay maaş ödemesi yapılmış. Toplam maaş ödemesi: {toplam:N2} TL"
+        : "Bu ay maaş ödemesi kaydı bulunamadı.";
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = toplam,
+        Message = mesaj
+    });
+});
 app.MapRazorPages();
 
 app.Run();
