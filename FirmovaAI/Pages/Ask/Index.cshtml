@@ -36,7 +36,10 @@
                 {
                     <div class="message bot">
                         <div class="bubble @(mesaj == Model.Mesajlar.LastOrDefault() ? "son-cevap" : "")">
-                            @Html.Raw(mesaj.Text.Replace("\n", "<br />"))
+                           @foreach (var satir in (mesaj.Text ?? "").Split('\n'))
+                            {
+                                <div>@satir</div>
+                            }
                         </div>
                     </div>
                 }

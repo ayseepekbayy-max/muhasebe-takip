@@ -576,8 +576,26 @@ app.MapPost("/api/ai/musteri-borc", async (AppDbContext db, CalisanAvansToplamRe
 });
 app.MapPost("/api/ai/musteri-sayisi", async (AppDbContext db) =>
 {
-    var count = await db.Musteriler.CountAsync();
-    return Results.Json(new { success = true, message = $"Toplam müşteri sayısı: {count}" });
+    try
+    {
+        var count = await db.Musteriler.CountAsync();
+
+        return Results.Json(new
+        {
+            success = true,
+            message = $"Toplam müşteri sayısı: {count}"
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            message = "Müşteri sayısı alınırken hata oluştu.",
+            error = ex.Message,
+            detail = ex.InnerException?.Message
+        });
+    }
 });
 
 app.MapPost("/api/ai/calisan-sayisi", async (AppDbContext db) =>
@@ -825,7 +843,7 @@ app.MapPost("/api/ai/musteri-sayisi", async (AppDbContext db) =>
     });
 });
 
-
+  
 // ÇALIŞAN SAYISI
 app.MapPost("/api/ai/calisan-sayisi", async (AppDbContext db) =>
 {
