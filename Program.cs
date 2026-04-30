@@ -797,7 +797,8 @@ app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansTopla
             return Results.Json(new { success = false, message = "Çalışan bulunamadı." });
         }
 
-        var baslangic = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+        var now = DateTime.UtcNow;
+        var baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var bitis = baslangic.AddMonths(1);
 
         var kayitlar = await db.Set<CalisanPuantaj>()
@@ -831,7 +832,8 @@ app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansTopla
 });
 app.MapPost("/api/ai/kar-durumu", async (AppDbContext db) =>
 {
-    var baslangic = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+    var now = DateTime.UtcNow;
+    var baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
     var bitis = baslangic.AddMonths(1);
 
     var gelir = await db.KasaHareketleri
@@ -858,8 +860,8 @@ app.MapPost("/api/ai/kar-durumu", async (AppDbContext db) =>
 
 app.MapPost("/api/ai/aylik-karsilastirma", async (AppDbContext db) =>
 {
-    var buAyBaslangic = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-    var buAyBitis = buAyBaslangic.AddMonths(1);
+    var now = DateTime.UtcNow;
+    var buAyBaslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);    var buAyBitis = buAyBaslangic.AddMonths(1);
 
     var gecenAyBaslangic = buAyBaslangic.AddMonths(-1);
     var gecenAyBitis = buAyBaslangic;
@@ -900,7 +902,8 @@ app.MapPost("/api/ai/aylik-karsilastirma", async (AppDbContext db) =>
 
 app.MapPost("/api/ai/en-cok-gider", async (AppDbContext db) =>
 {
-    var baslangic = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+    var now = DateTime.UtcNow;
+    var baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
     var bitis = baslangic.AddMonths(1);
 
     var gider = await db.KasaHareketleri
@@ -991,7 +994,8 @@ app.MapPost("/api/ai/stok-durumu", async (AppDbContext db) =>
 
 app.MapPost("/api/ai/maas-odeme-kontrol", async (AppDbContext db) =>
 {
-    var baslangic = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+    var now = DateTime.UtcNow;
+    var baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
     var bitis = baslangic.AddMonths(1);
 
     var toplam = await db.CalisanAvanslari
