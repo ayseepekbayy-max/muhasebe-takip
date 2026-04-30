@@ -16,7 +16,26 @@ public class QueryInterpreter
             DateRange = DetectDateRange(lower),
             RequestType = DetectRequestType(lower)
         };
+    var lastTopic = GetLastTopic();
+    // DİYALOG TAKİBİ - MAAŞ KONUSUNUN DEVAMI
+if (lastTopic == "Maas")
+{
+    if (ContainsAny(lower, "kime ne kadar", "kim ne kadar", "kişilere göre", "çalışanlara göre"))
+    {
+        result.Intent = "MaasOdemeDagilim";
+        result.IsSuccess = true;
+        SetLastTopic("Maas");
+        return result;
+    }
 
+    if (ContainsAny(lower, "hangi gün", "hangi günlerde", "ne zaman", "tarihleri"))
+    {
+        result.Intent = "MaasOdemeTarihleri";
+        result.IsSuccess = true;
+        SetLastTopic("Maas");
+        return result;
+    }
+}
         
 if (ContainsAny(lower, "kâr", "kar") &&
     ContainsAny(lower, "ettim", "var mı", "ediyor muyum"))
@@ -73,6 +92,7 @@ if (ContainsAny(lower, "maaş") &&
 {
     result.Intent = "MaasOdemeKontrol";
     result.IsSuccess = true;
+    SetLastTopic("Maas");
     return result;
 }
 
@@ -162,6 +182,18 @@ if (ContainsAny(lower, "maaş") &&
         if (ContainsAny(lower, "avans"))
         {
             var ad = ExtractFirstWord(text);
+
+            private static string LastTopic { get; set; } = "";
+
+            private static void SetLastTopic(string topic)
+            {
+                LastTopic = topic;
+            }
+
+            private static string GetLastTopic()
+            {
+                return LastTopic;
+            }
 
             if (!string.IsNullOrWhiteSpace(ad) &&
                 !ContainsAny(lower, "toplam avans", "toplam", "herkes", "tüm çalışan", "bütün çalışan"))

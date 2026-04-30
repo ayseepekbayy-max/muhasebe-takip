@@ -110,6 +110,11 @@ public class QueryExecutor
             case "CalisanPuantaj":
                 return await GetCalisanPuantajAsync(intent);
 
+            case "MaasOdemeDagilim":
+            return (await _apiClient.GetMaasOdemeDagilimAsync()).Message;
+
+            case "MaasOdemeTarihleri":
+            return (await _apiClient.GetMaasOdemeTarihleriAsync()).Message;
             default:
                 return "Bu sorgu tipi henüz desteklenmiyor.";
         }

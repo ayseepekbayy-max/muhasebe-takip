@@ -1015,6 +1015,91 @@ app.MapPost("/api/ai/maas-odeme-kontrol", async (AppDbContext db) =>
         Message = mesaj
     });
 });
+
+app.MapPost("/api/ai/maas-odeme-dagilim", async (AppDbContext db) =>
+{
+    var now = DateTime.UtcNow;
+    var baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+    var bitis = baslangic.AddMonths(1);
+
+    var liste = await db.CalisanAvanslari
+        .Include(x => x.Calisan)
+        .Where(x => x.Tip == CalisanHareketTipi.MaasOdeme &&
+                    x.Tarih >= baslangic &&
+                    x.Tarih < bitis)
+        .GroupBy(x => x.Calisan != null ? x.Calisan.AdSoyad : x.Ad)
+        .Select(g => new
+        {
+            Calisan = g.Key,
+            Toplam = g.Sum(x => x.Tutar)
+        })
+        .OrderByDescending(x => x.Toplam)
+        .ToListAsync();
+
+    if (!liste.Any())
+    {
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = true,
+            Message = "Bu ay maaş ödemesi kaydı bulunamadı."
+        });
+    }
+
+    var mesaj = "Bu ay çalışanlara yapılan maaş ödemeleri:\n\n";
+
+    foreach (var item in liste)
+        mesaj += $"- {item.Calisan}: {item.Toplam:N2} TL\n";
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = liste.Sum(x => x.Toplam),
+        Message = mesaj
+    });
+});
+
+app.MapPost("/api/ai/maas-odeme-tarihleri", async (AppDbContext db) =>
+{
+    var now = DateTime.UtcNow;
+    var baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+    var bitis = baslangic.AddMonths(1);
+
+    var liste = await db.CalisanAvanslari
+        .Include(x => x.Calisan)
+        .Where(x => x.Tip == CalisanHareketTipi.MaasOdeme &&
+                    x.Tarih >= baslangic &&
+                    x.Tarih < bitis)
+        .OrderByDescending(x => x.Tarih)
+        .Select(x => new
+        {
+            Tarih = x.Tarih,
+            Calisan = x.Calisan != null ? x.Calisan.AdSoyad : x.Ad,
+            Tutar = x.Tutar
+        })
+        .ToListAsync();
+
+    if (!liste.Any())
+    {
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = true,
+            Message = "Bu ay maaş ödeme tarihi bulunamadı."
+        });
+    }
+
+    var mesaj = "Bu ay maaş ödeme tarihleri:\n\n";
+
+    foreach (var item in liste)
+        mesaj += $"- {item.Tarih:dd.MM.yyyy}: {item.Calisan} - {item.Tutar:N2} TL\n";
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = liste.Sum(x => x.Tutar),
+        Message = mesaj
+    });
+});
+
 app.MapRazorPages();
 
 app.Run();

@@ -172,6 +172,12 @@ public class MuhasebeApiClient
     public async Task<CalisanAvansApiResponse> GetCalisanAvansToplamAsync(string ad, string dateRange)
         => await PostJsonAsync("/api/ai/calisan-avans-toplam",
             new CalisanAvansApiRequest { CalisanAdi = ad, DateRange = dateRange });
+
+    public async Task<CalisanAvansApiResponse> GetMaasOdemeDagilimAsync()
+          => await PostEmptyAsync("/api/ai/maas-odeme-dagilim");
+
+    public async Task<CalisanAvansApiResponse> GetMaasOdemeTarihleriAsync()
+         => await PostEmptyAsync("/api/ai/maas-odeme-tarihleri");
 }
 
 // =======================
