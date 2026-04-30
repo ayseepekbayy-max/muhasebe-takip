@@ -174,10 +174,28 @@ app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value?.ToLower() ?? "";
 
-    // API isteklerini login kontrolünden çıkar
+    // API istekleri için özel hata yakalama
     if (path.StartsWith("/api"))
     {
-        await next();
+        try
+        {
+            await next();
+        }
+        catch (Exception ex)
+        {
+            context.Response.StatusCode = 500;
+            context.Response.ContentType = "application/json; charset=utf-8";
+
+            await context.Response.WriteAsJsonAsync(new
+            {
+                success = false,
+                message = "Muhasebe API içinde hata oluştu.",
+                error = ex.Message,
+                detail = ex.InnerException?.Message,
+                path = path
+            });
+        }
+
         return;
     }
 
