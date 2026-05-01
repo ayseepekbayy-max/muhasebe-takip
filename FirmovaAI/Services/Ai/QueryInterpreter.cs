@@ -19,6 +19,9 @@ public class ConversationContext
     public TopicType CurrentTopic { get; set; } = TopicType.None;
     public string LastIntent { get; set; } = "";
     public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+
+    public int? Year { get; set; }
+    public int? Month { get; set; }
 }
 
 public class QueryInterpreter
@@ -60,6 +63,10 @@ public class QueryInterpreter
             {
                 result.Intent = followUpIntent;
                 result.IsSuccess = true;
+
+                result.Year = Context.Year;
+                result.Month = Context.Month;
+
                 UpdateContextFromIntent(followUpIntent);
                 return result;
             }
@@ -127,11 +134,11 @@ public class QueryInterpreter
         }
 
         if (ContainsAny(lower, "maaş") &&
-            ContainsAny(lower, "ödedim", "ödeme yaptım", "ödemesi yaptım", "maaş ödemesi"))
+        ContainsAny(lower, "ödedim", "ödeme yaptım", "ödemesi yaptım", "maaş ödemesi"))
         {
             result.Intent = "MaasOdemeKontrol";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Maas, result.Intent);
+            UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -508,12 +515,15 @@ public class QueryInterpreter
             UpdateContext(TopicType.Genel, intent);
     }
 
-    private static void UpdateContext(TopicType topic, string intent)
-    {
-        Context.CurrentTopic = topic;
-        Context.LastIntent = intent;
-        Context.LastUpdated = DateTime.UtcNow;
-    }
+    private static void UpdateContext(TopicType topic, string intent, int? year = null, int? month = null)
+{
+    Context.CurrentTopic = topic;
+    Context.LastIntent = intent;
+    Context.LastUpdated = DateTime.UtcNow;
+
+    Context.Year = year;
+    Context.Month = month;
+}
 
     private static bool ContainsAny(string text, params string[] words)
     {

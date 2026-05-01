@@ -1018,11 +1018,16 @@ app.MapPost("/api/ai/maas-odeme-kontrol", async (AppDbContext db, CalisanAvansAp
     });
 });
 
-app.MapPost("/api/ai/maas-odeme-dagilim", async (AppDbContext db) =>
+app.MapPost("/api/ai/maas-odeme-dagilim", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
-    var now = DateTime.UtcNow;
-    var baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+    int year = request.Year ?? DateTime.UtcNow.Year;
+    int month = request.Month ?? DateTime.UtcNow.Month;
+
+    var baslangic = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var bitis = baslangic.AddMonths(1);
+
+    var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
+    var ayAdi = ayAdlari[month];
 
     var liste = await db.CalisanAvanslari
         .Include(x => x.Calisan)
@@ -1043,11 +1048,11 @@ app.MapPost("/api/ai/maas-odeme-dagilim", async (AppDbContext db) =>
         return Results.Json(new CalisanAvansToplamResponse
         {
             Success = true,
-            Message = "Bu ay maaş ödemesi kaydı bulunamadı."
+            Message = $"{ayAdi} ayında maaş ödemesi kaydı bulunamadı."
         });
     }
 
-    var mesaj = "Bu ay çalışanlara yapılan maaş ödemeleri:\n\n";
+    var mesaj = $"{ayAdi} ayında çalışanlara yapılan maaş ödemeleri:\n\n";
 
     foreach (var item in liste)
         mesaj += $"- {item.Calisan}: {item.Toplam:N2} TL\n";
@@ -1060,11 +1065,16 @@ app.MapPost("/api/ai/maas-odeme-dagilim", async (AppDbContext db) =>
     });
 });
 
-app.MapPost("/api/ai/maas-odeme-tarihleri", async (AppDbContext db) =>
+app.MapPost("/api/ai/maas-odeme-tarihleri", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
-    var now = DateTime.UtcNow;
-    var baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+    int year = request.Year ?? DateTime.UtcNow.Year;
+    int month = request.Month ?? DateTime.UtcNow.Month;
+
+    var baslangic = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var bitis = baslangic.AddMonths(1);
+
+    var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
+    var ayAdi = ayAdlari[month];
 
     var liste = await db.CalisanAvanslari
         .Include(x => x.Calisan)
@@ -1085,11 +1095,11 @@ app.MapPost("/api/ai/maas-odeme-tarihleri", async (AppDbContext db) =>
         return Results.Json(new CalisanAvansToplamResponse
         {
             Success = true,
-            Message = "Bu ay maaş ödeme tarihi bulunamadı."
+            Message = $"{ayAdi} ayında maaş ödeme tarihi bulunamadı."
         });
     }
 
-    var mesaj = "Bu ay maaş ödeme tarihleri:\n\n";
+    var mesaj = $"{ayAdi} ayında maaş ödeme tarihleri:\n\n";
 
     foreach (var item in liste)
         mesaj += $"- {item.Tarih:dd.MM.yyyy}: {item.Calisan} - {item.Tutar:N2} TL\n";

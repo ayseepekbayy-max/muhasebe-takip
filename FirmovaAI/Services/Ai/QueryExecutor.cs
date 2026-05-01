@@ -105,16 +105,16 @@ public class QueryExecutor
                 return (await _apiClient.GetStokDurumuAsync()).Message;
 
             case "MaasOdemeKontrol":
-                return (await _apiClient.GetMaasOdemeKontrolAsync()).Message;
+            return (await _apiClient.GetMaasOdemeKontrolAsync(intent.Year, intent.Month)).Message;
 
             case "CalisanPuantaj":
                 return await GetCalisanPuantajAsync(intent);
 
             case "MaasOdemeDagilim":
-            return (await _apiClient.GetMaasOdemeDagilimAsync()).Message;
+            return (await _apiClient.GetMaasOdemeDagilimAsync(intent.Year, intent.Month)).Message;
 
             case "MaasOdemeTarihleri":
-            return (await _apiClient.GetMaasOdemeTarihleriAsync()).Message;
+            return (await _apiClient.GetMaasOdemeTarihleriAsync(intent.Year, intent.Month)).Message;
             default:
                 return "Bu sorgu tipi henüz desteklenmiyor.";
         }

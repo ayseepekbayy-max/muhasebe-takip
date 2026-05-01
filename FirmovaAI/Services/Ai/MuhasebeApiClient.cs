@@ -139,8 +139,13 @@ public class MuhasebeApiClient
     public async Task<CalisanAvansApiResponse> GetStokDurumuAsync()
         => await PostEmptyAsync("/api/ai/stok-durumu");
 
-    public async Task<CalisanAvansApiResponse> GetMaasOdemeKontrolAsync()
-        => await PostEmptyAsync("/api/ai/maas-odeme-kontrol");
+    public async Task<CalisanAvansApiResponse> GetMaasOdemeKontrolAsync(int? year, int? month)
+    => await PostJsonAsync("/api/ai/maas-odeme-kontrol",
+        new CalisanAvansApiRequest
+        {
+            Year = year,
+            Month = month
+        });
 
     public async Task<CalisanAvansApiResponse> GetMusteriBorcAsync(string ad)
         => await PostJsonAsync("/api/ai/musteri-borc", new CalisanAvansApiRequest { CalisanAdi = ad });
@@ -173,11 +178,21 @@ public class MuhasebeApiClient
         => await PostJsonAsync("/api/ai/calisan-avans-toplam",
             new CalisanAvansApiRequest { CalisanAdi = ad, DateRange = dateRange });
 
-    public async Task<CalisanAvansApiResponse> GetMaasOdemeDagilimAsync()
-          => await PostEmptyAsync("/api/ai/maas-odeme-dagilim");
+    public async Task<CalisanAvansApiResponse> GetMaasOdemeDagilimAsync(int? year, int? month)
+    => await PostJsonAsync("/api/ai/maas-odeme-dagilim",
+        new CalisanAvansApiRequest
+        {
+            Year = year,
+            Month = month
+        });
 
-    public async Task<CalisanAvansApiResponse> GetMaasOdemeTarihleriAsync()
-         => await PostEmptyAsync("/api/ai/maas-odeme-tarihleri");
+    public async Task<CalisanAvansApiResponse> GetMaasOdemeTarihleriAsync(int? year, int? month)
+    => await PostJsonAsync("/api/ai/maas-odeme-tarihleri",
+        new CalisanAvansApiRequest
+        {
+            Year = year,
+            Month = month
+        });
 }
 
 // =======================
@@ -188,6 +203,9 @@ public class CalisanAvansApiRequest
 {
     public string CalisanAdi { get; set; } = "";
     public string DateRange { get; set; } = "ThisMonth";
+
+    public int? Year { get; set; }
+    public int? Month { get; set; }
 }
 
 public class CalisanAvansApiResponse
