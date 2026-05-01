@@ -45,17 +45,12 @@ public class QueryInterpreter
         result.Year = year;
         result.Month = month;
 
-        // Çok eski konu kalmasın diye 30 dakika sonra bağlam sıfırlanır
         if (DateTime.UtcNow - Context.LastUpdated > TimeSpan.FromMinutes(30))
         {
             Context = new ConversationContext();
         }
 
-        // =========================
-        // BAĞLAMA GÖRE DEVAM SORULARI
-        // =========================
-
-        if (IsFollowUpQuestion(lower))
+        if (IsFollowUpQuestion(lower) && !StartsNewTopic(lower))
         {
             var followUpIntent = ResolveFollowUpIntent(lower);
 
@@ -65,26 +60,22 @@ public class QueryInterpreter
                 result.IsSuccess = true;
 
                 if (result.Year == null)
-                 result.Year = Context.Year;
+                    result.Year = Context.Year;
 
                 if (result.Month == null)
-                 result.Month = Context.Month;
+                    result.Month = Context.Month;
 
                 UpdateContextFromIntent(followUpIntent);
                 return result;
             }
         }
 
-        // =========================
-        // YENİ AKILLI SORULAR
-        // =========================
-
         if (ContainsAny(lower, "kâr", "kar") &&
             ContainsAny(lower, "ettim", "var mı", "ediyor muyum"))
         {
             result.Intent = "KarDurumu";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Genel, result.Intent);
+            UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -92,7 +83,7 @@ public class QueryInterpreter
         {
             result.Intent = "AylikKarsilastirma";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Genel, result.Intent);
+            UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -100,7 +91,7 @@ public class QueryInterpreter
         {
             result.Intent = "EnCokGider";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Kasa, result.Intent);
+            UpdateContext(TopicType.Kasa, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -108,7 +99,7 @@ public class QueryInterpreter
         {
             result.Intent = "EnCokKazandiranMusteri";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Musteri, result.Intent);
+            UpdateContext(TopicType.Musteri, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -116,7 +107,7 @@ public class QueryInterpreter
         {
             result.Intent = "StokDurumu";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Stok, result.Intent);
+            UpdateContext(TopicType.Stok, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -124,7 +115,7 @@ public class QueryInterpreter
         {
             result.Intent = "GenelOzet";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Genel, result.Intent);
+            UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -132,12 +123,12 @@ public class QueryInterpreter
         {
             result.Intent = "GenelOzet";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Genel, result.Intent);
+            UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
             return result;
         }
 
-        if (ContainsAny(lower, "maaş") &&
-        ContainsAny(lower, "ödedim", "ödeme yaptım", "ödemesi yaptım", "maaş ödemesi"))
+        if (ContainsAny(lower, "maaş", "maas") &&
+            ContainsAny(lower, "ödedim", "ödeme yaptım", "ödemesi yaptım", "maaş ödemesi", "maas odemesi", "maaş verdim", "maas verdim"))
         {
             result.Intent = "MaasOdemeKontrol";
             result.IsSuccess = true;
@@ -145,34 +136,26 @@ public class QueryInterpreter
             return result;
         }
 
-        // =========================
-        // GENEL ÖZET / DURUM
-        // =========================
-
         if (ContainsAny(lower,
-        "genel durum", "durum nasıl", "genel özet", "özet ver",
-        "firma durumu", "işletme durumu", "şirket durumu",
-        "işler nasıl gidiyor", "işler iyi mi gidiyor",
-        "şirket nasıl gidiyor", "firma nasıl",
-        "durumumuz nasıl", "işler ne durumda",
-        "kasa iyi mi kötü mü", "param artıyor mu azalıyor mu",
-        "durum kötü mü", "işler iyi mi"))
+            "genel durum", "durum nasıl", "genel özet", "özet ver",
+            "firma durumu", "işletme durumu", "şirket durumu",
+            "işler nasıl gidiyor", "işler iyi mi gidiyor",
+            "şirket nasıl gidiyor", "firma nasıl",
+            "durumumuz nasıl", "işler ne durumda",
+            "kasa iyi mi kötü mü", "param artıyor mu azalıyor mu",
+            "durum kötü mü", "işler iyi mi"))
         {
             result.Intent = "GenelOzet";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Genel, result.Intent);
+            UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
             return result;
         }
-
-        // =========================
-        // SAYISAL GENEL SORGULAR
-        // =========================
 
         if (ContainsAny(lower, "kaç müşteri", "müşteri sayısı", "müşterim var", "toplam müşteri"))
         {
             result.Intent = "MusteriSayisi";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Musteri, result.Intent);
+            UpdateContext(TopicType.Musteri, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -180,7 +163,7 @@ public class QueryInterpreter
         {
             result.Intent = "CalisanSayisi";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Genel, result.Intent);
+            UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -188,7 +171,7 @@ public class QueryInterpreter
         {
             result.Intent = "CariSayisi";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Cari, result.Intent);
+            UpdateContext(TopicType.Cari, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -196,7 +179,7 @@ public class QueryInterpreter
         {
             result.Intent = "AliciSayisi";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Cari, result.Intent);
+            UpdateContext(TopicType.Cari, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -204,19 +187,15 @@ public class QueryInterpreter
         {
             result.Intent = "SaticiSayisi";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Cari, result.Intent);
+            UpdateContext(TopicType.Cari, result.Intent, result.Year, result.Month);
             return result;
         }
-
-        // =========================
-        // STOK
-        // =========================
 
         if (ContainsAny(lower, "stokta kaç ürün", "ürün sayısı", "stok ürün sayısı", "kaç ürün var", "toplam ürün", "stok sayısı"))
         {
             result.Intent = "StokSayisi";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Stok, result.Intent);
+            UpdateContext(TopicType.Stok, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -227,7 +206,7 @@ public class QueryInterpreter
         {
             result.Intent = "BitenStoklar";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Stok, result.Intent);
+            UpdateContext(TopicType.Stok, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -235,19 +214,15 @@ public class QueryInterpreter
         {
             result.Intent = "EnCokStoktaOlanUrun";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Stok, result.Intent);
+            UpdateContext(TopicType.Stok, result.Intent, result.Year, result.Month);
             return result;
         }
-
-        // =========================
-        // AVANS
-        // =========================
 
         if (ContainsAny(lower, "son", "en son") && ContainsAny(lower, "avans"))
         {
             result.Intent = "SonAvansVerilenKisi";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Avans, result.Intent);
+            UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -261,26 +236,22 @@ public class QueryInterpreter
                 result.CalisanAdi = ad;
                 result.Intent = "CalisanAvansToplam";
                 result.IsSuccess = true;
-                UpdateContext(TopicType.Avans, result.Intent);
+                UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
                 return result;
             }
 
             result.Intent = "ToplamAvans";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Avans, result.Intent);
+            UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
             return result;
         }
-
-        // =========================
-        // KASA
-        // =========================
 
         if (ContainsAny(lower, "son", "son 10", "son işlemler") &&
             ContainsAny(lower, "kasa", "hareket"))
         {
             result.Intent = "SonKasaHareketleri";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Kasa, result.Intent);
+            UpdateContext(TopicType.Kasa, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -288,7 +259,7 @@ public class QueryInterpreter
         {
             result.Intent = "BugunKasaIslemSayisi";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Kasa, result.Intent);
+            UpdateContext(TopicType.Kasa, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -296,7 +267,7 @@ public class QueryInterpreter
         {
             result.Intent = "BugunKasaGiris";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Kasa, result.Intent);
+            UpdateContext(TopicType.Kasa, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -304,7 +275,7 @@ public class QueryInterpreter
         {
             result.Intent = "BugunKasaCikis";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Kasa, result.Intent);
+            UpdateContext(TopicType.Kasa, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -312,7 +283,7 @@ public class QueryInterpreter
         {
             result.Intent = "BugunKasa";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Kasa, result.Intent);
+            UpdateContext(TopicType.Kasa, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -322,20 +293,16 @@ public class QueryInterpreter
         {
             result.Intent = "KasaBakiye";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Kasa, result.Intent);
+            UpdateContext(TopicType.Kasa, result.Intent, result.Year, result.Month);
             return result;
         }
-
-        // =========================
-        // GELİR / GİDER
-        // =========================
 
         if (ContainsAny(lower, "gelir", "giriş", "kazanç", "tahsilat") ||
             (ContainsAny(lower, "kasa") && ContainsAny(lower, "girdi")))
         {
             result.Intent = "ToplamGelir";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Kasa, result.Intent);
+            UpdateContext(TopicType.Kasa, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -344,19 +311,15 @@ public class QueryInterpreter
         {
             result.Intent = "ToplamGider";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Kasa, result.Intent);
+            UpdateContext(TopicType.Kasa, result.Intent, result.Year, result.Month);
             return result;
         }
-
-        // =========================
-        // MÜŞTERİ / SATICI
-        // =========================
 
         if (ContainsAny(lower, "müşteri tahsilatı", "müşterilerden", "müşteriden ne kadar", "toplam tahsilat"))
         {
             result.Intent = "ToplamMusteriTahsilati";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Musteri, result.Intent);
+            UpdateContext(TopicType.Musteri, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -364,7 +327,7 @@ public class QueryInterpreter
         {
             result.Intent = "ToplamSaticiOdemesi";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Cari, result.Intent);
+            UpdateContext(TopicType.Cari, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -372,7 +335,7 @@ public class QueryInterpreter
         {
             result.Intent = "EnBorcluMusteri";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Musteri, result.Intent);
+            UpdateContext(TopicType.Musteri, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -380,7 +343,7 @@ public class QueryInterpreter
         {
             result.Intent = "EnAlacakliSatici";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Cari, result.Intent);
+            UpdateContext(TopicType.Cari, result.Intent, result.Year, result.Month);
             return result;
         }
 
@@ -389,13 +352,9 @@ public class QueryInterpreter
             result.CalisanAdi = ExtractFirstWord(text);
             result.Intent = "MusteriBorc";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Musteri, result.Intent);
+            UpdateContext(TopicType.Musteri, result.Intent, result.Year, result.Month);
             return result;
         }
-
-        // =========================
-        // PUANTAJ
-        // =========================
 
         if (ContainsAny(lower, "puantaj", "geldi", "gelmedi", "izinli", "yarım gün"))
         {
@@ -406,7 +365,7 @@ public class QueryInterpreter
                 result.CalisanAdi = ad;
                 result.Intent = "CalisanPuantaj";
                 result.IsSuccess = true;
-                UpdateContext(TopicType.Genel, result.Intent);
+                UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
                 return result;
             }
         }
@@ -500,36 +459,43 @@ public class QueryInterpreter
             "giriş", "çıkış", "gelir", "gider");
     }
 
-    private static void UpdateContextFromIntent(string intent)
-{
-    var year = Context.Year;
-    var month = Context.Month;
+    private static bool StartsNewTopic(string text)
+    {
+        return ContainsAny(text,
+            "avans", "maaş", "maas", "kasa", "stok", "müşteri", "musteri",
+            "cari", "alıcı", "alici", "satıcı", "satici",
+            "gelir", "gider", "kâr", "kar", "borç", "borc");
+    }
 
-    if (intent.StartsWith("Maas"))
-        UpdateContext(TopicType.Maas, intent, year, month);
-    else if (intent.Contains("Avans"))
-        UpdateContext(TopicType.Avans, intent, year, month);
-    else if (intent.Contains("Kasa") || intent.Contains("Gelir") || intent.Contains("Gider"))
-        UpdateContext(TopicType.Kasa, intent, year, month);
-    else if (intent.Contains("Stok"))
-        UpdateContext(TopicType.Stok, intent, year, month);
-    else if (intent.Contains("Musteri") || intent.Contains("Borclu"))
-        UpdateContext(TopicType.Musteri, intent, year, month);
-    else if (intent.Contains("Cari") || intent.Contains("Alici") || intent.Contains("Satici"))
-        UpdateContext(TopicType.Cari, intent, year, month);
-    else
-        UpdateContext(TopicType.Genel, intent, year, month);
-}
+    private static void UpdateContextFromIntent(string intent)
+    {
+        var year = Context.Year;
+        var month = Context.Month;
+
+        if (intent.StartsWith("Maas"))
+            UpdateContext(TopicType.Maas, intent, year, month);
+        else if (intent.Contains("Avans"))
+            UpdateContext(TopicType.Avans, intent, year, month);
+        else if (intent.Contains("Kasa") || intent.Contains("Gelir") || intent.Contains("Gider"))
+            UpdateContext(TopicType.Kasa, intent, year, month);
+        else if (intent.Contains("Stok"))
+            UpdateContext(TopicType.Stok, intent, year, month);
+        else if (intent.Contains("Musteri") || intent.Contains("Borclu"))
+            UpdateContext(TopicType.Musteri, intent, year, month);
+        else if (intent.Contains("Cari") || intent.Contains("Alici") || intent.Contains("Satici"))
+            UpdateContext(TopicType.Cari, intent, year, month);
+        else
+            UpdateContext(TopicType.Genel, intent, year, month);
+    }
 
     private static void UpdateContext(TopicType topic, string intent, int? year = null, int? month = null)
-{
-    Context.CurrentTopic = topic;
-    Context.LastIntent = intent;
-    Context.LastUpdated = DateTime.UtcNow;
-
-    Context.Year = year;
-    Context.Month = month;
-}
+    {
+        Context.CurrentTopic = topic;
+        Context.LastIntent = intent;
+        Context.LastUpdated = DateTime.UtcNow;
+        Context.Year = year;
+        Context.Month = month;
+    }
 
     private static bool ContainsAny(string text, params string[] words)
     {
@@ -537,24 +503,24 @@ public class QueryInterpreter
     }
 
     private static string DetectDateRange(string text)
-{
-    if (ContainsAny(text, "bugün", "bugünkü"))
-        return "Today";
+    {
+        if (ContainsAny(text, "bugün", "bugünkü"))
+            return "Today";
 
-    if (ContainsAny(text, "dün", "dünkü"))
-        return "Yesterday";
+        if (ContainsAny(text, "dün", "dünkü"))
+            return "Yesterday";
 
-    if (ContainsAny(text, "geçen ay", "önceki ay", "bir önceki ay"))
-        return "LastMonth";
+        if (ContainsAny(text, "geçen ay", "önceki ay", "bir önceki ay"))
+            return "LastMonth";
 
-    if (ContainsAny(text, "bu ay", "bu ayki", "içinde bulunduğumuz ay"))
+        if (ContainsAny(text, "bu ay", "bu ayki", "içinde bulunduğumuz ay"))
+            return "ThisMonth";
+
+        if (ContainsAny(text, "tüm zamanlar", "hepsi", "tamamı", "toplam genel", "genel toplam", "başından beri"))
+            return "All";
+
         return "ThisMonth";
-
-    if (ContainsAny(text, "tüm zamanlar", "hepsi", "tamamı", "toplam genel", "genel toplam", "başından beri"))
-        return "All";
-
-    return "ThisMonth";
-}
+    }
 
     private static string DetectRequestType(string text)
     {
@@ -573,43 +539,41 @@ public class QueryInterpreter
             return null;
 
         var words = text.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
         return words.Length > 0 ? words[0].ToLowerInvariant() : null;
     }
 
     private static (int? year, int? month) ExtractMonthInfo(string text)
-{
-    var months = new Dictionary<string, int>
     {
-        { "ocak", 1 },
-        { "şubat", 2 },
-        { "mart", 3 },
-        { "nisan", 4 },
-        { "mayıs", 5 },
-        { "haziran", 6 },
-        { "temmuz", 7 },
-        { "ağustos", 8 },
-        { "eylül", 9 },
-        { "ekim", 10 },
-        { "kasım", 11 },
-        { "aralık", 12 }
-    };
-
-    foreach (var m in months)
-    {
-        if (text.Contains(m.Key))
+        var months = new Dictionary<string, int>
         {
-            var year = DateTime.UtcNow.Year;
+            { "ocak", 1 },
+            { "şubat", 2 },
+            { "mart", 3 },
+            { "nisan", 4 },
+            { "mayıs", 5 },
+            { "haziran", 6 },
+            { "temmuz", 7 },
+            { "ağustos", 8 },
+            { "eylül", 9 },
+            { "ekim", 10 },
+            { "kasım", 11 },
+            { "aralık", 12 }
+        };
 
-            // "2024 nisan" gibi yıl varsa yakala
-            var match = System.Text.RegularExpressions.Regex.Match(text, @"(20\d{2})");
-            if (match.Success)
-                year = int.Parse(match.Value);
+        foreach (var m in months)
+        {
+            if (text.Contains(m.Key))
+            {
+                var year = DateTime.UtcNow.Year;
 
-            return (year, m.Value);
+                var match = System.Text.RegularExpressions.Regex.Match(text, @"(20\d{2})");
+                if (match.Success)
+                    year = int.Parse(match.Value);
+
+                return (year, m.Value);
+            }
         }
-    }
 
-    return (null, null);
-}
+        return (null, null);
+    }
 }
