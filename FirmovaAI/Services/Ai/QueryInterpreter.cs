@@ -64,8 +64,11 @@ public class QueryInterpreter
                 result.Intent = followUpIntent;
                 result.IsSuccess = true;
 
-                result.Year = Context.Year;
-                result.Month = Context.Month;
+                if (result.Year == null)
+                 result.Year = Context.Year;
+
+                if (result.Month == null)
+                 result.Month = Context.Month;
 
                 UpdateContextFromIntent(followUpIntent);
                 return result;
@@ -498,22 +501,25 @@ public class QueryInterpreter
     }
 
     private static void UpdateContextFromIntent(string intent)
-    {
-        if (intent.StartsWith("Maas"))
-            UpdateContext(TopicType.Maas, intent);
-        else if (intent.Contains("Avans"))
-            UpdateContext(TopicType.Avans, intent);
-        else if (intent.Contains("Kasa") || intent.Contains("Gelir") || intent.Contains("Gider"))
-            UpdateContext(TopicType.Kasa, intent);
-        else if (intent.Contains("Stok"))
-            UpdateContext(TopicType.Stok, intent);
-        else if (intent.Contains("Musteri") || intent.Contains("Borclu"))
-            UpdateContext(TopicType.Musteri, intent);
-        else if (intent.Contains("Cari") || intent.Contains("Alici") || intent.Contains("Satici"))
-            UpdateContext(TopicType.Cari, intent);
-        else
-            UpdateContext(TopicType.Genel, intent);
-    }
+{
+    var year = Context.Year;
+    var month = Context.Month;
+
+    if (intent.StartsWith("Maas"))
+        UpdateContext(TopicType.Maas, intent, year, month);
+    else if (intent.Contains("Avans"))
+        UpdateContext(TopicType.Avans, intent, year, month);
+    else if (intent.Contains("Kasa") || intent.Contains("Gelir") || intent.Contains("Gider"))
+        UpdateContext(TopicType.Kasa, intent, year, month);
+    else if (intent.Contains("Stok"))
+        UpdateContext(TopicType.Stok, intent, year, month);
+    else if (intent.Contains("Musteri") || intent.Contains("Borclu"))
+        UpdateContext(TopicType.Musteri, intent, year, month);
+    else if (intent.Contains("Cari") || intent.Contains("Alici") || intent.Contains("Satici"))
+        UpdateContext(TopicType.Cari, intent, year, month);
+    else
+        UpdateContext(TopicType.Genel, intent, year, month);
+}
 
     private static void UpdateContext(TopicType topic, string intent, int? year = null, int? month = null)
 {

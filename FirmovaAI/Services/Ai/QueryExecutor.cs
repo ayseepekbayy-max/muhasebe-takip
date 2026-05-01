@@ -90,13 +90,13 @@ public class QueryExecutor
                 return (await _apiClient.GetGenelOzetAsync()).Message;
 
             case "KarDurumu":
-                return (await _apiClient.GetKarDurumuAsync()).Message;
+                return (await _apiClient.GetKarDurumuAsync(intent.Year, intent.Month)).Message;
 
             case "AylikKarsilastirma":
-                return (await _apiClient.GetAylikKarsilastirmaAsync()).Message;
+                return (await _apiClient.GetAylikKarsilastirmaAsync(intent.Year, intent.Month)).Message;
 
             case "EnCokGider":
-                return (await _apiClient.GetEnCokGiderAsync()).Message;
+                return (await _apiClient.GetEnCokGiderAsync(intent.Year, intent.Month)).Message;
 
             case "EnCokKazandiranMusteri":
                 return (await _apiClient.GetEnCokKazandiranMusteriAsync()).Message;
@@ -105,16 +105,17 @@ public class QueryExecutor
                 return (await _apiClient.GetStokDurumuAsync()).Message;
 
             case "MaasOdemeKontrol":
-            return (await _apiClient.GetMaasOdemeKontrolAsync(intent.Year, intent.Month)).Message;
+                return (await _apiClient.GetMaasOdemeKontrolAsync(intent.Year, intent.Month)).Message;
+
+            case "MaasOdemeDagilim":
+                return (await _apiClient.GetMaasOdemeDagilimAsync(intent.Year, intent.Month)).Message;
+
+            case "MaasOdemeTarihleri":
+                return (await _apiClient.GetMaasOdemeTarihleriAsync(intent.Year, intent.Month)).Message;
 
             case "CalisanPuantaj":
                 return await GetCalisanPuantajAsync(intent);
 
-            case "MaasOdemeDagilim":
-            return (await _apiClient.GetMaasOdemeDagilimAsync(intent.Year, intent.Month)).Message;
-
-            case "MaasOdemeTarihleri":
-            return (await _apiClient.GetMaasOdemeTarihleriAsync(intent.Year, intent.Month)).Message;
             default:
                 return "Bu sorgu tipi henüz desteklenmiyor.";
         }
@@ -127,7 +128,7 @@ public class QueryExecutor
         if (string.IsNullOrWhiteSpace(intent.CalisanAdi))
             return "Çalışan adı anlaşılamadı.";
 
-        return "Çalışan puantaj sorgusu için API tarafındaki bağlantı henüz tamamlanmadı. Önce derleme hatasını kaldırdım; sonraki adımda MuhasebeApiClient içine puantaj metodunu eklememiz gerekiyor.";
+        return "Çalışan puantaj sorgusu için API tarafındaki bağlantı henüz tamamlanmadı.";
     }
 
     private async Task<string> GetCalisanAvansToplamAsync(QueryIntent intent)
@@ -137,14 +138,20 @@ public class QueryExecutor
 
         var result = await _apiClient.GetCalisanAvansToplamAsync(
             intent.CalisanAdi,
-            intent.DateRange ?? "ThisMonth");
+            intent.DateRange ?? "ThisMonth",
+            intent.Year,
+            intent.Month);
 
         return result.Message;
     }
 
     private async Task<string> GetToplamAvansAsync(QueryIntent intent)
     {
-        var result = await _apiClient.GetToplamAvansAsync(intent.DateRange ?? "ThisMonth");
+        var result = await _apiClient.GetToplamAvansAsync(
+            intent.DateRange ?? "ThisMonth",
+            intent.Year,
+            intent.Month);
+
         return result.Message;
     }
 
@@ -156,7 +163,11 @@ public class QueryExecutor
 
     private async Task<string> GetBugunKasaAsync(QueryIntent intent)
     {
-        var result = await _apiClient.GetBugunKasaDurumuAsync(intent.Intent ?? "BugunKasa");
+        var result = await _apiClient.GetBugunKasaDurumuAsync(
+            intent.Intent ?? "BugunKasa",
+            intent.Year,
+            intent.Month);
+
         return result.Message;
     }
 
@@ -174,31 +185,51 @@ public class QueryExecutor
 
     private async Task<string> GetToplamMusteriTahsilatiAsync(QueryIntent intent)
     {
-        var result = await _apiClient.GetToplamMusteriTahsilatiAsync(intent.DateRange ?? "ThisMonth");
+        var result = await _apiClient.GetToplamMusteriTahsilatiAsync(
+            intent.DateRange ?? "ThisMonth",
+            intent.Year,
+            intent.Month);
+
         return result.Message;
     }
 
     private async Task<string> GetToplamSaticiOdemesiAsync(QueryIntent intent)
     {
-        var result = await _apiClient.GetToplamSaticiOdemesiAsync(intent.DateRange ?? "ThisMonth");
+        var result = await _apiClient.GetToplamSaticiOdemesiAsync(
+            intent.DateRange ?? "ThisMonth",
+            intent.Year,
+            intent.Month);
+
         return result.Message;
     }
 
     private async Task<string> GetToplamGelirAsync(QueryIntent intent)
     {
-        var result = await _apiClient.GetToplamGelirAsync(intent.DateRange ?? "ThisMonth");
+        var result = await _apiClient.GetToplamGelirAsync(
+            intent.DateRange ?? "ThisMonth",
+            intent.Year,
+            intent.Month);
+
         return result.Message;
     }
 
     private async Task<string> GetToplamGiderAsync(QueryIntent intent)
     {
-        var result = await _apiClient.GetToplamGiderAsync(intent.DateRange ?? "ThisMonth");
+        var result = await _apiClient.GetToplamGiderAsync(
+            intent.DateRange ?? "ThisMonth",
+            intent.Year,
+            intent.Month);
+
         return result.Message;
     }
 
     private async Task<string> GetKasaBakiyeAsync(QueryIntent intent)
     {
-        var result = await _apiClient.GetKasaBakiyeAsync(intent.DateRange ?? "ThisMonth");
+        var result = await _apiClient.GetKasaBakiyeAsync(
+            intent.DateRange ?? "ThisMonth",
+            intent.Year,
+            intent.Month);
+
         return result.Message;
     }
 

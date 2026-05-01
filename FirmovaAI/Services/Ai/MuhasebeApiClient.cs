@@ -12,10 +12,6 @@ public class MuhasebeApiClient
         _httpClient = httpClient;
     }
 
-    // =======================
-    // GENEL METHODLAR
-    // =======================
-
     private async Task<CalisanAvansApiResponse> PostEmptyAsync(string url)
     {
         try
@@ -45,9 +41,7 @@ public class MuhasebeApiClient
     private static async Task<CalisanAvansApiResponse> HandleResponseAsync(HttpResponseMessage response, string url)
     {
         if (response.StatusCode == HttpStatusCode.NotFound)
-        {
             return Error($"Bu özellik henüz bağlı değil: {url}");
-        }
 
         if (!response.IsSuccessStatusCode)
         {
@@ -78,9 +72,16 @@ public class MuhasebeApiClient
         };
     }
 
-    // =======================
-    // API ÇAĞRILARI
-    // =======================
+    private static CalisanAvansApiRequest Request(string dateRange = "ThisMonth", int? year = null, int? month = null, string calisanAdi = "")
+    {
+        return new CalisanAvansApiRequest
+        {
+            DateRange = dateRange,
+            Year = year,
+            Month = month,
+            CalisanAdi = calisanAdi
+        };
+    }
 
     public async Task<CalisanAvansApiResponse> GetMusteriSayisiAsync()
         => await PostEmptyAsync("/api/ai/musteri-sayisi");
@@ -124,14 +125,14 @@ public class MuhasebeApiClient
     public async Task<CalisanAvansApiResponse> GetEnAlacakliSaticiAsync()
         => await PostEmptyAsync("/api/ai/en-alacakli-satici");
 
-    public async Task<CalisanAvansApiResponse> GetKarDurumuAsync()
-        => await PostEmptyAsync("/api/ai/kar-durumu");
+    public async Task<CalisanAvansApiResponse> GetKarDurumuAsync(int? year, int? month)
+        => await PostJsonAsync("/api/ai/kar-durumu", Request(year: year, month: month));
 
-    public async Task<CalisanAvansApiResponse> GetAylikKarsilastirmaAsync()
-        => await PostEmptyAsync("/api/ai/aylik-karsilastirma");
+    public async Task<CalisanAvansApiResponse> GetAylikKarsilastirmaAsync(int? year, int? month)
+        => await PostJsonAsync("/api/ai/aylik-karsilastirma", Request(year: year, month: month));
 
-    public async Task<CalisanAvansApiResponse> GetEnCokGiderAsync()
-        => await PostEmptyAsync("/api/ai/en-cok-gider");
+    public async Task<CalisanAvansApiResponse> GetEnCokGiderAsync(int? year, int? month)
+        => await PostJsonAsync("/api/ai/en-cok-gider", Request(year: year, month: month));
 
     public async Task<CalisanAvansApiResponse> GetEnCokKazandiranMusteriAsync()
         => await PostEmptyAsync("/api/ai/en-cok-kazandiran-musteri");
@@ -140,70 +141,47 @@ public class MuhasebeApiClient
         => await PostEmptyAsync("/api/ai/stok-durumu");
 
     public async Task<CalisanAvansApiResponse> GetMaasOdemeKontrolAsync(int? year, int? month)
-    => await PostJsonAsync("/api/ai/maas-odeme-kontrol",
-        new CalisanAvansApiRequest
-        {
-            Year = year,
-            Month = month
-        });
-
-    public async Task<CalisanAvansApiResponse> GetMusteriBorcAsync(string ad)
-        => await PostJsonAsync("/api/ai/musteri-borc", new CalisanAvansApiRequest { CalisanAdi = ad });
-
-    public async Task<CalisanAvansApiResponse> GetToplamAvansAsync(string dateRange)
-        => await PostJsonAsync("/api/ai/toplam-avans", new CalisanAvansApiRequest { DateRange = dateRange });
-
-    public async Task<CalisanAvansApiResponse> GetToplamGelirAsync(string dateRange)
-        => await PostJsonAsync("/api/ai/toplam-gelir", new CalisanAvansApiRequest { DateRange = dateRange });
-
-    public async Task<CalisanAvansApiResponse> GetToplamGiderAsync(string dateRange)
-        => await PostJsonAsync("/api/ai/toplam-gider", new CalisanAvansApiRequest { DateRange = dateRange });
-
-    public async Task<CalisanAvansApiResponse> GetKasaBakiyeAsync(string dateRange)
-        => await PostJsonAsync("/api/ai/kasa-bakiye", new CalisanAvansApiRequest { DateRange = dateRange });
-
-    public async Task<CalisanAvansApiResponse> GetBugunKasaDurumuAsync(string kasaIntent)
-        => await PostJsonAsync("/api/ai/bugun-kasa-durumu",
-            new CalisanAvansApiRequest { CalisanAdi = kasaIntent, DateRange = "Today" });
-
-    public async Task<CalisanAvansApiResponse> GetToplamMusteriTahsilatiAsync(string dateRange)
-        => await PostJsonAsync("/api/ai/toplam-musteri-tahsilati",
-            new CalisanAvansApiRequest { DateRange = dateRange });
-
-    public async Task<CalisanAvansApiResponse> GetToplamSaticiOdemesiAsync(string dateRange)
-        => await PostJsonAsync("/api/ai/toplam-satici-odemesi",
-            new CalisanAvansApiRequest { DateRange = dateRange });
-
-    public async Task<CalisanAvansApiResponse> GetCalisanAvansToplamAsync(string ad, string dateRange)
-        => await PostJsonAsync("/api/ai/calisan-avans-toplam",
-            new CalisanAvansApiRequest { CalisanAdi = ad, DateRange = dateRange });
+        => await PostJsonAsync("/api/ai/maas-odeme-kontrol", Request(year: year, month: month));
 
     public async Task<CalisanAvansApiResponse> GetMaasOdemeDagilimAsync(int? year, int? month)
-    => await PostJsonAsync("/api/ai/maas-odeme-dagilim",
-        new CalisanAvansApiRequest
-        {
-            Year = year,
-            Month = month
-        });
+        => await PostJsonAsync("/api/ai/maas-odeme-dagilim", Request(year: year, month: month));
 
     public async Task<CalisanAvansApiResponse> GetMaasOdemeTarihleriAsync(int? year, int? month)
-    => await PostJsonAsync("/api/ai/maas-odeme-tarihleri",
-        new CalisanAvansApiRequest
-        {
-            Year = year,
-            Month = month
-        });
-}
+        => await PostJsonAsync("/api/ai/maas-odeme-tarihleri", Request(year: year, month: month));
 
-// =======================
-// MODELLER
-// =======================
+    public async Task<CalisanAvansApiResponse> GetMusteriBorcAsync(string ad)
+        => await PostJsonAsync("/api/ai/musteri-borc", Request(calisanAdi: ad));
+
+    public async Task<CalisanAvansApiResponse> GetToplamAvansAsync(string dateRange, int? year, int? month)
+        => await PostJsonAsync("/api/ai/toplam-avans", Request(dateRange, year, month));
+
+    public async Task<CalisanAvansApiResponse> GetToplamGelirAsync(string dateRange, int? year, int? month)
+        => await PostJsonAsync("/api/ai/toplam-gelir", Request(dateRange, year, month));
+
+    public async Task<CalisanAvansApiResponse> GetToplamGiderAsync(string dateRange, int? year, int? month)
+        => await PostJsonAsync("/api/ai/toplam-gider", Request(dateRange, year, month));
+
+    public async Task<CalisanAvansApiResponse> GetKasaBakiyeAsync(string dateRange, int? year, int? month)
+        => await PostJsonAsync("/api/ai/kasa-bakiye", Request(dateRange, year, month));
+
+    public async Task<CalisanAvansApiResponse> GetBugunKasaDurumuAsync(string kasaIntent, int? year, int? month)
+        => await PostJsonAsync("/api/ai/bugun-kasa-durumu",
+            Request("Today", year, month, kasaIntent));
+
+    public async Task<CalisanAvansApiResponse> GetToplamMusteriTahsilatiAsync(string dateRange, int? year, int? month)
+        => await PostJsonAsync("/api/ai/toplam-musteri-tahsilati", Request(dateRange, year, month));
+
+    public async Task<CalisanAvansApiResponse> GetToplamSaticiOdemesiAsync(string dateRange, int? year, int? month)
+        => await PostJsonAsync("/api/ai/toplam-satici-odemesi", Request(dateRange, year, month));
+
+    public async Task<CalisanAvansApiResponse> GetCalisanAvansToplamAsync(string ad, string dateRange, int? year, int? month)
+        => await PostJsonAsync("/api/ai/calisan-avans-toplam", Request(dateRange, year, month, ad));
+}
 
 public class CalisanAvansApiRequest
 {
     public string CalisanAdi { get; set; } = "";
     public string DateRange { get; set; } = "ThisMonth";
-
     public int? Year { get; set; }
     public int? Month { get; set; }
 }

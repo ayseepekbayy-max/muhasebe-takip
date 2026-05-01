@@ -7,6 +7,7 @@ builder.Services.AddSession();
 
 builder.Services.AddScoped<QueryInterpreter>();
 builder.Services.AddScoped<QueryExecutor>();
+builder.Services.AddSingleton<NovaReplyService>();
 
 builder.Services.AddHttpClient<MuhasebeApiClient>(client =>
 {

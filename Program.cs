@@ -242,22 +242,28 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansToplamRequest req
     }
 });
 
-app.MapPost("/api/ai/toplam-avans", async (CalisanAvansToplamRequest request, AppDbContext db) =>
+app.MapPost("/api/ai/toplam-gelir", async (CalisanAvansApiRequest request, AppDbContext db) =>
 {
     try
     {
-        var result = await AiApiHelpers.GetToplamAvansAsync(db, request.DateRange);
-        return Results.Json(result);
+        var (baslangic, bitis, ayAdi) = GetDateRange(request);
+
+        var toplam = await db.KasaHareketleri
+            .Where(x => x.Tip == HareketTipi.Giris &&
+                        x.Tarih >= baslangic &&
+                        x.Tarih < bitis)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = true,
+            Total = toplam,
+            Message = $"{ayAdi} toplam gelir: {toplam:N2} TL"
+        });
     }
     catch (Exception ex)
     {
-        return Results.Json(new
-        {
-            success = false,
-            error = ex.Message,
-            detail = ex.InnerException?.Message,
-            stack = ex.StackTrace
-        }, statusCode: 500);
+        return Results.Json(new { success = false, error = ex.Message }, statusCode: 500);
     }
 });
 
@@ -375,29 +381,11 @@ app.MapPost("/api/ai/toplam-satici-odemesi", async (CalisanAvansToplamRequest re
     }
 });
 
-app.MapPost("/api/ai/toplam-gelir", async (CalisanAvansToplamRequest request, AppDbContext db) =>
+app.MapPost("/api/ai/toplam-gelir", async (CalisanAvansApiRequest request, AppDbContext db) =>
 {
     try
     {
-        DateTime baslangic;
-        DateTime bitis;
-        var now = DateTime.UtcNow;
-
-        if (request.DateRange == "Today")
-        {
-            baslangic = now.Date;
-            bitis = baslangic.AddDays(1);
-        }
-        else if (request.DateRange == "LastMonth")
-        {
-            baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
-            bitis = baslangic.AddMonths(1);
-        }
-        else
-        {
-            baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            bitis = baslangic.AddMonths(1);
-        }
+        var (baslangic, bitis, ayAdi) = GetDateRange(request);
 
         var toplam = await db.KasaHareketleri
             .Where(x => x.Tip == HareketTipi.Giris &&
@@ -405,46 +393,24 @@ app.MapPost("/api/ai/toplam-gelir", async (CalisanAvansToplamRequest request, Ap
                         x.Tarih < bitis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-        return Results.Json(new
+        return Results.Json(new CalisanAvansToplamResponse
         {
-            success = true,
-            total = toplam,
-            message = $"Toplam gelir: {toplam:N2} TL"
+            Success = true,
+            Total = toplam,
+            Message = $"{ayAdi} toplam gelir: {toplam:N2} TL"
         });
     }
     catch (Exception ex)
     {
-        return Results.Json(new
-        {
-            success = false,
-            error = ex.Message
-        }, statusCode: 500);
+        return Results.Json(new { success = false, error = ex.Message }, statusCode: 500);
     }
 });
 
-app.MapPost("/api/ai/toplam-gider", async (CalisanAvansToplamRequest request, AppDbContext db) =>
+app.MapPost("/api/ai/toplam-gider", async (CalisanAvansApiRequest request, AppDbContext db) =>
 {
     try
     {
-        DateTime baslangic;
-        DateTime bitis;
-        var now = DateTime.UtcNow;
-
-        if (request.DateRange == "Today")
-        {
-            baslangic = now.Date;
-            bitis = baslangic.AddDays(1);
-        }
-        else if (request.DateRange == "LastMonth")
-        {
-            baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
-            bitis = baslangic.AddMonths(1);
-        }
-        else
-        {
-            baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            bitis = baslangic.AddMonths(1);
-        }
+        var (baslangic, bitis, ayAdi) = GetDateRange(request);
 
         var toplam = await db.KasaHareketleri
             .Where(x => x.Tip == HareketTipi.Cikis &&
@@ -452,46 +418,24 @@ app.MapPost("/api/ai/toplam-gider", async (CalisanAvansToplamRequest request, Ap
                         x.Tarih < bitis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-        return Results.Json(new
+        return Results.Json(new CalisanAvansToplamResponse
         {
-            success = true,
-            total = toplam,
-            message = $"Toplam gider: {toplam:N2} TL"
+            Success = true,
+            Total = toplam,
+            Message = $"{ayAdi} toplam gider: {toplam:N2} TL"
         });
     }
     catch (Exception ex)
     {
-        return Results.Json(new
-        {
-            success = false,
-            error = ex.Message
-        }, statusCode: 500);
+        return Results.Json(new { success = false, error = ex.Message }, statusCode: 500);
     }
 });
 
-app.MapPost("/api/ai/kasa-bakiye", async (CalisanAvansToplamRequest request, AppDbContext db) =>
+app.MapPost("/api/ai/kasa-bakiye", async (CalisanAvansApiRequest request, AppDbContext db) =>
 {
     try
     {
-        DateTime baslangic;
-        DateTime bitis;
-        var now = DateTime.UtcNow;
-
-        if (request.DateRange == "Today")
-        {
-            baslangic = now.Date;
-            bitis = baslangic.AddDays(1);
-        }
-        else if (request.DateRange == "LastMonth")
-        {
-            baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
-            bitis = baslangic.AddMonths(1);
-        }
-        else
-        {
-            baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            bitis = baslangic.AddMonths(1);
-        }
+        var (baslangic, bitis, ayAdi) = GetDateRange(request);
 
         var giris = await db.KasaHareketleri
             .Where(x => x.Tip == HareketTipi.Giris &&
@@ -507,20 +451,16 @@ app.MapPost("/api/ai/kasa-bakiye", async (CalisanAvansToplamRequest request, App
 
         var bakiye = giris - cikis;
 
-        return Results.Json(new
+        return Results.Json(new CalisanAvansToplamResponse
         {
-            success = true,
-            total = bakiye,
-            message = $"Kasa bakiyesi: {bakiye:N2} TL"
+            Success = true,
+            Total = bakiye,
+            Message = $"{ayAdi} kasa bakiyesi: {bakiye:N2} TL"
         });
     }
     catch (Exception ex)
     {
-        return Results.Json(new
-        {
-            success = false,
-            error = ex.Message
-        }, statusCode: 500);
+        return Results.Json(new { success = false, error = ex.Message }, statusCode: 500);
     }
 });
 
@@ -830,11 +770,9 @@ app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansTopla
         });
     }
 });
-app.MapPost("/api/ai/kar-durumu", async (AppDbContext db) =>
+app.MapPost("/api/ai/kar-durumu", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
-    var now = DateTime.UtcNow;
-    var baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-    var bitis = baslangic.AddMonths(1);
+    var (baslangic, bitis, ayAdi) = GetDateRange(request);
 
     var gelir = await db.KasaHareketleri
         .Where(x => x.Tip == HareketTipi.Giris && x.Tarih >= baslangic && x.Tarih < bitis)
@@ -847,8 +785,8 @@ app.MapPost("/api/ai/kar-durumu", async (AppDbContext db) =>
     var kar = gelir - gider;
 
     var mesaj = kar >= 0
-        ? $"Bu ay kâr etmiş görünüyorsun. Gelir: {gelir:N2} TL, gider: {gider:N2} TL, kâr: {kar:N2} TL"
-        : $"Bu ay zarar etmiş görünüyorsun. Gelir: {gelir:N2} TL, gider: {gider:N2} TL, zarar: {Math.Abs(kar):N2} TL";
+        ? $"{ayAdi} kâr etmiş görünüyorsun. Gelir: {gelir:N2} TL, gider: {gider:N2} TL, kâr: {kar:N2} TL"
+        : $"{ayAdi} zarar etmiş görünüyorsun. Gelir: {gelir:N2} TL, gider: {gider:N2} TL, zarar: {Math.Abs(kar):N2} TL";
 
     return Results.Json(new CalisanAvansToplamResponse
     {
@@ -900,11 +838,9 @@ app.MapPost("/api/ai/aylik-karsilastirma", async (AppDbContext db) =>
     });
 });
 
-app.MapPost("/api/ai/en-cok-gider", async (AppDbContext db) =>
+app.MapPost("/api/ai/en-cok-gider", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
-    var now = DateTime.UtcNow;
-    var baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-    var bitis = baslangic.AddMonths(1);
+    var (baslangic, bitis, ayAdi) = GetDateRange(request);
 
     var gider = await db.KasaHareketleri
         .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
@@ -922,7 +858,7 @@ app.MapPost("/api/ai/en-cok-gider", async (AppDbContext db) =>
         return Results.Json(new CalisanAvansToplamResponse
         {
             Success = true,
-            Message = "Bu ay gider kaydı bulunamadı."
+            Message = $"{ayAdi} gider kaydı bulunamadı."
         });
     }
 
@@ -930,7 +866,7 @@ app.MapPost("/api/ai/en-cok-gider", async (AppDbContext db) =>
     {
         Success = true,
         Total = gider.Toplam,
-        Message = $"Bu ay en çok gider: {gider.Aciklama} - {gider.Toplam:N2} TL"
+        Message = $"{ayAdi} en çok gider: {gider.Aciklama} - {gider.Toplam:N2} TL"
     });
 });
 
@@ -1111,6 +1047,34 @@ app.MapPost("/api/ai/maas-odeme-tarihleri", async (AppDbContext db, CalisanAvans
         Message = mesaj
     });
 });
+
+static (DateTime baslangic, DateTime bitis, string ayAdi) GetDateRange(CalisanAvansApiRequest request)
+{
+    var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
+
+    var now = DateTime.UtcNow;
+
+    if (request.Year.HasValue && request.Month.HasValue)
+    {
+        var baslangic = new DateTime(request.Year.Value, request.Month.Value, 1, 0, 0, 0, DateTimeKind.Utc);
+        return (baslangic, baslangic.AddMonths(1), $"{ayAdlari[request.Month.Value]} {request.Year.Value}");
+    }
+
+    if (request.DateRange == "LastMonth")
+    {
+        var baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
+        return (baslangic, baslangic.AddMonths(1), $"{ayAdlari[baslangic.Month]} {baslangic.Year}");
+    }
+
+    if (request.DateRange == "Today")
+    {
+        var baslangic = now.Date;
+        return (baslangic, baslangic.AddDays(1), "Bugün");
+    }
+
+    var thisMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+    return (thisMonth, thisMonth.AddMonths(1), $"{ayAdlari[thisMonth.Month]} {thisMonth.Year}");
+}
 
 app.MapRazorPages();
 

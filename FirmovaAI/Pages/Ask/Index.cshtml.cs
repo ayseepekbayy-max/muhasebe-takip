@@ -11,10 +11,13 @@ public class IndexModel : PageModel
     private readonly QueryInterpreter _interpreter;
     private readonly QueryExecutor _executor;
 
-    public IndexModel(QueryInterpreter interpreter, QueryExecutor executor)
+    private readonly NovaReplyService _novaReplyService;
+
+    public IndexModel(QueryInterpreter interpreter, QueryExecutor executor, NovaReplyService novaReplyService)
     {
         _interpreter = interpreter;
         _executor = executor;
+        _novaReplyService = novaReplyService;
     }
 
     [BindProperty]
@@ -44,8 +47,18 @@ public class IndexModel : PageModel
 
         try
         {
-            var sonuc = _interpreter.Interpret(Soru);
-            Cevap = await _executor.ExecuteAsync(sonuc);
+            // 👉 Önce Nova cevap versin mi kontrol et
+            var novaReply = _novaReplyService.GetReply(Soru);
+
+            if (!string.IsNullOrWhiteSpace(novaReply))
+            {
+                Cevap = novaReply;
+            }
+            else
+            {
+                var sonuc = _interpreter.Interpret(Soru);
+                Cevap = await _executor.ExecuteAsync(sonuc);
+            }
         }
         catch (Exception ex)
         {
