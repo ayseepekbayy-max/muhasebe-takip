@@ -1076,29 +1076,39 @@ static (DateTime baslangic, DateTime bitis, string ayAdi) GetDateRange(CalisanAv
     return (thisMonth, thisMonth.AddMonths(1), $"{ayAdlari[thisMonth.Month]} {thisMonth.Year}");
 }
 
-app.MapPost("/api/ai/toplam-avans", async (AppDbContext db, HttpContext ctx, CalisanAvansApiRequest req) =>
+app.MapPost("/api/ai/toplam-avans", async (AppDbContext db, CalisanAvansApiRequest req) =>
 {
-    var firmaId = ctx.Session.GetInt32("FirmaId");
-    if (firmaId == null)
-        return Results.BadRequest("Firma bulunamadı.");
+    int year = req.Year ?? DateTime.UtcNow.Year;
+    int month = req.Month ?? DateTime.UtcNow.Month;
 
-    var query = db.CalisanAvanslari
-        .Where(x => x.FirmaId == firmaId && x.Tip == CalisanHareketTipi.Avans);
+    var baslangic = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+    var bitis = baslangic.AddMonths(1);
 
-    if (req.Year != null && req.Month != null)
+    var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
+    var ayAdi = ayAdlari[month];
+
+    var toplam = await db.CalisanAvanslari
+        .Where(x => x.Tip == CalisanHareketTipi.Avans &&
+                    x.Tarih >= baslangic &&
+                    x.Tarih < bitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    if (toplam <= 0)
     {
-        var start = new DateTime(req.Year.Value, req.Month.Value, 1);
-        var end = start.AddMonths(1);
-
-        query = query.Where(x => x.Tarih >= start && x.Tarih < end);
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = true,
+            Total = 0,
+            Message = $"{ayAdi} ayında avans kaydı bulunamadı."
+        });
     }
 
-    var toplam = await query.SumAsync(x => x.Tutar);
-
-    if (toplam == 0)
-        return Results.Ok("Seçilen ay için avans kaydı bulunamadı.");
-
-    return Results.Ok($"{toplam:N2} TL");
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = toplam,
+        Message = $"{ayAdi} ayında verilen toplam avans: {toplam:N2} TL"
+    });
 });
 
 app.MapPost("/api/ai/avans-dagilim", async (AppDbContext db, CalisanAvansApiRequest req) =>
