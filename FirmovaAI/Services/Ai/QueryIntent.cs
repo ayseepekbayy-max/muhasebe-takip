@@ -15,4 +15,6 @@ public class QueryIntent
 
     public bool IsSuccess { get; set; }
     public string? ErrorMessage { get; set; }
+    public int? Year { get; set; }
+    public int? Month { get; set; }
 }

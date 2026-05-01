@@ -992,10 +992,12 @@ app.MapPost("/api/ai/stok-durumu", async (AppDbContext db) =>
     });
 });
 
-app.MapPost("/api/ai/maas-odeme-kontrol", async (AppDbContext db) =>
+app.MapPost("/api/ai/maas-odeme-kontrol", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
-    var now = DateTime.UtcNow;
-    var baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+    int year = request.Year ?? DateTime.UtcNow.Year;
+    int month = request.Month ?? DateTime.UtcNow.Month;
+
+    var baslangic = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var bitis = baslangic.AddMonths(1);
 
     var toplam = await db.CalisanAvanslari
@@ -1103,3 +1105,11 @@ app.MapPost("/api/ai/maas-odeme-tarihleri", async (AppDbContext db) =>
 app.MapRazorPages();
 
 app.Run();
+
+public class CalisanAvansApiRequest
+{
+    public string CalisanAdi { get; set; } = "";
+    public string DateRange { get; set; } = "ThisMonth";
+    public int? Year { get; set; }
+    public int? Month { get; set; }
+}
