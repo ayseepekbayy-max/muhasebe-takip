@@ -24,6 +24,12 @@ public class QueryExecutor
             case "ToplamAvans":
                 return await GetToplamAvansAsync(intent);
 
+            case "AvansDagilim":
+             return (await _apiClient.GetAvansDagilimAsync(intent.Year, intent.Month)).Message;
+
+            case "EnCokAvansAlan":
+            return (await _apiClient.GetEnCokAvansAlanAsync(intent.Year, intent.Month)).Message;
+
             case "SonAvansVerilenKisi":
                 return await GetSonAvansVerilenKisiAsync();
 
