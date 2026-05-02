@@ -1230,7 +1230,26 @@ app.MapPost("/api/ai/son-avans", async (AppDbContext db) =>
     return Results.Ok($"En son avans verilen kişi: {ad} - {son.Tutar:N2} TL ({son.Tarih:dd.MM.yyyy})");
 });
 
+app.MapGet("/api/ai/debug-avans-nisan", async (AppDbContext db) =>
+{
+    var liste = await db.CalisanAvanslari
+        .Include(x => x.Calisan)
+        .Where(x => x.Tip == CalisanHareketTipi.Avans &&
+                    x.Tarih.Year == 2026 &&
+                    x.Tarih.Month == 4)
+        .OrderBy(x => x.Tarih)
+        .Select(x => new
+        {
+            x.Id,
+            x.FirmaId,
+            Tarih = x.Tarih,
+            Calisan = x.Calisan != null ? x.Calisan.AdSoyad : x.Ad,
+            x.Tutar
+        })
+        .ToListAsync();
 
+    return Results.Json(liste);
+});
 app.MapRazorPages();
 
 app.Run();
