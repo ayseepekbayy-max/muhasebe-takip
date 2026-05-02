@@ -1078,10 +1078,10 @@ static (DateTime baslangic, DateTime bitis, string ayAdi) GetDateRange(CalisanAv
 
 app.MapPost("/api/ai/toplam-avans", async (AppDbContext db, CalisanAvansApiRequest req) =>
 {
-    int year = req.Year ?? DateTime.UtcNow.Year;
-    int month = req.Month ?? DateTime.UtcNow.Month;
+    int year = req.Year ?? DateTime.Now.Year;
+    int month = req.Month ?? DateTime.Now.Month;
 
-    var baslangic = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+    var baslangic = new DateTime(year, month, 1);
     var bitis = baslangic.AddMonths(1);
 
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
@@ -1112,18 +1112,16 @@ app.MapPost("/api/ai/toplam-avans", async (AppDbContext db, CalisanAvansApiReque
 });
 
 app.MapPost("/api/ai/avans-dagilim", async (AppDbContext db, CalisanAvansApiRequest req) =>
-{
-    int year = req.Year ?? DateTime.Now.Year;
+    {int year = req.Year ?? DateTime.Now.Year;
     int month = req.Month ?? DateTime.Now.Month;
 
-    var start = new DateTime(year, month, 1);
-    var end = start.AddMonths(1);
+    var baslangic = new DateTime(year, month, 1);
+    var bitis = baslangic.AddMonths(1);
 
     var liste = await db.CalisanAvanslari
         .Include(x => x.Calisan)
         .Where(x => x.Tip == CalisanHareketTipi.Avans &&
-                    x.Tarih >= start &&
-                    x.Tarih < end)
+                    x.Tarih >= baslangic && x.Tarih < bitis)
         .GroupBy(x => x.Calisan != null ? x.Calisan.AdSoyad : x.Ad)
         .Select(g => new
         {
@@ -1149,14 +1147,13 @@ app.MapPost("/api/ai/en-cok-avans-alan", async (AppDbContext db, CalisanAvansApi
     int year = req.Year ?? DateTime.Now.Year;
     int month = req.Month ?? DateTime.Now.Month;
 
-    var start = new DateTime(year, month, 1);
-    var end = start.AddMonths(1);
+    var baslangic = new DateTime(year, month, 1);
+    var bitis = baslangic.AddMonths(1);
 
     var kisi = await db.CalisanAvanslari
         .Include(x => x.Calisan)
         .Where(x => x.Tip == CalisanHareketTipi.Avans &&
-                    x.Tarih >= start &&
-                    x.Tarih < end)
+                   x.Tarih >= baslangic && x.Tarih < bitis)
         .GroupBy(x => x.Calisan != null ? x.Calisan.AdSoyad : x.Ad)
         .Select(g => new
         {
