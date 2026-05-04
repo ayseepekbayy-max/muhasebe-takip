@@ -255,9 +255,10 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest reques
 
     var toplam = await db.CalisanAvanslari
         .Where(x => x.CalisanId == calisan.Id &&
-                    x.Tip == CalisanHareketTipi.Avans &&
-                    x.Tarih.Year == year &&
-                    x.Tarih.Month == month)
+            x.Tip == CalisanHareketTipi.Avans &&
+            !x.ArsivlendiMi &&
+            x.Tarih.Year == year &&
+            x.Tarih.Month == month)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
