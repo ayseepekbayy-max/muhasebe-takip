@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FirmovaAI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+876aeee8f833ae18cb684bf0b339024efecf7391")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+db737b5b7e215d6b1c75c6024a3e166fc42f32af")]
 [assembly: System.Reflection.AssemblyProductAttribute("FirmovaAI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FirmovaAI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
