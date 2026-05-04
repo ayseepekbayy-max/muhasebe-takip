@@ -141,6 +141,13 @@ public class QueryInterpreter
 
         if (ContainsAny(lower, "maaş", "maas"))
         {
+            if (ContainsAny(lower, "verdim mi", "ödedim mi", "odedim mi", "ödeme yaptım mı", "odeme yaptım mı"))
+            {
+                result.Intent = "MaasOdemeKontrol";
+                result.IsSuccess = true;
+                UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
+                return result;
+            }
             var kisiAdi = ExtractPersonName(lower);
 
             if (!string.IsNullOrWhiteSpace(kisiAdi)
