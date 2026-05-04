@@ -223,23 +223,54 @@ app.Use(async (context, next) =>
 
 app.UseAuthorization();
 
-app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansToplamRequest request, AppDbContext db) =>
+app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest request, AppDbContext db) =>
 {
-    try
+    if (string.IsNullOrWhiteSpace(request.CalisanAdi))
     {
-        var result = await AiApiHelpers.GetCalisanAvansToplamAsync(db, request.CalisanAdi, request.DateRange);
-        return Results.Json(result);
-    }
-    catch (Exception ex)
-    {
-        return Results.Json(new
+        return Results.Json(new CalisanAvansToplamResponse
         {
-            success = false,
-            error = ex.Message,
-            detail = ex.InnerException?.Message,
-            stack = ex.StackTrace
-        }, statusCode: 500);
+            Success = false,
+            Message = "Çalışan adı gerekli."
+        });
     }
+
+    int year = request.Year ?? DateTime.Now.Year;
+    int month = request.Month ?? DateTime.Now.Month;
+
+    var ad = request.CalisanAdi.ToLower();
+
+    var calisan = await db.Calisanlar
+        .FirstOrDefaultAsync(x =>
+            x.AdSoyad.ToLower().Contains(ad) ||
+            x.Ad.ToLower().Contains(ad));
+
+    if (calisan == null)
+    {
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = false,
+            Message = $"{request.CalisanAdi} isimli çalışan bulunamadı."
+        });
+    }
+
+    var toplam = await db.CalisanAvanslari
+        .Where(x => x.CalisanId == calisan.Id &&
+                    x.Tip == CalisanHareketTipi.Avans &&
+                    x.Tarih.Year == year &&
+                    x.Tarih.Month == month)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
+    var ayAdi = ayAdlari[month];
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = toplam,
+        Message = toplam > 0
+            ? $"{calisan.AdSoyad} {ayAdi} ayında toplam {toplam:N2} TL avans aldı."
+            : $"{calisan.AdSoyad} için {ayAdi} ayında avans kaydı bulunamadı."
+    });
 });
 
 app.MapPost("/api/ai/toplam-gelir", async (CalisanAvansApiRequest request, AppDbContext db) =>

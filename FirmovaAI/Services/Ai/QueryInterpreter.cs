@@ -22,6 +22,7 @@ public class ConversationContext
 
     public int? Year { get; set; }
     public int? Month { get; set; }
+    public string CalisanAdi { get; set; } = "";
 }
 
 public class QueryInterpreter
@@ -65,7 +66,10 @@ public class QueryInterpreter
                 if (result.Month == null)
                     result.Month = Context.Month;
 
-                UpdateContextFromIntent(followUpIntent);
+                if (string.IsNullOrWhiteSpace(result.CalisanAdi))
+                    result.CalisanAdi = Context.CalisanAdi;
+
+                UpdateContextFromIntent(followUpIntent, result.CalisanAdi);
                 return result;
             }
         }
@@ -144,7 +148,7 @@ public class QueryInterpreter
                 result.CalisanAdi = kisiAdi;
                 result.Intent = "CalisanMaasToplam";
                 result.IsSuccess = true;
-                UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
+                UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month, result.CalisanAdi);
                 return result;
             }
 
@@ -301,7 +305,7 @@ public class QueryInterpreter
                 result.CalisanAdi = kisiAdi;
                 result.Intent = "CalisanAvansToplam";
                 result.IsSuccess = true;
-                UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
+                UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month, result.CalisanAdi);
                 return result;
             }
 
@@ -425,7 +429,7 @@ public class QueryInterpreter
             result.CalisanAdi = ExtractPersonName(lower) ?? ExtractFirstWord(text);
             result.Intent = "MusteriBorc";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Musteri, result.Intent, result.Year, result.Month);
+            UpdateContext(TopicType.Musteri, result.Intent, result.Year, result.Month, result.CalisanAdi);
             return result;
         }
 
@@ -442,7 +446,7 @@ public class QueryInterpreter
                 result.CalisanAdi = ad;
                 result.Intent = "CalisanPuantaj";
                 result.IsSuccess = true;
-                UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
+                UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month, result.CalisanAdi);
                 return result;
             }
         }
@@ -453,6 +457,12 @@ public class QueryInterpreter
 
     private static string ResolveFollowUpIntent(string text)
     {
+        if (Context.LastIntent == "CalisanAvansToplam" && !string.IsNullOrWhiteSpace(Context.CalisanAdi))
+            return "CalisanAvansToplam";
+
+        if (Context.LastIntent == "CalisanMaasToplam" && !string.IsNullOrWhiteSpace(Context.CalisanAdi))
+            return "CalisanMaasToplam";
+
         switch (Context.CurrentTopic)
         {
             case TopicType.Maas:
@@ -550,34 +560,40 @@ public class QueryInterpreter
             "gelir", "gider", "kâr", "kar", "borç", "borc");
     }
 
-    private static void UpdateContextFromIntent(string intent)
+    private static void UpdateContextFromIntent(string intent, string? calisanAdi = null)
     {
         var year = Context.Year;
         var month = Context.Month;
+        var ad = !string.IsNullOrWhiteSpace(calisanAdi) ? calisanAdi : Context.CalisanAdi;
 
-        if (intent.StartsWith("Maas"))
-            UpdateContext(TopicType.Maas, intent, year, month);
+        if (intent.StartsWith("Maas") || intent.Contains("Maas"))
+            UpdateContext(TopicType.Maas, intent, year, month, ad);
         else if (intent.Contains("Avans"))
-            UpdateContext(TopicType.Avans, intent, year, month);
+            UpdateContext(TopicType.Avans, intent, year, month, ad);
         else if (intent.Contains("Kasa") || intent.Contains("Gelir") || intent.Contains("Gider"))
-            UpdateContext(TopicType.Kasa, intent, year, month);
+            UpdateContext(TopicType.Kasa, intent, year, month, ad);
         else if (intent.Contains("Stok"))
-            UpdateContext(TopicType.Stok, intent, year, month);
+            UpdateContext(TopicType.Stok, intent, year, month, ad);
         else if (intent.Contains("Musteri") || intent.Contains("Borclu"))
-            UpdateContext(TopicType.Musteri, intent, year, month);
+            UpdateContext(TopicType.Musteri, intent, year, month, ad);
         else if (intent.Contains("Cari") || intent.Contains("Alici") || intent.Contains("Satici"))
-            UpdateContext(TopicType.Cari, intent, year, month);
+            UpdateContext(TopicType.Cari, intent, year, month, ad);
         else
-            UpdateContext(TopicType.Genel, intent, year, month);
+            UpdateContext(TopicType.Genel, intent, year, month, ad);
     }
 
-    private static void UpdateContext(TopicType topic, string intent, int? year = null, int? month = null)
+    private static void UpdateContext(TopicType topic, string intent, int? year = null, int? month = null, string? calisanAdi = null)
     {
         Context.CurrentTopic = topic;
         Context.LastIntent = intent;
         Context.LastUpdated = DateTime.UtcNow;
         Context.Year = year;
         Context.Month = month;
+
+        if (!string.IsNullOrWhiteSpace(calisanAdi))
+            Context.CalisanAdi = calisanAdi;
+        else if (!intent.Contains("Calisan"))
+            Context.CalisanAdi = "";
     }
 
     private static bool ContainsAny(string text, params string[] words)
@@ -589,8 +605,7 @@ public class QueryInterpreter
     {
         return ContainsAny(text,
             "toplam", "hepsi", "herkes", "tüm çalışan", "bütün çalışan",
-            "genel toplam", "kaç tl avans", "kaç tl maaş",
-            "toplam kaç", "toplam ne kadar");
+            "genel toplam", "toplam kaç", "toplam ne kadar");
     }
 
     private static string? ExtractPersonName(string text)
@@ -598,19 +613,26 @@ public class QueryInterpreter
         if (string.IsNullOrWhiteSpace(text))
             return null;
 
-        var clean = text
-            .Replace("’", " ")
-            .Replace("'", " ")
-            .Replace("ye", " ")
-            .Replace("ya", " ")
-            .Replace("e", " ")
-            .Replace("a", " ");
+        var normalized = text
+            .Replace("’", "'")
+            .Replace("`", "'");
 
-        var words = clean.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        normalized = normalized
+            .Replace("'ye", " ")
+            .Replace("'ya", " ")
+            .Replace("'e", " ")
+            .Replace("'a", " ");
+
+        var words = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         foreach (var rawWord in words)
         {
-            var word = rawWord.Trim().ToLowerInvariant();
+            var word = rawWord
+                .Trim()
+                .Trim(',', '.', '?', '!', ':', ';')
+                .ToLowerInvariant();
+
+            word = RemoveTurkishSuffixes(word);
 
             if (word.Length < 2)
                 continue;
@@ -625,6 +647,22 @@ public class QueryInterpreter
         }
 
         return null;
+    }
+
+    private static string RemoveTurkishSuffixes(string word)
+    {
+        var suffixes = new[]
+        {
+            "ye", "ya", "e", "a", "nin", "nın", "nun", "nün", "in", "ın", "un", "ün"
+        };
+
+        foreach (var suffix in suffixes)
+        {
+            if (word.Length > suffix.Length + 1 && word.EndsWith(suffix))
+                return word[..^suffix.Length];
+        }
+
+        return word;
     }
 
     private static bool IsQuestionWord(string word)
