@@ -192,6 +192,14 @@ public class MuhasebeApiClient
 
     public async Task<CalisanAvansApiResponse> GetCalisanAvansToplamAsync(string ad, string dateRange, int? year, int? month)
         => await PostJsonAsync("/api/ai/calisan-avans-toplam", Request(dateRange, year, month, ad));
+    public async Task<CalisanAvansApiResponse> GetCalisanMaasToplamAsync(string ad, int? year, int? month)
+    => await PostJsonAsync("/api/ai/calisan-maas-toplam",
+        new CalisanAvansApiRequest
+        {
+            CalisanAdi = ad,
+            Year = year,
+            Month = month
+        });
 }
 
 public class CalisanAvansApiRequest

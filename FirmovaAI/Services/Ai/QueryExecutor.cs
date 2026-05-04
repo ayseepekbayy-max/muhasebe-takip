@@ -122,6 +122,9 @@ public class QueryExecutor
             case "CalisanPuantaj":
                 return await GetCalisanPuantajAsync(intent);
 
+            case "CalisanMaasToplam":
+                return (await _apiClient.GetCalisanMaasToplamAsync(intent.CalisanAdi, intent.Year, intent.Month)).Message;
+
             default:
                 return "Bu sorgu tipi henüz desteklenmiyor.";
         }

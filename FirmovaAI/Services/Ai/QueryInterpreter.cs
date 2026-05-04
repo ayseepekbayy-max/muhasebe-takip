@@ -70,6 +70,10 @@ public class QueryInterpreter
             }
         }
 
+        // =========================
+        // KÂR / ANALİZ
+        // =========================
+
         if (ContainsAny(lower, "kâr", "kar") &&
             ContainsAny(lower, "ettim", "var mı", "ediyor muyum"))
         {
@@ -127,14 +131,48 @@ public class QueryInterpreter
             return result;
         }
 
-        if (ContainsAny(lower, "maaş", "maas") &&
-            ContainsAny(lower, "ödedim", "ödeme yaptım", "ödemesi yaptım", "maaş ödemesi", "maas odemesi", "maaş verdim", "maas verdim"))
+        // =========================
+        // MAAŞ
+        // =========================
+
+        if (ContainsAny(lower, "maaş", "maas"))
         {
+            var kisiAdi = ExtractPersonName(lower);
+
+            if (!string.IsNullOrWhiteSpace(kisiAdi) && !IsTotalQuestion(lower))
+            {
+                result.CalisanAdi = kisiAdi;
+                result.Intent = "CalisanMaasToplam";
+                result.IsSuccess = true;
+                UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
+                return result;
+            }
+
+            if (ContainsAny(lower, "kimlere", "hangi çalışan", "hangi çalışanlara", "çalışanlara", "kim ne kadar", "kime ne kadar", "dağılım"))
+            {
+                result.Intent = "MaasOdemeDagilim";
+                result.IsSuccess = true;
+                UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
+                return result;
+            }
+
+            if (ContainsAny(lower, "hangi gün", "hangi günlerde", "ne zaman", "tarih", "tarihleri"))
+            {
+                result.Intent = "MaasOdemeTarihleri";
+                result.IsSuccess = true;
+                UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
+                return result;
+            }
+
             result.Intent = "MaasOdemeKontrol";
             result.IsSuccess = true;
             UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
             return result;
         }
+
+        // =========================
+        // GENEL ÖZET / DURUM
+        // =========================
 
         if (ContainsAny(lower,
             "genel durum", "durum nasıl", "genel özet", "özet ver",
@@ -150,6 +188,10 @@ public class QueryInterpreter
             UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
             return result;
         }
+
+        // =========================
+        // SAYISAL GENEL SORGULAR
+        // =========================
 
         if (ContainsAny(lower, "kaç müşteri", "müşteri sayısı", "müşterim var", "toplam müşteri"))
         {
@@ -191,6 +233,10 @@ public class QueryInterpreter
             return result;
         }
 
+        // =========================
+        // STOK
+        // =========================
+
         if (ContainsAny(lower, "stokta kaç ürün", "ürün sayısı", "stok ürün sayısı", "kaç ürün var", "toplam ürün", "stok sayısı"))
         {
             result.Intent = "StokSayisi";
@@ -218,58 +264,56 @@ public class QueryInterpreter
             return result;
         }
 
-        if (ContainsAny(lower, "avans") &&
-    ContainsAny(lower, "kimlere", "hangi çalışan", "hangi çalışanlara", "hangi çalışanlarıma", "çalışanlarıma", "çalışanlara", "kim ne kadar", "kime ne kadar", "dağılım"))
-{
-    result.Intent = "AvansDagilim";
-    result.IsSuccess = true;
-    UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
-    return result;
-}
+        // =========================
+        // AVANS
+        // =========================
 
-if (ContainsAny(lower, "avans") &&
-    ContainsAny(lower, "en çok kim", "en fazla kim", "en çok alan", "en fazla alan"))
-{
-    result.Intent = "EnCokAvansAlan";
-    result.IsSuccess = true;
-    UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
-    return result;
-}
+        if (ContainsAny(lower, "avans"))
+        {
+            if (ContainsAny(lower, "kimlere", "hangi çalışan", "hangi çalışanlara", "hangi çalışanlarıma", "çalışanlarıma", "çalışanlara", "kim ne kadar", "kime ne kadar", "dağılım"))
+            {
+                result.Intent = "AvansDagilim";
+                result.IsSuccess = true;
+                UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
+                return result;
+            }
 
-if (ContainsAny(lower, "son", "en son") && ContainsAny(lower, "avans"))
-{
-    result.Intent = "SonAvansVerilenKisi";
-    result.IsSuccess = true;
-    UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
-    return result;
-}
+            if (ContainsAny(lower, "en çok kim", "en fazla kim", "en çok alan", "en fazla alan"))
+            {
+                result.Intent = "EnCokAvansAlan";
+                result.IsSuccess = true;
+                UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
+                return result;
+            }
 
-if (ContainsAny(lower, "avans"))
-{
-    if (ContainsAny(lower, "toplam", "kaç tl", "kaç para", "ne kadar", "verdik", "verdim", "verilen"))
-    {
-        result.Intent = "ToplamAvans";
-        result.IsSuccess = true;
-        UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
-        return result;
-    }
+            if (ContainsAny(lower, "son", "en son"))
+            {
+                result.Intent = "SonAvansVerilenKisi";
+                result.IsSuccess = true;
+                UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
+                return result;
+            }
 
-    var ad = ExtractFirstWord(text);
+            var kisiAdi = ExtractPersonName(lower);
 
-    if (!string.IsNullOrWhiteSpace(ad) && !IsDateWord(ad))
-    {
-        result.CalisanAdi = ad;
-        result.Intent = "CalisanAvansToplam";
-        result.IsSuccess = true;
-        UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
-        return result;
-    }
+            if (!string.IsNullOrWhiteSpace(kisiAdi) && !IsTotalQuestion(lower))
+            {
+                result.CalisanAdi = kisiAdi;
+                result.Intent = "CalisanAvansToplam";
+                result.IsSuccess = true;
+                UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
+                return result;
+            }
 
-    result.Intent = "ToplamAvans";
-    result.IsSuccess = true;
-    UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
-    return result;
-}
+            result.Intent = "ToplamAvans";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
+        // =========================
+        // KASA
+        // =========================
 
         if (ContainsAny(lower, "son", "son 10", "son işlemler") &&
             ContainsAny(lower, "kasa", "hareket"))
@@ -340,6 +384,10 @@ if (ContainsAny(lower, "avans"))
             return result;
         }
 
+        // =========================
+        // MÜŞTERİ / SATICI
+        // =========================
+
         if (ContainsAny(lower, "müşteri tahsilatı", "müşterilerden", "müşteriden ne kadar", "toplam tahsilat"))
         {
             result.Intent = "ToplamMusteriTahsilati";
@@ -374,16 +422,20 @@ if (ContainsAny(lower, "avans"))
 
         if (ContainsAny(lower, "borç", "borcu", "borçlu"))
         {
-            result.CalisanAdi = ExtractFirstWord(text);
+            result.CalisanAdi = ExtractPersonName(lower) ?? ExtractFirstWord(text);
             result.Intent = "MusteriBorc";
             result.IsSuccess = true;
             UpdateContext(TopicType.Musteri, result.Intent, result.Year, result.Month);
             return result;
         }
 
+        // =========================
+        // PUANTAJ
+        // =========================
+
         if (ContainsAny(lower, "puantaj", "geldi", "gelmedi", "izinli", "yarım gün"))
         {
-            var ad = ExtractFirstWord(text);
+            var ad = ExtractPersonName(lower) ?? ExtractFirstWord(text);
 
             if (!string.IsNullOrWhiteSpace(ad))
             {
@@ -415,6 +467,12 @@ if (ContainsAny(lower, "avans"))
             case TopicType.Avans:
                 if (ContainsAny(text, "en son", "son kime", "kime verdim"))
                     return "SonAvansVerilenKisi";
+
+                if (ContainsAny(text, "kimlere", "hangi çalışanlara", "çalışanlara", "kim ne kadar", "kime ne kadar", "dağılım"))
+                    return "AvansDagilim";
+
+                if (ContainsAny(text, "en çok kim", "en fazla kim", "en çok alan", "en fazla alan"))
+                    return "EnCokAvansAlan";
 
                 return "ToplamAvans";
 
@@ -527,6 +585,59 @@ if (ContainsAny(lower, "avans"))
         return words.Any(w => text.Contains(w));
     }
 
+    private static bool IsTotalQuestion(string text)
+    {
+        return ContainsAny(text,
+            "toplam", "hepsi", "herkes", "tüm çalışan", "bütün çalışan",
+            "genel toplam", "kaç tl avans", "kaç tl maaş",
+            "toplam kaç", "toplam ne kadar");
+    }
+
+    private static string? ExtractPersonName(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var clean = text
+            .Replace("’", " ")
+            .Replace("'", " ")
+            .Replace("ye", " ")
+            .Replace("ya", " ")
+            .Replace("e", " ")
+            .Replace("a", " ");
+
+        var words = clean.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var rawWord in words)
+        {
+            var word = rawWord.Trim().ToLowerInvariant();
+
+            if (word.Length < 2)
+                continue;
+
+            if (IsDateWord(word) || IsQuestionWord(word))
+                continue;
+
+            if (ContainsAny(word, "avans", "maaş", "maas"))
+                continue;
+
+            return word;
+        }
+
+        return null;
+    }
+
+    private static bool IsQuestionWord(string word)
+    {
+        return ContainsAny(word,
+            "ayında", "ayinda", "bu", "geçen", "gecen",
+            "ne", "kadar", "kaç", "tl", "para",
+            "aldı", "aldi", "verdim", "verdik", "verilen",
+            "ödedim", "odedim", "ödeme", "odeme", "yaptım", "yaptik", "yaptık",
+            "kim", "kime", "kimlere", "hangi", "çalışan", "çalışanlara", "çalışanlarıma",
+            "için", "icin", "toplam");
+    }
+
     private static string DetectDateRange(string text)
     {
         if (ContainsAny(text, "bugün", "bugünkü"))
@@ -568,12 +679,12 @@ if (ContainsAny(lower, "avans"))
     }
 
     private static bool IsDateWord(string word)
-{
-    return ContainsAny(word,
-        "ocak", "şubat", "mart", "nisan", "mayıs", "haziran",
-        "temmuz", "ağustos", "eylül", "ekim", "kasım", "aralık",
-        "bugün", "dün", "bu", "geçen");
-}
+    {
+        return ContainsAny(word,
+            "ocak", "şubat", "subat", "mart", "nisan", "mayıs", "mayis", "haziran",
+            "temmuz", "ağustos", "agustos", "eylül", "eylul", "ekim", "kasım", "kasim", "aralık", "aralik",
+            "bugün", "bugun", "dün", "dun", "bu", "geçen", "gecen");
+    }
 
     private static (int? year, int? month) ExtractMonthInfo(string text)
     {
@@ -581,16 +692,22 @@ if (ContainsAny(lower, "avans"))
         {
             { "ocak", 1 },
             { "şubat", 2 },
+            { "subat", 2 },
             { "mart", 3 },
             { "nisan", 4 },
             { "mayıs", 5 },
+            { "mayis", 5 },
             { "haziran", 6 },
             { "temmuz", 7 },
             { "ağustos", 8 },
+            { "agustos", 8 },
             { "eylül", 9 },
+            { "eylul", 9 },
             { "ekim", 10 },
             { "kasım", 11 },
-            { "aralık", 12 }
+            { "kasim", 11 },
+            { "aralık", 12 },
+            { "aralik", 12 }
         };
 
         foreach (var m in months)

@@ -1215,6 +1215,56 @@ app.MapPost("/api/ai/son-avans", async (AppDbContext db) =>
     });
 });
 
+app.MapPost("/api/ai/calisan-maas-toplam", async (AppDbContext db, CalisanAvansApiRequest req) =>
+{
+    if (string.IsNullOrWhiteSpace(req.CalisanAdi))
+    {
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = false,
+            Message = "Çalışan adı gerekli."
+        });
+    }
+
+    int year = req.Year ?? DateTime.Now.Year;
+    int month = req.Month ?? DateTime.Now.Month;
+
+    var ad = req.CalisanAdi.ToLower();
+
+    var calisan = await db.Calisanlar
+        .FirstOrDefaultAsync(x =>
+            x.AdSoyad.ToLower().Contains(ad) ||
+            x.Ad.ToLower().Contains(ad));
+
+    if (calisan == null)
+    {
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = false,
+            Message = "Çalışan bulunamadı."
+        });
+    }
+
+    var toplam = await db.CalisanAvanslari
+        .Where(x => x.Tip == CalisanHareketTipi.MaasOdeme &&
+                    x.CalisanId == calisan.Id &&
+                    x.Tarih.Year == year &&
+                    x.Tarih.Month == month)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
+    var ayAdi = ayAdlari[month];
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = toplam,
+        Message = toplam > 0
+            ? $"{calisan.AdSoyad} için {ayAdi} ayında ödenen maaş: {toplam:N2} TL"
+            : $"{calisan.AdSoyad} için {ayAdi} ayında maaş kaydı bulunamadı."
+    });
+});
+
 app.MapRazorPages();
 
 app.Run();
