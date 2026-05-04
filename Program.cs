@@ -1092,7 +1092,6 @@ app.MapPost("/api/ai/toplam-avans", async (AppDbContext db, CalisanAvansApiReque
 
     var query = db.CalisanAvanslari
         .Where(x =>x.Tip == CalisanHareketTipi.Avans &&
-                    !x.ArsivlendiMi &&
                     x.Tarih.Year == year &&
                     x.Tarih.Month == month);
 
@@ -1127,7 +1126,6 @@ app.MapPost("/api/ai/avans-dagilim", async (AppDbContext db, CalisanAvansApiRequ
     var query = db.CalisanAvanslari
         .Include(x => x.Calisan)
         .Where(x => x.Tip == CalisanHareketTipi.Avans &&
-                    !x.ArsivlendiMi &&
                     x.Tarih.Year == year &&
                     x.Tarih.Month == month);
 
@@ -1183,7 +1181,6 @@ app.MapPost("/api/ai/en-cok-avans-alan", async (AppDbContext db, CalisanAvansApi
     var query = db.CalisanAvanslari
         .Include(x => x.Calisan)
         .Where(x => x.Tip == CalisanHareketTipi.Avans &&
-                    !x.ArsivlendiMi &&
                     x.Tarih.Year == year &&
                     x.Tarih.Month == month);
 
