@@ -143,7 +143,9 @@ public class QueryInterpreter
         {
             var kisiAdi = ExtractPersonName(lower);
 
-            if (!string.IsNullOrWhiteSpace(kisiAdi) && !IsTotalQuestion(lower))
+            if (!string.IsNullOrWhiteSpace(kisiAdi)
+                && !IsTotalQuestion(lower)
+                && !IsDateWord(kisiAdi))
             {
                 result.CalisanAdi = kisiAdi;
                 result.Intent = "CalisanMaasToplam";
@@ -300,7 +302,9 @@ public class QueryInterpreter
 
             var kisiAdi = ExtractPersonName(lower);
 
-            if (!string.IsNullOrWhiteSpace(kisiAdi) && !IsTotalQuestion(lower))
+            if (!string.IsNullOrWhiteSpace(kisiAdi)
+                && !IsTotalQuestion(lower)
+                && !IsDateWord(kisiAdi))
             {
                 result.CalisanAdi = kisiAdi;
                 result.Intent = "CalisanAvansToplam";
@@ -466,25 +470,34 @@ public class QueryInterpreter
         switch (Context.CurrentTopic)
         {
             case TopicType.Maas:
-                if (ContainsAny(text, "kime ne kadar", "kim ne kadar", "kişilere göre", "çalışanlara göre", "dağılım"))
-                    return "MaasOdemeDagilim";
 
-                if (ContainsAny(text, "hangi gün", "hangi günlerde", "ne zaman", "tarih", "tarihleri"))
-                    return "MaasOdemeTarihleri";
+    if (ContainsAny(text, "detay", "detay ver", "listele"))
+        return "MaasOdemeDagilim";
 
-                return "MaasOdemeKontrol";
+    if (ContainsAny(text, "kime ne kadar", "kim ne kadar", "kişilere göre", "çalışanlara göre", "dağılım"))
+        return "MaasOdemeDagilim";
+
+    if (ContainsAny(text, "hangi gün", "hangi günlerde", "ne zaman", "tarih", "tarihleri"))
+        return "MaasOdemeTarihleri";
+
+    return "MaasOdemeKontrol";
 
             case TopicType.Avans:
-                if (ContainsAny(text, "en son", "son kime", "kime verdim"))
-                    return "SonAvansVerilenKisi";
 
-                if (ContainsAny(text, "kimlere", "hangi çalışanlara", "çalışanlara", "kim ne kadar", "kime ne kadar", "dağılım"))
-                    return "AvansDagilim";
+            // 👇 BU SATIRI EKLE (EN ÖNEMLİ)
+            if (ContainsAny(text, "detay", "detay ver", "listele"))
+                return "AvansDagilim";
 
-                if (ContainsAny(text, "en çok kim", "en fazla kim", "en çok alan", "en fazla alan"))
-                    return "EnCokAvansAlan";
+            if (ContainsAny(text, "en son", "son kime", "kime verdim"))
+                return "SonAvansVerilenKisi";
 
-                return "ToplamAvans";
+            if (ContainsAny(text, "kimlere", "hangi çalışanlara", "çalışanlara", "kim ne kadar", "kime ne kadar", "dağılım"))
+                return "AvansDagilim";
+
+            if (ContainsAny(text, "en çok kim", "en fazla kim", "en çok alan", "en fazla alan"))
+                return "EnCokAvansAlan";
+
+            return "ToplamAvans";
 
             case TopicType.Kasa:
                 if (ContainsAny(text, "detay", "son işlemler", "hareketler", "listele"))
