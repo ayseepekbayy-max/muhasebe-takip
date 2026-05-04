@@ -966,7 +966,7 @@ app.MapPost("/api/ai/maas-odeme-kontrol", async (AppDbContext db, CalisanAvansAp
     int year = request.Year ?? DateTime.Now.Year;
     int month = request.Month ?? DateTime.Now.Month;
 
-    var start = new DateTime(year, month, 1);
+    var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
     var firmaId = await db.Firmalar
@@ -1022,7 +1022,7 @@ app.MapPost("/api/ai/maas-odeme-dagilim", async (AppDbContext db, CalisanAvansAp
     int year = request.Year ?? DateTime.Now.Year;
     int month = request.Month ?? DateTime.Now.Month;
 
-    var start = new DateTime(year, month, 1);
+    var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
     var firmaId = await db.Firmalar
