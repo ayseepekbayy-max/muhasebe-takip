@@ -229,9 +229,7 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest reques
     try
     {
         if (string.IsNullOrWhiteSpace(request.CalisanAdi))
-        {
             return Results.Json(new CalisanAvansToplamResponse { Success = false, Total = 0, Message = "Çalışan adı gerekli." });
-        }
 
         int year = request.Year ?? DateTime.Now.Year;
         int month = request.Month ?? DateTime.Now.Month;
@@ -239,48 +237,49 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest reques
         var firmaId = await db.Firmalar.Where(x => x.AktifMi).OrderBy(x => x.Id).Select(x => (int?)x.Id).FirstOrDefaultAsync();
         var ad = request.CalisanAdi.ToLower();
 
-        var calisanQuery = db.Calisanlar.AsQueryable();
-        if (firmaId != null)
-            calisanQuery = calisanQuery.Where(x => x.FirmaId == firmaId);
-
-        var calisan = await calisanQuery.FirstOrDefaultAsync(x => x.AdSoyad.ToLower().Contains(ad) || x.Ad.ToLower().Contains(ad));
+        var calisan = await db.Calisanlar
+            .Where(x => firmaId == null || x.FirmaId == firmaId)
+            .FirstOrDefaultAsync(x => x.AdSoyad.ToLower().Contains(ad) || x.Ad.ToLower().Contains(ad));
 
         if (calisan == null)
-        {
             return Results.Json(new CalisanAvansToplamResponse { Success = false, Total = 0, Message = $"{request.CalisanAdi} isimli çalışan bulunamadı." });
-        }
 
-        var aktifQuery = db.CalisanAvanslari.Where(x =>
-            x.CalisanId == calisan.Id &&
-            x.Tip == CalisanHareketTipi.Avans &&
-            !x.ArsivlendiMi &&
-            x.Tarih.Year == year &&
-            x.Tarih.Month == month);
-
-        if (firmaId != null)
-            aktifQuery = aktifQuery.Where(x => x.FirmaId == firmaId);
-
-        var aktifToplam = await aktifQuery.SumAsync(x => (decimal?)x.Tutar) ?? 0;
-
-        var arsivQuery = db.CalisanMaasArsivleri.Where(x =>
+        var arsivVarMi = await db.CalisanMaasArsivleri.AnyAsync(x =>
             x.CalisanId == calisan.Id &&
             x.DonemBaslangic.Year == year &&
-            x.DonemBaslangic.Month == month);
+            x.DonemBaslangic.Month == month &&
+            (firmaId == null || x.FirmaId == firmaId));
 
-        if (firmaId != null)
-            arsivQuery = arsivQuery.Where(x => x.FirmaId == firmaId);
+        decimal toplam;
+        string kaynak;
 
-        var arsivToplam = await arsivQuery.SumAsync(x => (decimal?)x.ToplamAvans) ?? 0;
-        var toplam = aktifToplam + arsivToplam;
+        if (arsivVarMi)
+        {
+            toplam = await db.CalisanMaasArsivleri
+                .Where(x => x.CalisanId == calisan.Id &&
+                            x.DonemBaslangic.Year == year &&
+                            x.DonemBaslangic.Month == month &&
+                            (firmaId == null || x.FirmaId == firmaId))
+                .SumAsync(x => (decimal?)x.ToplamAvans) ?? 0;
+
+            kaynak = "Bu bilgi maaş arşivinden alındı.";
+        }
+        else
+        {
+            toplam = await db.CalisanAvanslari
+                .Where(x => x.CalisanId == calisan.Id &&
+                            x.Tip == CalisanHareketTipi.Avans &&
+                            !x.ArsivlendiMi &&
+                            x.Tarih.Year == year &&
+                            x.Tarih.Month == month &&
+                            (firmaId == null || x.FirmaId == firmaId))
+                .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+            kaynak = "Bu bilgi aktif kayıtlardan alındı.";
+        }
 
         var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
         var ayAdi = ayAdlari[month];
-
-        var kaynak = arsivToplam > 0 && aktifToplam > 0
-            ? "Aktif kayıtlar ve maaş arşivi birlikte hesaplandı."
-            : arsivToplam > 0
-                ? "Bu bilgi maaş arşivinden alındı."
-                : "Bu bilgi aktif kayıtlardan alındı.";
 
         return Results.Json(new CalisanAvansToplamResponse
         {
@@ -293,7 +292,7 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest reques
     }
     catch (Exception ex)
     {
-        return Results.Json(new { success = false, error = ex.Message, detail = ex.InnerException?.Message, stack = ex.StackTrace }, statusCode: 500);
+        return Results.Json(new { success = false, error = ex.Message, detail = ex.InnerException?.Message }, statusCode: 500);
     }
 });
 
@@ -1190,37 +1189,56 @@ app.MapPost("/api/ai/toplam-avans", async (AppDbContext db, CalisanAvansApiReque
     int year = req.Year ?? DateTime.Now.Year;
     int month = req.Month ?? DateTime.Now.Month;
 
-    var firmaId = await db.Firmalar.Where(x => x.AktifMi).OrderBy(x => x.Id).Select(x => (int?)x.Id).FirstOrDefaultAsync();
+    var firmaId = await db.Firmalar
+        .Where(x => x.AktifMi)
+        .OrderBy(x => x.Id)
+        .Select(x => (int?)x.Id)
+        .FirstOrDefaultAsync();
 
-    var aktifQuery = db.CalisanAvanslari.Where(x =>
-        x.Tip == CalisanHareketTipi.Avans &&
-        !x.ArsivlendiMi &&
-        x.Tarih.Year == year &&
-        x.Tarih.Month == month);
+    // 🔥 1. ARŞİV VAR MI?
+    var arsivVarMi = await db.CalisanMaasArsivleri
+        .AnyAsync(x =>
+            x.DonemBaslangic.Year == year &&
+            x.DonemBaslangic.Month == month);
 
-    if (firmaId != null)
-        aktifQuery = aktifQuery.Where(x => x.FirmaId == firmaId);
+    decimal toplam = 0;
+    string kaynak = "";
 
-    var aktifToplam = await aktifQuery.SumAsync(x => (decimal?)x.Tutar) ?? 0;
+    // 🔥 2. ARŞİV VARSA SADECE ORAYI KULLAN
+    if (arsivVarMi)
+    {
+        var arsivQuery = db.CalisanMaasArsivleri
+            .Where(x =>
+                x.DonemBaslangic.Year == year &&
+                x.DonemBaslangic.Month == month);
 
-    var arsivQuery = db.CalisanMaasArsivleri.Where(x =>
-        x.DonemBaslangic.Year == year &&
-        x.DonemBaslangic.Month == month);
+        if (firmaId != null)
+            arsivQuery = arsivQuery.Where(x => x.FirmaId == firmaId);
 
-    if (firmaId != null)
-        arsivQuery = arsivQuery.Where(x => x.FirmaId == firmaId);
+        toplam = await arsivQuery.SumAsync(x => (decimal?)x.ToplamAvans) ?? 0;
 
-    var arsivToplam = await arsivQuery.SumAsync(x => (decimal?)x.ToplamAvans) ?? 0;
-    var toplam = aktifToplam + arsivToplam;
+        kaynak = "Bu bilgi maaş arşivinden alındı.";
+    }
+    else
+    {
+        // 🔥 3. ARŞİV YOKSA AKTİF KAYITLAR
+        var aktifQuery = db.CalisanAvanslari
+            .Where(x =>
+                x.Tip == CalisanHareketTipi.Avans &&
+                !x.ArsivlendiMi &&
+                x.Tarih.Year == year &&
+                x.Tarih.Month == month);
+
+        if (firmaId != null)
+            aktifQuery = aktifQuery.Where(x => x.FirmaId == firmaId);
+
+        toplam = await aktifQuery.SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        kaynak = "Bu bilgi aktif kayıtlardan alındı.";
+    }
 
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
-
-    var kaynak = arsivToplam > 0 && aktifToplam > 0
-        ? "Aktif kayıtlar ve maaş arşivi birlikte hesaplandı."
-        : arsivToplam > 0
-            ? "Bu bilgi maaş arşivinden alındı."
-            : "Bu bilgi aktif kayıtlardan alındı.";
 
     return Results.Json(new CalisanAvansToplamResponse
     {
@@ -1241,63 +1259,73 @@ app.MapPost("/api/ai/avans-dagilim", async (AppDbContext db, CalisanAvansApiRequ
 
     var firmaId = await db.Firmalar.Where(x => x.AktifMi).OrderBy(x => x.Id).Select(x => (int?)x.Id).FirstOrDefaultAsync();
 
-    var aktifQuery = db.CalisanAvanslari
-        .Include(x => x.Calisan)
-        .Where(x => x.Tip == CalisanHareketTipi.Avans &&
-                    !x.ArsivlendiMi &&
-                    x.Tarih.Year == year &&
-                    x.Tarih.Month == month);
-
-    if (firmaId != null)
-        aktifQuery = aktifQuery.Where(x => x.FirmaId == firmaId);
-
-    var aktifListe = await aktifQuery
-        .GroupBy(x => x.Calisan != null ? x.Calisan.AdSoyad : x.Ad)
-        .Select(g => new { Kisi = g.Key, Toplam = g.Sum(x => x.Tutar) })
-        .ToListAsync();
-
-    var arsivQuery =
-        from arsiv in db.CalisanMaasArsivleri
-        join calisan in db.Calisanlar on arsiv.CalisanId equals calisan.Id
-        where arsiv.DonemBaslangic.Year == year && arsiv.DonemBaslangic.Month == month
-        select new { Kisi = calisan.AdSoyad, Toplam = arsiv.ToplamAvans, FirmaId = arsiv.FirmaId };
-
-    if (firmaId != null)
-        arsivQuery = arsivQuery.Where(x => x.FirmaId == firmaId);
-
-    var arsivListe = await arsivQuery.ToListAsync();
-
-    var liste = aktifListe
-        .Concat(arsivListe.Select(x => new { x.Kisi, x.Toplam }))
-        .GroupBy(x => x.Kisi)
-        .Select(g => new { Kisi = g.Key, Toplam = g.Sum(x => x.Toplam) })
-        .Where(x => x.Toplam > 0)
-        .OrderByDescending(x => x.Toplam)
-        .ToList();
-
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
 
-    if (!liste.Any())
+    var arsivVarMi = await db.CalisanMaasArsivleri.AnyAsync(x =>
+        x.DonemBaslangic.Year == year &&
+        x.DonemBaslangic.Month == month &&
+        (firmaId == null || x.FirmaId == firmaId));
+
+    List<(string Kisi, decimal Toplam)> liste;
+
+    if (arsivVarMi)
     {
-        return Results.Json(new CalisanAvansToplamResponse { Success = true, Total = 0, Message = $"{ayAdi} ayında avans kaydı bulunamadı." });
+        liste = await db.CalisanMaasArsivleri
+            .Where(x => x.DonemBaslangic.Year == year &&
+                        x.DonemBaslangic.Month == month &&
+                        (firmaId == null || x.FirmaId == firmaId) &&
+                        x.ToplamAvans > 0)
+            .Join(db.Calisanlar,
+                arsiv => arsiv.CalisanId,
+                calisan => calisan.Id,
+                (arsiv, calisan) => new { Kisi = calisan.AdSoyad, Toplam = arsiv.ToplamAvans })
+            .OrderByDescending(x => x.Toplam)
+            .Select(x => new ValueTuple<string, decimal>(x.Kisi, x.Toplam))
+            .ToListAsync();
+    }
+    else
+    {
+        var aktifListe = await db.CalisanAvanslari
+            .Include(x => x.Calisan)
+            .Where(x => x.Tip == CalisanHareketTipi.Avans &&
+                        !x.ArsivlendiMi &&
+                        x.Tarih.Year == year &&
+                        x.Tarih.Month == month &&
+                        (firmaId == null || x.FirmaId == firmaId))
+            .GroupBy(x => x.Calisan != null ? x.Calisan.AdSoyad : x.Ad)
+            .Select(g => new { Kisi = g.Key, Toplam = g.Sum(x => x.Tutar) })
+            .Where(x => x.Toplam > 0)
+            .OrderByDescending(x => x.Toplam)
+            .ToListAsync();
+
+        liste = aktifListe.Select(x => (x.Kisi, x.Toplam)).ToList();
     }
 
+    if (!liste.Any())
+    {
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = true,
+            Total = 0,
+            Message = $"{ayAdi} ayında avans kaydı bulunamadı."
+        });
+    }
+
+    var kaynak = arsivVarMi ? "Bu bilgi maaş arşivinden alındı." : "Bu bilgi aktif kayıtlardan alındı.";
     var mesaj = $"{ayAdi} ayında avans verilen çalışanlar:\n\n";
+
     foreach (var item in liste)
         mesaj += $"- {item.Kisi}: {item.Toplam:N2} TL\n";
 
-    var aktifToplam = aktifListe.Sum(x => x.Toplam);
-    var arsivToplam = arsivListe.Sum(x => x.Toplam);
+    mesaj += $"\n{kaynak}";
 
-    if (aktifToplam > 0 && arsivToplam > 0)
-        mesaj += "\nAktif kayıtlar ve maaş arşivi birlikte hesaplandı.";
-    else if (arsivToplam > 0)
-        mesaj += "\nBu bilgi maaş arşivinden alındı.";
-    else
-        mesaj += "\nBu bilgi aktif kayıtlardan alındı.";
-
-    return Results.Json(new CalisanAvansToplamResponse { Success = true, Total = liste.Sum(x => x.Toplam), Message = mesaj });
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = liste.Sum(x => x.Toplam),
+        Message = mesaj
+    });
 });
 
 
