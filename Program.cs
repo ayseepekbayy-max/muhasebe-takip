@@ -978,8 +978,8 @@ app.MapPost("/api/ai/maas-odeme-kontrol", async (AppDbContext db, CalisanAvansAp
     var aktifQuery = db.CalisanAvanslari.Where(x =>
         x.Tip == CalisanHareketTipi.MaasOdeme &&
         !x.ArsivlendiMi &&
-        x.Tarih.Year == year &&
-        x.Tarih.Month == month);
+        x.Tarih >= start &&
+        x.Tarih < end);
 
     if (firmaId != null)
         aktifQuery = aktifQuery.Where(x => x.FirmaId == firmaId);
@@ -987,8 +987,8 @@ app.MapPost("/api/ai/maas-odeme-kontrol", async (AppDbContext db, CalisanAvansAp
     var aktifToplam = await aktifQuery.SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var arsivQuery = db.CalisanMaasArsivleri.Where(x =>
-        x.DonemBaslangic < end &&
-        x.DonemBitis >= start);
+        x.OdemeTarihi >= start &&
+        x.OdemeTarihi < end);
 
     if (firmaId != null)
         arsivQuery = arsivQuery.Where(x => x.FirmaId == firmaId);
@@ -1035,8 +1035,8 @@ app.MapPost("/api/ai/maas-odeme-dagilim", async (AppDbContext db, CalisanAvansAp
         .Include(x => x.Calisan)
         .Where(x => x.Tip == CalisanHareketTipi.MaasOdeme &&
                     !x.ArsivlendiMi &&
-                    x.Tarih.Year == year &&
-                    x.Tarih.Month == month);
+                    x.Tarih >= start &&
+                    x.Tarih < end);
 
     if (firmaId != null)
         aktifQuery = aktifQuery.Where(x => x.FirmaId == firmaId);
@@ -1046,23 +1046,25 @@ app.MapPost("/api/ai/maas-odeme-dagilim", async (AppDbContext db, CalisanAvansAp
         .Select(g => new { Calisan = g.Key, Toplam = g.Sum(x => x.Tutar) })
         .ToListAsync();
 
-   var arsivQuery = db.CalisanMaasArsivleri
-    .Where(x =>
-        x.DonemBaslangic < end &&
-        x.DonemBitis >= start);
+    var arsivQuery = db.CalisanMaasArsivleri
+        .Where(x =>
+            x.OdemeTarihi >= start &&
+            x.OdemeTarihi < end);
+
     if (firmaId != null)
         arsivQuery = arsivQuery.Where(x => x.FirmaId == firmaId);
-var arsivListe = await arsivQuery
-    .Join(
-        db.Calisanlar,
-        arsiv => arsiv.CalisanId,
-        calisan => calisan.Id,
-        (arsiv, calisan) => new
-        {
-            Calisan = calisan.AdSoyad,
-            Toplam = arsiv.ToplamMaas
-        })
-    .ToListAsync();
+
+    var arsivListe = await arsivQuery
+        .Join(
+            db.Calisanlar,
+            arsiv => arsiv.CalisanId,
+            calisan => calisan.Id,
+            (arsiv, calisan) => new
+            {
+                Calisan = calisan.AdSoyad,
+                Toplam = arsiv.ToplamMaas
+            })
+        .ToListAsync();
 
     var liste = aktifListe
         .Concat(arsivListe)
