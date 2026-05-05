@@ -1457,11 +1457,9 @@ app.MapPost("/api/ai/calisan-maas-toplam", async (CalisanAvansApiRequest request
 app.MapPost("/api/ai/calisan-maas-toplam", async (CalisanAvansApiRequest request, AppDbContext db) =>
 {
     if (string.IsNullOrWhiteSpace(request.CalisanAdi))
-        return Results.Json(new CalisanAvansToplamResponse
-        {
-            Success = false,
-            Message = "Çalışan adı gerekli."
-        });
+    {
+        return Results.Json(new CalisanAvansToplamResponse { Success = false, Total = 0, Message = "Çalışan adı gerekli." });
+    }
 
     int year = request.Year ?? DateTime.Now.Year;
     int month = request.Month ?? DateTime.Now.Month;
@@ -1469,27 +1467,21 @@ app.MapPost("/api/ai/calisan-maas-toplam", async (CalisanAvansApiRequest request
     var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
-
+    var firmaId = await db.Firmalar.Where(x => x.AktifMi).OrderBy(x => x.Id).Select(x => (int?)x.Id).FirstOrDefaultAsync();
     var ad = request.CalisanAdi.ToLower();
 
-    var calisan = await db.Calisanlar
-        .FirstOrDefaultAsync(x =>
-            x.AdSoyad.ToLower().Contains(ad) ||
-            x.Ad.ToLower().Contains(ad));
+    var calisanQuery = db.Calisanlar.AsQueryable();
+    if (firmaId != null)
+        calisanQuery = calisanQuery.Where(x => x.FirmaId == firmaId);
+
+    var calisan = await calisanQuery.FirstOrDefaultAsync(x => x.AdSoyad.ToLower().Contains(ad) || x.Ad.ToLower().Contains(ad));
 
     if (calisan == null)
-        return Results.Json(new CalisanAvansToplamResponse
-        {
-            Success = false,
-            Message = "Çalışan bulunamadı."
-        });
+    {
+        return Results.Json(new CalisanAvansToplamResponse { Success = false, Total = 0, Message = $"{request.CalisanAdi} isimli çalışan bulunamadı." });
+    }
 
-    var aktif = db.CalisanAvanslari.Where(x =>
+    var aktifQuery = db.CalisanAvanslari.Where(x =>
         x.CalisanId == calisan.Id &&
         x.Tip == CalisanHareketTipi.MaasOdeme &&
         !x.ArsivlendiMi &&
@@ -1497,33 +1489,37 @@ app.MapPost("/api/ai/calisan-maas-toplam", async (CalisanAvansApiRequest request
         x.Tarih < end);
 
     if (firmaId != null)
-        aktif = aktif.Where(x => x.FirmaId == firmaId);
+        aktifQuery = aktifQuery.Where(x => x.FirmaId == firmaId);
 
-    var aktifToplam = await aktif.SumAsync(x => (decimal?)x.Tutar) ?? 0;
+    var aktifToplam = await aktifQuery.SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-    var arsiv = db.CalisanMaasArsivleri
-        .Where(x =>
-            x.CalisanId == calisan.Id &&
-            x.OdemeTarihi >= start &&
-            x.OdemeTarihi < end);
+    var arsivQuery = db.CalisanMaasArsivleri.Where(x =>
+        x.CalisanId == calisan.Id &&
+        x.OdemeTarihi >= start &&
+        x.OdemeTarihi < end);
 
     if (firmaId != null)
-        arsiv = arsiv.Where(x => x.FirmaId == firmaId);
+        arsivQuery = arsivQuery.Where(x => x.FirmaId == firmaId);
 
-    var arsivToplam = await arsiv.SumAsync(x => (decimal?)x.ToplamMaas) ?? 0;
-
+    var arsivToplam = await arsivQuery.SumAsync(x => (decimal?)x.ToplamMaas) ?? 0;
     var toplam = aktifToplam + arsivToplam;
 
-    var ayAdlari = new[] { "", "Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık" };
+    var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
+
+    var kaynak = arsivToplam > 0 && aktifToplam > 0
+        ? "Aktif kayıtlar ve maaş arşivi birlikte hesaplandı."
+        : arsivToplam > 0
+            ? "Bu bilgi maaş arşivinden alındı."
+            : "Bu bilgi aktif kayıtlardan alındı.";
 
     return Results.Json(new CalisanAvansToplamResponse
     {
         Success = true,
         Total = toplam,
         Message = toplam > 0
-            ? $"{calisan.AdSoyad} {ayAdi} ayında {toplam:N2} TL maaş aldı."
-            : $"{calisan.AdSoyad} için bu ay maaş kaydı bulunamadı."
+            ? $"{calisan.AdSoyad} için {ayAdi} ayında ödenen maaş: {toplam:N2} TL\n{kaynak}"
+            : $"{calisan.AdSoyad} için {ayAdi} ayında maaş kaydı bulunamadı."
     });
 });
 
