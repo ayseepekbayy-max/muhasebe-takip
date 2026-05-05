@@ -119,6 +119,11 @@ public class QueryExecutor
             case "MaasOdemeTarihleri":
                 return (await _apiClient.GetMaasOdemeTarihleriAsync(intent.Year, intent.Month)).Message;
 
+            case "CalisanMaasToplam":
+                return (await _apiClient.GetCalisanMaasToplamAsync(
+                    intent.CalisanAdi,
+                    intent.Year,
+                    intent.Month)).Message;
             case "CalisanPuantaj":
                 return await GetCalisanPuantajAsync(intent);
 

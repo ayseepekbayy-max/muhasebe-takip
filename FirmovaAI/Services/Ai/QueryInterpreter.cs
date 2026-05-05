@@ -139,6 +139,22 @@ public class QueryInterpreter
         // MAAŞ
         // =========================
 
+
+        if (ContainsAny(lower, "maaş") && ContainsAny(lower, "ne kadar"))
+        {
+            var kisi = ExtractPersonName(lower);
+
+            if (!string.IsNullOrEmpty(kisi))
+            {
+                result.Intent = "CalisanMaasToplam";
+                result.CalisanAdi = kisi;
+                result.IsSuccess = true;
+
+                UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
+                return result;
+            }
+        }
+
         if (ContainsAny(lower, "maaş", "maas"))
         {
             if (ContainsAny(lower, "verdim mi", "ödedim mi", "odedim mi", "ödeme yaptım mı", "odeme yaptım mı"))

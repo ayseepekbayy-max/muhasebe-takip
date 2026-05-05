@@ -1454,6 +1454,79 @@ app.MapPost("/api/ai/calisan-maas-toplam", async (CalisanAvansApiRequest request
     });
 });
 
+app.MapPost("/api/ai/calisan-maas-toplam", async (CalisanAvansApiRequest request, AppDbContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(request.CalisanAdi))
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = false,
+            Message = "Çalışan adı gerekli."
+        });
+
+    int year = request.Year ?? DateTime.Now.Year;
+    int month = request.Month ?? DateTime.Now.Month;
+
+    var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+    var end = start.AddMonths(1);
+
+    var firmaId = await db.Firmalar
+        .Where(x => x.AktifMi)
+        .OrderBy(x => x.Id)
+        .Select(x => (int?)x.Id)
+        .FirstOrDefaultAsync();
+
+    var ad = request.CalisanAdi.ToLower();
+
+    var calisan = await db.Calisanlar
+        .FirstOrDefaultAsync(x =>
+            x.AdSoyad.ToLower().Contains(ad) ||
+            x.Ad.ToLower().Contains(ad));
+
+    if (calisan == null)
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = false,
+            Message = "Çalışan bulunamadı."
+        });
+
+    var aktif = db.CalisanAvanslari.Where(x =>
+        x.CalisanId == calisan.Id &&
+        x.Tip == CalisanHareketTipi.MaasOdeme &&
+        !x.ArsivlendiMi &&
+        x.Tarih >= start &&
+        x.Tarih < end);
+
+    if (firmaId != null)
+        aktif = aktif.Where(x => x.FirmaId == firmaId);
+
+    var aktifToplam = await aktif.SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var arsiv = db.CalisanMaasArsivleri
+        .Where(x =>
+            x.CalisanId == calisan.Id &&
+            x.OdemeTarihi >= start &&
+            x.OdemeTarihi < end);
+
+    if (firmaId != null)
+        arsiv = arsiv.Where(x => x.FirmaId == firmaId);
+
+    var arsivToplam = await arsiv.SumAsync(x => (decimal?)x.ToplamMaas) ?? 0;
+
+    var toplam = aktifToplam + arsivToplam;
+
+    var ayAdlari = new[] { "", "Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık" };
+    var ayAdi = ayAdlari[month];
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = toplam,
+        Message = toplam > 0
+            ? $"{calisan.AdSoyad} {ayAdi} ayında {toplam:N2} TL maaş aldı."
+            : $"{calisan.AdSoyad} için bu ay maaş kaydı bulunamadı."
+    });
+});
+
 app.MapRazorPages();
 
 app.Run();
