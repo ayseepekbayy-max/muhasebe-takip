@@ -1658,18 +1658,19 @@ app.MapPost("/api/ai/personel-gideri", async (AppDbContext db, CalisanAvansApiRe
 
     var avansToplam = await avansQuery.SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-    var personelGideri = aktifMaasToplam + arsivMaasToplam + avansToplam;
+    var maasToplam = aktifMaasToplam + arsivMaasToplam;
+    var personelGideri = maasToplam;
 
     return Results.Json(new CalisanAvansToplamResponse
     {
         Success = true,
         Total = personelGideri,
         Message =
-            $"{ayAdi} personel gideri:\n\n" +
-            $"- Maaş ödemeleri: {(aktifMaasToplam + arsivMaasToplam):N2} TL\n" +
-            $"- Avans ödemeleri: {avansToplam:N2} TL\n" +
-            $"- Toplam personel gideri: {personelGideri:N2} TL\n" +
-            $"Aynı isimli çalışan için aynı ayda birden fazla maaş arşivi varsa en son kayıt dikkate alındı."
+    $"{ayAdi} personel gideri:\n\n" +
+    $"- Toplam maaş gideri: {maasToplam:N2} TL\n" +
+    $"- Maaşlardan düşülen avans: {avansToplam:N2} TL\n" +
+    $"- Net personel gideri: {personelGideri:N2} TL\n" +
+    $"Not: Avans maaştan düşüldüğü için personel giderine ikinci kez eklenmedi."
     });
 });
 
