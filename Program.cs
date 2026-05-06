@@ -2168,6 +2168,222 @@ app.MapPost("/api/ai/calisan-maas-toplam", async (CalisanAvansApiRequest request
     });
 });
 
+// =========================
+// EK AI ANALİZ ENDPOINTLERİ
+// =========================
+
+app.MapPost("/api/ai/kasa-artis-azalis", async (AppDbContext db, CalisanAvansApiRequest request) =>
+{
+    var (baslangic, bitis, ayAdi) = GetDateRange(request);
+
+    var giris = await db.KasaHareketleri
+        .Where(x => x.Tip == HareketTipi.Giris && x.Tarih >= baslangic && x.Tarih < bitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var cikis = await db.KasaHareketleri
+        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var sonuc = giris - cikis;
+    var yorum = sonuc >= 0 ? "Kasa bu dönemde artmış görünüyor." : "Kasa bu dönemde azalmış görünüyor.";
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = sonuc,
+        Message =
+            $"{ayAdi} kasa artış/azalış analizi:\n\n" +
+            $"- Toplam giriş: {giris:N2} TL\n" +
+            $"- Toplam çıkış: {cikis:N2} TL\n" +
+            $"- Net sonuç: {sonuc:N2} TL\n" +
+            $"- Yorum: {yorum}"
+    });
+});
+
+app.MapPost("/api/ai/son-7-gun-kasa-ozeti", async (AppDbContext db) =>
+{
+    var bitis = DateTime.UtcNow.Date.AddDays(1);
+    var baslangic = bitis.AddDays(-7);
+
+    var giris = await db.KasaHareketleri
+        .Where(x => x.Tip == HareketTipi.Giris && x.Tarih >= baslangic && x.Tarih < bitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var cikis = await db.KasaHareketleri
+        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var islemSayisi = await db.KasaHareketleri.CountAsync(x => x.Tarih >= baslangic && x.Tarih < bitis);
+    var sonuc = giris - cikis;
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = sonuc,
+        Message =
+            $"Son 7 gün kasa özeti:\n\n" +
+            $"- Toplam giriş: {giris:N2} TL\n" +
+            $"- Toplam çıkış: {cikis:N2} TL\n" +
+            $"- Net sonuç: {sonuc:N2} TL\n" +
+            $"- İşlem sayısı: {islemSayisi}"
+    });
+});
+
+app.MapPost("/api/ai/gunluk-ortalama-gider", async (AppDbContext db, CalisanAvansApiRequest request) =>
+{
+    var (baslangic, bitis, ayAdi) = GetDateRange(request);
+
+    var toplamGider = await db.KasaHareketleri
+        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var gunSayisi = Math.Max(1, (bitis.Date - baslangic.Date).Days);
+    var ortalama = toplamGider / gunSayisi;
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = ortalama,
+        Message =
+            $"{ayAdi} günlük ortalama gider:\n\n" +
+            $"- Toplam gider: {toplamGider:N2} TL\n" +
+            $"- Gün sayısı: {gunSayisi}\n" +
+            $"- Günlük ortalama gider: {ortalama:N2} TL"
+    });
+});
+
+app.MapPost("/api/ai/en-cok-devamsizlik-yapan", async (AppDbContext db, CalisanAvansApiRequest request) =>
+{
+    var (baslangic, bitis, ayAdi) = GetDateRange(request);
+
+    var sonuc = await db.Set<CalisanPuantaj>()
+        .Include(x => x.Calisan)
+        .Where(x => x.Tarih >= baslangic && x.Tarih < bitis && x.Durum == PuantajDurum.Gelmedi)
+        .GroupBy(x => x.Calisan != null ? x.Calisan.AdSoyad : "Bilinmeyen çalışan")
+        .Select(g => new { Calisan = g.Key, Gun = g.Count() })
+        .OrderByDescending(x => x.Gun)
+        .FirstOrDefaultAsync();
+
+    if (sonuc == null)
+    {
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = true,
+            Total = 0,
+            Message = $"{ayAdi} devamsızlık kaydı bulunamadı."
+        });
+    }
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = sonuc.Gun,
+        Message = $"{ayAdi} en fazla devamsızlık yapan çalışan: {sonuc.Calisan} - {sonuc.Gun} gün"
+    });
+});
+
+app.MapPost("/api/ai/calisan-devamsizlik", async (AppDbContext db, CalisanAvansApiRequest request) =>
+{
+    if (string.IsNullOrWhiteSpace(request.CalisanAdi))
+    {
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = false,
+            Total = 0,
+            Message = "Çalışan adı gerekli."
+        });
+    }
+
+    var (baslangic, bitis, ayAdi) = GetDateRange(request);
+    var ad = request.CalisanAdi.ToLower();
+
+    var calisan = await db.Calisanlar
+        .FirstOrDefaultAsync(x => x.AdSoyad.ToLower().Contains(ad) || x.Ad.ToLower().Contains(ad));
+
+    if (calisan == null)
+    {
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = false,
+            Total = 0,
+            Message = $"{request.CalisanAdi} isimli çalışan bulunamadı."
+        });
+    }
+
+    var kayitlar = await db.Set<CalisanPuantaj>()
+        .Where(x => x.CalisanId == calisan.Id && x.Tarih >= baslangic && x.Tarih < bitis)
+        .ToListAsync();
+
+    var geldi = kayitlar.Count(x => x.Durum == PuantajDurum.Geldi);
+    var gelmedi = kayitlar.Count(x => x.Durum == PuantajDurum.Gelmedi);
+    var izinli = kayitlar.Count(x => x.Durum == PuantajDurum.Izinli);
+    var yarimGun = kayitlar.Count(x => x.Durum == PuantajDurum.YarimGun);
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = gelmedi,
+        Message =
+            $"{calisan.AdSoyad} {ayAdi} puantaj/devamsızlık özeti:\n\n" +
+            $"- Geldi: {geldi} gün\n" +
+            $"- Gelmedi: {gelmedi} gün\n" +
+            $"- İzinli: {izinli} gün\n" +
+            $"- Yarım gün: {yarimGun} gün"
+    });
+});
+
+app.MapPost("/api/ai/akilli-isletme-yorumu", async (AppDbContext db, CalisanAvansApiRequest request) =>
+{
+    var (baslangic, bitis, ayAdi) = GetDateRange(request);
+
+    var gelir = await db.KasaHareketleri
+        .Where(x => x.Tip == HareketTipi.Giris && x.Tarih >= baslangic && x.Tarih < bitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var gider = await db.KasaHareketleri
+        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var sonuc = gelir - gider;
+
+    var personelGideri = await db.CalisanMaasArsivleri
+        .Where(x => x.OdemeTarihi >= baslangic && x.OdemeTarihi < bitis)
+        .SumAsync(x => (decimal?)x.ToplamMaas) ?? 0;
+
+    var yorum = "";
+
+    if (sonuc > 0)
+        yorum += "Bu dönemde kasa sonucu pozitif görünüyor.\n";
+    else if (sonuc < 0)
+        yorum += "Bu dönemde kasa sonucu negatif görünüyor.\n";
+    else
+        yorum += "Bu dönemde kasa sonucu dengede görünüyor.\n";
+
+    if (personelGideri > 0 && gider > 0)
+    {
+        var oran = personelGideri / gider * 100;
+        yorum += $"Personel gideri, toplam giderlerin yaklaşık %{oran:N2} seviyesinde.\n";
+    }
+
+    if (gider > gelir && gelir > 0)
+        yorum += "Giderler gelirlerden yüksek olduğu için harcama kalemleri ayrıca incelenmeli.\n";
+    else if (gelir > gider)
+        yorum += "Gelirler giderlerden yüksek olduğu için dönem olumlu görünüyor.\n";
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = sonuc,
+        Message =
+            $"{ayAdi} akıllı işletme yorumu:\n\n" +
+            $"- Gelir: {gelir:N2} TL\n" +
+            $"- Gider: {gider:N2} TL\n" +
+            $"- Net sonuç: {sonuc:N2} TL\n" +
+            $"- Personel gideri: {personelGideri:N2} TL\n\n" +
+            yorum
+    });
+});
+
 app.MapRazorPages();
 
 app.Run();
