@@ -241,58 +241,14 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest reques
         int year = request.Year ?? DateTime.Now.Year;
         int month = request.Month ?? DateTime.Now.Month;
 
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+        var firmaId = await db.Firmalar
+            .Where(x => x.AktifMi)
+            .OrderBy(x => x.Id)
+            .Select(x => (int?)x.Id)
+            .FirstOrDefaultAsync();
 
-    var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
-    var ayAdi = ayAdlari[month];
-
-    var arsivlerQuery = db.CalisanMaasArsivleri.AsQueryable();
-
-    if (firmaId != null)
-        arsivlerQuery = arsivlerQuery.Where(x => x.FirmaId == firmaId);
-
-    var buAyBaslangic = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
-    var sonrakiAyBaslangic = buAyBaslangic.AddMonths(1);
-    var sonrakiAyBitis = sonrakiAyBaslangic.AddMonths(1);
-
-    var baslangic = await arsivlerQuery
-        .Where(x =>
-            x.OdemeTarihi >= buAyBaslangic &&
-            x.OdemeTarihi < sonrakiAyBaslangic)
-        .MaxAsync(x => (DateTime?)x.OdemeTarihi);
-
-    if (baslangic == null)
-    {
-        return Results.Json(new CalisanAvansToplamResponse
-        {
-            Success = true,
-            Total = 0,
-            Message = $"{ayAdi} ayı için maaş arşivi bulunamadı."
-        });
-    }
-
-    var bitis = await arsivlerQuery
-        .Where(x =>
-            x.OdemeTarihi >= sonrakiAyBaslangic &&
-            x.OdemeTarihi < sonrakiAyBitis)
-        .MaxAsync(x => (DateTime?)x.OdemeTarihi);
-
-    if (bitis == null)
-    {
-        return Results.Json(new CalisanAvansToplamResponse
-        {
-            Success = true,
-            Total = 0,
-            Message = $"{ayAdi} ayı için sonraki ay maaş arşivi bulunamadı."
-        });
-    }
-
-    var baslangicTarihi = baslangic.GetValueOrDefault();
-    var bitisTarihi = bitis.GetValueOrDefault();
+        var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
+        var ayAdi = ayAdlari[month];
 
         var ad = request.CalisanAdi.ToLower();
 
@@ -316,11 +272,45 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest reques
             });
         }
 
+        var arsivQuery = db.CalisanMaasArsivleri
+            .Where(x => x.CalisanId == calisan.Id);
+
+        if (firmaId != null)
+            arsivQuery = arsivQuery.Where(x => x.FirmaId == firmaId);
+
+        var ayBaslangic = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var sonrakiAyBaslangic = ayBaslangic.AddMonths(1);
+
+        var baslangic = await arsivQuery
+            .Where(x =>
+                x.OdemeTarihi >= ayBaslangic &&
+                x.OdemeTarihi < sonrakiAyBaslangic)
+            .MaxAsync(x => (DateTime?)x.OdemeTarihi);
+
+        if (baslangic == null)
+        {
+            return Results.Json(new CalisanAvansToplamResponse
+            {
+                Success = true,
+                Total = 0,
+                Message = $"{calisan.AdSoyad} için {ayAdi} ayında maaş arşivi bulunamadı. Bu çalışanın dönem avansını hesaplamak için önce maaş ödendi ve arşivle işlemi yapılmalı."
+            });
+        }
+
+        var bitis = await arsivQuery
+            .Where(x => x.OdemeTarihi > baslangic.Value)
+            .OrderBy(x => x.OdemeTarihi)
+            .Select(x => (DateTime?)x.OdemeTarihi)
+            .FirstOrDefaultAsync();
+
+        var bitisTarihi = bitis ?? DateTime.UtcNow;
+        var devamEdiyorMu = bitis == null;
+
         var avanslar = await db.CalisanAvanslari
             .Where(x =>
                 x.CalisanId == calisan.Id &&
                 x.Tip == CalisanHareketTipi.Avans &&
-                x.Tarih > baslangicTarihi &&
+                x.Tarih > baslangic.Value &&
                 x.Tarih < bitisTarihi &&
                 (firmaId == null || x.FirmaId == firmaId))
             .OrderBy(x => x.Tarih)
@@ -329,22 +319,26 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest reques
 
         var toplam = avanslar.Sum(x => x.Tutar);
 
+        var donemMetni = devamEdiyorMu
+            ? $"{baslangic.Value:dd.MM.yyyy} sonrası devam eden dönem"
+            : $"{baslangic.Value:dd.MM.yyyy} - {bitisTarihi:dd.MM.yyyy}";
+
         if (!avanslar.Any())
         {
             return Results.Json(new CalisanAvansToplamResponse
             {
                 Success = true,
                 Total = 0,
-                Message = $"{calisan.AdSoyad} için {ayAdi} döneminde {baslangicTarihi:dd.MM.yyyy} - {bitisTarihi:dd.MM.yyyy} arasında avans kaydı bulunamadı."
+                Message = $"{calisan.AdSoyad} için {ayAdi} döneminde ({donemMetni}) avans kaydı bulunamadı."
             });
         }
 
-        var mesaj = $"{calisan.AdSoyad} {ayAdi} dönemi avansları ({baslangicTarihi:dd.MM.yyyy} - {bitisTarihi:dd.MM.yyyy}):\n\n";
+        var mesaj = $"{calisan.AdSoyad} {ayAdi} dönemi avansları ({donemMetni}):\n\n";
 
         foreach (var item in avanslar)
             mesaj += $"- {item.Tarih:dd.MM.yyyy}: {item.Tutar:N2} TL\n";
 
-        mesaj += $"\nToplam: {toplam:N2} TL";
+        mesaj += $"\nToplam: {toplam:N2} TL\nBu sorgu çalışanın kendi maaş arşiv dönemine göre hesaplandı.";
 
         return Results.Json(new CalisanAvansToplamResponse
         {
@@ -1256,6 +1250,9 @@ app.MapPost("/api/ai/toplam-avans", async (AppDbContext db, CalisanAvansApiReque
     int year = req.Year ?? DateTime.Now.Year;
     int month = req.Month ?? DateTime.Now.Month;
 
+    var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+    var end = start.AddMonths(1);
+
     var firmaId = await db.Firmalar
         .Where(x => x.AktifMi)
         .OrderBy(x => x.Id)
@@ -1265,55 +1262,11 @@ app.MapPost("/api/ai/toplam-avans", async (AppDbContext db, CalisanAvansApiReque
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
 
-    var arsivlerQuery = db.CalisanMaasArsivleri.AsQueryable();
-
-    if (firmaId != null)
-        arsivlerQuery = arsivlerQuery.Where(x => x.FirmaId == firmaId);
-
-    var buAyBaslangic = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
-    var sonrakiAyBaslangic = buAyBaslangic.AddMonths(1);
-    var sonrakiAyBitis = sonrakiAyBaslangic.AddMonths(1);
-
-    var baslangic = await arsivlerQuery
-        .Where(x =>
-            x.OdemeTarihi >= buAyBaslangic &&
-            x.OdemeTarihi < sonrakiAyBaslangic)
-        .MaxAsync(x => (DateTime?)x.OdemeTarihi);
-
-    if (baslangic == null)
-    {
-        return Results.Json(new CalisanAvansToplamResponse
-        {
-            Success = true,
-            Total = 0,
-            Message = $"{ayAdi} ayı için maaş arşivi bulunamadı."
-        });
-    }
-
-    var bitis = await arsivlerQuery
-        .Where(x =>
-            x.OdemeTarihi >= sonrakiAyBaslangic &&
-            x.OdemeTarihi < sonrakiAyBitis)
-        .MaxAsync(x => (DateTime?)x.OdemeTarihi);
-
-    if (bitis == null)
-    {
-        return Results.Json(new CalisanAvansToplamResponse
-        {
-            Success = true,
-            Total = 0,
-            Message = $"{ayAdi} ayı için sonraki ay maaş arşivi bulunamadı."
-        });
-    }
-
-    var baslangicTarihi = baslangic.GetValueOrDefault();
-    var bitisTarihi = bitis.GetValueOrDefault();
-
     var query = db.CalisanAvanslari
         .Where(x =>
             x.Tip == CalisanHareketTipi.Avans &&
-            x.Tarih > baslangicTarihi &&
-            x.Tarih < bitisTarihi);
+            x.Tarih >= start &&
+            x.Tarih < end);
 
     if (firmaId != null)
         query = query.Where(x => x.FirmaId == firmaId);
@@ -1325,8 +1278,8 @@ app.MapPost("/api/ai/toplam-avans", async (AppDbContext db, CalisanAvansApiReque
         Success = true,
         Total = toplam,
         Message = toplam > 0
-            ? $"{ayAdi} dönemi verilen toplam avans: {toplam:N2} TL\nDönem: {baslangicTarihi:dd.MM.yyyy} - {bitisTarihi:dd.MM.yyyy}"
-            : $"{ayAdi} dönemi için {baslangicTarihi:dd.MM.yyyy} - {bitisTarihi:dd.MM.yyyy} arasında avans kaydı bulunamadı."
+            ? $"{ayAdi} ayında verilen toplam avans: {toplam:N2} TL\nDönem: {start:dd.MM.yyyy} - {end.AddDays(-1):dd.MM.yyyy}\nBu genel toplam takvim ayına göre hesaplandı."
+            : $"{ayAdi} ayında avans kaydı bulunamadı."
     });
 });
 
@@ -1334,6 +1287,9 @@ app.MapPost("/api/ai/avans-dagilim", async (AppDbContext db, CalisanAvansApiRequ
 {
     int year = req.Year ?? DateTime.Now.Year;
     int month = req.Month ?? DateTime.Now.Month;
+
+    var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+    var end = start.AddMonths(1);
 
     var firmaId = await db.Firmalar
         .Where(x => x.AktifMi)
@@ -1344,56 +1300,12 @@ app.MapPost("/api/ai/avans-dagilim", async (AppDbContext db, CalisanAvansApiRequ
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
 
-    var arsivlerQuery = db.CalisanMaasArsivleri.AsQueryable();
-
-    if (firmaId != null)
-        arsivlerQuery = arsivlerQuery.Where(x => x.FirmaId == firmaId);
-
-    var buAyBaslangic = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
-    var sonrakiAyBaslangic = buAyBaslangic.AddMonths(1);
-    var sonrakiAyBitis = sonrakiAyBaslangic.AddMonths(1);
-
-    var baslangic = await arsivlerQuery
-        .Where(x =>
-            x.OdemeTarihi >= buAyBaslangic &&
-            x.OdemeTarihi < sonrakiAyBaslangic)
-        .MaxAsync(x => (DateTime?)x.OdemeTarihi);
-
-    if (baslangic == null)
-    {
-        return Results.Json(new CalisanAvansToplamResponse
-        {
-            Success = true,
-            Total = 0,
-            Message = $"{ayAdi} ayı için maaş arşivi bulunamadı."
-        });
-    }
-
-    var bitis = await arsivlerQuery
-        .Where(x =>
-            x.OdemeTarihi >= sonrakiAyBaslangic &&
-            x.OdemeTarihi < sonrakiAyBitis)
-        .MaxAsync(x => (DateTime?)x.OdemeTarihi);
-
-    if (bitis == null)
-    {
-        return Results.Json(new CalisanAvansToplamResponse
-        {
-            Success = true,
-            Total = 0,
-            Message = $"{ayAdi} ayı için sonraki ay maaş arşivi bulunamadı."
-        });
-    }
-
-    var baslangicTarihi = baslangic.GetValueOrDefault();
-    var bitisTarihi = bitis.GetValueOrDefault();
-
     var query = db.CalisanAvanslari
         .Include(x => x.Calisan)
         .Where(x =>
             x.Tip == CalisanHareketTipi.Avans &&
-            x.Tarih > baslangicTarihi &&
-            x.Tarih < bitisTarihi);
+            x.Tarih >= start &&
+            x.Tarih < end);
 
     if (firmaId != null)
         query = query.Where(x => x.FirmaId == firmaId);
@@ -1406,7 +1318,8 @@ app.MapPost("/api/ai/avans-dagilim", async (AppDbContext db, CalisanAvansApiRequ
         {
             Tarih = x.Tarih,
             Kisi = x.Calisan != null ? x.Calisan.AdSoyad : x.Ad,
-            Tutar = x.Tutar
+            Tutar = x.Tutar,
+            ArsivlendiMi = x.ArsivlendiMi
         })
         .ToListAsync();
 
@@ -1416,24 +1329,28 @@ app.MapPost("/api/ai/avans-dagilim", async (AppDbContext db, CalisanAvansApiRequ
         {
             Success = true,
             Total = 0,
-            Message = $"{ayAdi} dönemi için {baslangicTarihi:dd.MM.yyyy} - {bitisTarihi:dd.MM.yyyy} arasında avans kaydı bulunamadı."
+            Message = $"{ayAdi} ayında avans kaydı bulunamadı."
         });
     }
 
     var toplam = liste.Sum(x => x.Tutar);
-    var mesaj = $"{ayAdi} dönemi avansları ({baslangicTarihi:dd.MM.yyyy} - {bitisTarihi:dd.MM.yyyy}):\n\n";
+
+    var mesaj = $"{ayAdi} ayı avans detayları ({start:dd.MM.yyyy} - {end.AddDays(-1):dd.MM.yyyy}):\n\n";
 
     foreach (var grup in liste.GroupBy(x => x.Kisi))
     {
         mesaj += $"{grup.Key}:\n";
 
         foreach (var item in grup)
-            mesaj += $"- {item.Tarih:dd.MM.yyyy}: {item.Tutar:N2} TL\n";
+        {
+            var durum = item.ArsivlendiMi ? "arşivlendi" : "aktif";
+            mesaj += $"- {item.Tarih:dd.MM.yyyy}: {item.Tutar:N2} TL ({durum})\n";
+        }
 
         mesaj += $"Toplam: {grup.Sum(x => x.Tutar):N2} TL\n\n";
     }
 
-    mesaj += $"Genel toplam: {toplam:N2} TL";
+    mesaj += $"Genel toplam: {toplam:N2} TL\nBu genel detay takvim ayına göre hesaplandı.";
 
     return Results.Json(new CalisanAvansToplamResponse
     {
