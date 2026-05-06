@@ -1044,25 +1044,48 @@ app.MapPost("/api/ai/maas-odeme-kontrol", async (AppDbContext db, CalisanAvansAp
     if (firmaId != null)
         aktifQuery = aktifQuery.Where(x => x.FirmaId == firmaId);
 
-    var aktifToplam = await aktifQuery.SumAsync(x => (decimal?)x.Tutar) ?? 0;
+    var aktifListe = await aktifQuery
+        .GroupBy(x => x.CalisanId)
+        .Select(g => new
+        {
+            CalisanId = g.Key,
+            Toplam = g.Sum(x => x.Tutar)
+        })
+        .ToListAsync();
 
-    var arsivQuery = db.CalisanMaasArsivleri.Where(x =>
-        x.OdemeTarihi >= start &&
-        x.OdemeTarihi < end);
+    var arsivQuery = db.CalisanMaasArsivleri
+        .Where(x => x.OdemeTarihi >= start &&
+                    x.OdemeTarihi < end);
 
     if (firmaId != null)
         arsivQuery = arsivQuery.Where(x => x.FirmaId == firmaId);
 
-    var arsivToplam = await arsivQuery.SumAsync(x => (decimal?)x.ToplamMaas) ?? 0;
+    var arsivTumListe = await arsivQuery
+        .Select(x => new
+        {
+            x.Id,
+            x.CalisanId,
+            x.OdemeTarihi,
+            x.ToplamMaas
+        })
+        .ToListAsync();
+
+    var arsivListe = arsivTumListe
+        .GroupBy(x => x.CalisanId)
+        .Select(g => g.OrderByDescending(x => x.OdemeTarihi).ThenByDescending(x => x.Id).First())
+        .ToList();
+
+    var aktifToplam = aktifListe.Sum(x => x.Toplam);
+    var arsivToplam = arsivListe.Sum(x => x.ToplamMaas);
     var toplam = aktifToplam + arsivToplam;
 
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
 
     var kaynak = arsivToplam > 0 && aktifToplam > 0
-        ? "Aktif kayıtlar ve maaş arşivi birlikte hesaplandı."
+        ? "Aktif kayıtlar ve maaş arşivi birlikte hesaplandı. Aynı ay içinde bir çalışan için birden fazla maaş arşivi varsa en son kayıt dikkate alındı."
         : arsivToplam > 0
-            ? "Bu bilgi maaş arşivinden alındı."
+            ? "Bu bilgi maaş arşivinden alındı. Aynı ay içinde bir çalışan için birden fazla maaş arşivi varsa en son kayıt dikkate alındı."
             : "Bu bilgi aktif kayıtlardan alındı.";
 
     return Results.Json(new CalisanAvansToplamResponse
@@ -1074,8 +1097,6 @@ app.MapPost("/api/ai/maas-odeme-kontrol", async (AppDbContext db, CalisanAvansAp
             : $"{ayAdi} ayında maaş ödemesi kaydı bulunamadı."
     });
 });
-
-
 
 app.MapPost("/api/ai/maas-odeme-dagilim", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
@@ -1102,34 +1123,57 @@ app.MapPost("/api/ai/maas-odeme-dagilim", async (AppDbContext db, CalisanAvansAp
         aktifQuery = aktifQuery.Where(x => x.FirmaId == firmaId);
 
     var aktifListe = await aktifQuery
-        .GroupBy(x => x.Calisan != null ? x.Calisan.AdSoyad : x.Ad)
-        .Select(g => new { Calisan = g.Key, Toplam = g.Sum(x => x.Tutar) })
+        .GroupBy(x => new
+        {
+            x.CalisanId,
+            Calisan = x.Calisan != null ? x.Calisan.AdSoyad : x.Ad
+        })
+        .Select(g => new
+        {
+            CalisanId = g.Key.CalisanId,
+            Calisan = g.Key.Calisan,
+            Toplam = g.Sum(x => x.Tutar)
+        })
         .ToListAsync();
 
     var arsivQuery = db.CalisanMaasArsivleri
-        .Where(x =>
-            x.OdemeTarihi >= start &&
-            x.OdemeTarihi < end);
+        .Where(x => x.OdemeTarihi >= start &&
+                    x.OdemeTarihi < end);
 
     if (firmaId != null)
         arsivQuery = arsivQuery.Where(x => x.FirmaId == firmaId);
 
-    var arsivListe = await arsivQuery
+    var arsivTumListe = await arsivQuery
         .Join(
             db.Calisanlar,
             arsiv => arsiv.CalisanId,
             calisan => calisan.Id,
             (arsiv, calisan) => new
             {
+                arsiv.Id,
+                arsiv.CalisanId,
                 Calisan = calisan.AdSoyad,
-                Toplam = arsiv.ToplamMaas
+                arsiv.ToplamMaas,
+                arsiv.OdemeTarihi
             })
         .ToListAsync();
 
+    var arsivListe = arsivTumListe
+        .GroupBy(x => x.CalisanId)
+        .Select(g => g.OrderByDescending(x => x.OdemeTarihi).ThenByDescending(x => x.Id).First())
+        .Select(x => new
+        {
+            x.CalisanId,
+            x.Calisan,
+            Toplam = x.ToplamMaas
+        })
+        .ToList();
+
     var liste = aktifListe
+        .Select(x => new { x.CalisanId, x.Calisan, x.Toplam })
         .Concat(arsivListe)
-        .GroupBy(x => x.Calisan)
-        .Select(g => new { Calisan = g.Key, Toplam = g.Sum(x => x.Toplam) })
+        .GroupBy(x => new { x.CalisanId, x.Calisan })
+        .Select(g => new { Calisan = g.Key.Calisan, Toplam = g.Sum(x => x.Toplam) })
         .Where(x => x.Toplam > 0)
         .OrderByDescending(x => x.Toplam)
         .ToList();
@@ -1156,9 +1200,9 @@ app.MapPost("/api/ai/maas-odeme-dagilim", async (AppDbContext db, CalisanAvansAp
     var arsivToplam = arsivListe.Sum(x => x.Toplam);
 
     if (aktifToplam > 0 && arsivToplam > 0)
-        mesaj += "\nAktif kayıtlar ve maaş arşivi birlikte hesaplandı.";
+        mesaj += "\nAktif kayıtlar ve maaş arşivi birlikte hesaplandı. Aynı ay içinde bir çalışan için birden fazla maaş arşivi varsa en son kayıt dikkate alındı.";
     else if (arsivToplam > 0)
-        mesaj += "\nBu bilgi maaş arşivinden alındı.";
+        mesaj += "\nBu bilgi maaş arşivinden alındı. Aynı ay içinde bir çalışan için birden fazla maaş arşivi varsa en son kayıt dikkate alındı.";
     else
         mesaj += "\nBu bilgi aktif kayıtlardan alındı.";
 
@@ -1562,7 +1606,20 @@ app.MapPost("/api/ai/personel-gideri", async (AppDbContext db, CalisanAvansApiRe
     if (firmaId != null)
         arsivMaasQuery = arsivMaasQuery.Where(x => x.FirmaId == firmaId);
 
-    var arsivMaasToplam = await arsivMaasQuery.SumAsync(x => (decimal?)x.ToplamMaas) ?? 0;
+    var arsivTumListe = await arsivMaasQuery
+        .Select(x => new
+        {
+            x.Id,
+            x.CalisanId,
+            x.OdemeTarihi,
+            x.ToplamMaas
+        })
+        .ToListAsync();
+
+    var arsivMaasToplam = arsivTumListe
+        .GroupBy(x => x.CalisanId)
+        .Select(g => g.OrderByDescending(x => x.OdemeTarihi).ThenByDescending(x => x.Id).First())
+        .Sum(x => x.ToplamMaas);
 
     var avansQuery = db.CalisanAvanslari
         .Where(x => x.Tip == CalisanHareketTipi.Avans &&
@@ -1584,7 +1641,8 @@ app.MapPost("/api/ai/personel-gideri", async (AppDbContext db, CalisanAvansApiRe
             $"{ayAdi} personel gideri:\n\n" +
             $"- Maaş ödemeleri: {(aktifMaasToplam + arsivMaasToplam):N2} TL\n" +
             $"- Avans ödemeleri: {avansToplam:N2} TL\n" +
-            $"- Toplam personel gideri: {personelGideri:N2} TL"
+            $"- Toplam personel gideri: {personelGideri:N2} TL\n" +
+            $"Aynı ay içinde bir çalışan için birden fazla maaş arşivi varsa en son kayıt dikkate alındı."
     });
 });
 
@@ -1612,7 +1670,21 @@ app.MapPost("/api/ai/ortalama-maas", async (AppDbContext db, CalisanAvansApiRequ
     if (firmaId != null)
         query = query.Where(x => x.FirmaId == firmaId);
 
-    var liste = await query.Select(x => x.ToplamMaas).ToListAsync();
+    var tumListe = await query
+        .Select(x => new
+        {
+            x.Id,
+            x.CalisanId,
+            x.OdemeTarihi,
+            x.ToplamMaas
+        })
+        .ToListAsync();
+
+    var liste = tumListe
+        .GroupBy(x => x.CalisanId)
+        .Select(g => g.OrderByDescending(x => x.OdemeTarihi).ThenByDescending(x => x.Id).First())
+        .Select(x => x.ToplamMaas)
+        .ToList();
 
     if (!liste.Any())
     {
@@ -1630,7 +1702,7 @@ app.MapPost("/api/ai/ortalama-maas", async (AppDbContext db, CalisanAvansApiRequ
     {
         Success = true,
         Total = ortalama,
-        Message = $"{ayAdi} ayı ortalama maaş: {ortalama:N2} TL\nHesaplanan çalışan sayısı: {liste.Count}"
+        Message = $"{ayAdi} ayı ortalama maaş: {ortalama:N2} TL\nHesaplanan çalışan sayısı: {liste.Count}\nAynı ay içinde bir çalışan için birden fazla maaş arşivi varsa en son kayıt dikkate alındı."
     });
 });
 
@@ -1795,8 +1867,24 @@ app.MapPost("/api/ai/maas-avans-orani", async (AppDbContext db, CalisanAvansApiR
     if (firmaId != null)
         query = query.Where(x => x.FirmaId == firmaId);
 
-    var toplamMaas = await query.SumAsync(x => (decimal?)x.ToplamMaas) ?? 0;
-    var toplamAvans = await query.SumAsync(x => (decimal?)x.ToplamAvans) ?? 0;
+    var tumListe = await query
+        .Select(x => new
+        {
+            x.Id,
+            x.CalisanId,
+            x.OdemeTarihi,
+            x.ToplamMaas,
+            x.ToplamAvans
+        })
+        .ToListAsync();
+
+    var liste = tumListe
+        .GroupBy(x => x.CalisanId)
+        .Select(g => g.OrderByDescending(x => x.OdemeTarihi).ThenByDescending(x => x.Id).First())
+        .ToList();
+
+    var toplamMaas = liste.Sum(x => x.ToplamMaas);
+    var toplamAvans = liste.Sum(x => x.ToplamAvans);
 
     if (toplamMaas <= 0)
     {
@@ -1817,7 +1905,8 @@ app.MapPost("/api/ai/maas-avans-orani", async (AppDbContext db, CalisanAvansApiR
         Message =
             $"{ayAdi} maaşa göre avans oranı: %{oran:N2}\n\n" +
             $"- Toplam maaş: {toplamMaas:N2} TL\n" +
-            $"- Toplam avans: {toplamAvans:N2} TL"
+            $"- Toplam avans: {toplamAvans:N2} TL\n" +
+            $"Aynı ay içinde bir çalışan için birden fazla maaş arşivi varsa en son kayıt dikkate alındı."
     });
 });
 
