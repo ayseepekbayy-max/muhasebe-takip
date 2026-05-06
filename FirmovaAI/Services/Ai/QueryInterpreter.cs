@@ -140,6 +140,75 @@ public class QueryInterpreter
         // =========================
 
 
+        if (ContainsAny(lower, "personel gideri", "personel masrafı", "personel masrafi", "çalışan gideri", "calisan gideri", "çalışan masrafı", "calisan masrafi", "toplam personel gideri"))
+        {
+            result.Intent = "PersonelGideri";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
+        if (ContainsAny(lower, "ortalama maaş", "ortalama maas", "maaş ortalaması", "maas ortalamasi", "maaş ortalamasi"))
+        {
+            result.Intent = "OrtalamaMaas";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
+        if (ContainsAny(lower, "son maaş ödemesi", "son maas odemesi", "en son maaş", "en son maas", "son maaş tarihi", "son maas tarihi"))
+        {
+            result.Intent = "SonMaasOdemesi";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
+        if (ContainsAny(lower, "maaşı kapanmayan", "maasi kapanmayan", "maaşı kapanmadı", "maasi kapanmadi", "maaşı henüz kapanmayan", "maasi henuz kapanmayan", "maaşı arşivlenmeyen", "maasi arsivlenmeyen"))
+        {
+            result.Intent = "MaasiKapanmayanCalisanlar";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
+        if (ContainsAny(lower, "maaşa göre avans", "maasa gore avans", "avans oranı", "avans orani", "maaş avans oranı", "maas avans orani"))
+        {
+            result.Intent = "MaasAvansOrani";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
+        if (ContainsAny(lower, "kalan maaş", "kalan maas", "maaştan kalan", "maastan kalan", "ne kadar maaşı kaldı", "ne kadar maasi kaldi", "maaşı kaldı", "maasi kaldi"))
+        {
+            var kisi = ExtractPersonName(lower);
+
+            if (!string.IsNullOrWhiteSpace(kisi))
+            {
+                result.Intent = "CalisanKalanMaas";
+                result.CalisanAdi = kisi;
+                result.IsSuccess = true;
+                UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month, result.CalisanAdi);
+                return result;
+            }
+        }
+
+        if (ContainsAny(lower, "maaş özeti", "maas ozeti", "maaş detay", "maas detay", "maaş bilgisi", "maas bilgisi"))
+        {
+            var kisi = ExtractPersonName(lower);
+
+            if (!string.IsNullOrWhiteSpace(kisi))
+            {
+                result.Intent = "CalisanMaasOzet";
+                result.CalisanAdi = kisi;
+                result.IsSuccess = true;
+                UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month, result.CalisanAdi);
+                return result;
+            }
+        }
+
+
         if (ContainsAny(lower, "maaş") && ContainsAny(lower, "ne kadar"))
         {
             var kisi = ExtractPersonName(lower);
@@ -493,6 +562,18 @@ public class QueryInterpreter
         switch (Context.CurrentTopic)
         {
             case TopicType.Maas:
+
+    if (ContainsAny(text, "maaşı kapanmayan", "maasi kapanmayan", "kapanmayan"))
+        return "MaasiKapanmayanCalisanlar";
+
+    if (ContainsAny(text, "oran", "avans oranı", "avans orani"))
+        return "MaasAvansOrani";
+
+    if (ContainsAny(text, "ortalama", "maaş ortalaması", "maas ortalamasi"))
+        return "OrtalamaMaas";
+
+    if (ContainsAny(text, "son maaş", "son maas", "son ödeme", "son odeme"))
+        return "SonMaasOdemesi";
 
     if (ContainsAny(text, "detay", "detay ver", "listele"))
         return "MaasOdemeDagilim";

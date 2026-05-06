@@ -192,6 +192,28 @@ public class MuhasebeApiClient
 
     public async Task<CalisanAvansApiResponse> GetCalisanAvansToplamAsync(string ad, string dateRange, int? year, int? month)
         => await PostJsonAsync("/api/ai/calisan-avans-toplam", Request(dateRange, year, month, ad));
+
+    public async Task<CalisanAvansApiResponse> GetPersonelGideriAsync(int? year, int? month)
+        => await PostJsonAsync("/api/ai/personel-gideri", Request(year: year, month: month));
+
+    public async Task<CalisanAvansApiResponse> GetOrtalamaMaasAsync(int? year, int? month)
+        => await PostJsonAsync("/api/ai/ortalama-maas", Request(year: year, month: month));
+
+    public async Task<CalisanAvansApiResponse> GetSonMaasOdemesiAsync()
+        => await PostEmptyAsync("/api/ai/son-maas-odemesi");
+
+    public async Task<CalisanAvansApiResponse> GetCalisanKalanMaasAsync(string ad, int? year, int? month)
+        => await PostJsonAsync("/api/ai/calisan-kalan-maas", Request(year: year, month: month, calisanAdi: ad));
+
+    public async Task<CalisanAvansApiResponse> GetMaasAvansOraniAsync(int? year, int? month)
+        => await PostJsonAsync("/api/ai/maas-avans-orani", Request(year: year, month: month));
+
+    public async Task<CalisanAvansApiResponse> GetMaasiKapanmayanCalisanlarAsync(int? year, int? month)
+        => await PostJsonAsync("/api/ai/maasi-kapanmayan-calisanlar", Request(year: year, month: month));
+
+    public async Task<CalisanAvansApiResponse> GetCalisanMaasOzetAsync(string ad, int? year, int? month)
+        => await PostJsonAsync("/api/ai/calisan-maas-ozet", Request(year: year, month: month, calisanAdi: ad));
+
     public async Task<CalisanAvansApiResponse> GetCalisanMaasToplamAsync(string ad, int? year, int? month)
     => await PostJsonAsync("/api/ai/calisan-maas-toplam",
         new CalisanAvansApiRequest

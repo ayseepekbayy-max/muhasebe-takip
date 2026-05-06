@@ -124,6 +124,34 @@ public class QueryExecutor
                     intent.CalisanAdi,
                     intent.Year,
                     intent.Month)).Message;
+
+            case "PersonelGideri":
+                return (await _apiClient.GetPersonelGideriAsync(intent.Year, intent.Month)).Message;
+
+            case "OrtalamaMaas":
+                return (await _apiClient.GetOrtalamaMaasAsync(intent.Year, intent.Month)).Message;
+
+            case "SonMaasOdemesi":
+                return (await _apiClient.GetSonMaasOdemesiAsync()).Message;
+
+            case "CalisanKalanMaas":
+                return (await _apiClient.GetCalisanKalanMaasAsync(
+                    intent.CalisanAdi,
+                    intent.Year,
+                    intent.Month)).Message;
+
+            case "MaasAvansOrani":
+                return (await _apiClient.GetMaasAvansOraniAsync(intent.Year, intent.Month)).Message;
+
+            case "MaasiKapanmayanCalisanlar":
+                return (await _apiClient.GetMaasiKapanmayanCalisanlarAsync(intent.Year, intent.Month)).Message;
+
+            case "CalisanMaasOzet":
+                return (await _apiClient.GetCalisanMaasOzetAsync(
+                    intent.CalisanAdi,
+                    intent.Year,
+                    intent.Month)).Message;
+
             case "CalisanPuantaj":
                 return await GetCalisanPuantajAsync(intent);
 
