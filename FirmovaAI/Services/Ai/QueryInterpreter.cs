@@ -78,6 +78,61 @@ public class QueryInterpreter
         // KÂR / ANALİZ
         // =========================
 
+
+        if (ContainsAny(lower, "akıllı işletme yorumu", "akilli isletme yorumu", "işletme yorumu", "isletme yorumu", "bu ay işletme durumum nasıl", "bu ay isletme durumum nasil", "işletme durumum nasıl", "isletme durumum nasil"))
+        {
+            result.Intent = "AkilliIsletmeYorumu";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
+        if (ContainsAny(lower, "kasam arttı mı", "kasam artti mi", "kasa arttı mı", "kasa artti mi", "kasam azaldı mı", "kasam azaldi mi", "kasa azaldı mı", "kasa azaldi mi", "kasa artış", "kasa artis", "kasa azalış", "kasa azalis"))
+        {
+            result.Intent = "KasaArtisAzalis";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Kasa, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
+        if (ContainsAny(lower, "son 7 gün kasa", "son yedi gün kasa", "son 7 gun kasa", "son yedi gun kasa", "haftalık kasa", "haftalik kasa"))
+        {
+            result.Intent = "Son7GunKasaOzeti";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Kasa, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
+        if (ContainsAny(lower, "günlük ortalama gider", "gunluk ortalama gider", "günlük gider ortalaması", "gunluk gider ortalamasi", "ortalama gider"))
+        {
+            result.Intent = "GunlukOrtalamaGider";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Kasa, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
+        if (ContainsAny(lower, "en fazla devamsızlık", "en fazla devamsizlik", "en çok devamsızlık", "en cok devamsizlik", "devamsızlık yapan", "devamsizlik yapan"))
+        {
+            result.Intent = "EnCokDevamsizlikYapan";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
+        if (ContainsAny(lower, "devamsızlığı kaç", "devamsizligi kac", "devamsızlık kaç", "devamsizlik kac", "kaç gün gelmedi", "kac gun gelmedi", "puantaj özeti", "puantaj ozeti"))
+        {
+            var kisi = ExtractPersonName(lower);
+
+            if (!string.IsNullOrWhiteSpace(kisi))
+            {
+                result.Intent = "CalisanDevamsizlik";
+                result.CalisanAdi = kisi;
+                result.IsSuccess = true;
+                UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month, result.CalisanAdi);
+                return result;
+            }
+        }
+
         if (ContainsAny(lower, "kâr", "kar") &&
             ContainsAny(lower, "ettim", "var mı", "ediyor muyum"))
         {
@@ -604,6 +659,15 @@ public class QueryInterpreter
             return "ToplamAvans";
 
             case TopicType.Kasa:
+                if (ContainsAny(text, "son 7", "son yedi", "haftalık", "haftalik"))
+                    return "Son7GunKasaOzeti";
+
+                if (ContainsAny(text, "ortalama", "günlük", "gunluk"))
+                    return "GunlukOrtalamaGider";
+
+                if (ContainsAny(text, "arttı", "artti", "azaldı", "azaldi", "artış", "artis", "azalış", "azalis"))
+                    return "KasaArtisAzalis";
+
                 if (ContainsAny(text, "detay", "son işlemler", "hareketler", "listele"))
                     return "SonKasaHareketleri";
 
@@ -643,6 +707,12 @@ public class QueryInterpreter
                 return "CariSayisi";
 
             case TopicType.Genel:
+                if (ContainsAny(text, "yorum", "analiz", "akıllı", "akilli"))
+                    return "AkilliIsletmeYorumu";
+
+                if (ContainsAny(text, "devamsızlık", "devamsizlik", "gelmedi"))
+                    return "EnCokDevamsizlikYapan";
+
                 if (ContainsAny(text, "geçen aya göre", "karşılaştır"))
                     return "AylikKarsilastirma";
 

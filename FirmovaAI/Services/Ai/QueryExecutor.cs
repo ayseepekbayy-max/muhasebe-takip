@@ -152,6 +152,28 @@ public class QueryExecutor
                     intent.Year,
                     intent.Month)).Message;
 
+
+            case "KasaArtisAzalis":
+                return (await _apiClient.GetKasaArtisAzalisAsync(intent.Year, intent.Month)).Message;
+
+            case "Son7GunKasaOzeti":
+                return (await _apiClient.GetSon7GunKasaOzetiAsync()).Message;
+
+            case "GunlukOrtalamaGider":
+                return (await _apiClient.GetGunlukOrtalamaGiderAsync(intent.Year, intent.Month)).Message;
+
+            case "EnCokDevamsizlikYapan":
+                return (await _apiClient.GetEnCokDevamsizlikYapanAsync(intent.Year, intent.Month)).Message;
+
+            case "CalisanDevamsizlik":
+                return (await _apiClient.GetCalisanDevamsizlikAsync(
+                    intent.CalisanAdi,
+                    intent.Year,
+                    intent.Month)).Message;
+
+            case "AkilliIsletmeYorumu":
+                return (await _apiClient.GetAkilliIsletmeYorumuAsync(intent.Year, intent.Month)).Message;
+
             case "CalisanPuantaj":
                 return await GetCalisanPuantajAsync(intent);
 
