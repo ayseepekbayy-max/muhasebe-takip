@@ -1272,17 +1272,17 @@ static (DateTime baslangic, DateTime bitis, string ayAdi) GetDateRange(CalisanAv
 {
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
 
-    var now = DateTime.Now;
+    var now = DateTime.UtcNow;
 
     if (request.Year.HasValue && request.Month.HasValue)
     {
-        var baslangic = new DateTime(request.Year.Value, request.Month.Value, 1);
+        var baslangic = new DateTime(request.Year.Value, request.Month.Value, 1, 0, 0, 0, DateTimeKind.Utc);
         return (baslangic, baslangic.AddMonths(1), $"{ayAdlari[request.Month.Value]} {request.Year.Value}");
     }
 
     if (request.DateRange == "LastMonth")
     {
-        var baslangic = new DateTime(now.Year, now.Month, 1).AddMonths(-1);
+        var baslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
         return (baslangic, baslangic.AddMonths(1), $"{ayAdlari[baslangic.Month]} {baslangic.Year}");
     }
 
@@ -1292,7 +1292,7 @@ static (DateTime baslangic, DateTime bitis, string ayAdi) GetDateRange(CalisanAv
         return (baslangic, baslangic.AddDays(1), "Bugün");
     }
 
-    var thisMonth = new DateTime(now.Year, now.Month, 1);
+    var thisMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
     return (thisMonth, thisMonth.AddMonths(1), $"{ayAdlari[thisMonth.Month]} {thisMonth.Year}");
 }
 

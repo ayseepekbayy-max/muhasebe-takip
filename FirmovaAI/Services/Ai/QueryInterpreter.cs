@@ -423,6 +423,19 @@ public class QueryInterpreter
 
         if (ContainsAny(lower, "avans"))
         {
+            if (ContainsAny(lower,
+                "avans verdim mi", "avans verdik mi",
+                "bu ay avans", "toplam avans",
+                "avans var mı", "avans var mi",
+                "avans kaydı var mı", "avans kaydi var mi"))
+            {
+                result.CalisanAdi = "";
+                result.Intent = "ToplamAvans";
+                result.IsSuccess = true;
+                UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
+                return result;
+            }
+
             if (ContainsAny(lower, "kimlere", "hangi çalışan", "hangi çalışanlara", "hangi çalışanlarıma", "çalışanlarıma", "çalışanlara", "kim ne kadar", "kime ne kadar", "dağılım"))
             {
                 result.Intent = "AvansDagilim";
@@ -855,8 +868,8 @@ public class QueryInterpreter
     private static bool IsQuestionWord(string word)
     {
         return ContainsAny(word,
-            "ayında", "ayinda", "bu", "geçen", "gecen",
-            "ne", "kadar", "kaç", "tl", "para",
+            "ay", "ayında", "ayinda", "bu", "geçen", "gecen",
+            "ne", "kadar", "kaç", "tl", "para", "mi", "mı", "mu", "mü",
             "aldı", "aldi", "verdim", "verdik", "verilen",
             "ödedim", "odedim", "ödeme", "odeme", "yaptım", "yaptik", "yaptık",
             "kim", "kime", "kimlere", "hangi", "çalışan", "çalışanlara", "çalışanlarıma",
@@ -908,7 +921,7 @@ public class QueryInterpreter
         return ContainsAny(word,
             "ocak", "şubat", "subat", "mart", "nisan", "mayıs", "mayis", "haziran",
             "temmuz", "ağustos", "agustos", "eylül", "eylul", "ekim", "kasım", "kasim", "aralık", "aralik",
-            "bugün", "bugun", "dün", "dun", "bu", "geçen", "gecen");
+            "bugün", "bugun", "dün", "dun", "bu", "geçen", "gecen", "ay");
     }
 
     private static (int? year, int? month) ExtractMonthInfo(string text)
