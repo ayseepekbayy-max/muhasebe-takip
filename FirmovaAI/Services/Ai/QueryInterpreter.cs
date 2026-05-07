@@ -51,6 +51,31 @@ public class QueryInterpreter
             Context = new ConversationContext();
         }
 
+        // EN ÜST ÖNCELİK: Çalışan adı geçen avans soruları.
+        // Bu blok özellikle "Ayşe Nur avansı ne kadar?" gibi soruların
+        // genel toplam avansa düşmesini engeller.
+        if (ContainsAny(lower, "avans"))
+        {
+            var erkenKisiAdi = ExtractPersonName(lower);
+
+            if (!string.IsNullOrWhiteSpace(erkenKisiAdi)
+                && !IsDateWord(erkenKisiAdi))
+            {
+                result.CalisanAdi = erkenKisiAdi;
+                result.Intent = "CalisanAvansToplam";
+                result.IsSuccess = true;
+
+                UpdateContext(
+                    TopicType.Avans,
+                    result.Intent,
+                    result.Year,
+                    result.Month,
+                    result.CalisanAdi);
+
+                return result;
+            }
+        }
+
         if (IsFollowUpQuestion(lower) && !StartsNewTopic(lower))
         {
             var followUpIntent = ResolveFollowUpIntent(lower);
@@ -423,59 +448,117 @@ public class QueryInterpreter
 
         if (ContainsAny(lower, "avans"))
         {
-            if (ContainsAny(lower,
-                "avans verdim mi", "avans verdik mi",
-                "bu ay avans", "toplam avans",
-                "avans var mı", "avans var mi",
-                "avans kaydı var mı", "avans kaydi var mi"))
-            {
-                result.CalisanAdi = "";
-                result.Intent = "ToplamAvans";
-                result.IsSuccess = true;
-                UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
-                return result;
-            }
-
-            if (ContainsAny(lower, "kimlere", "hangi çalışan", "hangi çalışanlara", "hangi çalışanlarıma", "çalışanlarıma", "çalışanlara", "kim ne kadar", "kime ne kadar", "dağılım"))
-            {
-                result.Intent = "AvansDagilim";
-                result.IsSuccess = true;
-                UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
-                return result;
-            }
-
-            if (ContainsAny(lower, "en çok kim", "en fazla kim", "en çok alan", "en fazla alan"))
-            {
-                result.Intent = "EnCokAvansAlan";
-                result.IsSuccess = true;
-                UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
-                return result;
-            }
-
-            if (ContainsAny(lower, "son", "en son"))
-            {
-                result.Intent = "SonAvansVerilenKisi";
-                result.IsSuccess = true;
-                UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
-                return result;
-            }
-
             var kisiAdi = ExtractPersonName(lower);
 
+            // ÇALIŞAN BAZLI AVANS
             if (!string.IsNullOrWhiteSpace(kisiAdi)
-                && !IsTotalQuestion(lower)
                 && !IsDateWord(kisiAdi))
             {
                 result.CalisanAdi = kisiAdi;
                 result.Intent = "CalisanAvansToplam";
                 result.IsSuccess = true;
-                UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month, result.CalisanAdi);
+
+                UpdateContext(
+                    TopicType.Avans,
+                    result.Intent,
+                    result.Year,
+                    result.Month,
+                    result.CalisanAdi);
+
+                return result;
+            }
+
+            // GENEL AVANS
+            if (ContainsAny(lower,
+                "avans verdim mi",
+                "avans verdik mi",
+                "bu ay avans",
+                "toplam avans",
+                "avans var mı",
+                "avans var mi",
+                "avans kaydı var mı",
+                "avans kaydi var mi"))
+            {
+                result.CalisanAdi = "";
+                result.Intent = "ToplamAvans";
+                result.IsSuccess = true;
+
+                UpdateContext(
+                    TopicType.Avans,
+                    result.Intent,
+                    result.Year,
+                    result.Month);
+
+                return result;
+            }
+
+            // AVANS DAĞILIMI
+            if (ContainsAny(lower,
+                "kimlere",
+                "hangi çalışan",
+                "hangi çalışanlara",
+                "hangi çalışanlarıma",
+                "çalışanlarıma",
+                "çalışanlara",
+                "kim ne kadar",
+                "kime ne kadar",
+                "dağılım"))
+            {
+                result.Intent = "AvansDagilim";
+                result.IsSuccess = true;
+
+                UpdateContext(
+                    TopicType.Avans,
+                    result.Intent,
+                    result.Year,
+                    result.Month);
+
+                return result;
+            }
+
+            // EN ÇOK AVANS ALAN
+            if (ContainsAny(lower,
+                "en çok kim",
+                "en fazla kim",
+                "en çok alan",
+                "en fazla alan"))
+            {
+                result.Intent = "EnCokAvansAlan";
+                result.IsSuccess = true;
+
+                UpdateContext(
+                    TopicType.Avans,
+                    result.Intent,
+                    result.Year,
+                    result.Month);
+
+                return result;
+            }
+
+            // SON AVANS
+            if (ContainsAny(lower, "son", "en son"))
+            {
+                result.Intent = "SonAvansVerilenKisi";
+                result.IsSuccess = true;
+
+                UpdateContext(
+                    TopicType.Avans,
+                    result.Intent,
+                    result.Year,
+                    result.Month);
+
                 return result;
             }
 
             result.Intent = "ToplamAvans";
             result.IsSuccess = true;
-            UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
+
+            UpdateContext(
+                TopicType.Avans,
+                result.Intent,
+                result.Year,
+                result.Month);
+
             return result;
         }
 
@@ -813,40 +896,131 @@ public class QueryInterpreter
         if (string.IsNullOrWhiteSpace(text))
             return null;
 
-        var normalized = text
-            .Replace("’", "'")
-            .Replace("`", "'");
+        var normalized = NormalizeNameText(text);
 
-        normalized = normalized
-            .Replace("'ye", " ")
-            .Replace("'ya", " ")
-            .Replace("'e", " ")
-            .Replace("'a", " ");
-
-        var words = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var rawWord in words)
+        // Programda kullandığın çalışan adları burada tek merkezden yönetilir.
+        // Yeni çalışan eklenirse sadece bu listeye eklemek yeterli olur.
+        var calisanAdlari = new[]
         {
-            var word = rawWord
-                .Trim()
-                .Trim(',', '.', '?', '!', ':', ';')
-                .ToLowerInvariant();
+            "Ali Samet Bulut",
+            "Ayşe Nur Pekbay",
+            "Ozan Kılıç",
+            "Nurettin El Müslüm"
+        };
 
-            word = RemoveTurkishSuffixes(word);
+        var normalizedWords = normalized
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .ToList();
 
-            if (word.Length < 2)
-                continue;
+        var stopWords = new HashSet<string>
+        {
+            "avans", "avansi", "avansı", "maas", "maaş", "maasi", "maaşı",
+            "ne", "kadar", "kac", "kaç", "tl", "para",
+            "bu", "ay", "ayinda", "ayında", "icin", "için",
+            "verdim", "verdik", "aldı", "aldi", "odeme", "ödeme",
+            "mi", "mı", "mu", "mü", "var", "yok", "toplam",
+            "ocak", "subat", "şubat", "mart", "nisan", "mayis", "mayıs",
+            "haziran", "temmuz", "agustos", "ağustos", "eylul", "eylül",
+            "ekim", "kasim", "kasım", "aralik", "aralık"
+        };
 
-            if (IsDateWord(word) || IsQuestionWord(word))
-                continue;
+        // 1) Tam isim eşleşmesi: "ayşe nur pekbay"
+        foreach (var ad in calisanAdlari.OrderByDescending(x => x.Length))
+        {
+            var normAd = NormalizeNameText(ad);
 
-            if (ContainsAny(word, "avans", "maaş", "maas"))
-                continue;
+            if (ContainsWholePhrase(normalized, normAd))
+                return ad;
+        }
 
-            return word;
+        // 2) Ad + ikinci ad / soyad eşleşmesi:
+        // "ayşe nur", "ali samet", "ozan kılıç", "nurettin el"
+        foreach (var ad in calisanAdlari.OrderByDescending(x => x.Length))
+        {
+            var adWords = NormalizeNameText(ad)
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .ToList();
+
+            for (int size = Math.Min(2, adWords.Count); size >= 2; size--)
+            {
+                for (int i = 0; i <= adWords.Count - size; i++)
+                {
+                    var phrase = string.Join(" ", adWords.Skip(i).Take(size));
+
+                    if (ContainsWholePhrase(normalized, phrase))
+                        return ad;
+                }
+            }
+        }
+
+        // 3) Tek kelime eşleşmesi:
+        // Burada sadece tam kelime aranır. "nur" kelimesi "nurettin" içinde sayılmaz.
+        var adayKelimeler = normalizedWords
+            .Where(x => !stopWords.Contains(x))
+            .Where(x => x.Length >= 2)
+            .ToList();
+
+        foreach (var kelime in adayKelimeler)
+        {
+            var eslesenler = calisanAdlari
+                .Where(ad =>
+                {
+                    var adWords = NormalizeNameText(ad)
+                        .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                    return adWords.Any(w => w == kelime);
+                })
+                .ToList();
+
+            // Tek bir çalışanla net eşleşiyorsa onu döndür.
+            if (eslesenler.Count == 1)
+                return eslesenler[0];
+
+            // Birden fazla eşleşme varsa yanlış kişiye gitmesin.
+            // Örneğin ortak kelime varsa boş bırakıyoruz.
+            if (eslesenler.Count > 1)
+                return null;
         }
 
         return null;
+    }
+
+    private static string NormalizeNameText(string text)
+    {
+        var value = (text ?? "")
+            .ToLowerInvariant()
+            .Replace("’", "'")
+            .Replace("`", "'");
+
+        value = value
+            .Replace("'ye", " ")
+            .Replace("'ya", " ")
+            .Replace("'e", " ")
+            .Replace("'a", " ")
+            .Replace(".", " ")
+            .Replace(",", " ")
+            .Replace("?", " ")
+            .Replace("!", " ")
+            .Replace(":", " ")
+            .Replace(";", " ");
+
+        value = value
+            .Replace("â", "a")
+            .Replace("î", "i")
+            .Replace("û", "u");
+
+        value = System.Text.RegularExpressions.Regex.Replace(value, @"\s+", " ").Trim();
+
+        return value;
+    }
+
+    private static bool ContainsWholePhrase(string text, string phrase)
+    {
+        if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(phrase))
+            return false;
+
+        var pattern = $@"(^|\s){System.Text.RegularExpressions.Regex.Escape(phrase)}(\s|$)";
+        return System.Text.RegularExpressions.Regex.IsMatch(text, pattern);
     }
 
     private static string RemoveTurkishSuffixes(string word)
