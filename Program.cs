@@ -253,7 +253,7 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest reques
         var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
         var ayAdi = ayAdlari[month];
 
-        var ad = request.CalisanAdi.Trim().ToLower();
+        var ad = (request.CalisanAdi ?? "").Trim().ToLower();
 
         var calisanQuery = db.Calisanlar.AsQueryable();
 
@@ -882,9 +882,24 @@ app.MapPost("/api/ai/kar-durumu", async (AppDbContext db, CalisanAvansApiRequest
 
     var kar = gelir - gider;
 
-    var mesaj = kar >= 0
-        ? $"{ayAdi} kâr etmiş görünüyorsun. Gelir: {gelir:N2} TL, gider: {gider:N2} TL, kâr: {kar:N2} TL"
-        : $"{ayAdi} zarar etmiş görünüyorsun. Gelir: {gelir:N2} TL, gider: {gider:N2} TL, zarar: {Math.Abs(kar):N2} TL";
+    string mesaj;
+
+    if (gelir == 0 && gider == 0)
+    {
+        mesaj = $"{ayAdi} için gelir veya gider kaydı bulunamadı. Bu yüzden kâr/zarar yorumu yapılamıyor.";
+    }
+    else if (kar > 0)
+    {
+        mesaj = $"{ayAdi} kâr etmiş görünüyorsun. Gelir: {gelir:N2} TL, gider: {gider:N2} TL, kâr: {kar:N2} TL";
+    }
+    else if (kar < 0)
+    {
+        mesaj = $"{ayAdi} zarar etmiş görünüyorsun. Gelir: {gelir:N2} TL, gider: {gider:N2} TL, zarar: {Math.Abs(kar):N2} TL";
+    }
+    else
+    {
+        mesaj = $"{ayAdi} döneminde gelir ve gider birbirine eşit görünüyor. Gelir: {gelir:N2} TL, gider: {gider:N2} TL, net sonuç: 0.00 TL";
+    }
 
     return Results.Json(new CalisanAvansToplamResponse
     {
@@ -1100,9 +1115,9 @@ app.MapPost("/api/ai/maas-odeme-kontrol", async (AppDbContext db, CalisanAvansAp
     var ayAdi = ayAdlari[month];
 
     var kaynak = arsivToplam > 0 && aktifToplam > 0
-        ? "Aktif kayıtlar ve maaş arşivi birlikte hesaplandı. Aynı isimli çalışan için aynı ayda birden fazla maaş arşivi varsa en son kayıt dikkate alındı."
+        ? "Aktif kayıtlar ve maaş arşivi birlikte hesaplandı."
         : arsivToplam > 0
-            ? "Bu bilgi maaş arşivinden alındı. Aynı isimli çalışan için aynı ayda birden fazla maaş arşivi varsa en son kayıt dikkate alındı."
+            ? "Bu bilgi maaş arşivinden alındı."
             : "Bu bilgi aktif kayıtlardan alındı.";
 
     return Results.Json(new CalisanAvansToplamResponse
@@ -1215,9 +1230,9 @@ app.MapPost("/api/ai/maas-odeme-dagilim", async (AppDbContext db, CalisanAvansAp
     var arsivToplam = arsivListe.Sum(x => x.Toplam);
 
     if (aktifToplam > 0 && arsivToplam > 0)
-        mesaj += "\nAktif kayıtlar ve maaş arşivi birlikte hesaplandı. Aynı isimli çalışan için aynı ayda birden fazla maaş arşivi varsa en son kayıt dikkate alındı.";
+        mesaj += "\nAktif kayıtlar ve maaş arşivi birlikte hesaplandı.";
     else if (arsivToplam > 0)
-        mesaj += "\nBu bilgi maaş arşivinden alındı. Aynı isimli çalışan için aynı ayda birden fazla maaş arşivi varsa en son kayıt dikkate alındı.";
+        mesaj += "\nBu bilgi maaş arşivinden alındı.";
     else
         mesaj += "\nBu bilgi aktif kayıtlardan alındı.";
 
@@ -1742,7 +1757,7 @@ app.MapPost("/api/ai/ortalama-maas", async (AppDbContext db, CalisanAvansApiRequ
     {
         Success = true,
         Total = ortalama,
-        Message = $"{ayAdi} ayı ortalama maaş: {ortalama:N2} TL\nHesaplanan çalışan sayısı: {liste.Count}\nAynı isimli çalışan için aynı ayda birden fazla maaş arşivi varsa en son kayıt dikkate alındı."
+        Message = $"{ayAdi} ayı ortalama maaş: {ortalama:N2} TL\nHesaplanan çalışan sayısı: {liste.Count}\n"
     });
 });
 
@@ -1951,7 +1966,7 @@ app.MapPost("/api/ai/maas-avans-orani", async (AppDbContext db, CalisanAvansApiR
             $"{ayAdi} maaşa göre avans oranı: %{oran:N2}\n\n" +
             $"- Toplam maaş: {toplamMaas:N2} TL\n" +
             $"- Toplam avans: {toplamAvans:N2} TL\n" +
-            $"Aynı isimli çalışan için aynı ayda birden fazla maaş arşivi varsa en son kayıt dikkate alındı."
+            $""
     });
 });
 
@@ -2192,7 +2207,7 @@ app.MapPost("/api/ai/kasa-artis-azalis", async (AppDbContext db, CalisanAvansApi
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var sonuc = giris - cikis;
-    var yorum = sonuc >= 0 ? "Kasa bu dönemde artmış görünüyor." : "Kasa bu dönemde azalmış görünüyor.";
+    var yorum = sonuc > 0 ? "Kasa bu dönemde artmış görünüyor." : sonuc < 0 ? "Kasa bu dönemde azalmış görünüyor." : "Bu dönemde kasa artışı veya azalışı görünmüyor.";
 
     return Results.Json(new CalisanAvansToplamResponse
     {

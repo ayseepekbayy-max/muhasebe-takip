@@ -76,6 +76,26 @@ public class QueryInterpreter
             }
         }
 
+        if (ContainsAny(lower, "devamsızlık", "devamsizlik", "puantaj", "gelmedi", "izinli"))
+        {
+            var kisi = ExtractPersonName(lower);
+
+            if (!string.IsNullOrWhiteSpace(kisi) &&
+                ContainsAny(lower, "devamsızlığı", "devamsizligi", "kaç gün", "kac gun", "puantaj özeti", "puantaj ozeti"))
+            {
+                result.Intent = "CalisanDevamsizlik";
+                result.CalisanAdi = kisi;
+                result.IsSuccess = true;
+                UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month, result.CalisanAdi);
+                return result;
+            }
+
+            result.Intent = "EnCokDevamsizlikYapan";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
         if (IsFollowUpQuestion(lower) && !StartsNewTopic(lower))
         {
             var followUpIntent = ResolveFollowUpIntent(lower);
@@ -840,7 +860,8 @@ public class QueryInterpreter
         return ContainsAny(text,
             "avans", "maaş", "maas", "kasa", "stok", "müşteri", "musteri",
             "cari", "alıcı", "alici", "satıcı", "satici",
-            "gelir", "gider", "kâr", "kar", "borç", "borc");
+            "gelir", "gider", "kâr", "kar", "borç", "borc",
+            "devamsızlık", "devamsizlik", "puantaj", "gelmedi", "izinli");
     }
 
     private static void UpdateContextFromIntent(string intent, string? calisanAdi = null)
