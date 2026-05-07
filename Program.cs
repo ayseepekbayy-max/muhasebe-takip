@@ -253,17 +253,24 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest reques
         var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
         var ayAdi = ayAdlari[month];
 
-        var ad = request.CalisanAdi.ToLower();
+        var ad = request.CalisanAdi.Trim().ToLower();
 
         var calisanQuery = db.Calisanlar.AsQueryable();
 
         if (firmaId != null)
             calisanQuery = calisanQuery.Where(x => x.FirmaId == firmaId);
 
-        var calisan = await calisanQuery
-            .FirstOrDefaultAsync(x =>
-                x.AdSoyad.ToLower().Contains(ad) ||
-                x.Ad.ToLower().Contains(ad));
+        var tumCalisanlar = await calisanQuery.ToListAsync();
+
+        var calisan = tumCalisanlar.FirstOrDefault(x =>
+        {
+            var tamAd = (x.AdSoyad ?? "").Trim().ToLower();
+            var kisaAd = (x.Ad ?? "").Trim().ToLower();
+
+            return tamAd == ad
+                || tamAd.StartsWith(ad + " ")
+                || kisaAd == ad;
+        });
 
         if (calisan == null)
         {
