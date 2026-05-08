@@ -184,12 +184,15 @@ public class QueryExecutor
 
     private async Task<string> GetCalisanPuantajAsync(QueryIntent intent)
     {
-        await Task.CompletedTask;
-
         if (string.IsNullOrWhiteSpace(intent.CalisanAdi))
             return "Çalışan adı anlaşılamadı.";
 
-        return "Çalışan puantaj sorgusu için API tarafındaki bağlantı henüz tamamlanmadı.";
+        var result = await _apiClient.GetCalisanPuantajAsync(
+            intent.CalisanAdi,
+            intent.Year,
+            intent.Month);
+
+        return result.Message;
     }
 
     private async Task<string> GetCalisanAvansToplamAsync(QueryIntent intent)

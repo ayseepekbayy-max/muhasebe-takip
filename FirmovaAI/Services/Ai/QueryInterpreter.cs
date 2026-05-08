@@ -51,11 +51,27 @@ public class QueryInterpreter
             Context = new ConversationContext();
         }
 
-        // EN ÜST ÖNCELİK: Çalışan adı geçen avans soruları.
-        // Bu blok özellikle "Ayşe Nur avansı ne kadar?" gibi soruların
-        // genel toplam avansa düşmesini engeller.
+        // EN ÜST ÖNCELİK: AVANS
+        // "En fazla avans alan kim?" gibi genel sorular önce yakalanır.
+        // Çalışan adı varsa çalışan bazlı avansa yönlenir.
         if (ContainsAny(lower, "avans"))
         {
+            if (ContainsAny(lower,
+                "en çok avans", "en cok avans",
+                "en fazla avans",
+                "en çok avans alan", "en cok avans alan",
+                "en fazla avans alan",
+                "en çok kim avans", "en cok kim avans",
+                "en fazla kim avans",
+                "en çok avansı kim", "en cok avansi kim",
+                "en fazla avansı kim", "en fazla avansi kim"))
+            {
+                result.Intent = "EnCokAvansAlan";
+                result.IsSuccess = true;
+                UpdateContext(TopicType.Avans, result.Intent, result.Year, result.Month);
+                return result;
+            }
+
             var erkenKisiAdi = ExtractPersonName(lower);
 
             if (!string.IsNullOrWhiteSpace(erkenKisiAdi)
@@ -240,7 +256,25 @@ public class QueryInterpreter
         // =========================
 
 
-        if (ContainsAny(lower, "personel gideri", "personel masrafı", "personel masrafi", "çalışan gideri", "calisan gideri", "çalışan masrafı", "calisan masrafi", "toplam personel gideri"))
+        if (ContainsAny(lower,
+            "en yüksek maaş",
+            "en yuksek maas",
+            "en yüksek maaşı",
+            "en yuksek maasi",
+            "en fazla maaş",
+            "en fazla maas",
+            "en yüksek maaşı kim aldı",
+            "en yuksek maasi kim aldi",
+            "en fazla maaşı kim aldı",
+            "en fazla maasi kim aldi"))
+        {
+            result.Intent = "MaasOdemeDagilim";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
+        if (ContainsAny(lower, "personel gideri", "personel masrafı", "personel masrafi", "personel maliyeti", "personel maliyet", "toplam personel maliyeti", "toplam personel maliyet", "çalışan gideri", "calisan gideri", "çalışan masrafı", "calisan masrafi", "çalışan maliyeti", "calisan maliyeti", "çalışan maliyet", "calisan maliyet", "toplam personel gideri"))
         {
             result.Intent = "PersonelGideri";
             result.IsSuccess = true;
@@ -539,9 +573,14 @@ public class QueryInterpreter
             // EN ÇOK AVANS ALAN
             if (ContainsAny(lower,
                 "en çok kim",
+                "en cok kim",
                 "en fazla kim",
                 "en çok alan",
-                "en fazla alan"))
+                "en cok alan",
+                "en fazla alan",
+                "en çok avans",
+                "en cok avans",
+                "en fazla avans"))
             {
                 result.Intent = "EnCokAvansAlan";
                 result.IsSuccess = true;
@@ -919,88 +958,51 @@ public class QueryInterpreter
 
         var normalized = NormalizeNameText(text);
 
-        // Programda kullandığın çalışan adları burada tek merkezden yönetilir.
-        // Yeni çalışan eklenirse sadece bu listeye eklemek yeterli olur.
-        var calisanAdlari = new[]
+        // Çalışan isimleri ve kullanılabilecek kısa yazımlar.
+        // Tüm çalışanlar için aynı eşleştirme mantığı kullanılır.
+        var calisanEslesmeleri = new Dictionary<string, string>
         {
-            "Ali Samet Bulut",
-            "Ayşe Nur Pekbay",
-            "Ozan Kılıç",
-            "Nurettin El Müslüm"
+            // Ali Samet Bulut
+            { "ali samet bulut", "Ali Samet Bulut" },
+            { "ali samet", "Ali Samet Bulut" },
+            { "samet bulut", "Ali Samet Bulut" },
+            { "ali", "Ali Samet Bulut" },
+            { "samet", "Ali Samet Bulut" },
+            { "bulut", "Ali Samet Bulut" },
+
+            // Ayşe Nur Pekbay
+            { "ayşe nur pekbay", "Ayşe Nur Pekbay" },
+            { "ayse nur pekbay", "Ayşe Nur Pekbay" },
+            { "ayşe nur", "Ayşe Nur Pekbay" },
+            { "ayse nur", "Ayşe Nur Pekbay" },
+            { "ayşenur", "Ayşe Nur Pekbay" },
+            { "aysenur", "Ayşe Nur Pekbay" },
+            { "ayşe", "Ayşe Nur Pekbay" },
+            { "ayse", "Ayşe Nur Pekbay" },
+            { "pekbay", "Ayşe Nur Pekbay" },
+
+            // Ozan Kılıç
+            { "ozan kılıç", "Ozan Kılıç" },
+            { "ozan kilic", "Ozan Kılıç" },
+            { "ozan", "Ozan Kılıç" },
+            { "kılıç", "Ozan Kılıç" },
+            { "kilic", "Ozan Kılıç" },
+
+            // Nurettin El Müslüm
+            { "nurettin el müslüm", "Nurettin El Müslüm" },
+            { "nurettin el muslim", "Nurettin El Müslüm" },
+            { "nurettin el", "Nurettin El Müslüm" },
+            { "el müslüm", "Nurettin El Müslüm" },
+            { "el muslim", "Nurettin El Müslüm" },
+            { "nurettin", "Nurettin El Müslüm" },
+            { "müslüm", "Nurettin El Müslüm" },
+            { "muslim", "Nurettin El Müslüm" }
         };
 
-        var normalizedWords = normalized
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .ToList();
-
-        var stopWords = new HashSet<string>
+        foreach (var item in calisanEslesmeleri.OrderByDescending(x => x.Key.Length))
         {
-            "avans", "avansi", "avansı", "maas", "maaş", "maasi", "maaşı",
-            "ne", "kadar", "kac", "kaç", "tl", "para",
-            "bu", "ay", "ayinda", "ayında", "icin", "için",
-            "verdim", "verdik", "aldı", "aldi", "odeme", "ödeme",
-            "mi", "mı", "mu", "mü", "var", "yok", "toplam",
-            "ocak", "subat", "şubat", "mart", "nisan", "mayis", "mayıs",
-            "haziran", "temmuz", "agustos", "ağustos", "eylul", "eylül",
-            "ekim", "kasim", "kasım", "aralik", "aralık"
-        };
-
-        // 1) Tam isim eşleşmesi: "ayşe nur pekbay"
-        foreach (var ad in calisanAdlari.OrderByDescending(x => x.Length))
-        {
-            var normAd = NormalizeNameText(ad);
-
-            if (ContainsWholePhrase(normalized, normAd))
-                return ad;
-        }
-
-        // 2) Ad + ikinci ad / soyad eşleşmesi:
-        // "ayşe nur", "ali samet", "ozan kılıç", "nurettin el"
-        foreach (var ad in calisanAdlari.OrderByDescending(x => x.Length))
-        {
-            var adWords = NormalizeNameText(ad)
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                .ToList();
-
-            for (int size = Math.Min(2, adWords.Count); size >= 2; size--)
-            {
-                for (int i = 0; i <= adWords.Count - size; i++)
-                {
-                    var phrase = string.Join(" ", adWords.Skip(i).Take(size));
-
-                    if (ContainsWholePhrase(normalized, phrase))
-                        return ad;
-                }
-            }
-        }
-
-        // 3) Tek kelime eşleşmesi:
-        // Burada sadece tam kelime aranır. "nur" kelimesi "nurettin" içinde sayılmaz.
-        var adayKelimeler = normalizedWords
-            .Where(x => !stopWords.Contains(x))
-            .Where(x => x.Length >= 2)
-            .ToList();
-
-        foreach (var kelime in adayKelimeler)
-        {
-            var eslesenler = calisanAdlari
-                .Where(ad =>
-                {
-                    var adWords = NormalizeNameText(ad)
-                        .Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-                    return adWords.Any(w => w == kelime);
-                })
-                .ToList();
-
-            // Tek bir çalışanla net eşleşiyorsa onu döndür.
-            if (eslesenler.Count == 1)
-                return eslesenler[0];
-
-            // Birden fazla eşleşme varsa yanlış kişiye gitmesin.
-            // Örneğin ortak kelime varsa boş bırakıyoruz.
-            if (eslesenler.Count > 1)
-                return null;
+            if (ContainsWholePhrase(normalized, NormalizeNameText(item.Key)))
+                return item.Value;
         }
 
         return null;
@@ -1018,6 +1020,14 @@ public class QueryInterpreter
             .Replace("'ya", " ")
             .Replace("'e", " ")
             .Replace("'a", " ")
+            .Replace("'nin", " ")
+            .Replace("'nın", " ")
+            .Replace("'nun", " ")
+            .Replace("'nün", " ")
+            .Replace("'in", " ")
+            .Replace("'ın", " ")
+            .Replace("'un", " ")
+            .Replace("'ün", " ")
             .Replace(".", " ")
             .Replace(",", " ")
             .Replace("?", " ")
