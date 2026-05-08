@@ -817,6 +817,7 @@ app.MapPost("/api/ai/genel-ozet", async (AppDbContext db) =>
     });
 });
 app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansApiRequest req) =>
+app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansApiRequest req) =>
 {
     try
     {
@@ -833,8 +834,9 @@ app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansApiRe
         int year = req.Year ?? DateTime.UtcNow.Year;
         int month = req.Month ?? DateTime.UtcNow.Month;
 
-        var baslangic = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var bitis = baslangic.AddMonths(1);
+        var ayBaslangic = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var sonrakiAy = ayBaslangic.AddMonths(1);
+        var ayBitis = sonrakiAy.AddDays(-1);
 
         var firmaId = await db.Firmalar
             .Where(x => x.AktifMi)
@@ -844,12 +846,9 @@ app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansApiRe
 
         var ad = (req.CalisanAdi ?? "").Trim().ToLower();
 
-        var calisanQuery = db.Calisanlar.AsQueryable();
-
-        if (firmaId != null)
-            calisanQuery = calisanQuery.Where(x => x.FirmaId == firmaId);
-
-        var calisanlar = await calisanQuery.ToListAsync();
+        var calisanlar = await db.Calisanlar
+            .Where(x => firmaId == null || x.FirmaId == firmaId)
+            .ToListAsync();
 
         var calisan = calisanlar.FirstOrDefault(x =>
         {
@@ -867,23 +866,70 @@ app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansApiRe
             {
                 Success = false,
                 Total = 0,
-                Message = $"{req.CalisanAdi} isimli çalışan bulunamadı."
+                Message = $"{req.CalisanAdi} çalışanı bulunamadı."
             });
         }
 
-        var kayitlar = await db.Set<CalisanPuantaj>()
+        var kayitlar = await db.CalisanPuantajlari
             .Where(x =>
                 x.CalisanId == calisan.Id &&
-                x.Tarih >= baslangic &&
-                x.Tarih < bitis)
+                x.FirmaId == firmaId &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < sonrakiAy)
             .ToListAsync();
 
-        var geldi = kayitlar.Count(x => x.Durum == PuantajDurum.Geldi);
-        var gelmedi = kayitlar.Count(x => x.Durum == PuantajDurum.Gelmedi);
-        var izinli = kayitlar.Count(x => x.Durum == PuantajDurum.Izinli);
-        var yarim = kayitlar.Count(x => x.Durum == PuantajDurum.YarimGun);
+        int geldi = 0;
+        int gelmedi = 0;
+        int izinli = 0;
+        int yarimGun = 0;
 
-        var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
+        var bugun = DateTime.UtcNow.Date;
+
+        for (var gun = ayBaslangic; gun <= ayBitis; gun = gun.AddDays(1))
+        {
+            if (gun.DayOfWeek == DayOfWeek.Sunday)
+                continue;
+
+            var gelecekTarihMi = gun.Date > bugun;
+
+            if (gelecekTarihMi)
+                continue;
+
+            var kayit = kayitlar.FirstOrDefault(x =>
+                x.Tarih >= gun &&
+                x.Tarih < gun.AddDays(1));
+
+            var durum = kayit != null
+                ? kayit.Durum
+                : PuantajDurum.Gelmedi;
+
+            switch (durum)
+            {
+                case PuantajDurum.Geldi:
+                    geldi++;
+                    break;
+
+                case PuantajDurum.Gelmedi:
+                    gelmedi++;
+                    break;
+
+                case PuantajDurum.Izinli:
+                    izinli++;
+                    break;
+
+                case PuantajDurum.YarimGun:
+                    yarimGun++;
+                    break;
+            }
+        }
+
+        var ayAdlari = new[]
+        {
+            "", "Ocak", "Şubat", "Mart", "Nisan",
+            "Mayıs", "Haziran", "Temmuz", "Ağustos",
+            "Eylül", "Ekim", "Kasım", "Aralık"
+        };
+
         var ayAdi = ayAdlari[month];
 
         return Results.Json(new CalisanAvansToplamResponse
@@ -891,11 +937,11 @@ app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansApiRe
             Success = true,
             Total = gelmedi,
             Message =
-                $"{calisan.AdSoyad} {ayAdi} puantaj özeti:\n" +
-                $"- Geldi: {geldi}\n" +
-                $"- Gelmedi: {gelmedi}\n" +
-                $"- İzinli: {izinli}\n" +
-                $"- Yarım Gün: {yarim}"
+                $"{calisan.AdSoyad} {ayAdi} {year} puantaj/devamsızlık özeti:\n" +
+                $"- Geldi: {geldi} gün\n" +
+                $"- Gelmedi: {gelmedi} gün\n" +
+                $"- İzinli: {izinli} gün\n" +
+                $"- Yarım gün: {yarimGun} gün"
         });
     }
     catch (Exception ex)
@@ -908,7 +954,7 @@ app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansApiRe
             detail = ex.InnerException?.Message
         }, statusCode: 500);
     }
-});
+}));
 
 app.MapPost("/api/ai/kar-durumu", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
