@@ -16,6 +16,8 @@ public class QueryExecutor
         if (!intent.IsSuccess || string.IsNullOrWhiteSpace(intent.Intent))
             return "Sorunuzu anlayamadım.";
 
+        _apiClient.FirmaId = intent.FirmaId;
+
         switch (intent.Intent)
         {
             case "CalisanAvansToplam":

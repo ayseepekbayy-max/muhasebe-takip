@@ -57,6 +57,10 @@ public class IndexModel : PageModel
             else
             {
                 var sonuc = _interpreter.Interpret(Soru);
+
+                // TEST için geçici firma
+                sonuc.FirmaId = 1;
+
                 Cevap = await _executor.ExecuteAsync(sonuc);
             }
         }

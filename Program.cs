@@ -243,11 +243,7 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest reques
         var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
         var end = start.AddMonths(1);
 
-        var firmaId = await db.Firmalar
-            .Where(x => x.AktifMi)
-            .OrderBy(x => x.Id)
-            .Select(x => (int?)x.Id)
-            .FirstOrDefaultAsync();
+        var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
         var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
         var ayAdi = ayAdlari[month];
@@ -573,11 +569,14 @@ app.MapPost("/api/ai/kasa-bakiye", async (CalisanAvansApiRequest request, AppDbC
     }
 });
 
-app.MapPost("/api/ai/son-kasa-hareketleri", async (AppDbContext db) =>
+app.MapPost("/api/ai/son-kasa-hareketleri", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
+
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
     try
     {
         var liste = await db.KasaHareketleri
+            .Where(x => firmaId == null || x.FirmaId == firmaId)
             .OrderByDescending(x => x.Tarih)
             .ThenByDescending(x => x.Id)
             .Take(10)
@@ -634,11 +633,13 @@ app.MapPost("/api/ai/musteri-borc", async (AppDbContext db, CalisanAvansToplamRe
     return Results.Json(result);
 });
 
-app.MapPost("/api/ai/musteri-sayisi", async (AppDbContext db) =>
+app.MapPost("/api/ai/musteri-sayisi", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
+
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
     try
     {
-        var count = await db.Musteriler.CountAsync();
+        var count = await db.Musteriler.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
 
         return Results.Json(new
         {
@@ -658,43 +659,55 @@ app.MapPost("/api/ai/musteri-sayisi", async (AppDbContext db) =>
     }
 });
 
-app.MapPost("/api/ai/calisan-sayisi", async (AppDbContext db) =>
+app.MapPost("/api/ai/calisan-sayisi", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
-    var count = await db.Calisanlar.CountAsync();
+
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
+    var count = await db.Calisanlar.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
     return Results.Json(new { success = true, message = $"Toplam çalışan sayısı: {count}" });
 });
 
-app.MapPost("/api/ai/cari-sayisi", async (AppDbContext db) =>
+app.MapPost("/api/ai/cari-sayisi", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
-    var count = await db.CariKartlar.CountAsync();
+
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
+    var count = await db.CariKartlar.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
     return Results.Json(new { success = true, message = $"Toplam cari sayısı: {count}" });
 });
 
-app.MapPost("/api/ai/alici-sayisi", async (AppDbContext db) =>
+app.MapPost("/api/ai/alici-sayisi", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
-    var count = await db.CariKartlar.Where(x => x.Tip == CariTip.Alici).CountAsync();
+
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
+    var count = await db.CariKartlar.Where(x => x.Tip == CariTip.Alici && (firmaId == null || x.FirmaId == firmaId)).CountAsync();
     return Results.Json(new { success = true, message = $"Toplam alıcı sayısı: {count}" });
 });
 
-app.MapPost("/api/ai/satici-sayisi", async (AppDbContext db) =>
+app.MapPost("/api/ai/satici-sayisi", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
-    var count = await db.CariKartlar.Where(x => x.Tip == CariTip.Satici).CountAsync();
+
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
+    var count = await db.CariKartlar.Where(x => x.Tip == CariTip.Satici && (firmaId == null || x.FirmaId == firmaId)).CountAsync();
     return Results.Json(new { success = true, message = $"Toplam satıcı sayısı: {count}" });
 });
 
-app.MapPost("/api/ai/stok-sayisi", async (AppDbContext db) =>
+app.MapPost("/api/ai/stok-sayisi", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
-    var count = await db.StokUrunler.CountAsync();
+
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
+    var count = await db.StokUrunler.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
     return Results.Json(new { success = true, message = $"Toplam stok ürün sayısı: {count}" });
 });
 
-app.MapPost("/api/ai/bugun-kasa-islem-sayisi", async (AppDbContext db) =>
+app.MapPost("/api/ai/bugun-kasa-islem-sayisi", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
+
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
     var bugun = DateTime.UtcNow.Date;
     var yarin = bugun.AddDays(1);
 
     var toplam = await db.KasaHareketleri
-        .CountAsync(x => x.Tarih >= bugun && x.Tarih < yarin);
+        .CountAsync(x => x.Tarih >= bugun && x.Tarih < yarin && (firmaId == null || x.FirmaId == firmaId));
 
     return Results.Json(new CalisanAvansToplamResponse
     {
@@ -704,16 +717,19 @@ app.MapPost("/api/ai/bugun-kasa-islem-sayisi", async (AppDbContext db) =>
     });
 });
 
-app.MapPost("/api/ai/biten-stoklar", async (AppDbContext db) =>
+app.MapPost("/api/ai/biten-stoklar", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
+
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
     try
     {
         var stoklar = await db.StokUrunler
+            .Where(u => firmaId == null || u.FirmaId == firmaId)
             .Select(u => new
             {
                 Urun = u.Ad,
                 Miktar = db.StokHareketleri
-                    .Where(h => h.StokUrunId == u.Id)
+                    .Where(h => h.StokUrunId == u.Id && (firmaId == null || h.FirmaId == firmaId))
                     .Sum(h => h.Tip == StokHareketTipi.Giris ? h.Miktar : -h.Miktar)
             })
             .Where(x => x.Miktar <= 0)
@@ -752,8 +768,10 @@ app.MapPost("/api/ai/biten-stoklar", async (AppDbContext db) =>
     }
 });
 
-app.MapPost("/api/ai/en-cok-stokta-olan-urun", async (AppDbContext db) =>
+app.MapPost("/api/ai/en-cok-stokta-olan-urun", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
+
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
     try
     {
         var urun = await db.StokUrunler
@@ -761,7 +779,7 @@ app.MapPost("/api/ai/en-cok-stokta-olan-urun", async (AppDbContext db) =>
             {
                 Urun = u.Ad,
                 Miktar = db.StokHareketleri
-                    .Where(h => h.StokUrunId == u.Id)
+                    .Where(h => h.StokUrunId == u.Id && (firmaId == null || h.FirmaId == firmaId))
                     .Sum(h => h.Tip == StokHareketTipi.Giris ? h.Miktar : -h.Miktar)
             })
             .OrderByDescending(x => x.Miktar)
@@ -795,19 +813,21 @@ app.MapPost("/api/ai/en-cok-stokta-olan-urun", async (AppDbContext db) =>
     }
 });
 
-app.MapPost("/api/ai/genel-ozet", async (AppDbContext db) =>
+app.MapPost("/api/ai/genel-ozet", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
-    var musteriSayisi = await db.Musteriler.CountAsync();
-    var calisanSayisi = await db.Calisanlar.CountAsync();
-    var cariSayisi = await db.CariKartlar.CountAsync();
-    var stokUrunSayisi = await db.StokUrunler.CountAsync();
+
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
+    var musteriSayisi = await db.Musteriler.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
+    var calisanSayisi = await db.Calisanlar.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
+    var cariSayisi = await db.CariKartlar.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
+    var stokUrunSayisi = await db.StokUrunler.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
 
     var giris = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Giris)
+        .Where(x => x.Tip == HareketTipi.Giris && (firmaId == null || x.FirmaId == firmaId))
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var cikis = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Cikis)
+        .Where(x => x.Tip == HareketTipi.Cikis && (firmaId == null || x.FirmaId == firmaId))
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var bakiye = giris - cikis;
@@ -2488,11 +2508,7 @@ static async Task<IResult> GetCalisanPuantajOzetiAsync(AppDbContext db, CalisanA
         var sonrakiAy = ayBaslangic.AddMonths(1);
         var ayBitis = sonrakiAy.AddDays(-1);
 
-        var firmaId = await db.Firmalar
-            .Where(x => x.AktifMi)
-            .OrderBy(x => x.Id)
-            .Select(x => (int?)x.Id)
-            .FirstOrDefaultAsync();
+        var firmaId = await GetAiFirmaIdAsync(db, req.FirmaId);
 
         var ad = (req.CalisanAdi ?? "").Trim().ToLower();
 
@@ -2607,10 +2623,29 @@ static async Task<IResult> GetCalisanPuantajOzetiAsync(AppDbContext db, CalisanA
     }
 }
 
+static async Task<int?> GetAiFirmaIdAsync(AppDbContext db, int? requestFirmaId)
+{
+    if (requestFirmaId.HasValue)
+    {
+        var firmaVarMi = await db.Firmalar
+            .AnyAsync(x => x.Id == requestFirmaId.Value && x.AktifMi);
+
+        if (firmaVarMi)
+            return requestFirmaId.Value;
+    }
+
+    return await db.Firmalar
+        .Where(x => x.AktifMi)
+        .OrderBy(x => x.Id)
+        .Select(x => (int?)x.Id)
+        .FirstOrDefaultAsync();
+}
+
 public class CalisanAvansApiRequest
 {
     public string CalisanAdi { get; set; } = "";
     public string DateRange { get; set; } = "ThisMonth";
     public int? Year { get; set; }
     public int? Month { get; set; }
+    public int? FirmaId { get; set; }
 }

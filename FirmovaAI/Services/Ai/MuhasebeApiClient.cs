@@ -7,6 +7,8 @@ public class MuhasebeApiClient
 {
     private readonly HttpClient _httpClient;
 
+    public int? FirmaId { get; set; }
+
     public MuhasebeApiClient(HttpClient httpClient)
     {
         _httpClient = httpClient;
@@ -16,7 +18,7 @@ public class MuhasebeApiClient
     {
         try
         {
-            var response = await _httpClient.PostAsync(url, null);
+            var response = await _httpClient.PostAsJsonAsync(url, Request());
             return await HandleResponseAsync(response, url);
         }
         catch (Exception ex)
@@ -72,14 +74,15 @@ public class MuhasebeApiClient
         };
     }
 
-    private static CalisanAvansApiRequest Request(string dateRange = "ThisMonth", int? year = null, int? month = null, string calisanAdi = "")
+    private CalisanAvansApiRequest Request(string dateRange = "ThisMonth", int? year = null, int? month = null, string calisanAdi = "")
     {
         return new CalisanAvansApiRequest
         {
             DateRange = dateRange,
             Year = year,
             Month = month,
-            CalisanAdi = calisanAdi
+            CalisanAdi = calisanAdi,
+            FirmaId = FirmaId
         };
     }
 
@@ -159,20 +162,10 @@ public class MuhasebeApiClient
         => await PostJsonAsync("/api/ai/toplam-avans", Request(dateRange, year, month));
 
     public async Task<CalisanAvansApiResponse> GetAvansDagilimAsync(int? year, int? month)
-    => await PostJsonAsync("/api/ai/avans-dagilim",
-        new CalisanAvansApiRequest
-        {
-            Year = year,
-            Month = month
-        });
+        => await PostJsonAsync("/api/ai/avans-dagilim", Request(year: year, month: month));
 
     public async Task<CalisanAvansApiResponse> GetEnCokAvansAlanAsync(int? year, int? month)
-    => await PostJsonAsync("/api/ai/en-cok-avans-alan",
-        new CalisanAvansApiRequest
-        {
-            Year = year,
-            Month = month
-        });
+        => await PostJsonAsync("/api/ai/en-cok-avans-alan", Request(year: year, month: month));
 
     public async Task<CalisanAvansApiResponse> GetToplamGelirAsync(string dateRange, int? year, int? month)
         => await PostJsonAsync("/api/ai/toplam-gelir", Request(dateRange, year, month));
@@ -239,13 +232,7 @@ public class MuhasebeApiClient
         => await PostJsonAsync("/api/ai/calisan-puantaj", Request(year: year, month: month, calisanAdi: ad));
 
     public async Task<CalisanAvansApiResponse> GetCalisanMaasToplamAsync(string ad, int? year, int? month)
-    => await PostJsonAsync("/api/ai/calisan-maas-toplam",
-        new CalisanAvansApiRequest
-        {
-            CalisanAdi = ad,
-            Year = year,
-            Month = month
-        });
+        => await PostJsonAsync("/api/ai/calisan-maas-toplam", Request(year: year, month: month, calisanAdi: ad));
 }
 
 public class CalisanAvansApiRequest
@@ -254,6 +241,7 @@ public class CalisanAvansApiRequest
     public string DateRange { get; set; } = "ThisMonth";
     public int? Year { get; set; }
     public int? Month { get; set; }
+    public int? FirmaId { get; set; }
 }
 
 public class CalisanAvansApiResponse
