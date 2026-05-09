@@ -223,7 +223,6 @@ app.Use(async (context, next) =>
 
 app.UseAuthorization();
 
-
 app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest request, AppDbContext db) =>
 {
     try
@@ -817,6 +816,10 @@ app.MapPost("/api/ai/genel-ozet", async (AppDbContext db) =>
     });
 });
 app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansApiRequest req) =>
+{
+    return await GetCalisanPuantajOzetiAsync(db, req);
+});
+
 app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansApiRequest req) =>
 {
     try
@@ -954,7 +957,7 @@ app.MapPost("/api/ai/calisan-puantaj", async (AppDbContext db, CalisanAvansApiRe
             detail = ex.InnerException?.Message
         }, statusCode: 500);
     }
-}));
+});
 
 app.MapPost("/api/ai/kar-durumu", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
@@ -1128,8 +1131,6 @@ app.MapPost("/api/ai/stok-durumu", async (AppDbContext db) =>
             $"Biten stok sayısı: {bitenStokSayisi}"
     });
 });
-
-
 
 app.MapPost("/api/ai/maas-odeme-kontrol", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
@@ -1405,7 +1406,6 @@ static (DateTime baslangic, DateTime bitis, string ayAdi) GetDateRange(CalisanAv
     var thisMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
     return (thisMonth, thisMonth.AddMonths(1), $"{ayAdlari[thisMonth.Month]} {thisMonth.Year}");
 }
-
 
 app.MapPost("/api/ai/toplam-avans", async (AppDbContext db, CalisanAvansApiRequest req) =>
 {
@@ -1732,7 +1732,6 @@ app.MapPost("/api/ai/son-avans", async (AppDbContext db) =>
         Message = $"En son avans verilen kişi: {ad} - {son.Tutar:N2} TL ({son.Tarih:dd.MM.yyyy})"
     });
 });
-
 
 app.MapPost("/api/ai/personel-gideri", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
@@ -2437,54 +2436,9 @@ app.MapPost("/api/ai/en-cok-devamsizlik-yapan", async (AppDbContext db, CalisanA
     });
 });
 
-app.MapPost("/api/ai/calisan-devamsizlik", async (AppDbContext db, CalisanAvansApiRequest request) =>
+app.MapPost("/api/ai/calisan-devamsizlik", async (AppDbContext db, CalisanAvansApiRequest req) =>
 {
-    if (string.IsNullOrWhiteSpace(request.CalisanAdi))
-    {
-        return Results.Json(new CalisanAvansToplamResponse
-        {
-            Success = false,
-            Total = 0,
-            Message = "Çalışan adı gerekli."
-        });
-    }
-
-    var (baslangic, bitis, ayAdi) = GetDateRange(request);
-    var ad = request.CalisanAdi.ToLower();
-
-    var calisan = await db.Calisanlar
-        .FirstOrDefaultAsync(x => x.AdSoyad.ToLower().Contains(ad) || x.Ad.ToLower().Contains(ad));
-
-    if (calisan == null)
-    {
-        return Results.Json(new CalisanAvansToplamResponse
-        {
-            Success = false,
-            Total = 0,
-            Message = $"{request.CalisanAdi} isimli çalışan bulunamadı."
-        });
-    }
-
-    var kayitlar = await db.Set<CalisanPuantaj>()
-        .Where(x => x.CalisanId == calisan.Id && x.Tarih >= baslangic && x.Tarih < bitis)
-        .ToListAsync();
-
-    var geldi = kayitlar.Count(x => x.Durum == PuantajDurum.Geldi);
-    var gelmedi = kayitlar.Count(x => x.Durum == PuantajDurum.Gelmedi);
-    var izinli = kayitlar.Count(x => x.Durum == PuantajDurum.Izinli);
-    var yarimGun = kayitlar.Count(x => x.Durum == PuantajDurum.YarimGun);
-
-    return Results.Json(new CalisanAvansToplamResponse
-    {
-        Success = true,
-        Total = gelmedi,
-        Message =
-            $"{calisan.AdSoyad} {ayAdi} puantaj/devamsızlık özeti:\n\n" +
-            $"- Geldi: {geldi} gün\n" +
-            $"- Gelmedi: {gelmedi} gün\n" +
-            $"- İzinli: {izinli} gün\n" +
-            $"- Yarım gün: {yarimGun} gün"
-    });
+    return await GetCalisanPuantajOzetiAsync(db, req);
 });
 
 app.MapPost("/api/ai/akilli-isletme-yorumu", async (AppDbContext db, CalisanAvansApiRequest request) =>
@@ -2542,6 +2496,146 @@ app.MapPost("/api/ai/akilli-isletme-yorumu", async (AppDbContext db, CalisanAvan
 app.MapRazorPages();
 
 app.Run();
+
+static async Task<IResult> GetCalisanPuantajOzetiAsync(AppDbContext db, CalisanAvansApiRequest req)
+{
+    try
+    {
+        if (string.IsNullOrWhiteSpace(req.CalisanAdi))
+        {
+            return Results.Json(new CalisanAvansToplamResponse
+            {
+                Success = false,
+                Total = 0,
+                Message = "Çalışan adı gerekli."
+            });
+        }
+
+        int year = req.Year ?? DateTime.UtcNow.Year;
+        int month = req.Month ?? DateTime.UtcNow.Month;
+
+        var ayBaslangic = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var sonrakiAy = ayBaslangic.AddMonths(1);
+        var ayBitis = sonrakiAy.AddDays(-1);
+
+        var firmaId = await db.Firmalar
+            .Where(x => x.AktifMi)
+            .OrderBy(x => x.Id)
+            .Select(x => (int?)x.Id)
+            .FirstOrDefaultAsync();
+
+        var ad = (req.CalisanAdi ?? "").Trim().ToLower();
+
+        var calisanlarQuery = db.Calisanlar.AsQueryable();
+
+        if (firmaId != null)
+            calisanlarQuery = calisanlarQuery.Where(x => x.FirmaId == firmaId);
+
+        var calisanlar = await calisanlarQuery.ToListAsync();
+
+        var calisan = calisanlar.FirstOrDefault(x =>
+        {
+            var tamAd = (x.AdSoyad ?? "").Trim().ToLower();
+            var kisaAd = (x.Ad ?? "").Trim().ToLower();
+
+            return tamAd == ad
+                || tamAd.StartsWith(ad + " ")
+                || kisaAd == ad;
+        });
+
+        if (calisan == null)
+        {
+            return Results.Json(new CalisanAvansToplamResponse
+            {
+                Success = false,
+                Total = 0,
+                Message = $"{req.CalisanAdi} çalışanı bulunamadı."
+            });
+        }
+
+        var kayitlarQuery = db.CalisanPuantajlari
+            .Where(x =>
+                x.CalisanId == calisan.Id &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < sonrakiAy);
+
+        if (firmaId != null)
+            kayitlarQuery = kayitlarQuery.Where(x => x.FirmaId == firmaId);
+
+        var kayitlar = await kayitlarQuery.ToListAsync();
+
+        int geldi = 0;
+        int gelmedi = 0;
+        int izinli = 0;
+        int yarimGun = 0;
+
+        var bugun = DateTime.UtcNow.Date;
+
+        for (var gun = ayBaslangic; gun <= ayBitis; gun = gun.AddDays(1))
+        {
+            if (gun.DayOfWeek == DayOfWeek.Sunday)
+                continue;
+
+            if (gun.Date > bugun)
+                continue;
+
+            var kayit = kayitlar.FirstOrDefault(x =>
+                x.Tarih >= gun &&
+                x.Tarih < gun.AddDays(1));
+
+            var durum = kayit != null
+                ? kayit.Durum
+                : PuantajDurum.Gelmedi;
+
+            switch (durum)
+            {
+                case PuantajDurum.Geldi:
+                    geldi++;
+                    break;
+                case PuantajDurum.Gelmedi:
+                    gelmedi++;
+                    break;
+                case PuantajDurum.Izinli:
+                    izinli++;
+                    break;
+                case PuantajDurum.YarimGun:
+                    yarimGun++;
+                    break;
+            }
+        }
+
+        var ayAdlari = new[]
+        {
+            "", "Ocak", "Şubat", "Mart", "Nisan",
+            "Mayıs", "Haziran", "Temmuz", "Ağustos",
+            "Eylül", "Ekim", "Kasım", "Aralık"
+        };
+
+        var ayAdi = ayAdlari[month];
+
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = true,
+            Total = gelmedi,
+            Message =
+                $"{calisan.AdSoyad} {ayAdi} {year} puantaj/devamsızlık özeti:\n" +
+                $"- Geldi: {geldi} gün\n" +
+                $"- Gelmedi: {gelmedi} gün\n" +
+                $"- İzinli: {izinli} gün\n" +
+                $"- Yarım gün: {yarimGun} gün"
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            message = "Puantaj alınırken hata oluştu.",
+            error = ex.Message,
+            detail = ex.InnerException?.Message
+        }, statusCode: 500);
+    }
+}
 
 public class CalisanAvansApiRequest
 {

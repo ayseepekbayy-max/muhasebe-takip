@@ -96,8 +96,9 @@ public class QueryInterpreter
         {
             var kisi = ExtractPersonName(lower);
 
-            if (!string.IsNullOrWhiteSpace(kisi) &&
-                ContainsAny(lower, "devamsızlığı", "devamsizligi", "kaç gün", "kac gun", "puantaj özeti", "puantaj ozeti"))
+            // Çalışan adı varsa her zaman çalışan bazlı puantaj/devamsızlık özeti getir.
+            // Böylece "Ali'nin Nisan puantajı nedir?" genel "en fazla devamsızlık" sorgusuna düşmez.
+            if (!string.IsNullOrWhiteSpace(kisi))
             {
                 result.Intent = "CalisanDevamsizlik";
                 result.CalisanAdi = kisi;
@@ -138,7 +139,6 @@ public class QueryInterpreter
         // =========================
         // KÂR / ANALİZ
         // =========================
-
 
         if (ContainsAny(lower, "akıllı işletme yorumu", "akilli isletme yorumu", "işletme yorumu", "isletme yorumu", "bu ay işletme durumum nasıl", "bu ay isletme durumum nasil", "işletme durumum nasıl", "isletme durumum nasil"))
         {
@@ -255,7 +255,6 @@ public class QueryInterpreter
         // MAAŞ
         // =========================
 
-
         if (ContainsAny(lower,
             "en yüksek maaş",
             "en yuksek maas",
@@ -341,7 +340,6 @@ public class QueryInterpreter
                 return result;
             }
         }
-
 
         if (ContainsAny(lower, "maaş") && ContainsAny(lower, "ne kadar"))
         {
