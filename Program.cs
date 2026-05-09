@@ -291,9 +291,14 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest reques
                 x.Tarih < end &&
                 (firmaId == null || x.FirmaId == firmaId) &&
                 (
-                    x.CalisanId == calisan.Id ||
-                    ((x.Ad ?? "").Trim().ToLower() == calisanTamAd) ||
-                    ((x.Ad ?? "").Trim().ToLower() == calisanKisaAd)
+                    (x.CalisanId == calisan.Id && x.CalisanId > 0) ||
+                    (
+                        !string.IsNullOrWhiteSpace(x.Ad) &&
+                        (
+                            ((x.Ad ?? "").Trim().ToLower() == calisanTamAd && calisanTamAd != "") ||
+                            ((x.Ad ?? "").Trim().ToLower() == calisanKisaAd && calisanKisaAd != "")
+                        )
+                    )
                 ))
             .OrderBy(x => x.Tarih)
             .ThenBy(x => x.Id)
