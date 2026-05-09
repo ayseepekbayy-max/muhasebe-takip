@@ -52,8 +52,8 @@ public class QueryInterpreter
         }
 
         // EN ÜST ÖNCELİK: AVANS
-        // "En fazla avans alan kim?" gibi genel sorular önce yakalanır.
-        // Çalışan adı varsa çalışan bazlı avansa yönlenir.
+        // Genel "en fazla avans" soruları önce yakalanır.
+        // Çalışan adı/soyadı geçen avans soruları ise kesin olarak çalışan bazlı avansa gider.
         if (ContainsAny(lower, "avans"))
         {
             if (ContainsAny(lower,
@@ -74,8 +74,7 @@ public class QueryInterpreter
 
             var erkenKisiAdi = ExtractPersonName(lower);
 
-            if (!string.IsNullOrWhiteSpace(erkenKisiAdi)
-                && !IsDateWord(erkenKisiAdi))
+            if (!string.IsNullOrWhiteSpace(erkenKisiAdi))
             {
                 result.CalisanAdi = erkenKisiAdi;
                 result.Intent = "CalisanAvansToplam";
@@ -96,9 +95,8 @@ public class QueryInterpreter
         {
             var kisi = ExtractPersonName(lower);
 
-            // Çalışan adı varsa her zaman çalışan bazlı puantaj/devamsızlık özeti getir.
-            // Böylece "Ali'nin Nisan puantajı nedir?" genel "en fazla devamsızlık" sorgusuna düşmez.
-            if (!string.IsNullOrWhiteSpace(kisi))
+            if (!string.IsNullOrWhiteSpace(kisi) &&
+                ContainsAny(lower, "devamsızlığı", "devamsizligi", "kaç gün", "kac gun", "puantaj özeti", "puantaj ozeti"))
             {
                 result.Intent = "CalisanDevamsizlik";
                 result.CalisanAdi = kisi;
@@ -956,11 +954,8 @@ public class QueryInterpreter
 
         var normalized = NormalizeNameText(text);
 
-        // Çalışan isimleri ve kullanılabilecek kısa yazımlar.
-        // Tüm çalışanlar için aynı eşleştirme mantığı kullanılır.
         var calisanEslesmeleri = new Dictionary<string, string>
         {
-            // Ali Samet Bulut
             { "ali samet bulut", "Ali Samet Bulut" },
             { "ali samet", "Ali Samet Bulut" },
             { "samet bulut", "Ali Samet Bulut" },
@@ -968,7 +963,6 @@ public class QueryInterpreter
             { "samet", "Ali Samet Bulut" },
             { "bulut", "Ali Samet Bulut" },
 
-            // Ayşe Nur Pekbay
             { "ayşe nur pekbay", "Ayşe Nur Pekbay" },
             { "ayse nur pekbay", "Ayşe Nur Pekbay" },
             { "ayşe nur", "Ayşe Nur Pekbay" },
@@ -977,16 +971,15 @@ public class QueryInterpreter
             { "aysenur", "Ayşe Nur Pekbay" },
             { "ayşe", "Ayşe Nur Pekbay" },
             { "ayse", "Ayşe Nur Pekbay" },
+            { "nur pekbay", "Ayşe Nur Pekbay" },
             { "pekbay", "Ayşe Nur Pekbay" },
 
-            // Ozan Kılıç
             { "ozan kılıç", "Ozan Kılıç" },
             { "ozan kilic", "Ozan Kılıç" },
             { "ozan", "Ozan Kılıç" },
             { "kılıç", "Ozan Kılıç" },
             { "kilic", "Ozan Kılıç" },
 
-            // Nurettin El Müslüm
             { "nurettin el müslüm", "Nurettin El Müslüm" },
             { "nurettin el muslim", "Nurettin El Müslüm" },
             { "nurettin el", "Nurettin El Müslüm" },
@@ -1031,7 +1024,9 @@ public class QueryInterpreter
             .Replace("?", " ")
             .Replace("!", " ")
             .Replace(":", " ")
-            .Replace(";", " ");
+            .Replace(";", " ")
+            .Replace("(", " ")
+            .Replace(")", " ");
 
         value = value
             .Replace("â", "a")
