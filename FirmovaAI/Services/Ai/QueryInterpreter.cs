@@ -95,8 +95,7 @@ public class QueryInterpreter
         {
             var kisi = ExtractPersonName(lower);
 
-            if (!string.IsNullOrWhiteSpace(kisi) &&
-                ContainsAny(lower, "devamsızlığı", "devamsizligi", "kaç gün", "kac gun", "puantaj özeti", "puantaj ozeti"))
+            if (!string.IsNullOrWhiteSpace(kisi))
             {
                 result.Intent = "CalisanDevamsizlik";
                 result.CalisanAdi = kisi;
@@ -132,6 +131,45 @@ public class QueryInterpreter
                 UpdateContextFromIntent(followUpIntent, result.CalisanAdi);
                 return result;
             }
+        }
+
+        if (ContainsAny(lower,
+            "işletme analizi", "isletme analizi",
+            "şirket performansı", "sirket performansi",
+            "şirket performansını göster", "sirket performansini goster",
+            "finansal yorum", "risk var mı", "risk var mi",
+            "nakit akış", "nakit akis",
+            "harcamalar normal mi",
+            "şirket büyüyor mu", "sirket buyuyor mu"))
+        {
+            result.Intent = "AkilliIsletmeYorumu";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
+        if (ContainsAny(lower,
+            "müşteri durumunu göster", "musteri durumunu goster",
+            "müşteri durumu", "musteri durumu",
+            "müşterilerin listesini göster", "musterilerin listesini goster",
+            "müşteri listesi", "musteri listesi"))
+        {
+            result.Intent = "MusteriSayisi";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Musteri, result.Intent, result.Year, result.Month);
+            return result;
+        }
+
+        if (ContainsAny(lower,
+            "stok hareketlerini göster", "stok hareketlerini goster",
+            "stok hareketleri",
+            "en fazla satılan ürün", "en fazla satilan urun",
+            "en çok satılan ürün", "en cok satilan urun"))
+        {
+            result.Intent = "StokDurumu";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Stok, result.Intent, result.Year, result.Month);
+            return result;
         }
 
         // =========================
@@ -265,7 +303,7 @@ public class QueryInterpreter
             "en fazla maaşı kim aldı",
             "en fazla maasi kim aldi"))
         {
-            result.Intent = "MaasOdemeDagilim";
+            result.Intent = "EnYuksekMaas";
             result.IsSuccess = true;
             UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
             return result;

@@ -1706,6 +1706,101 @@ app.MapPost("/api/ai/personel-gideri", async (AppDbContext db, CalisanAvansApiRe
     });
 });
 
+app.MapPost("/api/ai/en-yuksek-maas", async (AppDbContext db, CalisanAvansApiRequest request) =>
+{
+    int year = request.Year ?? DateTime.Now.Year;
+    int month = request.Month ?? DateTime.Now.Month;
+
+    var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+    var end = start.AddMonths(1);
+
+    var firmaId = await db.Firmalar
+        .Where(x => x.AktifMi)
+        .OrderBy(x => x.Id)
+        .Select(x => (int?)x.Id)
+        .FirstOrDefaultAsync();
+
+    var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
+    var ayAdi = ayAdlari[month];
+
+    var aktifQuery = db.CalisanAvanslari
+        .Include(x => x.Calisan)
+        .Where(x =>
+            x.Tip == CalisanHareketTipi.MaasOdeme &&
+            !x.ArsivlendiMi &&
+            x.Tarih >= start &&
+            x.Tarih < end &&
+            x.Calisan != null &&
+            x.Calisan.AktifMi);
+
+    if (firmaId != null)
+        aktifQuery = aktifQuery.Where(x => x.FirmaId == firmaId);
+
+    var aktifListe = await aktifQuery
+        .Select(x => new
+        {
+            Calisan = x.Calisan != null ? x.Calisan.AdSoyad : x.Ad,
+            Toplam = x.Tutar
+        })
+        .ToListAsync();
+
+    var aktifGruplu = aktifListe
+        .GroupBy(x => x.Calisan)
+        .Select(g => new { Calisan = g.Key, Toplam = g.Sum(x => x.Toplam) })
+        .ToList();
+
+    var arsivQuery = db.CalisanMaasArsivleri
+        .Where(x => x.OdemeTarihi >= start && x.OdemeTarihi < end);
+
+    if (firmaId != null)
+        arsivQuery = arsivQuery.Where(x => x.FirmaId == firmaId);
+
+    var arsivListe = await arsivQuery
+        .Join(
+            db.Calisanlar.Where(c => c.AktifMi),
+            arsiv => arsiv.CalisanId,
+            calisan => calisan.Id,
+            (arsiv, calisan) => new
+            {
+                arsiv.Id,
+                Calisan = calisan.AdSoyad,
+                arsiv.ToplamMaas,
+                arsiv.OdemeTarihi
+            })
+        .ToListAsync();
+
+    var arsivSonListe = arsivListe
+        .GroupBy(x => x.Calisan)
+        .Select(g => g.OrderByDescending(x => x.OdemeTarihi).ThenByDescending(x => x.Id).First())
+        .Select(x => new { x.Calisan, Toplam = x.ToplamMaas })
+        .ToList();
+
+    var sonuc = aktifGruplu
+        .Concat(arsivSonListe)
+        .GroupBy(x => x.Calisan)
+        .Select(g => new { Calisan = g.Key, Toplam = g.Sum(x => x.Toplam) })
+        .Where(x => x.Toplam > 0)
+        .OrderByDescending(x => x.Toplam)
+        .FirstOrDefault();
+
+    if (sonuc == null)
+    {
+        return Results.Json(new CalisanAvansToplamResponse
+        {
+            Success = true,
+            Total = 0,
+            Message = $"{ayAdi} ayında maaş kaydı bulunamadı."
+        });
+    }
+
+    return Results.Json(new CalisanAvansToplamResponse
+    {
+        Success = true,
+        Total = sonuc.Toplam,
+        Message = $"{ayAdi} ayında en yüksek maaş alan çalışan: {sonuc.Calisan} - {sonuc.Toplam:N2} TL"
+    });
+});
+
 app.MapPost("/api/ai/ortalama-maas", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
     int year = request.Year ?? DateTime.Now.Year;
@@ -1740,9 +1835,11 @@ app.MapPost("/api/ai/ortalama-maas", async (AppDbContext db, CalisanAvansApiRequ
             {
                 arsiv.Id,
                 Calisan = calisan.AdSoyad,
+                CalisanAktifMi = calisan.AktifMi,
                 arsiv.OdemeTarihi,
                 arsiv.ToplamMaas
             })
+        .Where(x => x.CalisanAktifMi)
         .ToListAsync();
 
     var liste = tumListe
