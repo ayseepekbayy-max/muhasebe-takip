@@ -293,8 +293,7 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest reques
                 (
                     x.CalisanId == calisan.Id ||
                     ((x.Ad ?? "").Trim().ToLower() == calisanTamAd) ||
-                    ((x.Ad ?? "").Trim().ToLower() == calisanKisaAd) ||
-                    ((x.Ad ?? "").Trim().ToLower().Contains(calisanKisaAd) && calisanKisaAd != "")
+                    ((x.Ad ?? "").Trim().ToLower() == calisanKisaAd)
                 ))
             .OrderBy(x => x.Tarih)
             .ThenBy(x => x.Id)
