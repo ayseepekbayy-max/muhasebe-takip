@@ -27,7 +27,7 @@
     {
         <header>
             <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark app-navbar border-bottom box-shadow mb-4">
-                <div class="container">
+                <div class="container-fluid px-3">
                     <a class="navbar-brand app-brand" asp-area="" asp-page="/Index">
                         @(string.IsNullOrWhiteSpace(Context.Session.GetString("FirmaAdi"))
                             ? "Muhasebe Takip"
@@ -89,6 +89,10 @@
                                     <a class="nav-link" href="/Maliyet">Maliyet</a>
                                 </li>
                             }
+
+                            <li class="nav-item">
+                                <a class="nav-link" href="/AiAsistan">AI Asistan</a>
+                            </li>
 
                             @if (Context.Session.GetString("MenuCekler") != "0")
                             {

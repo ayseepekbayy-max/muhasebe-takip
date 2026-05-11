@@ -435,7 +435,32 @@ public class QueryInterpreter
             UpdateContext(TopicType.Maas, result.Intent, result.Year, result.Month);
             return result;
         }
+        // =========================
+// ÇALIŞAN SAYISI
+// =========================
 
+        if (ContainsAny(lower,
+            "kaç çalışan",
+            "çalışan sayısı",
+            "personel sayısı",
+            "kaç personel",
+            "toplam çalışan",
+            "çalışanım var",
+            "personelim var",
+            "personel sayım",
+            "çalışan sayım"))
+        {
+            result.Intent = "CalisanSayisi";
+            result.IsSuccess = true;
+
+            UpdateContext(
+                TopicType.Genel,
+                result.Intent,
+                result.Year,
+                result.Month);
+
+            return result;
+        }
         // =========================
         // GENEL ÖZET / DURUM
         // =========================
@@ -458,6 +483,23 @@ public class QueryInterpreter
         // =========================
         // SAYISAL GENEL SORGULAR
         // =========================
+
+        // Çalışan sayısı, müşteri sayısından önce kontrol edilmeli.
+        // Çünkü "kaç çalışanım var" gibi sorular bazen genel sayısal sorgularla karışabiliyor.
+        if (ContainsAny(lower,
+            "kaç çalışan",
+            "çalışan sayısı",
+            "personel sayısı",
+            "kaç personel",
+            "toplam çalışan",
+            "çalışanım var",
+            "personelim var"))
+        {
+            result.Intent = "CalisanSayisi";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
+            return result;
+        }
 
         if (ContainsAny(lower, "kaç müşteri", "müşteri sayısı", "müşterim var", "toplam müşteri"))
         {
@@ -967,10 +1009,11 @@ public class QueryInterpreter
     private static bool StartsNewTopic(string text)
     {
         return ContainsAny(text,
-            "avans", "maaş", "maas", "kasa", "stok", "müşteri", "musteri",
-            "cari", "alıcı", "alici", "satıcı", "satici",
-            "gelir", "gider", "kâr", "kar", "borç", "borc",
-            "devamsızlık", "devamsizlik", "puantaj", "gelmedi", "izinli");
+    "avans", "maaş", "maas", "kasa", "stok", "müşteri", "musteri",
+    "çalışan", "calisan", "personel",
+    "cari", "alıcı", "alici", "satıcı", "satici",
+    "gelir", "gider", "kâr", "kar", "borç", "borc",
+    "devamsızlık", "devamsizlik", "puantaj", "gelmedi", "izinli");
     }
 
     private static void UpdateContextFromIntent(string intent, string? calisanAdi = null)

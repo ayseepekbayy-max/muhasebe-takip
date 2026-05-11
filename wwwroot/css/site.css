@@ -564,3 +564,31 @@ tbody tr:hover {
 a {
     transition: all 0.2s ease;
 }
+.app-navbar .container-fluid {
+    max-width: 100%;
+}
+
+.app-nav-list {
+    flex-wrap: wrap;
+}
+
+.app-navbar .nav-link {
+    white-space: nowrap;
+}
+
+.app-top-actions {
+    flex-shrink: 0;
+}
+
+@media (max-width: 992px) {
+    .app-nav-list {
+        align-items: flex-start !important;
+        gap: 4px !important;
+    }
+
+    .app-top-actions {
+        margin-top: 10px;
+        align-items: flex-start !important;
+        flex-wrap: wrap;
+    }
+}
