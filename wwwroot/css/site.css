@@ -776,3 +776,54 @@ a.app-top-btn {
         overflow-x: hidden !important;
     }
 }
+/* DASHBOARD MOBİL UYUMLU DÜZEN */
+.dashboard-responsive {
+    width: 100%;
+    max-width: 100%;
+}
+
+.dashboard-top-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 18px;
+}
+
+.dashboard-main-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.dashboard-summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+@media (max-width: 768px) {
+    .dashboard-responsive {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .dashboard-top-grid,
+    .dashboard-main-grid,
+    .dashboard-summary-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .app-main-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    .dashboard-card-balance {
+        font-size: 24px !important;
+        word-break: break-word;
+    }
+}
