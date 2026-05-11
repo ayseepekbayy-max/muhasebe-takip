@@ -39,6 +39,7 @@ body {
     background: var(--bg-main);
     color: var(--text-main);
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    overflow-x: hidden;
 }
 
 /* Genel başlıklar */
@@ -56,11 +57,28 @@ h2, h3, h4, h5 {
 
 /* Navbar */
 .app-navbar {
+    width: 100% !important;
+    min-height: auto !important;
+    overflow: visible !important;
     background: linear-gradient(90deg, var(--nav-start), var(--nav-end)) !important;
     border-bottom: none !important;
     box-shadow: 0 6px 18px rgba(15, 23, 42, 0.10);
     padding-top: 12px;
     padding-bottom: 12px;
+}
+
+.app-navbar .container,
+.app-navbar .container-fluid {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+}
+
+.navbar-collapse {
+    flex-grow: 1 !important;
+    width: auto !important;
 }
 
 .app-brand {
@@ -71,8 +89,17 @@ h2, h3, h4, h5 {
 }
 
 .app-nav-list {
-    flex-wrap: nowrap !important;
-    white-space: nowrap;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+    max-width: 100% !important;
+    white-space: normal !important;
+}
+
+.app-nav-list .nav-item {
+    flex: 0 0 auto !important;
 }
 
 .app-nav-list .nav-link {
@@ -81,7 +108,7 @@ h2, h3, h4, h5 {
     border-radius: 12px;
     padding: 8px 12px !important;
     transition: all 0.2s ease;
-    white-space: nowrap;
+    white-space: nowrap !important;
 }
 
 .app-nav-list .nav-link:hover {
@@ -90,7 +117,9 @@ h2, h3, h4, h5 {
 }
 
 .app-top-actions {
-    flex-wrap: nowrap !important;
+    margin-left: auto !important;
+    flex-shrink: 0 !important;
+    flex-wrap: wrap !important;
     white-space: nowrap;
 }
 
@@ -560,26 +589,7 @@ tbody tr:hover {
     }
 }
 
-/* Basit link animasyonu */
-a {
-    transition: all 0.2s ease;
-}
-.app-navbar .container-fluid {
-    max-width: 100%;
-}
-
-.app-nav-list {
-    flex-wrap: wrap;
-}
-
-.app-navbar .nav-link {
-    white-space: nowrap;
-}
-
-.app-top-actions {
-    flex-shrink: 0;
-}
-
+/* Tablet / dar ekran navbar */
 @media (max-width: 992px) {
     .app-nav-list {
         align-items: flex-start !important;
@@ -589,6 +599,11 @@ a {
     .app-top-actions {
         margin-top: 10px;
         align-items: flex-start !important;
-        flex-wrap: wrap;
+        flex-wrap: wrap !important;
     }
+}
+
+/* Basit link animasyonu */
+a {
+    transition: all 0.2s ease;
 }
