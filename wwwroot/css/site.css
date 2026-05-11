@@ -692,3 +692,68 @@ a.app-top-btn {
 .dashboard-wide {
     min-width: 1100px;
 }
+/* MOBİL MENÜ DÜZELTME */
+@media (max-width: 768px) {
+    .app-navbar .container-fluid {
+        flex-wrap: wrap !important;
+    }
+
+    .navbar-collapse {
+        display: none !important;
+        width: 100% !important;
+        margin-top: 12px;
+    }
+
+    .navbar-collapse.show {
+        display: block !important;
+    }
+
+    .app-nav-list {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        gap: 6px !important;
+    }
+
+    .app-nav-list .nav-item {
+        width: 100% !important;
+    }
+
+    .app-nav-list .nav-link {
+        display: block !important;
+        width: 100% !important;
+        padding: 12px 14px !important;
+        font-size: 15px !important;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+    }
+
+    .app-top-actions {
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-top: 10px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+    }
+
+    .app-firma-badge,
+    .app-top-btn,
+    a.app-top-btn {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    .app-brand {
+        font-size: 18px !important;
+        max-width: calc(100% - 70px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .navbar-toggler {
+        margin-left: auto !important;
+    }
+}
