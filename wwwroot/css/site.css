@@ -39,7 +39,7 @@ body {
     background: var(--bg-main);
     color: var(--text-main);
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    overflow-x: hidden;
+    overflow-x: auto;
 }
 
 /* Genel başlıklar */
@@ -608,26 +608,6 @@ a {
     transition: all 0.2s ease;
 }
 /* NAVBAR TEK SATIR DÜZELTME */
-.app-navbar {
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-}
-
-.app-navbar .container-fluid {
-    flex-wrap: nowrap !important;
-}
-
-.navbar-collapse {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    align-items: center !important;
-}
-
-.app-nav-list {
-    flex-wrap: nowrap !important;
-    align-items: center !important;
-    gap: 6px !important;
-}
 
 .app-nav-list .nav-link {
     padding: 8px 10px !important;
@@ -652,4 +632,90 @@ a {
 .app-top-btn {
     min-height: 38px !important;
     padding: 0 14px !important;
+}
+/* NAVBAR DÜZGÜN SIĞDIRMA */
+.app-navbar {
+    overflow: visible !important;
+}
+
+.app-navbar .container-fluid {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+}
+
+.navbar-collapse {
+    display: flex !important;
+    align-items: center !important;
+    min-width: 0 !important;
+}
+
+.app-nav-list {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 4px !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+}
+
+.app-nav-list .nav-link {
+    padding: 7px 8px !important;
+    font-size: 13px !important;
+}
+
+.app-brand {
+    flex-shrink: 0 !important;
+    margin-right: 10px !important;
+    font-size: 15px !important;
+}
+
+.app-top-actions {
+    flex-shrink: 0 !important;
+    flex-wrap: nowrap !important;
+    margin-left: auto !important;
+}
+
+.app-firma-badge {
+    min-height: 36px !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+}
+
+.app-top-btn,
+a.app-top-btn {
+    min-height: 36px !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+}
+html,
+body {
+    overflow-x: auto !important;
+}
+
+.app-main-container {
+    min-width: 1100px;
+}
+/* SAYFA SAĞA-SOLA KAYDIRMA DÜZELTME */
+html {
+    overflow-x: auto !important;
+}
+
+body {
+    overflow-x: auto !important;
+    min-width: 1200px !important;
+}
+
+.app-main-container {
+    width: 1200px !important;
+    max-width: none !important;
+    min-width: 1200px !important;
+}
+
+.dashboard-page {
+    min-width: 1100px !important;
+}
+
+.app-navbar {
+    min-width: 1200px !important;
 }
