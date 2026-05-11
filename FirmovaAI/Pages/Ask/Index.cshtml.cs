@@ -58,8 +58,8 @@ public class IndexModel : PageModel
             {
                 var sonuc = _interpreter.Interpret(Soru);
 
-                // TEST için geçici firma
-                sonuc.FirmaId = 1;
+                // Giriş yapan kullanıcının firmasını al
+                sonuc.FirmaId = HttpContext.Session.GetInt32("FirmaId");
 
                 Cevap = await _executor.ExecuteAsync(sonuc);
             }

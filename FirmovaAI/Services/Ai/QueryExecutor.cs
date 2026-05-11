@@ -72,7 +72,10 @@ public class QueryExecutor
 
             case "CalisanSayisi":
                 return (await _apiClient.GetCalisanSayisiAsync()).Message;
-
+           
+            case "CalisanListesi":
+                 return (await _apiClient.GetCalisanListesiAsync()).Message;
+           
             case "CariSayisi":
                 return (await _apiClient.GetCariSayisiAsync()).Message;
 

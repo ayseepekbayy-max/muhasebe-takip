@@ -91,6 +91,9 @@ public class MuhasebeApiClient
 
     public async Task<CalisanAvansApiResponse> GetCalisanSayisiAsync()
         => await PostEmptyAsync("/api/ai/calisan-sayisi");
+    
+    public async Task<CalisanAvansApiResponse> GetCalisanListesiAsync()
+    => await PostEmptyAsync("/api/ai/calisan-listesi");
 
     public async Task<CalisanAvansApiResponse> GetCariSayisiAsync()
         => await PostEmptyAsync("/api/ai/cari-sayisi");

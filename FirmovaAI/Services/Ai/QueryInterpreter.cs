@@ -467,6 +467,22 @@ public class QueryInterpreter
             return result;
         }
 
+        if (ContainsAny(lower,
+            "çalışanları listele",
+            "calisanlari listele",
+            "çalışan listesi",
+            "calisan listesi",
+            "personel listesi",
+            "personelleri göster",
+            "personelleri goster",
+            "çalışanları göster",
+            "calisanlari goster"))
+        {
+            result.Intent = "CalisanListesi";
+            result.IsSuccess = true;
+            UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
+            return result;
+        }
         if (ContainsAny(lower, "kaç çalışan", "çalışan sayısı", "personel sayısı", "kaç personel", "toplam çalışan"))
         {
             result.Intent = "CalisanSayisi";
@@ -474,6 +490,26 @@ public class QueryInterpreter
             UpdateContext(TopicType.Genel, result.Intent, result.Year, result.Month);
             return result;
         }
+        if (ContainsAny(lower,
+        "çalışanları listele",
+        "calisanlari listele",
+        "personel listesi",
+        "çalışan listesi",
+        "calisan listesi",
+        "personelleri göster",
+        "personelleri goster"))
+    {
+        result.Intent = "CalisanListesi";
+        result.IsSuccess = true;
+
+        UpdateContext(
+            TopicType.Genel,
+            result.Intent,
+            result.Year,
+            result.Month);
+
+        return result;
+    }
 
         if (ContainsAny(lower, "kaç cari", "cari sayısı", "toplam cari"))
         {

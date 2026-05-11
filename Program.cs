@@ -667,6 +667,46 @@ app.MapPost("/api/ai/calisan-sayisi", async (AppDbContext db, CalisanAvansApiReq
     return Results.Json(new { success = true, message = $"Toplam çalışan sayısı: {count}" });
 });
 
+app.MapPost("/api/ai/calisan-listesi", async (AppDbContext db, CalisanAvansApiRequest request) =>
+{
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
+
+    if (firmaId == null)
+    {
+        return Results.Json(new
+        {
+            success = false,
+            message = "Firma bilgisi bulunamadı. Lütfen tekrar giriş yapın."
+        });
+    }
+
+    var liste = await db.Calisanlar
+        .Where(x => x.FirmaId == firmaId && x.AktifMi)
+        .OrderBy(x => x.AdSoyad)
+        .Select(x => x.AdSoyad)
+        .ToListAsync();
+
+    if (!liste.Any())
+    {
+        return Results.Json(new
+        {
+            success = true,
+            message = "Bu firmaya ait aktif çalışan bulunamadı."
+        });
+    }
+
+    var mesaj = "Aktif çalışan listesi:\n\n";
+
+    foreach (var item in liste)
+        mesaj += $"- {item}\n";
+
+    return Results.Json(new
+    {
+        success = true,
+        message = mesaj
+    });
+});
+
 app.MapPost("/api/ai/cari-sayisi", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
 
