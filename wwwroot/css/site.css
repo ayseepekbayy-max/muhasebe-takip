@@ -607,3 +607,49 @@ tbody tr:hover {
 a {
     transition: all 0.2s ease;
 }
+/* NAVBAR TEK SATIR DÜZELTME */
+.app-navbar {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+}
+
+.app-navbar .container-fluid {
+    flex-wrap: nowrap !important;
+}
+
+.navbar-collapse {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+}
+
+.app-nav-list {
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+.app-nav-list .nav-link {
+    padding: 8px 10px !important;
+    font-size: 14px !important;
+}
+
+.app-brand {
+    flex-shrink: 0 !important;
+    margin-right: 12px !important;
+}
+
+.app-top-actions {
+    flex-wrap: nowrap !important;
+    margin-left: auto !important;
+}
+
+.app-firma-badge {
+    min-height: 38px !important;
+    padding: 0 14px !important;
+}
+
+.app-top-btn {
+    min-height: 38px !important;
+    padding: 0 14px !important;
+}
