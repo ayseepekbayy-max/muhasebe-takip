@@ -132,8 +132,7 @@
         </header>
     }
 
-    <div class="container app-main-container" style="@(loginSayfasiMi ? "max-width:100%; padding:0;" : "")">
-        <main role="main" class="pb-4">
+    <div class="@(loginSayfasiMi ? "" : "container app-main-container")" style="@(loginSayfasiMi ? "width:100%; max-width:none; padding:0; margin:0;" : "")">        <main role="main" class="pb-4">
             @RenderBody()
         </main>
     </div>

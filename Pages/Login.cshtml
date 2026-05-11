@@ -5,21 +5,26 @@
 }
 
 <div style="
-    min-height:100vh; 
-    display:flex; 
-    align-items:center; 
-    justify-content:center; 
-    background: linear-gradient(to bottom, #ffffff 0%, #eef2ff 55%, #c7d2fe 100%);
-    background-attachment: fixed;
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(to bottom, #ffffff 0%, #eef2ff 55%, #c7d2fe 100%);
     padding:30px;
+    overflow:auto;
+    z-index:9999;
 ">
 
     <div style="
-        width:430px; 
-        background:rgba(255,255,255,0.97); 
-        border-radius:20px; 
-        padding:34px; 
-        box-shadow:0 18px 40px rgba(15,23,42,0.12); 
+        width:430px;
+        max-width:100%;
+        background:rgba(255,255,255,0.97);
+        border-radius:20px;
+        padding:34px;
+        box-shadow:0 18px 40px rgba(15,23,42,0.12);
         border:1px solid #dbe4ee;
     ">
 
@@ -39,90 +44,42 @@
 
         @if (!string.IsNullOrEmpty(Model.Hata))
         {
-            <div style="
-                color:#b42318;
-                border:1px solid #fecaca; 
-                background:#fef2f2; 
-                padding:10px 12px; 
-                border-radius:10px; 
-                margin-bottom:16px;">
+            <div style="color:#b42318; border:1px solid #fecaca; background:#fef2f2; padding:10px 12px; border-radius:10px; margin-bottom:16px;">
                 @Model.Hata
             </div>
         }
 
         <form method="post">
-
             <div style="margin-bottom:16px;">
-                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;">
-                    Kullanıcı Adı
-                </label>
-
-                <input asp-for="KullaniciAdi"
-                       style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:12px;" />
+                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;">Kullanıcı Adı</label>
+                <input asp-for="KullaniciAdi" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:12px;" />
             </div>
 
             <div style="margin-bottom:20px;">
-                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;">
-                    Şifre
-                </label>
+                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;">Şifre</label>
 
                 <div style="display:flex; gap:8px;">
-                    <input asp-for="Sifre"
-                           id="sifreInput"
-                           type="password"
-                           style="flex:1; padding:12px; border:1px solid #cbd5e1; border-radius:12px;" />
+                    <input asp-for="Sifre" id="sifreInput" type="password" style="flex:1; padding:12px; border:1px solid #cbd5e1; border-radius:12px;" />
 
-                    <button type="button"
-                            onclick="sifreGosterGizle(event)"
-                            style="
-                                padding:12px 14px; 
-                                border:1px solid #cbd5e1; 
-                                border-radius:12px; 
-                                background:#eef2ff; 
-                                color:#312e81; 
-                                font-weight:700;">
+                    <button type="button" onclick="sifreGosterGizle(event)" style="padding:12px 14px; border:1px solid #cbd5e1; border-radius:12px; background:#eef2ff; color:#312e81; font-weight:700;">
                         Göster
                     </button>
                 </div>
             </div>
 
             <div style="display:flex; gap:10px; margin-top:10px;">
-                <button type="submit"
-                        style="
-                            flex:1;
-                            padding:13px; 
-                            border:none; 
-                            border-radius:14px; 
-                            background:#6366f1; 
-                            color:white; 
-                            font-size:16px; 
-                            font-weight:800;">
+                <button type="submit" style="flex:1; padding:13px; border:none; border-radius:14px; background:#6366f1; color:white; font-size:16px; font-weight:800;">
                     Giriş Yap
                 </button>
 
-                <a href="/Register"
-                   style="
-                       flex:1;
-                       display:flex;
-                       align-items:center;
-                       justify-content:center;
-                       padding:13px;
-                       border-radius:14px;
-                       background:#312e81;
-                       color:white;
-                       font-size:16px;
-                       font-weight:800;
-                       text-decoration:none;">
+                <a href="/Register" style="flex:1; display:flex; align-items:center; justify-content:center; padding:13px; border-radius:14px; background:#312e81; color:white; font-size:16px; font-weight:800; text-decoration:none;">
                     Kayıt Ol
                 </a>
             </div>
 
-            <div style="margin-top:14px;">
-                <div style="text-align:center; font-size:13px; color:#64748b; margin-bottom:8px;">
-                    Hesabın yok mu?
-                </div>
+            <div style="margin-top:14px; text-align:center; font-size:13px; color:#64748b;">
+                Hesabın yok mu?
             </div>
-
         </form>
     </div>
 </div>
