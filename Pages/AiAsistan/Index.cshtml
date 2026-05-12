@@ -438,26 +438,42 @@ function novaDinlemeyiBaslat(){
     }
 }
 
-function novaCevapVer(metin){
+ffunction novaCevapVer(metin){
     novaDinlemeyiDurdur();
+
+    if (!metin || !metin.trim()) return;
+
     speechSynthesis.cancel();
 
     const t = new SpeechSynthesisUtterance(metin);
     t.lang = "tr-TR";
     t.rate = 0.95;
+    t.pitch = 1;
 
     t.onstart = () => {
         isSpeaking = true;
+        novaDurumYaz("🔊 Nova cevap veriyor...", true);
     };
 
     t.onend = () => {
         isSpeaking = false;
+        soruGonderiliyor = false;
+        novaDurumYaz("Nova dinlemede. 'Hey Nova' de.", false);
+
         setTimeout(() => {
             novaDinlemeyiBaslat();
         }, 700);
     };
 
-    speechSynthesis.speak(t);
+    t.onerror = () => {
+        isSpeaking = false;
+        soruGonderiliyor = false;
+        novaDurumYaz("Sesli okuma engellendi. Ekrana bir kez dokunup tekrar dene.", false);
+    };
+
+    setTimeout(() => {
+        speechSynthesis.speak(t);
+    }, 150);
 }
 
 function soruyuGonder(soru){
@@ -506,12 +522,12 @@ window.addEventListener("load", function(){
     const cevap = document.querySelector(".son-cevap");
 
     if(otomatikOku === "1" && cevap && cevap.innerText.trim()){
-        localStorage.removeItem("cevapOtomatikOku");
+    localStorage.removeItem("cevapOtomatikOku");
 
-        setTimeout(() => {
-            cevabiOku();
-        }, 800);
-    }
+    setTimeout(() => {
+        novaCevapVer(cevap.innerText);
+    }, 800);
+}
 
     const chatArea = document.querySelector(".chat-area");
     if(chatArea){
@@ -526,4 +542,21 @@ document.addEventListener("click", function(){
         novaDinlemeyiBaslat();
     }
 });
+document.addEventListener("touchstart", function () {
+    try {
+        speechSynthesis.cancel();
+
+        const t = new SpeechSynthesisUtterance("Nova hazır.");
+        t.lang = "tr-TR";
+        t.volume = 0.01;
+
+        speechSynthesis.speak(t);
+
+        novaDurumYaz("Nova hazır. 'Hey Nova' de.", false);
+
+        if (!novaDinliyor && !isSpeaking && !soruGonderiliyor) {
+            novaDinlemeyiBaslat();
+        }
+    } catch {}
+}, { once: true });
 </script>
