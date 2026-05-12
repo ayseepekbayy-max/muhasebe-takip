@@ -407,8 +407,9 @@ function novaDinlemeyiBaslat(){
     };
 
     novaRecognition.onerror = function(){
-        novaDinliyor = false;
-        novaDurumYaz("Nova kısa süre durdu. Sayfaya bir kez tıkla veya yenile.", false);
+    novaDinliyor = false;
+    novaDurumYaz("Nova beklemede. Ekrana bir kez dokun, sonra 'Hey Nova' de.", false);
+};
     };
 
     novaRecognition.onend = function(){
@@ -550,6 +551,12 @@ window.addEventListener("load", function(){
 
     novaDinlemeyiBaslat();
 });
+document.addEventListener("touchstart", function () {
+    if (!novaDinliyor && !isSpeaking && !soruGonderiliyor) {
+        novaDinlemeyiBaslat();
+        novaDurumYaz("Nova dinlemede. 'Hey Nova' de.", false);
+    }
+}, { once: true });
 
 document.addEventListener("click", function(){
     if(!novaDinliyor && !isSpeaking && !soruGonderiliyor){
