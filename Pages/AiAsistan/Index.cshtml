@@ -304,6 +304,13 @@ let isSpeaking = false;
 let soruGonderiliyor = false;
 let novaTimer = null;
 
+function novaDurumYaz(metin, aktifMi){
+    const durum = document.getElementById("novaDurum");
+    if (!durum) return;
+    durum.innerText = metin;
+    durum.className = aktifMi ? "nova-active" : "nova-passive";
+}
+
 function cevapGelinceOku(){
     localStorage.setItem("cevapOtomatikOku", "1");
 }
@@ -317,14 +324,6 @@ function aiDusunuyorGoster(){
     }
 }
 
-function novaDurumYaz(metin, aktifMi){
-    const durum = document.getElementById("novaDurum");
-    if (!durum) return;
-
-    durum.innerText = metin;
-    durum.className = aktifMi ? "nova-active" : "nova-passive";
-}
-
 function novaAktifEt(){
     novaAktif = true;
     novaDurumYaz("🟢 Nova aktif. Sorunu söyleyebilirsin.", true);
@@ -332,14 +331,13 @@ function novaAktifEt(){
     clearTimeout(novaTimer);
     novaTimer = setTimeout(() => {
         novaAktif = false;
-        novaDurumYaz("Nova beklemede. Başlatmak için 'Hey Nova' de.", false);
+        novaDurumYaz("Nova dinlemede. 'Hey Nova' de.", false);
     }, 20000);
 }
 
 function novaDinlemeyiDurdur(){
     if(novaRecognition){
         try {
-            novaRecognition.onend = null;
             novaRecognition.stop();
         } catch {}
     }
@@ -352,86 +350,96 @@ function novaDinlemeyiBaslat(){
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if(!SpeechRecognition){
-        novaDurumYaz("Tarayıcı sesli komutu desteklemiyor. Google Chrome kullan.", false);
+        novaDurumYaz("Bu tarayıcı sesli komutu desteklemiyor. Chrome ile dene.", false);
         return;
     }
 
     if(novaDinliyor) return;
 
-    novaDinliyor = true;
+    try {
+        novaRecognition = new SpeechRecognition();
+        novaRecognition.lang = "tr-TR";
+        novaRecognition.continuous = true;
+        novaRecognition.interimResults = false;
 
-    novaRecognition = new SpeechRecognition();
-    novaRecognition.lang = "tr-TR";
-    novaRecognition.continuous = true;
-    novaRecognition.interimResults = false;
+        novaRecognition.onstart = function(){
+            novaDinliyor = true;
+            novaDurumYaz("Nova dinlemede. 'Hey Nova' de.", false);
+        };
 
-    novaDurumYaz("Nova dinlemede. 'Hey Nova' de.", false);
+        novaRecognition.onresult = function(e){
+            if(isSpeaking || soruGonderiliyor) return;
 
-    novaRecognition.onresult = function(e){
-        if(isSpeaking || soruGonderiliyor) return;
+            const sonIndex = e.results.length - 1;
+            let metin = e.results[sonIndex][0].transcript.toLowerCase().trim();
 
-        const sonIndex = e.results.length - 1;
-        let metin = e.results[sonIndex][0].transcript.toLowerCase().trim();
+            novaDurumYaz("Duydum: " + metin, novaAktif);
 
-        novaDurumYaz("Duydum: " + metin, novaAktif);
+            const novaDendi =
+                metin.includes("hey nova") ||
+                metin.includes("ey nova") ||
+                metin.includes("hey noba") ||
+                metin === "nova" ||
+                metin.includes("nova");
 
-        const novaDendi =
-            metin.includes("hey nova") ||
-            metin.includes("ey nova") ||
-            metin.includes("hey noba") ||
-            metin === "nova" ||
-            metin.includes("nova");
+            if(!novaAktif && novaDendi){
+                let kalanSoru = metin
+                    .replace("hey nova", "")
+                    .replace("ey nova", "")
+                    .replace("hey noba", "")
+                    .replace("nova", "")
+                    .trim();
 
-        if(!novaAktif && novaDendi){
-            let kalanSoru = metin
-                .replace("hey nova", "")
-                .replace("ey nova", "")
-                .replace("hey noba", "")
-                .replace("nova", "")
-                .trim();
+                novaAktifEt();
 
-            novaAktifEt();
+                if(kalanSoru.length > 5){
+                    soruyuGonder(kalanSoru);
+                    return;
+                }
 
-            if(kalanSoru.length > 5){
-                soruyuGonder(kalanSoru);
+                novaCevapVer("Dinliyorum");
                 return;
             }
 
-            novaCevapVer("Dinliyorum");
-            return;
-        }
+            if(novaAktif && metin.length > 5 && metin.split(" ").length >= 2){
+                soruyuGonder(metin);
+            }
+        };
 
-        if(novaAktif && metin.length > 5 && metin.split(" ").length >= 2){
-            soruyuGonder(metin);
-        }
-    };
+        novaRecognition.onerror = function(e){
+            novaDinliyor = false;
 
-    novaRecognition.onerror = function(){
-    novaDinliyor = false;
-    novaDurumYaz("Nova beklemede. Ekrana bir kez dokun, sonra 'Hey Nova' de.", false);
-};
-    };
+            if(e.error === "not-allowed"){
+                novaDurumYaz("Mikrofon izni kapalı. Tarayıcıdan mikrofon izni ver.", false);
+            }
+            else if(e.error === "no-speech"){
+                novaDurumYaz("Ses duyamadım. Tekrar 'Hey Nova' de.", false);
+            }
+            else {
+                novaDurumYaz("Nova durdu. Ekrana bir kez tıkla ve tekrar dene.", false);
+            }
+        };
 
-    novaRecognition.onend = function(){
-        novaDinliyor = false;
+        novaRecognition.onend = function(){
+            novaDinliyor = false;
 
-        if(!soruGonderiliyor && !isSpeaking){
-            setTimeout(() => {
-                novaDinlemeyiBaslat();
-            }, 700);
-        }
-    };
+            if(!isSpeaking && !soruGonderiliyor){
+                setTimeout(() => {
+                    novaDinlemeyiBaslat();
+                }, 800);
+            }
+        };
 
-    try {
         novaRecognition.start();
-    } catch {
+    }
+    catch {
         novaDinliyor = false;
+        novaDurumYaz("Nova başlatılamadı. Sayfaya bir kez tıkla.", false);
     }
 }
 
 function novaCevapVer(metin){
     novaDinlemeyiDurdur();
-
     speechSynthesis.cancel();
 
     const t = new SpeechSynthesisUtterance(metin);
@@ -446,7 +454,7 @@ function novaCevapVer(metin){
         isSpeaking = false;
         setTimeout(() => {
             novaDinlemeyiBaslat();
-        }, 500);
+        }, 700);
     };
 
     speechSynthesis.speak(t);
@@ -472,55 +480,16 @@ function soruyuGonder(soru){
 }
 
 function sesliSor(){
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if(!SpeechRecognition){
-        alert("Tarayıcınız sesli komutu desteklemiyor. Google Chrome kullanın.");
-        return;
-    }
-
-    const rec = new SpeechRecognition();
-    rec.lang = "tr-TR";
-    rec.continuous = false;
-    rec.interimResults = false;
-
-    rec.start();
-
-    rec.onresult = e => {
-        document.getElementById("soruKutusu").value = e.results[0][0].transcript;
-    };
-
-    rec.onerror = () => {
-        alert("Ses algılanamadı. Mikrofon iznini kontrol edin.");
-    };
+    novaDinlemeyiBaslat();
+    novaDurumYaz("Nova dinlemede. Sorunu söyleyebilirsin.", true);
+    novaAktif = true;
 }
 
 function cevabiOku(){
     const cevap = document.querySelector(".son-cevap");
     if(!cevap) return;
 
-    novaDinlemeyiDurdur();
-    speechSynthesis.cancel();
-
-    const t = new SpeechSynthesisUtterance(cevap.innerText);
-    t.lang = "tr-TR";
-    t.rate = 0.95;
-
-    t.onstart = () => {
-        isSpeaking = true;
-    };
-
-    t.onend = () => {
-        isSpeaking = false;
-        soruGonderiliyor = false;
-        novaAktifEt();
-
-        setTimeout(() => {
-            novaDinlemeyiBaslat();
-        }, 700);
-    };
-
-    speechSynthesis.speak(t);
+    novaCevapVer(cevap.innerText);
 }
 
 function sesiDurdur(){
@@ -549,14 +518,8 @@ window.addEventListener("load", function(){
         chatArea.scrollTop = chatArea.scrollHeight;
     }
 
-    novaDinlemeyiBaslat();
+    novaDurumYaz("Nova hazır. Sayfaya bir kez tıkla veya Sesli Sor'a bas.", false);
 });
-document.addEventListener("touchstart", function () {
-    if (!novaDinliyor && !isSpeaking && !soruGonderiliyor) {
-        novaDinlemeyiBaslat();
-        novaDurumYaz("Nova dinlemede. 'Hey Nova' de.", false);
-    }
-}, { once: true });
 
 document.addEventListener("click", function(){
     if(!novaDinliyor && !isSpeaking && !soruGonderiliyor){
