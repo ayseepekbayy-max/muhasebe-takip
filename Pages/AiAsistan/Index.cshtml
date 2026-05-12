@@ -1,0 +1,217 @@
+@page
+@model MuhasebeTakip2.App.Pages.AiAsistan.IndexModel
+@{
+    ViewData["Title"] = "AI Asistan";
+}
+
+<div class="ai-page">
+
+    <div class="ai-header">
+        <div>
+            <h1>AI Asistan</h1>
+            <p>
+                Muhasebe verilerinizi doğal dil ile analiz edin.
+            </p>
+        </div>
+    </div>
+
+    <div class="ai-chat-card">
+
+        <div class="ai-messages" id="chatBox">
+
+            @if (Model.Mesajlar.Count == 0)
+            {
+                <div class="ai-empty">
+                    Örnek sorular:
+                    <br />
+                    • Bugün kasaya ne kadar giriş oldu?
+                    <br />
+                    • Kaç çalışan var?
+                    <br />
+                    • Bu ay toplam gider ne kadar?
+                    <br />
+                    • Cari sayım kaç?
+                </div>
+            }
+
+            @foreach (var mesaj in Model.Mesajlar)
+            {
+                if (mesaj.Gonderen == "Kullanici")
+                {
+                    <div class="msg-row user">
+                        <div class="msg user-msg">
+                            @mesaj.Metin
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="msg-row ai">
+                        <div class="msg ai-msg">
+                            @mesaj.Metin
+                        </div>
+                    </div>
+                }
+            }
+
+        </div>
+
+        <form method="post" class="ai-form">
+
+            <input asp-for="Soru"
+                   class="ai-input"
+                   placeholder="Bir soru yazın..." />
+
+            <button type="submit" class="ai-btn">
+                Gönder
+            </button>
+
+        </form>
+
+        <form method="post" asp-page-handler="Temizle">
+            <button type="submit" class="clear-btn">
+                Sohbeti Temizle
+            </button>
+        </form>
+
+    </div>
+
+</div>
+
+<style>
+    .ai-page {
+        width: 100%;
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .ai-header {
+        margin-bottom: 20px;
+    }
+
+    .ai-header h1 {
+        font-size: 34px;
+        font-weight: 800;
+        margin-bottom: 6px;
+        color: #0f172a;
+    }
+
+    .ai-header p {
+        color: #64748b;
+        margin: 0;
+    }
+
+    .ai-chat-card {
+        background: white;
+        border-radius: 22px;
+        border: 1px solid #e2e8f0;
+        padding: 20px;
+        box-shadow: 0 10px 30px rgba(15,23,42,0.06);
+    }
+
+    .ai-messages {
+        height: 520px;
+        overflow-y: auto;
+        padding: 10px;
+        background: #f8fafc;
+        border-radius: 18px;
+        margin-bottom: 16px;
+    }
+
+    .msg-row {
+        display: flex;
+        margin-bottom: 14px;
+    }
+
+    .msg-row.user {
+        justify-content: flex-end;
+    }
+
+    .msg-row.ai {
+        justify-content: flex-start;
+    }
+
+    .msg {
+        max-width: 80%;
+        padding: 14px 16px;
+        border-radius: 18px;
+        font-size: 15px;
+        line-height: 1.5;
+        word-break: break-word;
+    }
+
+    .user-msg {
+        background: linear-gradient(135deg,#4f46e5,#3730a3);
+        color: white;
+        border-bottom-right-radius: 6px;
+    }
+
+    .ai-msg {
+        background: white;
+        border: 1px solid #dbe4ee;
+        color: #0f172a;
+        border-bottom-left-radius: 6px;
+    }
+
+    .ai-form {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+    }
+
+    .ai-input {
+        flex: 1;
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid #cbd5e1;
+        font-size: 15px;
+    }
+
+    .ai-btn {
+        border: none;
+        border-radius: 14px;
+        padding: 0 22px;
+        background: #4f46e5;
+        color: white;
+        font-weight: 700;
+    }
+
+    .clear-btn {
+        margin-top: 14px;
+        border: none;
+        background: #fee2e2;
+        color: #991b1b;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-weight: 700;
+    }
+
+    .ai-empty {
+        color: #64748b;
+        line-height: 1.9;
+        padding: 20px;
+    }
+
+    @@media (max-width: 768px) {
+
+        .ai-chat-card {
+            padding: 14px;
+        }
+
+        .ai-messages {
+            height: 420px;
+        }
+
+        .msg {
+            max-width: 92%;
+        }
+
+        .ai-form {
+            flex-direction: column;
+        }
+
+        .ai-btn {
+            height: 48px;
+        }
+    }
+</style>
