@@ -77,6 +77,64 @@ public class IndexModel : PageModel
         return Page();
     }
 
+    public async Task<IActionResult> OnPostAjaxAsync()
+{
+    var firmaId = HttpContext.Session.GetInt32("FirmaId");
+
+    if (firmaId == null)
+    {
+        return new JsonResult(new
+        {
+            success = false,
+            cevap = "Oturum süresi dolmuş. Lütfen tekrar giriş yapın."
+        });
+    }
+
+    if (string.IsNullOrWhiteSpace(Soru))
+    {
+        return new JsonResult(new
+        {
+            success = false,
+            cevap = "Lütfen bir soru yazın."
+        });
+    }
+
+    Mesajlar = HttpContext.Session.GetObject<List<ChatMesaj>>("AiMesajlar")
+                ?? new List<ChatMesaj>();
+
+    Mesajlar.Add(new ChatMesaj
+    {
+        Gonderen = "Kullanici",
+        Metin = Soru
+    });
+
+    string cevap;
+
+    try
+    {
+        cevap = await CevapUret(Soru, firmaId.Value);
+    }
+    catch (Exception ex)
+    {
+        cevap = $"İşlem sırasında hata oluştu.\n\nHata: {ex.Message}";
+    }
+
+    Mesajlar.Add(new ChatMesaj
+    {
+        Gonderen = "Ai",
+        Metin = cevap
+    });
+
+    HttpContext.Session.SetObject("AiMesajlar", Mesajlar);
+
+    return new JsonResult(new
+    {
+        success = true,
+        soru = Soru,
+        cevap = cevap
+    });
+}
+
     public IActionResult OnPostTemizle()
     {
         HttpContext.Session.Remove("AiMesajlar");

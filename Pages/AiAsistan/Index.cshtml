@@ -311,10 +311,6 @@ function novaDurumYaz(metin, aktifMi){
     durum.className = aktifMi ? "nova-active" : "nova-passive";
 }
 
-function cevapGelinceOku(){
-    localStorage.setItem("cevapOtomatikOku", "1");
-}
-
 function aiDusunuyorGoster(){
     const kutu = document.getElementById("soruKutusu");
     const dusunuyor = document.getElementById("aiDusunuyor");
@@ -322,6 +318,55 @@ function aiDusunuyorGoster(){
     if(kutu && kutu.value.trim() && dusunuyor){
         dusunuyor.style.display = "flex";
     }
+}
+
+function aiDusunuyorGizle(){
+    const dusunuyor = document.getElementById("aiDusunuyor");
+    if(dusunuyor){
+        dusunuyor.style.display = "none";
+    }
+}
+
+function chatAltaKaydir(){
+    const chatArea = document.querySelector(".chat-area");
+    if(chatArea){
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
+}
+
+function mesajEkle(tip, metin){
+    const chatArea = document.querySelector(".chat-area");
+    const dusunuyor = document.getElementById("aiDusunuyor");
+
+    if(!chatArea) return;
+
+    const row = document.createElement("div");
+    row.className = tip === "user" ? "message user" : "message bot";
+
+    const bubble = document.createElement("div");
+    bubble.className = tip === "user" ? "bubble" : "bubble son-cevap";
+
+    if(tip !== "user"){
+        document.querySelectorAll(".son-cevap").forEach(x => x.classList.remove("son-cevap"));
+        const satirlar = (metin || "").split("\n");
+        satirlar.forEach(s => {
+            const div = document.createElement("div");
+            div.innerText = s;
+            bubble.appendChild(div);
+        });
+    } else {
+        bubble.innerText = metin;
+    }
+
+    row.appendChild(bubble);
+
+    if(dusunuyor){
+        chatArea.insertBefore(row, dusunuyor);
+    } else {
+        chatArea.appendChild(row);
+    }
+
+    chatAltaKaydir();
 }
 
 function novaAktifEt(){
@@ -416,7 +461,7 @@ function novaDinlemeyiBaslat(){
                 novaDurumYaz("Ses duyamadım. Tekrar 'Hey Nova' de.", false);
             }
             else {
-                novaDurumYaz("Nova durdu. Ekrana bir kez tıkla ve tekrar dene.", false);
+                novaDurumYaz("Nova durdu. Ekrana bir kez tıkla veya Sesli Sor'a bas.", false);
             }
         };
 
@@ -426,7 +471,7 @@ function novaDinlemeyiBaslat(){
             if(!isSpeaking && !soruGonderiliyor){
                 setTimeout(() => {
                     novaDinlemeyiBaslat();
-                }, 800);
+                }, 700);
             }
         };
 
@@ -439,10 +484,9 @@ function novaDinlemeyiBaslat(){
 }
 
 function novaCevapVer(metin){
-    novaDinlemeyiDurdur();
-
     if (!metin || !metin.trim()) return;
 
+    novaDinlemeyiDurdur();
     speechSynthesis.cancel();
 
     const t = new SpeechSynthesisUtterance(metin);
@@ -468,43 +512,69 @@ function novaCevapVer(metin){
     t.onerror = () => {
         isSpeaking = false;
         soruGonderiliyor = false;
-        novaDurumYaz("Sesli okuma engellendi. Ekrana bir kez dokunup tekrar dene.", false);
+        novaDurumYaz("Sesli okuma engellendi. Sesli Sor veya Oku butonuna bir kez basıp tekrar dene.", false);
     };
 
-    setTimeout(() => {
-        speechSynthesis.speak(t);
-    }, 150);
+    speechSynthesis.speak(t);
 }
 
-function soruyuGonder(soru){
+async function soruyuGonder(soru){
+    const form = document.getElementById("soruFormu");
     const kutu = document.getElementById("soruKutusu");
-    const buton = document.getElementById("sorButonu");
 
-    if(!kutu || !buton) return;
+    if(!form || !kutu) return;
+
+    const temizSoru = (soru || kutu.value || "").trim();
+    if(!temizSoru) return;
 
     soruGonderiliyor = true;
-
-    kutu.value = soru;
-    cevapGelinceOku();
-    aiDusunuyorGoster();
-
     novaDinlemeyiDurdur();
 
-    setTimeout(() => {
-        buton.click();
-    }, 400);
+    kutu.value = temizSoru;
+    mesajEkle("user", temizSoru);
+    aiDusunuyorGoster();
+
+    try {
+        const formData = new FormData(form);
+        formData.set("Soru", temizSoru);
+
+        const response = await fetch("?handler=Ajax", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        aiDusunuyorGizle();
+
+        const cevap = data.cevap || "Cevap alınamadı.";
+        mesajEkle("bot", cevap);
+
+        kutu.value = "";
+
+        setTimeout(() => {
+            novaCevapVer(cevap);
+        }, 200);
+    }
+    catch(error){
+        aiDusunuyorGizle();
+        soruGonderiliyor = false;
+
+        const hata = "Bağlantı sırasında hata oluştu.";
+        mesajEkle("bot", hata);
+        novaDurumYaz(hata, false);
+    }
 }
 
 function sesliSor(){
-    novaDinlemeyiBaslat();
-    novaDurumYaz("Nova dinlemede. Sorunu söyleyebilirsin.", true);
     novaAktif = true;
+    novaDurumYaz("Nova dinlemede. Sorunu söyleyebilirsin.", true);
+    novaDinlemeyiBaslat();
 }
 
 function cevabiOku(){
     const cevap = document.querySelector(".son-cevap");
     if(!cevap) return;
-
     novaCevapVer(cevap.innerText);
 }
 
@@ -517,24 +587,26 @@ function sesiDurdur(){
 
 window.addEventListener("load", function(){
     soruGonderiliyor = false;
-
-    const otomatikOku = localStorage.getItem("cevapOtomatikOku");
-    const cevap = document.querySelector(".son-cevap");
-
-    if(otomatikOku === "1" && cevap && cevap.innerText.trim()){
-    localStorage.removeItem("cevapOtomatikOku");
-
-    setTimeout(() => {
-        novaCevapVer(cevap.innerText);
-    }, 800);
-}
-
-    const chatArea = document.querySelector(".chat-area");
-    if(chatArea){
-        chatArea.scrollTop = chatArea.scrollHeight;
-    }
-
+    chatAltaKaydir();
     novaDurumYaz("Nova hazır. Sayfaya bir kez tıkla veya Sesli Sor'a bas.", false);
+});
+
+document.addEventListener("DOMContentLoaded", function(){
+    const form = document.getElementById("soruFormu");
+
+    if(form){
+        form.addEventListener("submit", function(e){
+            const submitter = e.submitter;
+
+            if(submitter && submitter.getAttribute("formaction") && submitter.getAttribute("formaction").includes("Temizle")){
+                return;
+            }
+
+            e.preventDefault();
+            const kutu = document.getElementById("soruKutusu");
+            soruyuGonder(kutu ? kutu.value : "");
+        });
+    }
 });
 
 document.addEventListener("click", function(){
@@ -542,17 +614,13 @@ document.addEventListener("click", function(){
         novaDinlemeyiBaslat();
     }
 });
+
 document.addEventListener("touchstart", function () {
     try {
-        speechSynthesis.cancel();
-
         const t = new SpeechSynthesisUtterance("Nova hazır.");
         t.lang = "tr-TR";
         t.volume = 0.01;
-
         speechSynthesis.speak(t);
-
-        novaDurumYaz("Nova hazır. 'Hey Nova' de.", false);
 
         if (!novaDinliyor && !isSpeaking && !soruGonderiliyor) {
             novaDinlemeyiBaslat();
