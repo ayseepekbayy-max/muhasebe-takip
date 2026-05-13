@@ -192,7 +192,11 @@ else
 
         if (
             bulunanCalisan != null &&
-            lower.Contains("avans")
+            lower.Contains("avans") &&
+            !lower.Contains("toplam") &&
+            !lower.Contains("en fazla") &&
+            !lower.Contains("en çok") &&
+            !lower.Contains("kaç tl avans verdim")
         )
         {
             var toplam = await _db.CalisanAvanslari
@@ -912,7 +916,9 @@ else
     new DateTime(now.Year, 12, 1),
     DateTimeKind.Utc);
 
-        return new DateTime(now.Year, now.Month, 1);
+        return DateTime.SpecifyKind(
+    new DateTime(now.Year, now.Month, 1),
+    DateTimeKind.Utc);
     }
 }
 
