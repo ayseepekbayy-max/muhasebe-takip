@@ -135,12 +135,14 @@ public class IndexModel : PageModel
 
         var ay = AyBul(lower);
 
-        var ayBaslangic = new DateTime(
+        var ayBaslangic = DateTime.SpecifyKind(
+        new DateTime(
             ay.Year,
             ay.Month,
-            1);
+            1),
+         DateTimeKind.Utc);
 
-        var ayBitis = ayBaslangic.AddMonths(1);
+          var ayBitis = ayBaslangic.AddMonths(1);
 
         var calisanlar = await _db.Calisanlar
             .Where(x => x.FirmaId == firmaId)
@@ -209,7 +211,7 @@ else
         }
 
         // AVANS ANALİZİ
-        return "AVANS BLOĞUNA GİRDİ";
+        
         if (lower.Contains("avans"))
         {
             if (
@@ -851,40 +853,64 @@ else
         var now = DateTime.UtcNow;
 
         if (text.Contains("ocak"))
-            return new DateTime(now.Year, 1, 1);
+           return DateTime.SpecifyKind(
+    new DateTime(now.Year, 1, 1),
+    DateTimeKind.Utc);
 
         if (text.Contains("şubat"))
-            return new DateTime(now.Year, 2, 1);
+            return DateTime.SpecifyKind(
+    new DateTime(now.Year, 2, 1),
+    DateTimeKind.Utc);
 
         if (text.Contains("mart"))
-            return new DateTime(now.Year, 3, 1);
+            return DateTime.SpecifyKind(
+    new DateTime(now.Year, 3, 1),
+    DateTimeKind.Utc);
 
         if (text.Contains("nisan"))
-            return new DateTime(now.Year, 4, 1);
+            return DateTime.SpecifyKind(
+    new DateTime(now.Year, 4, 1),
+    DateTimeKind.Utc);
 
         if (text.Contains("mayıs"))
-            return new DateTime(now.Year, 5, 1);
+            return DateTime.SpecifyKind(
+    new DateTime(now.Year, 5, 1),
+    DateTimeKind.Utc);
 
         if (text.Contains("haziran"))
-            return new DateTime(now.Year, 6, 1);
+            return DateTime.SpecifyKind(
+    new DateTime(now.Year, 6, 1),
+    DateTimeKind.Utc);
 
         if (text.Contains("temmuz"))
-            return new DateTime(now.Year, 7, 1);
+            return DateTime.SpecifyKind(
+    new DateTime(now.Year, 7, 1),
+    DateTimeKind.Utc);
 
         if (text.Contains("ağustos"))
-            return new DateTime(now.Year, 8, 1);
+            return DateTime.SpecifyKind(
+    new DateTime(now.Year, 8, 1),
+    DateTimeKind.Utc);
 
         if (text.Contains("eylül"))
-            return new DateTime(now.Year, 9, 1);
+            return DateTime.SpecifyKind(
+    new DateTime(now.Year, 9, 1),
+    DateTimeKind.Utc);
 
         if (text.Contains("ekim"))
-            return new DateTime(now.Year, 10, 1);
+            return DateTime.SpecifyKind(
+    new DateTime(now.Year, 10, 1),
+    DateTimeKind.Utc);
 
         if (text.Contains("kasım"))
-            return new DateTime(now.Year, 11, 1);
+           return DateTime.SpecifyKind(
+    new DateTime(now.Year, 11, 1),
+    DateTimeKind.Utc);
 
         if (text.Contains("aralık"))
-            return new DateTime(now.Year, 12, 1);
+            return DateTime.SpecifyKind(
+    new DateTime(now.Year, 12, 1),
+    DateTimeKind.Utc);
 
         return new DateTime(now.Year, now.Month, 1);
     }
