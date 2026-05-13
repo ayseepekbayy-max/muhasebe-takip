@@ -68,7 +68,7 @@
                       class="chat-input"></textarea>
 
             <div class="button-row">
-                <button id="sorButonu" type="submit" class="btn primary" onclick="cevapGelinceOku(); aiDusunuyorGoster()">Sor</button>
+                <button id="sorButonu" type="submit" class="btn primary">Sor</button>
                 <button type="button" onclick="sesliSor()" class="btn">🎤 Sesli Sor</button>
                 <button type="button" onclick="cevabiOku()" class="btn">🔊 Oku</button>
                 <button type="button" onclick="sesiDurdur()" class="btn danger">⏹ Durdur</button>
@@ -76,7 +76,7 @@
             </div>
 
             <div id="novaDurum" style="margin-top:10px; font-size:14px; color:#475569;">
-                Nova dinleme hazırlanıyor...
+                Nova hazırlanıyor...
             </div>
 
         </form>
@@ -201,11 +201,6 @@
     outline: none;
 }
 
-.chat-input:focus {
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
-}
-
 .button-row {
     display: flex;
     gap: 10px;
@@ -262,129 +257,107 @@
     50% { opacity: 1; }
 }
 
-.nova-active {
-    color: #15803d !important;
-    font-weight: 700;
-}
+@@media (max-width:768px){
 
-.nova-passive {
-    color: #475569 !important;
-}
-
-@@media (max-width: 768px) {
-    .ai-page {
-        padding: 14px 8px;
+    .ai-page{
+        padding:14px 8px;
     }
 
-    .ai-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
+    .ai-header{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:12px;
     }
 
-    .bubble {
-        max-width: 92%;
+    .bubble{
+        max-width:92%;
     }
 
-    .button-row {
-        flex-direction: column;
+    .button-row{
+        flex-direction:column;
     }
 
-    .btn {
-        width: 100%;
+    .btn{
+        width:100%;
     }
 }
 </style>
 
 <script>
+
 let novaRecognition = null;
 let novaDinliyor = false;
 let novaAktif = false;
 let isSpeaking = false;
 let soruGonderiliyor = false;
-let novaTimer = null;
 
-function novaDurumYaz(metin, aktifMi){
+function novaDurumYaz(metin){
+
     const durum = document.getElementById("novaDurum");
-    if (!durum) return;
-    durum.innerText = metin;
-    durum.className = aktifMi ? "nova-active" : "nova-passive";
-}
 
-function aiDusunuyorGoster(){
-    const kutu = document.getElementById("soruKutusu");
-    const dusunuyor = document.getElementById("aiDusunuyor");
-
-    if(kutu && kutu.value.trim() && dusunuyor){
-        dusunuyor.style.display = "flex";
-    }
-}
-
-function aiDusunuyorGizle(){
-    const dusunuyor = document.getElementById("aiDusunuyor");
-    if(dusunuyor){
-        dusunuyor.style.display = "none";
+    if(durum){
+        durum.innerText = metin;
     }
 }
 
 function chatAltaKaydir(){
-    const chatArea = document.querySelector(".chat-area");
-    if(chatArea){
-        chatArea.scrollTop = chatArea.scrollHeight;
+
+    const alan = document.querySelector(".chat-area");
+
+    if(alan){
+        alan.scrollTop = alan.scrollHeight;
     }
 }
 
 function mesajEkle(tip, metin){
-    const chatArea = document.querySelector(".chat-area");
-    const dusunuyor = document.getElementById("aiDusunuyor");
 
-    if(!chatArea) return;
+    const alan = document.querySelector(".chat-area");
+
+    if(!alan) return;
 
     const row = document.createElement("div");
-    row.className = tip === "user" ? "message user" : "message bot";
+    row.className = tip === "user"
+        ? "message user"
+        : "message bot";
 
     const bubble = document.createElement("div");
-    bubble.className = tip === "user" ? "bubble" : "bubble son-cevap";
 
-    if(tip !== "user"){
-        document.querySelectorAll(".son-cevap").forEach(x => x.classList.remove("son-cevap"));
-        const satirlar = (metin || "").split("\n");
-        satirlar.forEach(s => {
-            const div = document.createElement("div");
-            div.innerText = s;
-            bubble.appendChild(div);
-        });
-    } else {
+    bubble.className = tip === "user"
+        ? "bubble"
+        : "bubble son-cevap";
+
+    if(tip === "user"){
+
         bubble.innerText = metin;
+
+    } else {
+
+        document.querySelectorAll(".son-cevap")
+            .forEach(x => x.classList.remove("son-cevap"));
+
+        (metin || "").split("\n").forEach(x => {
+
+            const d = document.createElement("div");
+            d.innerText = x;
+            bubble.appendChild(d);
+        });
     }
 
     row.appendChild(bubble);
 
-    if(dusunuyor){
-        chatArea.insertBefore(row, dusunuyor);
-    } else {
-        chatArea.appendChild(row);
-    }
+    alan.appendChild(row);
 
     chatAltaKaydir();
 }
 
-function novaAktifEt(){
-    novaAktif = true;
-    novaDurumYaz("🟢 Nova aktif. Sorunu söyleyebilirsin.", true);
-
-    clearTimeout(novaTimer);
-    novaTimer = setTimeout(() => {
-        novaAktif = false;
-        novaDurumYaz("Nova dinlemede. 'Hey Nova' de.", false);
-    }, 20000);
-}
-
 function novaDinlemeyiDurdur(){
+
     if(novaRecognition){
-        try {
+
+        try{
             novaRecognition.stop();
-        } catch {}
+        }
+        catch{}
     }
 
     novaRecognition = null;
@@ -392,277 +365,289 @@ function novaDinlemeyiDurdur(){
 }
 
 function novaDinlemeyiBaslat(){
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if(isSpeaking || soruGonderiliyor) return;
+
+    const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
 
     if(!SpeechRecognition){
-        novaDurumYaz("Bu tarayıcı sesli komutu desteklemiyor. Chrome ile dene.", false);
+
+        novaDurumYaz("Tarayıcı sesli komutu desteklemiyor.");
         return;
     }
 
     if(novaDinliyor) return;
 
-    try {
+    try{
+
         novaRecognition = new SpeechRecognition();
+
         novaRecognition.lang = "tr-TR";
         novaRecognition.continuous = false;
         novaRecognition.interimResults = false;
 
         novaRecognition.onstart = function(){
+
             novaDinliyor = true;
-            novaDurumYaz("Nova dinlemede. 'Hey Nova' de.", false);
+
+            novaDurumYaz("Nova dinlemede...");
         };
 
         novaRecognition.onresult = function(e){
+
             if(isSpeaking || soruGonderiliyor) return;
 
             const sonIndex = e.results.length - 1;
-            if(isSpeaking) return;
 
-            if(speechSynthesis.speaking){
-                speechSynthesis.cancel();
-            }
-            let metin = e.results[sonIndex][0].transcript.toLowerCase().trim();
-            
-            novaDurumYaz("Duydum: " + metin, novaAktif);
+            let metin =
+                e.results[sonIndex][0]
+                .transcript
+                .toLowerCase()
+                .trim();
 
             const novaDendi =
                 metin.includes("hey nova") ||
                 metin.includes("ey nova") ||
-                metin.includes("hey noba") ||
-                metin === "nova" ||
-                metin.includes("nova");
+                metin === "nova";
 
             if(!novaAktif && novaDendi){
-                let kalanSoru = metin
-                    .replace("hey nova", "")
-                    .replace("ey nova", "")
-                    .replace("hey noba", "")
-                    .replace("nova", "")
-                    .trim();
 
-                novaAktifEt();
+                novaAktif = true;
 
-                if(kalanSoru.length > 5){
-                    soruyuGonder(kalanSoru);
-                    return;
-                }
+                novaDurumYaz("Nova aktif.");
 
                 novaCevapVer("Dinliyorum");
+
                 return;
             }
 
-            if(novaAktif && metin.length > 5 && metin.split(" ").length >= 2){
+            if(
+                novaAktif &&
+                metin.length > 3 &&
+                !metin.includes("hey nova")
+            ){
+
                 soruyuGonder(metin);
             }
         };
 
-        novaRecognition.onerror = function(e){
+        novaRecognition.onerror = function(){
+
             novaDinliyor = false;
-        if(e.error === "aborted"){
-            return;
-        }
-            if(e.error === "not-allowed"){
-                novaDurumYaz("Mikrofon izni kapalı. Tarayıcıdan mikrofon izni ver.", false);
-            }
-            else if(e.error === "no-speech"){
-                novaDurumYaz("Ses duyamadım. Tekrar 'Hey Nova' de.", false);
-            }
-            else {
-                novaDurumYaz("Nova durdu. Ekrana bir kez tıkla veya Sesli Sor'a bas.", false);
-            }
         };
 
         novaRecognition.onend = function(){
 
-    novaDinliyor = false;
+            novaDinliyor = false;
 
-    if(isSpeaking || soruGonderiliyor){
-        return;
-    }
-
-    setTimeout(() => {
-
-        if(!novaDinliyor && !isSpeaking){
-
-            try{
-                novaDinlemeyiBaslat();
+            if(isSpeaking || soruGonderiliyor){
+                return;
             }
-            catch{}
 
-        }
+            setTimeout(() => {
 
-    }, 1200);
-};
+                try{
+                    novaDinlemeyiBaslat();
+                }
+                catch{}
+
+            }, 1500);
+        };
 
         novaRecognition.start();
     }
-    catch {
+    catch{
+
         novaDinliyor = false;
-        novaDurumYaz("Nova başlatılamadı. Sayfaya bir kez tıkla.", false);
     }
 }
 
 function novaCevapVer(metin){
+
     if (!metin || !metin.trim()) return;
 
     novaDinlemeyiDurdur();
+
     speechSynthesis.cancel();
 
     const t = new SpeechSynthesisUtterance(metin);
+
     t.lang = "tr-TR";
-    t.rate = 0.95;
+    t.rate = 0.92;
     t.pitch = 1;
 
     t.onstart = () => {
+
         isSpeaking = true;
-        novaDurumYaz("🔊 Nova cevap veriyor...", true);
+
+        novaDurumYaz("🔊 Nova cevap veriyor...");
     };
 
     t.onend = () => {
 
-    speechSynthesis.cancel();
+        speechSynthesis.cancel();
 
-    isSpeaking = false;
-    soruGonderiliyor = false;
-
-    novaDurumYaz("Nova dinlemede. 'Hey Nova' de.", false);
-
-    if(novaRecognition){
-        try{
-            novaRecognition.abort();
-        } catch {}
-    }
-
-    setTimeout(() => {
-
-        if(!novaDinliyor && !isSpeaking){
-
-            try{
-                novaDinlemeyiBaslat();
-            }
-            catch{}
-
-        }
-
-    }, 1800);
-};
-
-    t.onerror = () => {
         isSpeaking = false;
         soruGonderiliyor = false;
-        novaDurumYaz("Sesli okuma engellendi. Sesli Sor veya Oku butonuna bir kez basıp tekrar dene.", false);
+
+        novaDurumYaz("Nova dinlemede...");
+
+        setTimeout(() => {
+
+            if(!novaDinliyor && !isSpeaking){
+
+                try{
+                    novaDinlemeyiBaslat();
+                }
+                catch{}
+
+            }
+
+        }, 2200);
+    };
+
+    t.onerror = () => {
+
+        isSpeaking = false;
+        soruGonderiliyor = false;
+
+        novaDurumYaz("Sesli okuma başarısız oldu.");
     };
 
     speechSynthesis.speak(t);
 }
 
 async function soruyuGonder(soru){
+
     const form = document.getElementById("soruFormu");
-    const kutu = document.getElementById("soruKutusu");
 
-    if(!form || !kutu) return;
-
-    const temizSoru = (soru || kutu.value || "").trim();
-    if(!temizSoru) return;
+    if(!form) return;
 
     soruGonderiliyor = true;
+
     novaDinlemeyiDurdur();
 
-    kutu.value = temizSoru;
-    mesajEkle("user", temizSoru);
-    aiDusunuyorGoster();
+    mesajEkle("user", soru);
 
-    try {
-        const formData = new FormData(form);
-        formData.set("Soru", temizSoru);
+    try{
+
+        const fd = new FormData(form);
+
+        fd.set("Soru", soru);
 
         const response = await fetch("?handler=Ajax", {
             method: "POST",
-            body: formData
+            body: fd
         });
 
         const data = await response.json();
 
-        aiDusunuyorGizle();
+        const cevap =
+            data.cevap || "Cevap alınamadı.";
 
-        const cevap = data.cevap || "Cevap alınamadı.";
         mesajEkle("bot", cevap);
 
-        kutu.value = "";
-
         setTimeout(() => {
+
             novaCevapVer(cevap);
-        }, 200);
+
+        }, 250);
     }
-    catch(error){
-        aiDusunuyorGizle();
+    catch{
+
         soruGonderiliyor = false;
 
-        const hata = "Bağlantı sırasında hata oluştu.";
-        mesajEkle("bot", hata);
-        novaDurumYaz(hata, false);
+        novaDurumYaz("Bağlantı hatası.");
     }
 }
 
 function sesliSor(){
+
     novaAktif = true;
-    novaDurumYaz("Nova dinlemede. Sorunu söyleyebilirsin.", true);
+
+    novaDurumYaz("Nova aktif.");
+
     novaDinlemeyiBaslat();
 }
 
 function cevabiOku(){
-    const cevap = document.querySelector(".son-cevap");
+
+    const cevap =
+        document.querySelector(".son-cevap");
+
     if(!cevap) return;
+
     novaCevapVer(cevap.innerText);
 }
 
 function sesiDurdur(){
+
     speechSynthesis.cancel();
+
     isSpeaking = false;
     soruGonderiliyor = false;
-    novaDinlemeyiBaslat();
+
+    novaDurumYaz("Nova durduruldu.");
+
+    setTimeout(() => {
+
+        try{
+            novaDinlemeyiBaslat();
+        }
+        catch{}
+
+    }, 1200);
 }
 
 window.addEventListener("load", function(){
+
     soruGonderiliyor = false;
+
     chatAltaKaydir();
-    novaDurumYaz("Nova hazır. Sayfaya bir kez tıkla veya Sesli Sor'a bas.", false);
+
+    novaDurumYaz("Nova hazır. 'Hey Nova' diyebilirsin.");
+
+    setTimeout(() => {
+
+        try{
+            novaDinlemeyiBaslat();
+        }
+        catch{}
+
+    }, 1200);
 });
 
 document.addEventListener("DOMContentLoaded", function(){
-    const form = document.getElementById("soruFormu");
+
+    const form =
+        document.getElementById("soruFormu");
 
     if(form){
+
         form.addEventListener("submit", function(e){
+
             const submitter = e.submitter;
 
-            if(submitter && submitter.getAttribute("formaction") && submitter.getAttribute("formaction").includes("Temizle")){
+            if(
+                submitter &&
+                submitter.getAttribute("formaction") &&
+                submitter.getAttribute("formaction").includes("Temizle")
+            ){
                 return;
             }
 
             e.preventDefault();
-            const kutu = document.getElementById("soruKutusu");
-            soruyuGonder(kutu ? kutu.value : "");
+
+            const kutu =
+                document.getElementById("soruKutusu");
+
+            soruyuGonder(
+                kutu ? kutu.value : ""
+            );
         });
     }
 });
 
-document.addEventListener("click", function(){
-    if(!novaDinliyor && !isSpeaking && !soruGonderiliyor){
-        novaDinlemeyiBaslat();
-    }
-});
-
-document.addEventListener("touchstart", function () {
-    try {
-        const t = new SpeechSynthesisUtterance("Nova hazır.");
-        t.lang = "tr-TR";
-        t.volume = 0.01;
-        speechSynthesis.speak(t);
-
-        if (!novaDinliyor && !isSpeaking && !soruGonderiliyor) {
-            novaDinlemeyiBaslat();
-        }
-    } catch {}
-}, { once: true });
 </script>
