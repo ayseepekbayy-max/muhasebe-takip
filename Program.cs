@@ -3,11 +3,16 @@ using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using Microsoft.AspNetCore.Http;
 using MuhasebeTakip2.App.Helpers;
+using MuhasebeTakip2.App.Services.Ai;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
+
+builder.Services.AddScoped<QueryInterpreter>();
+builder.Services.AddScoped<QueryExecutor>();
+builder.Services.AddScoped<NovaReplyService>();
 
 builder.Services.AddSession(options =>
 {

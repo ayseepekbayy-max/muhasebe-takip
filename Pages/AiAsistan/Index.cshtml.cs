@@ -4,16 +4,27 @@ using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using MuhasebeTakip2.App.Helpers;
+using MuhasebeTakip2.App.Services.Ai;
 
 namespace MuhasebeTakip2.App.Pages.AiAsistan;
 
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly QueryInterpreter _interpreter;
+    private readonly QueryExecutor _executor;
+    private readonly NovaReplyService _novaReplyService;
 
-    public IndexModel(AppDbContext db)
+    public IndexModel(
+        AppDbContext db,
+        QueryInterpreter interpreter,
+        QueryExecutor executor,
+        NovaReplyService novaReplyService)
     {
         _db = db;
+        _interpreter = interpreter;
+        _executor = executor;
+        _novaReplyService = novaReplyService;
     }
 
     [BindProperty]
@@ -57,7 +68,7 @@ public class IndexModel : PageModel
 
         try
         {
-            cevap = await CevapUret(Soru, firmaId.Value);
+            cevap = await AkilliCevapUret(Soru, firmaId.Value);
         }
         catch (Exception ex)
         {
@@ -78,67 +89,89 @@ public class IndexModel : PageModel
     }
 
     public async Task<IActionResult> OnPostAjaxAsync()
-{
-    var firmaId = HttpContext.Session.GetInt32("FirmaId");
-
-    if (firmaId == null)
     {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+
+        if (firmaId == null)
+        {
+            return new JsonResult(new
+            {
+                success = false,
+                cevap = "Oturum süresi dolmuş. Lütfen tekrar giriş yapın."
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(Soru))
+        {
+            return new JsonResult(new
+            {
+                success = false,
+                cevap = "Lütfen bir soru yazın."
+            });
+        }
+
+        Mesajlar = HttpContext.Session.GetObject<List<ChatMesaj>>("AiMesajlar")
+                    ?? new List<ChatMesaj>();
+
+        Mesajlar.Add(new ChatMesaj
+        {
+            Gonderen = "Kullanici",
+            Metin = Soru
+        });
+
+        string cevap;
+
+        try
+        {
+            cevap = await AkilliCevapUret(Soru, firmaId.Value);
+        }
+        catch (Exception ex)
+        {
+            cevap = $"İşlem sırasında hata oluştu.\n\nHata: {ex.Message}";
+        }
+
+        Mesajlar.Add(new ChatMesaj
+        {
+            Gonderen = "Ai",
+            Metin = cevap
+        });
+
+        HttpContext.Session.SetObject("AiMesajlar", Mesajlar);
+
         return new JsonResult(new
         {
-            success = false,
-            cevap = "Oturum süresi dolmuş. Lütfen tekrar giriş yapın."
+            success = true,
+            soru = Soru,
+            cevap = cevap
         });
     }
-
-    if (string.IsNullOrWhiteSpace(Soru))
-    {
-        return new JsonResult(new
-        {
-            success = false,
-            cevap = "Lütfen bir soru yazın."
-        });
-    }
-
-    Mesajlar = HttpContext.Session.GetObject<List<ChatMesaj>>("AiMesajlar")
-                ?? new List<ChatMesaj>();
-
-    Mesajlar.Add(new ChatMesaj
-    {
-        Gonderen = "Kullanici",
-        Metin = Soru
-    });
-
-    string cevap;
-
-    try
-    {
-        cevap = await CevapUret(Soru, firmaId.Value);
-    }
-    catch (Exception ex)
-    {
-        cevap = $"İşlem sırasında hata oluştu.\n\nHata: {ex.Message}";
-    }
-
-    Mesajlar.Add(new ChatMesaj
-    {
-        Gonderen = "Ai",
-        Metin = cevap
-    });
-
-    HttpContext.Session.SetObject("AiMesajlar", Mesajlar);
-
-    return new JsonResult(new
-    {
-        success = true,
-        soru = Soru,
-        cevap = cevap
-    });
-}
 
     public IActionResult OnPostTemizle()
     {
         HttpContext.Session.Remove("AiMesajlar");
         return RedirectToPage();
+    }
+
+    private async Task<string> AkilliCevapUret(string soru, int firmaId)
+    {
+        var novaReply = _novaReplyService.GetReply(soru);
+
+        if (!string.IsNullOrWhiteSpace(novaReply))
+            return novaReply;
+
+        var sonuc = _interpreter.Interpret(soru);
+        sonuc.FirmaId = firmaId;
+
+        var cevap = await _executor.ExecuteAsync(sonuc);
+
+        if (!string.IsNullOrWhiteSpace(cevap) &&
+            cevap != "Bu sorgu tipi henüz desteklenmiyor." &&
+            cevap != "Sorunuzu anlayamadım.")
+        {
+            return cevap;
+        }
+
+        return await CevapUret(soru, firmaId);
     }
 
     private async Task<string> CevapUret(string soru, int firmaId)

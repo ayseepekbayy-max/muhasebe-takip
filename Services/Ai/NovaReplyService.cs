@@ -1,4 +1,4 @@
-namespace FirmovaAI.Services.Ai;
+namespace MuhasebeTakip2.App.Services.Ai;
 
 public class NovaReplyService
 {
@@ -41,7 +41,9 @@ public class NovaReplyService
 
         if (text == "hey nova" ||
             text == "nova" ||
-            text.Contains("hey nova"))
+            text == "ey nova" ||
+            text.Contains("hey nova") ||
+            text.Contains("ey nova"))
         {
             return GetRandomWakeReply();
         }
@@ -58,4 +60,4 @@ public class NovaReplyService
     {
         return _introReplies[Random.Next(_introReplies.Length)];
     }
-} 
+}
