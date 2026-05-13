@@ -72,7 +72,11 @@ public class IndexModel : PageModel
         }
         catch (Exception ex)
         {
-            cevap = $"İşlem sırasında hata oluştu.\n\nHata: {ex.Message}";
+            cevap =
+                "HATA DETAYI:\n\n" +
+                ex.Message + "\n\n" +
+                ex.StackTrace + "\n\n" +
+                ex.InnerException?.Message;
         }
 
         Mesajlar.Add(new ChatMesaj
