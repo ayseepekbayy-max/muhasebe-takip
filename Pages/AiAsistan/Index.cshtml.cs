@@ -5,6 +5,7 @@ using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using MuhasebeTakip2.App.Helpers;
 using MuhasebeTakip2.App.Services.Ai;
+using System.Globalization;
 
 namespace MuhasebeTakip2.App.Pages.AiAsistan;
 
@@ -143,6 +144,9 @@ public class IndexModel : PageModel
          DateTimeKind.Utc);
 
           var ayBitis = ayBaslangic.AddMonths(1);
+          var turkceAy = ayBaslangic.ToString(
+          "MMMM",
+          new CultureInfo("tr-TR"));
 
         var calisanlar = await _db.Calisanlar
             .Where(x => x.FirmaId == firmaId)
@@ -179,13 +183,15 @@ else
         )
         {
             var toplam = await _db.CalisanAvanslari
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.Tarih >= ayBaslangic &&
-                    x.Tarih < ayBitis)
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.CalisanId == bulunanCalisan.Id &&
+                x.Tip == CalisanHareketTipi.Avans &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < ayBitis)
                 .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-            return $"{ayBaslangic:MMMM} ayı personel gideriniz: {toplam:N2} TL";
+            return $"{turkceAy} ayı personel gideriniz: {toplam:N2} TL";
         }
 
         // ÇALIŞAN AVANS
@@ -210,7 +216,7 @@ else
 
             return
                 $"{bulunanCalisan.AdSoyad} isimli çalışan " +
-                $"{ayBaslangic:MMMM} ayında toplam " +
+                $"{turkceAy} ayında toplam " +
                 $"{toplam:N2} TL avans aldı.";
         }
 
@@ -244,13 +250,13 @@ else
 
             var toplamAvans = await _db.CalisanAvanslari
                 .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.Tarih >= ayBaslangic &&
-                    x.Tarih < ayBitis &&
-                    x.Tip == CalisanHareketTipi.Avans)
+                x.FirmaId == firmaId &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < ayBitis &&
+                x.Tip == CalisanHareketTipi.Avans)
                 .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-            return $"{ayBaslangic:MMMM} ayında toplam {toplamAvans:N2} TL avans verilmiş.";
+            return $"{turkceAy} ayında toplam {toplamAvans:N2} TL avans verilmiş.";
         }
 
         // ÇALIŞAN MAAŞ
@@ -299,7 +305,7 @@ else
                     x.Tip == CalisanHareketTipi.MaasOdeme)
                 .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-            return $"{ayBaslangic:MMMM} ayında toplam maaş ödemesi: {toplam:N2} TL";
+            return $"{turkceAy} ayında toplam maaş ödemesi: {toplam:N2} TL";
         }
 
         // ÇALIŞAN PUANTAJ
@@ -756,7 +762,7 @@ else
                 durum = "Şirket bu ay zarar etmiş görünüyor.";
 
             return
-                $"{ayBaslangic:MMMM} ayı finansal özeti:\n\n" +
+                $"{turkceAy} ayı finansal özeti:\n\n" +
                 $"- Toplam gelir: {toplamGelir:N2} TL\n" +
                 $"- Toplam masraf: {toplamMasraf:N2} TL\n" +
                 $"- Personel gideri: {personel:N2} TL\n" +
