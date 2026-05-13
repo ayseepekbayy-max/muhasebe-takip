@@ -377,6 +377,52 @@ else
         // KASA ANALİZİ
 
         if (
+    lower.Contains("bugünkü kasa") ||
+    lower.Contains("bugün kasa")
+)
+{
+    var bugun = DateTime.Today;
+    var yarin = bugun.AddDays(1);
+
+    var bugunGiris = await _db.KasaHareketleri
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tarih >= bugun &&
+            x.Tarih < yarin &&
+            x.Tip == HareketTipi.Giris)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var bugunCikis = await _db.KasaHareketleri
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tarih >= bugun &&
+            x.Tarih < yarin &&
+            x.Tip == HareketTipi.Cikis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var bugunNet = bugunGiris - bugunCikis;
+
+    if (
+        lower.Contains("giriş")
+    )
+    {
+        return $"Bugünkü kasa girişi: {bugunGiris:N2} TL";
+    }
+
+    if (
+        lower.Contains("çıkış")
+    )
+    {
+        return $"Bugünkü kasa çıkışı: {bugunCikis:N2} TL";
+    }
+
+    return
+        $"Bugünkü kasa özeti:\n\n" +
+        $"- Giriş: {bugunGiris:N2} TL\n" +
+        $"- Çıkış: {bugunCikis:N2} TL\n" +
+        $"- Net durum: {bugunNet:N2} TL";
+}
+        if (
             lower.Contains("son kasa hareket")
         )
         {
@@ -422,9 +468,62 @@ else
             var bakiye = giris - cikis;
 
             if (
-                lower.Contains("arttı") ||
-                lower.Contains("azaldı")
-            )
+    lower.Contains("arttı") ||
+    lower.Contains("azaldı")
+)
+{
+    var bugun = DateTime.Today;
+    var dun = bugun.AddDays(-1);
+
+    var bugunGiris = await _db.KasaHareketleri
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tarih.Date == bugun &&
+            x.Tip == HareketTipi.Giris)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var bugunCikis = await _db.KasaHareketleri
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tarih.Date == bugun &&
+            x.Tip == HareketTipi.Cikis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var dunGiris = await _db.KasaHareketleri
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tarih.Date == dun &&
+            x.Tip == HareketTipi.Giris)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var dunCikis = await _db.KasaHareketleri
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tarih.Date == dun &&
+            x.Tip == HareketTipi.Cikis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var bugunNet = bugunGiris - bugunCikis;
+    var dunNet = dunGiris - dunCikis;
+
+    if (bugunNet > dunNet)
+    {
+        return
+            $"Kasa düne göre artmış görünüyor.\n\n" +
+            $"Bugün net: {bugunNet:N2} TL\n" +
+            $"Dün net: {dunNet:N2} TL";
+    }
+
+    if (bugunNet < dunNet)
+    {
+        return
+            $"Kasa düne göre azalmış görünüyor.\n\n" +
+            $"Bugün net: {bugunNet:N2} TL\n" +
+            $"Dün net: {dunNet:N2} TL";
+    }
+
+    return "Kasa durumu düne göre aynı seviyede görünüyor.";
+}
             {
                 if (giris > cikis)
                     return "Kasa artış trendinde görünüyor.";
