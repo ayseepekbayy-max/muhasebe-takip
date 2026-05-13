@@ -404,7 +404,7 @@ function novaDinlemeyiBaslat(){
     try {
         novaRecognition = new SpeechRecognition();
         novaRecognition.lang = "tr-TR";
-        novaRecognition.continuous = true;
+        novaRecognition.continuous = false;
         novaRecognition.interimResults = false;
 
         novaRecognition.onstart = function(){
@@ -416,8 +416,13 @@ function novaDinlemeyiBaslat(){
             if(isSpeaking || soruGonderiliyor) return;
 
             const sonIndex = e.results.length - 1;
-            let metin = e.results[sonIndex][0].transcript.toLowerCase().trim();
+            if(isSpeaking) return;
 
+            if(speechSynthesis.speaking){
+                speechSynthesis.cancel();
+            }
+            let metin = e.results[sonIndex][0].transcript.toLowerCase().trim();
+            
             novaDurumYaz("Duydum: " + metin, novaAktif);
 
             const novaDendi =
@@ -453,7 +458,9 @@ function novaDinlemeyiBaslat(){
 
         novaRecognition.onerror = function(e){
             novaDinliyor = false;
-
+        if(e.error === "aborted"){
+            return;
+        }
             if(e.error === "not-allowed"){
                 novaDurumYaz("Mikrofon izni kapalı. Tarayıcıdan mikrofon izni ver.", false);
             }
@@ -466,14 +473,26 @@ function novaDinlemeyiBaslat(){
         };
 
         novaRecognition.onend = function(){
-            novaDinliyor = false;
 
-            if(!isSpeaking && !soruGonderiliyor){
-                setTimeout(() => {
-                    novaDinlemeyiBaslat();
-                }, 700);
+    novaDinliyor = false;
+
+    if(isSpeaking || soruGonderiliyor){
+        return;
+    }
+
+    setTimeout(() => {
+
+        if(!novaDinliyor && !isSpeaking){
+
+            try{
+                novaDinlemeyiBaslat();
             }
-        };
+            catch{}
+
+        }
+
+    }, 1200);
+};
 
         novaRecognition.start();
     }
@@ -500,14 +519,33 @@ function novaCevapVer(metin){
     };
 
     t.onend = () => {
-        isSpeaking = false;
-        soruGonderiliyor = false;
-        novaDurumYaz("Nova dinlemede. 'Hey Nova' de.", false);
 
-        setTimeout(() => {
-            novaDinlemeyiBaslat();
-        }, 700);
-    };
+    speechSynthesis.cancel();
+
+    isSpeaking = false;
+    soruGonderiliyor = false;
+
+    novaDurumYaz("Nova dinlemede. 'Hey Nova' de.", false);
+
+    if(novaRecognition){
+        try{
+            novaRecognition.abort();
+        } catch {}
+    }
+
+    setTimeout(() => {
+
+        if(!novaDinliyor && !isSpeaking){
+
+            try{
+                novaDinlemeyiBaslat();
+            }
+            catch{}
+
+        }
+
+    }, 1800);
+};
 
     t.onerror = () => {
         isSpeaking = false;
