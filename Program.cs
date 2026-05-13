@@ -9,9 +9,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
-
-builder.Services.AddScoped<QueryInterpreter>();
-builder.Services.AddScoped<QueryExecutor>();
 builder.Services.AddScoped<NovaReplyService>();
 
 builder.Services.AddSession(options =>
