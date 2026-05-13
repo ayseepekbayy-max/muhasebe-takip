@@ -381,7 +381,7 @@ else
     lower.Contains("bugün kasa")
 )
 {
-    var bugun = DateTime.Today;
+    var bugun = DateTime.UtcNow.Date;
     var yarin = bugun.AddDays(1);
 
     var bugunGiris = await _db.KasaHareketleri
@@ -472,34 +472,41 @@ else
     lower.Contains("azaldı")
 )
 {
-    var bugun = DateTime.Today;
+    var bugun = DateTime.UtcNow.Date;
+    var yarin = bugun.AddDays(1);
+
     var dun = bugun.AddDays(-1);
+    var dunBitis = bugun;
 
     var bugunGiris = await _db.KasaHareketleri
         .Where(x =>
             x.FirmaId == firmaId &&
-            x.Tarih.Date == bugun &&
+            x.Tarih >= bugun &&
+            x.Tarih < yarin &&
             x.Tip == HareketTipi.Giris)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var bugunCikis = await _db.KasaHareketleri
         .Where(x =>
             x.FirmaId == firmaId &&
-            x.Tarih.Date == bugun &&
+            x.Tarih >= bugun &&
+            x.Tarih < yarin &&
             x.Tip == HareketTipi.Cikis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var dunGiris = await _db.KasaHareketleri
         .Where(x =>
             x.FirmaId == firmaId &&
-            x.Tarih.Date == dun &&
+            x.Tarih >= dun &&
+            x.Tarih < dunBitis &&
             x.Tip == HareketTipi.Giris)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var dunCikis = await _db.KasaHareketleri
         .Where(x =>
             x.FirmaId == firmaId &&
-            x.Tarih.Date == dun &&
+            x.Tarih >= dun &&
+            x.Tarih < dunBitis &&
             x.Tip == HareketTipi.Cikis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
@@ -523,14 +530,8 @@ else
     }
 
     return "Kasa durumu düne göre aynı seviyede görünüyor.";
+
 }
-            {
-                if (giris > cikis)
-                    return "Kasa artış trendinde görünüyor.";
-
-                return "Kasa çıkışları girişlerden fazla görünüyor.";
-            }
-
             if (lower.Contains("analiz"))
             {
                 return
