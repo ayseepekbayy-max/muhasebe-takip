@@ -209,7 +209,7 @@ else
         }
 
         // AVANS ANALİZİ
-
+        return "AVANS BLOĞUNA GİRDİ";
         if (lower.Contains("avans"))
         {
             if (
