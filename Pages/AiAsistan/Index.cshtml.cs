@@ -152,25 +152,26 @@ public class IndexModel : PageModel
             .Where(x => x.FirmaId == firmaId)
             .ToListAsync();
 
-        var bulunanCalisan = calisanlar
-    .FirstOrDefault(x =>
-        lower.Contains(x.AdSoyad.ToLower()) ||
-        lower.Contains(x.Ad.ToLower()));
+        Calisan? bulunanCalisan = null;
+
+        foreach (var c in calisanlar)
+        {
+            var ad = (c.Ad ?? "").ToLowerInvariant().Trim();
+            var soyad = (c.AdSoyad ?? "").ToLowerInvariant().Trim();
+
+            if (
+                lower.Contains(ad) ||
+                lower.Contains(soyad)
+            )
+            {
+                bulunanCalisan = c;
+                break;
+            }
+        }
 
 if (bulunanCalisan != null)
 {
     _memory.SonCalisaniKaydet(bulunanCalisan.AdSoyad);
-}
-else
-{
-    var sonCalisan = _memory.SonCalisaniGetir();
-
-    if (!string.IsNullOrWhiteSpace(sonCalisan))
-    {
-        bulunanCalisan = calisanlar
-            .FirstOrDefault(x =>
-                x.AdSoyad.ToLower() == sonCalisan.ToLower());
-    }
 }
 
         // PERSONEL GİDERİ
@@ -183,17 +184,16 @@ else
         )
         {
             var toplam = await _db.CalisanAvanslari
-            .Where(x =>
-                x.FirmaId == firmaId &&
-                x.CalisanId == bulunanCalisan.Id &&
-                x.Tip == CalisanHareketTipi.Avans &&
-                x.Tarih >= ayBaslangic &&
-                x.Tarih < ayBitis)
+                .Where(x =>
+                    x.FirmaId == firmaId &&
+                    x.Tip == CalisanHareketTipi.MaasOdeme &&
+                    !x.ArsivlendiMi &&
+                    x.Tarih >= ayBaslangic &&
+                    x.Tarih < ayBitis)
                 .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
             return $"{turkceAy} ayı personel gideriniz: {toplam:N2} TL";
         }
-
         // ÇALIŞAN AVANS
 
         if (
@@ -214,6 +214,11 @@ else
                     x.Tarih < ayBitis)
                 .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
+           if (toplam <= 0)
+            {
+                return $"{bulunanCalisan.AdSoyad} için {turkceAy} ayında avans kaydı bulunamadı.";
+            }
+
             return
                 $"{bulunanCalisan.AdSoyad} isimli çalışan " +
                 $"{turkceAy} ayında toplam " +
@@ -231,8 +236,9 @@ else
             {
                 var veri = await _db.CalisanAvanslari
                     .Where(x =>
-                        x.FirmaId == firmaId &&
-                        x.Tip == CalisanHareketTipi.Avans)
+                    x.FirmaId == firmaId &&
+                    x.Tip == CalisanHareketTipi.Avans &&
+                    !x.ArsivlendiMi)
                     .GroupBy(x => x.Calisan!.AdSoyad)
                     .Select(x => new
                     {
@@ -249,12 +255,13 @@ else
             }
 
             var toplamAvans = await _db.CalisanAvanslari
-                .Where(x =>
+            .Where(x =>
                 x.FirmaId == firmaId &&
+                x.Tip == CalisanHareketTipi.Avans &&
+                !x.ArsivlendiMi &&
                 x.Tarih >= ayBaslangic &&
-                x.Tarih < ayBitis &&
-                x.Tip == CalisanHareketTipi.Avans)
-                .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+                x.Tarih < ayBitis)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
             return $"{turkceAy} ayında toplam {toplamAvans:N2} TL avans verilmiş.";
         }
@@ -298,12 +305,14 @@ else
             }
 
             var toplam = await _db.CalisanAvanslari
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.Tarih >= ayBaslangic &&
-                    x.Tarih < ayBitis &&
-                    x.Tip == CalisanHareketTipi.MaasOdeme)
-                .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.CalisanId == bulunanCalisan.Id &&
+                x.Tip == CalisanHareketTipi.Avans &&
+                !x.ArsivlendiMi &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < ayBitis)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
             return $"{turkceAy} ayında toplam maaş ödemesi: {toplam:N2} TL";
         }
