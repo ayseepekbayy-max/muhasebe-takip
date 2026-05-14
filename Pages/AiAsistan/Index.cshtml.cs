@@ -270,7 +270,12 @@ if (bulunanCalisan != null)
 
         if (
             bulunanCalisan != null &&
-            lower.Contains("maaş")
+            lower.Contains("maaş") &&
+            !lower.Contains("ortalama") &&
+            !lower.Contains("toplam") &&
+            !lower.Contains("ne kadar maaş verdim") &&
+            !lower.Contains("maaş gider") &&
+            !lower.Contains("personel gider")
         )
         {
             return
