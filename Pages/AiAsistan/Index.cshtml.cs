@@ -137,6 +137,12 @@ public class IndexModel : PageModel
 
         var ay = AyBul(lower);
 
+        var simdi = DateTime.Now;
+
+        bool buAyMi =
+        ay.Month == simdi.Month &&
+        ay.Year == simdi.Year;
+
         var ayBaslangic = DateTime.SpecifyKind(
         new DateTime(
             ay.Year,
@@ -282,10 +288,14 @@ if (
 
             var toplamAvans = await _db.CalisanAvanslari
             .Where(x =>
-                x.FirmaId == firmaId &&
-                x.Tip == CalisanHareketTipi.Avans &&
-                x.Tarih.Month == ayBaslangic.Month &&
-                x.Tarih.Year == ayBaslangic.Year)
+            x.FirmaId == firmaId &&
+            x.Tip == CalisanHareketTipi.Avans &&
+            (
+                !buAyMi ||
+                !x.ArsivlendiMi
+            ) &&
+            x.Tarih.Month == ayBaslangic.Month &&
+            x.Tarih.Year == ayBaslangic.Year)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
             return $"{turkceAy} ayında toplam {toplamAvans:N2} TL avans verilmiş.";
@@ -336,12 +346,15 @@ if (
 
             var toplam = await _db.CalisanAvanslari
             .Where(x =>
-                x.FirmaId == firmaId &&
-                x.CalisanId == bulunanCalisan.Id &&
-                x.Tip == CalisanHareketTipi.Avans &&
-                !x.ArsivlendiMi &&
-                x.Tarih.Month == ayBaslangic.Month &&
-x.Tarih.        Year == ayBaslangic.Year)
+            x.FirmaId == firmaId &&
+            x.CalisanId == bulunanCalisan.Id &&
+            x.Tip == CalisanHareketTipi.Avans &&
+            (
+                !buAyMi ||
+                !x.ArsivlendiMi
+            ) &&
+            x.Tarih.Month == ayBaslangic.Month &&
+            x.Tarih.Year == ayBaslangic.Year)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
             return $"{turkceAy} ayında toplam maaş ödemesi: {toplam:N2} TL";
