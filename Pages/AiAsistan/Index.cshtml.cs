@@ -189,16 +189,6 @@ if (bulunanCalisan != null)
 {
     _memory.SonCalisaniKaydet(bulunanCalisan.AdSoyad);
 }
-if (
-    bulunanCalisan == null &&
-    lower.Contains("avans") &&
-    (
-        lower.Contains("ne kadar") ||
-        lower.Contains("kaç tl")
-    ))
-{
-    return "Çalışan bulunamadı.";
-}
 
         // PERSONEL GİDERİ
 
@@ -222,33 +212,53 @@ if (
         }
         // ÇALIŞAN AVANS
     
-        if (
-    bulunanCalisan != null &&
+            if (
+        bulunanCalisan != null &&
+        lower.Contains("avans") &&
+        !lower.Contains("toplam") &&
+        !lower.Contains("analiz") &&
+        !lower.Contains("durum")
+    )
+    if (
+    bulunanCalisan == null &&
     lower.Contains("avans") &&
+    !lower.Contains("toplam") &&
     !lower.Contains("analiz") &&
-    !lower.Contains("durum") &&
-    !lower.Contains("toplam")
-        )
-        {
-            var toplam = await _db.CalisanAvanslari
+    !lower.Contains("durum")
+)
+{
+    return "Çalışan bulunamadı.";
+}
+    {
+        var query = _db.CalisanAvanslari
             .Where(x =>
                 x.FirmaId == firmaId &&
                 x.CalisanId == bulunanCalisan.Id &&
                 x.Tip == CalisanHareketTipi.Avans &&
                 x.Tarih.Month == ayBaslangic.Month &&
-                x.Tarih.Year == ayBaslangic.Year)
+                x.Tarih.Year == ayBaslangic.Year);
+
+        // sadece bu ay ise arşivsizleri göster
+        if (buAyMi)
+        {
+            query = query.Where(x => !x.ArsivlendiMi);
+        }
+
+        var toplam = await query
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-           if (toplam <= 0)
-            {
-                return $"{bulunanCalisan.AdSoyad} için {turkceAy} ayında avans kaydı bulunamadı.";
-            }
-
+        if (toplam <= 0)
+        {
             return
-                $"{bulunanCalisan.AdSoyad} isimli çalışan " +
-                $"{turkceAy} ayında toplam " +
-                $"{toplam:N2} TL avans aldı.";
+                $"{bulunanCalisan.AdSoyad} için " +
+                $"{turkceAy} ayında avans kaydı bulunamadı.";
         }
+
+        return
+            $"{bulunanCalisan.AdSoyad} isimli çalışan " +
+            $"{turkceAy} ayında toplam " +
+            $"{toplam:N2} TL avans aldı.";
+    }
 
         // AVANS ANALİZİ
         
@@ -286,20 +296,26 @@ if (
                 $"{ad} ({veri.Toplam:N2} TL)";
             }
 
-            var toplamAvans = await _db.CalisanAvanslari
+             var queryToplam = _db.CalisanAvanslari
             .Where(x =>
-            x.FirmaId == firmaId &&
-            x.Tip == CalisanHareketTipi.Avans &&
-            (
-                !buAyMi ||
-                !x.ArsivlendiMi
-            ) &&
-            x.Tarih.Month == ayBaslangic.Month &&
-            x.Tarih.Year == ayBaslangic.Year)
+                x.FirmaId == firmaId &&
+                x.Tip == CalisanHareketTipi.Avans &&
+                x.Tarih.Month == ayBaslangic.Month &&
+                x.Tarih.Year == ayBaslangic.Year);
+
+        // sadece bu ay ise arşivsiz
+        if (buAyMi)
+        {
+            queryToplam = queryToplam
+                .Where(x => !x.ArsivlendiMi);
+        }
+
+        var toplamAvans = await queryToplam
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-            return $"{turkceAy} ayında toplam {toplamAvans:N2} TL avans verilmiş.";
-        }
+        return
+            $"{turkceAy} ayında toplam " +
+            $"{toplamAvans:N2} TL avans verilmiş.";
 
         // ÇALIŞAN MAAŞ
 
@@ -908,6 +924,7 @@ if (
         }
 
         return "Soruyu anladım ancak henüz buna cevap verecek sistem eklenmedi.";
+    }
     }
 
     private DateTime AyBul(string text)
