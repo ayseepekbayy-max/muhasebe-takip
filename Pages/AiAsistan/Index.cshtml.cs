@@ -167,8 +167,10 @@ foreach (var c in calisanlar)
 
     if (
     !string.IsNullOrWhiteSpace(adSoyad) &&
-    lower.Contains(adSoyad)
-)
+    (
+        lower.Contains(adSoyad) ||
+        adSoyad.Contains(lower.Replace("ne kadar avans aldı", "").Trim())
+    ))
     {
         bulunanCalisan = c;
         break;
@@ -205,6 +207,7 @@ if (bulunanCalisan != null)
         if (
             bulunanCalisan != null &&
             lower.Contains("avans") &&
+            !lower.Contains("toplam") &&
             !lower.Contains("toplam") &&
             !lower.Contains("en fazla") &&
             !lower.Contains("en çok") &&
