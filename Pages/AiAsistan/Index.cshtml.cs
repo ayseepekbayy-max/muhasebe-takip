@@ -137,6 +137,11 @@ public class IndexModel : PageModel
 
         var ay = AyBul(lower);
 
+        if (lower.Contains("bu ay"))
+        {
+            ay = DateTime.Now;
+        }
+
         var simdi = DateTime.Now;
 
         bool buAyMi =
@@ -219,23 +224,11 @@ if (
     lower.Contains("avans") &&
     !lower.Contains("toplam") &&
     !lower.Contains("analiz") &&
-    !lower.Contains("durum")
+    !lower.Contains("durum") &&
+    !lower.Contains("en fazla") &&
+    !lower.Contains("en çok")
 )
 {
-    var query = _db.CalisanAvanslari
-        .Where(x =>
-            x.FirmaId == firmaId &&
-            x.CalisanId == bulunanCalisan!.Id &&
-            x.Tip == CalisanHareketTipi.Avans &&
-            x.Tarih.Month == ayBaslangic.Month &&
-            x.Tarih.Year == ayBaslangic.Year);
-
-    // sadece bu ay ise arşivsizleri göster
-    if (buAyMi)
-    {
-        query = query.Where(x => !x.ArsivlendiMi);
-    }
-
     var toplam = await DonemAvansToplamiGetir(
     firmaId,
     bulunanCalisan.Id,
@@ -255,17 +248,6 @@ if (
         $"{toplam:N2} TL avans aldı.";
 }
 
-if (
-    bulunanCalisan == null &&
-    lower.Contains("avans") &&
-    !lower.Contains("toplam") &&
-    !lower.Contains("analiz") &&
-    !lower.Contains("durum")
-)
-{
-    return "Çalışan bulunamadı.";
-}
-
         // AVANS ANALİZİ
         
         if (lower.Contains("avans"))
@@ -276,8 +258,8 @@ if (
             )
             {
                 var tumCalisanlar = await _db.Calisanlar
-    .Where(x => x.FirmaId == firmaId)
-    .ToListAsync();
+             .Where(x => x.FirmaId == firmaId)
+            .ToListAsync();
 
 string enAd = "";
 decimal enToplam = 0;
@@ -285,10 +267,10 @@ decimal enToplam = 0;
 foreach (var c in tumCalisanlar)
 {
     var toplam = await DonemAvansToplamiGetir(
-        firmaId,
-        c.Id,
-        ayBaslangic.Month,
-        ayBaslangic.Year);
+    firmaId,
+    c.Id,
+    DateTime.Now.Month,
+    DateTime.Now.Year);
 
     if (toplam > enToplam)
     {
@@ -1032,7 +1014,18 @@ foreach (var c in tumCalisanlar2)
         .ToListAsync();
 
     if (!maaslar.Any())
-        return 0;
+{
+    var normalToplam = await _db.CalisanAvanslari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == calisanId &&
+            x.Tip == CalisanHareketTipi.Avans &&
+            x.Tarih.Month == ay &&
+            x.Tarih.Year == yil)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    return normalToplam;
+}
 
     DateTime? baslangic = null;
     DateTime? bitis = null;
@@ -1045,15 +1038,19 @@ foreach (var c in tumCalisanlar2)
             mevcut.Tarih.Month == ay &&
             mevcut.Tarih.Year == yil)
         {
-            baslangic = mevcut.Tarih;
+            baslangic = DateTime.SpecifyKind(
+            mevcut.Tarih,
+            DateTimeKind.Utc);
 
             if (i < maaslar.Count - 1)
             {
-                bitis = maaslar[i + 1].Tarih;
+                bitis = DateTime.SpecifyKind(
+                maaslar[i + 1].Tarih,
+                DateTimeKind.Utc);
             }
             else
             {
-                bitis = DateTime.Now;
+                bitis = DateTime.UtcNow;
             }
 
             break;
@@ -1063,13 +1060,18 @@ foreach (var c in tumCalisanlar2)
     if (baslangic == null)
         return 0;
 
+    if (bitis == null)
+    {
+        bitis = DateTime.UtcNow;
+    }
+
     var toplam = await _db.CalisanAvanslari
         .Where(x =>
             x.FirmaId == firmaId &&
             x.CalisanId == calisanId &&
             x.Tip == CalisanHareketTipi.Avans &&
-            x.Tarih >= baslangic &&
-            x.Tarih < bitis)
+            x.Tarih >= baslangic!.Value &&
+            x.Tarih < bitis!.Value)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     return toplam;
