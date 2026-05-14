@@ -236,8 +236,11 @@ if (
         query = query.Where(x => !x.ArsivlendiMi);
     }
 
-    var toplam = await query
-        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+    var toplam = await DonemAvansToplamiGetir(
+    firmaId,
+    bulunanCalisan.Id,
+    ayBaslangic.Month,
+    ayBaslangic.Year);
 
     if (toplam <= 0)
     {
@@ -272,31 +275,36 @@ if (
                 lower.Contains("en çok")
             )
             {
-                var veri = await _db.CalisanAvanslari
-                    .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.Tip == CalisanHareketTipi.Avans &&
-                    !x.ArsivlendiMi)
-                    .GroupBy(x => x.CalisanId)
-                    .Select(x => new
-                    {
-                        CalisanId = x.Key,
-                        Toplam = x.Sum(y => y.Tutar)
-                    })
-                    .OrderByDescending(x => x.Toplam)
-                    .FirstOrDefaultAsync();
+                var tumCalisanlar = await _db.Calisanlar
+    .Where(x => x.FirmaId == firmaId)
+    .ToListAsync();
 
-                if (veri == null)
-                    return "Avans kaydı bulunamadı.";
+string enAd = "";
+decimal enToplam = 0;
 
-                var calisan = await _db.Calisanlar
-                .FirstOrDefaultAsync(x => x.Id == veri.CalisanId);
+foreach (var c in tumCalisanlar)
+{
+    var toplam = await DonemAvansToplamiGetir(
+        firmaId,
+        c.Id,
+        ayBaslangic.Month,
+        ayBaslangic.Year);
 
-                var ad = calisan?.AdSoyad ?? "Bilinmiyor";
+    if (toplam > enToplam)
+    {
+        enToplam = toplam;
+        enAd = c.AdSoyad;
+    }
+}
 
-                return
-                $"En fazla avans alan kişi: " +
-                $"{ad} ({veri.Toplam:N2} TL)";
+if (enToplam <= 0)
+{
+    return "Avans kaydı bulunamadı.";
+}
+
+return
+    $"En fazla avans alan kişi: " +
+    $"{enAd} ({enToplam:N2} TL)";
             }
 
              var queryToplam = _db.CalisanAvanslari
@@ -313,9 +321,20 @@ if (
                 .Where(x => !x.ArsivlendiMi);
         }
 
-        var toplamAvans = await queryToplam
-            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+        decimal toplamAvans = 0;
 
+var tumCalisanlar2 = await _db.Calisanlar
+    .Where(x => x.FirmaId == firmaId)
+    .ToListAsync();
+
+foreach (var c in tumCalisanlar2)
+{
+    toplamAvans += await DonemAvansToplamiGetir(
+        firmaId,
+        c.Id,
+        ayBaslangic.Month,
+        ayBaslangic.Year);
+}
         return
             $"{turkceAy} ayında toplam " +
             $"{toplamAvans:N2} TL avans verilmiş.";
@@ -997,6 +1016,64 @@ if (
     new DateTime(now.Year, now.Month, 1),
     DateTimeKind.Utc);
     }
+    private async Task<decimal> DonemAvansToplamiGetir(
+    int firmaId,
+    int calisanId,
+    int ay,
+    int yil)
+{
+    // ilgili ayın maaş kayıtları
+    var maaslar = await _db.CalisanAvanslari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == calisanId &&
+            x.Tip == CalisanHareketTipi.MaasOdeme)
+        .OrderBy(x => x.Tarih)
+        .ToListAsync();
+
+    if (!maaslar.Any())
+        return 0;
+
+    DateTime? baslangic = null;
+    DateTime? bitis = null;
+
+    for (int i = 0; i < maaslar.Count; i++)
+    {
+        var mevcut = maaslar[i];
+
+        if (
+            mevcut.Tarih.Month == ay &&
+            mevcut.Tarih.Year == yil)
+        {
+            baslangic = mevcut.Tarih;
+
+            if (i < maaslar.Count - 1)
+            {
+                bitis = maaslar[i + 1].Tarih;
+            }
+            else
+            {
+                bitis = DateTime.Now;
+            }
+
+            break;
+        }
+    }
+
+    if (baslangic == null)
+        return 0;
+
+    var toplam = await _db.CalisanAvanslari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == calisanId &&
+            x.Tip == CalisanHareketTipi.Avans &&
+            x.Tarih >= baslangic &&
+            x.Tarih < bitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    return toplam;
+}
 }
 
 public class ChatMesaj
