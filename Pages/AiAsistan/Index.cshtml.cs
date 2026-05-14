@@ -183,6 +183,16 @@ if (bulunanCalisan != null)
 {
     _memory.SonCalisaniKaydet(bulunanCalisan.AdSoyad);
 }
+if (
+    bulunanCalisan == null &&
+    lower.Contains("avans") &&
+    (
+        lower.Contains("ne kadar") ||
+        lower.Contains("kaç tl")
+    ))
+{
+    return "Çalışan bulunamadı.";
+}
 
         // PERSONEL GİDERİ
 
@@ -207,13 +217,11 @@ if (bulunanCalisan != null)
         // ÇALIŞAN AVANS
     
         if (
-            bulunanCalisan != null &&
-            lower.Contains("avans") &&
-            !lower.Contains("toplam") &&
-            !lower.Contains("toplam") &&
-            !lower.Contains("en fazla") &&
-            !lower.Contains("en çok") &&
-            !lower.Contains("kaç tl avans verdim")
+    bulunanCalisan != null &&
+    lower.Contains("avans") &&
+    !lower.Contains("analiz") &&
+    !lower.Contains("durum") &&
+    !lower.Contains("toplam")
         )
         {
             var toplam = await _db.CalisanAvanslari
