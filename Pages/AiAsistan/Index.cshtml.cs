@@ -231,9 +231,7 @@ if (
 {
     var toplam = await DonemAvansToplamiGetir(
     firmaId,
-    bulunanCalisan.Id,
-    ayBaslangic.Month,
-    ayBaslangic.Year);
+    bulunanCalisan.Id);
 
     if (toplam <= 0)
     {
@@ -266,11 +264,9 @@ decimal enToplam = 0;
 
 foreach (var c in tumCalisanlar)
 {
-    var toplam = await DonemAvansToplamiGetir(
+   var toplam = await DonemAvansToplamiGetir(
     firmaId,
-    c.Id,
-    DateTime.Now.Month,
-    DateTime.Now.Year);
+    c.Id);
 
     if (toplam > enToplam)
     {
@@ -312,10 +308,8 @@ var tumCalisanlar2 = await _db.Calisanlar
 foreach (var c in tumCalisanlar2)
 {
     toplamAvans += await DonemAvansToplamiGetir(
-        firmaId,
-        c.Id,
-        ayBaslangic.Month,
-        ayBaslangic.Year);
+    firmaId,
+    c.Id);
 }
         return
             $"{turkceAy} ayında toplam " +
@@ -1000,72 +994,40 @@ foreach (var c in tumCalisanlar2)
     }
     private async Task<decimal> DonemAvansToplamiGetir(
     int firmaId,
-    int calisanId,
-    int ay,
-    int yil)
+    int calisanId)
 {
-    // tüm maaş kayıtları
-    var maaslar = await _db.CalisanAvanslari
+    // son maaş kaydı
+    var sonMaas = await _db.CalisanAvanslari
         .Where(x =>
             x.FirmaId == firmaId &&
             x.CalisanId == calisanId &&
             x.Tip == CalisanHareketTipi.MaasOdeme)
-        .OrderBy(x => x.Tarih)
-        .ToListAsync();
+        .OrderByDescending(x => x.Tarih)
+        .FirstOrDefaultAsync();
 
     DateTime baslangic;
-    DateTime bitis;
 
-    // ilgili ayın ilk günü
-    var ayIlkGun = new DateTime(yil, ay, 1);
-
-    // o aydan önceki son maaş
-    var sonMaas = maaslar
-        .Where(x => x.Tarih <= ayIlkGun.AddMonths(1))
-        .OrderByDescending(x => x.Tarih)
-        .FirstOrDefault();
-
+    // maaş yoksa tüm avanslar
     if (sonMaas == null)
     {
-        // maaş yoksa direkt aylık avans hesapla
-        return await _db.CalisanAvanslari
-            .Where(x =>
-                x.FirmaId == firmaId &&
-                x.CalisanId == calisanId &&
-                x.Tip == CalisanHareketTipi.Avans &&
-                x.Tarih.Month == ay &&
-                x.Tarih.Year == yil)
-            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
-    }
-
-    baslangic = DateTime.SpecifyKind(
-        sonMaas.Tarih,
-        DateTimeKind.Utc);
-
-    // sonraki maaş
-    var sonrakiMaas = maaslar
-        .Where(x => x.Tarih > sonMaas.Tarih)
-        .OrderBy(x => x.Tarih)
-        .FirstOrDefault();
-
-    if (sonrakiMaas != null)
-    {
-        bitis = DateTime.SpecifyKind(
-            sonrakiMaas.Tarih,
+        baslangic = DateTime.SpecifyKind(
+            DateTime.MinValue,
             DateTimeKind.Utc);
     }
     else
     {
-        bitis = DateTime.UtcNow;
+        baslangic = DateTime.SpecifyKind(
+            sonMaas.Tarih,
+            DateTimeKind.Utc);
     }
 
+    // sadece maaştan sonraki avanslar
     var toplam = await _db.CalisanAvanslari
         .Where(x =>
             x.FirmaId == firmaId &&
             x.CalisanId == calisanId &&
             x.Tip == CalisanHareketTipi.Avans &&
-            x.Tarih >= baslangic &&
-            x.Tarih < bitis)
+            x.Tarih > baslangic)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     return toplam;
