@@ -1004,7 +1004,7 @@ foreach (var c in tumCalisanlar2)
     int ay,
     int yil)
 {
-    // ilgili ayın maaş kayıtları
+    // tüm maaş kayıtları
     var maaslar = await _db.CalisanAvanslari
         .Where(x =>
             x.FirmaId == firmaId &&
@@ -1013,54 +1013,48 @@ foreach (var c in tumCalisanlar2)
         .OrderBy(x => x.Tarih)
         .ToListAsync();
 
-    if (!maaslar.Any())
-{
-    var normalToplam = await _db.CalisanAvanslari
-        .Where(x =>
-            x.FirmaId == firmaId &&
-            x.CalisanId == calisanId &&
-            x.Tip == CalisanHareketTipi.Avans &&
-            x.Tarih.Month == ay &&
-            x.Tarih.Year == yil)
-        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+    DateTime baslangic;
+    DateTime bitis;
 
-    return normalToplam;
-}
+    // ilgili ayın ilk günü
+    var ayIlkGun = new DateTime(yil, ay, 1);
 
-    DateTime? baslangic = null;
-    DateTime? bitis = null;
+    // o aydan önceki son maaş
+    var sonMaas = maaslar
+        .Where(x => x.Tarih <= ayIlkGun.AddMonths(1))
+        .OrderByDescending(x => x.Tarih)
+        .FirstOrDefault();
 
-    for (int i = 0; i < maaslar.Count; i++)
+    if (sonMaas == null)
     {
-        var mevcut = maaslar[i];
-
-        if (
-            mevcut.Tarih.Month == ay &&
-            mevcut.Tarih.Year == yil)
-        {
-            baslangic = DateTime.SpecifyKind(
-            mevcut.Tarih,
-            DateTimeKind.Utc);
-
-            if (i < maaslar.Count - 1)
-            {
-                bitis = DateTime.SpecifyKind(
-                maaslar[i + 1].Tarih,
-                DateTimeKind.Utc);
-            }
-            else
-            {
-                bitis = DateTime.UtcNow;
-            }
-
-            break;
-        }
+        // maaş yoksa direkt aylık avans hesapla
+        return await _db.CalisanAvanslari
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.CalisanId == calisanId &&
+                x.Tip == CalisanHareketTipi.Avans &&
+                x.Tarih.Month == ay &&
+                x.Tarih.Year == yil)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
     }
 
-    if (baslangic == null)
-        return 0;
+    baslangic = DateTime.SpecifyKind(
+        sonMaas.Tarih,
+        DateTimeKind.Utc);
 
-    if (bitis == null)
+    // sonraki maaş
+    var sonrakiMaas = maaslar
+        .Where(x => x.Tarih > sonMaas.Tarih)
+        .OrderBy(x => x.Tarih)
+        .FirstOrDefault();
+
+    if (sonrakiMaas != null)
+    {
+        bitis = DateTime.SpecifyKind(
+            sonrakiMaas.Tarih,
+            DateTimeKind.Utc);
+    }
+    else
     {
         bitis = DateTime.UtcNow;
     }
@@ -1070,14 +1064,13 @@ foreach (var c in tumCalisanlar2)
             x.FirmaId == firmaId &&
             x.CalisanId == calisanId &&
             x.Tip == CalisanHareketTipi.Avans &&
-            x.Tarih >= baslangic!.Value &&
-            x.Tarih < bitis!.Value)
+            x.Tarih >= baslangic &&
+            x.Tarih < bitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     return toplam;
 }
 }
-
 public class ChatMesaj
 {
     public string Gonderen { get; set; } = "";
