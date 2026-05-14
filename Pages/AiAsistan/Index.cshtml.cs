@@ -1020,15 +1020,15 @@ if (lower.Contains("avans"))
         var bitis = sonrakiMaas?.Tarih ?? DateTime.MaxValue;
 
         var toplam = await _db.CalisanAvanslari
-            .Where(x =>
-                x.FirmaId == firmaId &&
-                x.CalisanId == calisanId &&
-                x.Tip == CalisanHareketTipi.Avans &&
-                x.Tarih > baslangic &&
-                x.Tarih < bitis)
-            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == calisanId &&
+            x.Tip == CalisanHareketTipi.Avans &&
+            x.Tarih >= baslangic &&
+            x.Tarih < bitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-        return toplam;
+return toplam;
     }
 }
 
