@@ -276,7 +276,6 @@ if (bulunanCalisan != null)
             .Where(x =>
                 x.FirmaId == firmaId &&
                 x.Tip == CalisanHareketTipi.Avans &&
-                !x.ArsivlendiMi &&
                 x.Tarih.Month == ayBaslangic.Month &&
                 x.Tarih.Year == ayBaslangic.Year)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
