@@ -154,20 +154,29 @@ public class IndexModel : PageModel
 
         Calisan? bulunanCalisan = null;
 
-        foreach (var c in calisanlar)
-        {
-            var ad = (c.Ad ?? "").ToLowerInvariant().Trim();
-            var soyad = (c.AdSoyad ?? "").ToLowerInvariant().Trim();
+        Calisan? bulunanCalisan = null;
 
-            if (
-                lower.Contains(ad) ||
-                lower.Contains(soyad)
-            )
-            {
-                bulunanCalisan = c;
-                break;
-            }
-        }
+foreach (var c in calisanlar)
+{
+    var adSoyad = (c.AdSoyad ?? "")
+        .ToLowerInvariant()
+        .Trim();
+
+    var ad = (c.Ad ?? "")
+        .ToLowerInvariant()
+        .Trim();
+
+    var temizMesaj = lower.Trim();
+
+    if (
+        temizMesaj.Contains(adSoyad) ||
+        temizMesaj.Contains(ad)
+    )
+    {
+        bulunanCalisan = c;
+        break;
+    }
+}
 
 if (bulunanCalisan != null)
 {
