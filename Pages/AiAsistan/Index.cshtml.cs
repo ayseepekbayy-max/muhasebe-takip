@@ -155,6 +155,27 @@ public class IndexModel : PageModel
 
         Calisan? bulunanCalisan = null;
 
+foreach (var c in calisanlar)
+{
+    var adSoyad = (c.AdSoyad ?? "")
+        .ToLowerInvariant()
+        .Trim();
+
+    var ad = (c.Ad ?? "")
+        .ToLowerInvariant()
+        .Trim();
+
+    if (
+        lower.Contains(adSoyad) ||
+        (!string.IsNullOrWhiteSpace(ad) &&
+         lower.Contains(ad))
+    )
+    {
+        bulunanCalisan = c;
+        break;
+    }
+}
+
 
 foreach (var c in calisanlar)
 {
@@ -208,6 +229,10 @@ if (bulunanCalisan != null)
             return $"{turkceAy} ayı personel gideriniz: {toplam:N2} TL";
         }
         // ÇALIŞAN AVANS
+        if (bulunanCalisan == null)
+        {
+            return "Çalışan bulunamadı.";
+        }
 
         if (
             bulunanCalisan != null &&
