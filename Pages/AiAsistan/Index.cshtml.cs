@@ -173,7 +173,8 @@ foreach (var c in calisanlar)
     !string.IsNullOrWhiteSpace(adSoyad) &&
     (
         lower.Contains(adSoyad) ||
-        adSoyad.Contains(lower.Replace("ne kadar avans aldı", "").Trim())
+        adSoyad.Contains(lower.Replace("ne kadar avans aldı", "").Trim()) ||
+        lower.Contains(adSoyad.Split(' ')[0])
     ))
     {
         bulunanCalisan = c;
