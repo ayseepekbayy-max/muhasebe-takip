@@ -168,9 +168,13 @@ foreach (var c in calisanlar)
     var temizMesaj = lower.Trim();
 
     if (
-        temizMesaj.Contains(adSoyad) ||
-        temizMesaj.Contains(ad)
+    temizMesaj.Contains(adSoyad) ||
+    temizMesaj.Contains(ad)
     )
+    {
+    bulunanCalisan = c;
+    break;
+    }
     {
         bulunanCalisan = c;
         break;
@@ -267,8 +271,8 @@ if (bulunanCalisan != null)
                 x.FirmaId == firmaId &&
                 x.Tip == CalisanHareketTipi.Avans &&
                 !x.ArsivlendiMi &&
-                x.Tarih >= ayBaslangic &&
-                x.Tarih < ayBitis)
+                x.Tarih.Month == ayBaslangic.Month &&
+x.Tarih.        Year == ayBaslangic.Year)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
             return $"{turkceAy} ayında toplam {toplamAvans:N2} TL avans verilmiş.";
@@ -323,8 +327,8 @@ if (bulunanCalisan != null)
                 x.CalisanId == bulunanCalisan.Id &&
                 x.Tip == CalisanHareketTipi.Avans &&
                 !x.ArsivlendiMi &&
-                x.Tarih >= ayBaslangic &&
-                x.Tarih < ayBitis)
+                x.Tarih.Month == ayBaslangic.Month &&
+x.Tarih.        Year == ayBaslangic.Year)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
             return $"{turkceAy} ayında toplam maaş ödemesi: {toplam:N2} TL";
