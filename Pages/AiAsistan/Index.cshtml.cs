@@ -132,6 +132,19 @@ public class IndexModel : PageModel
 
     private async Task<string> CevapUret(string soru, int firmaId)
     {
+        var debug = await _db.CalisanAvanslari
+        .OrderByDescending(x => x.Tarih)
+        .Take(20)
+        .ToListAsync();
+
+         return string.Join(
+        "\n",
+        debug.Select(x =>
+        $"Ad: {x.Ad} | " +
+        $"CalisanId: {x.CalisanId} | " +
+        $"Tip: {x.Tip} | " +
+        $"Tutar: {x.Tutar} | " +
+        $"Tarih: {x.Tarih:dd.MM.yyyy}"));
         var lower = soru.ToLowerInvariant();
 
         var ay = AyBul(lower);
