@@ -166,37 +166,9 @@ foreach (var c in calisanlar)
         .Trim();
 
     if (
-        lower.Contains(adSoyad) ||
-        (!string.IsNullOrWhiteSpace(ad) &&
-         lower.Contains(ad))
-    )
-    {
-        bulunanCalisan = c;
-        break;
-    }
-}
-
-
-foreach (var c in calisanlar)
-{
-    var adSoyad = (c.AdSoyad ?? "")
-        .ToLowerInvariant()
-        .Trim();
-
-    var ad = (c.Ad ?? "")
-        .ToLowerInvariant()
-        .Trim();
-
-    var temizMesaj = lower.Trim();
-
-    if (
-    temizMesaj.Contains(adSoyad) ||
-    temizMesaj.Contains(ad)
-    )
-    {
-    bulunanCalisan = c;
-    break;
-    }
+    !string.IsNullOrWhiteSpace(adSoyad) &&
+    lower.Contains(adSoyad)
+)
     {
         bulunanCalisan = c;
         break;
@@ -229,11 +201,7 @@ if (bulunanCalisan != null)
             return $"{turkceAy} ayı personel gideriniz: {toplam:N2} TL";
         }
         // ÇALIŞAN AVANS
-        if (bulunanCalisan == null)
-        {
-            return "Çalışan bulunamadı.";
-        }
-
+    
         if (
             bulunanCalisan != null &&
             lower.Contains("avans") &&
@@ -244,12 +212,13 @@ if (bulunanCalisan != null)
         )
         {
             var toplam = await _db.CalisanAvanslari
-                .Where(x =>
+            .Where(x =>
                 x.FirmaId == firmaId &&
                 x.CalisanId == bulunanCalisan.Id &&
+                x.Tip == CalisanHareketTipi.Avans &&
                 x.Tarih.Month == ayBaslangic.Month &&
                 x.Tarih.Year == ayBaslangic.Year)
-                .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
            if (toplam <= 0)
             {
@@ -304,7 +273,7 @@ if (bulunanCalisan != null)
                 x.Tip == CalisanHareketTipi.Avans &&
                 !x.ArsivlendiMi &&
                 x.Tarih.Month == ayBaslangic.Month &&
-x.Tarih.        Year == ayBaslangic.Year)
+                x.Tarih.Year == ayBaslangic.Year)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
             return $"{turkceAy} ayında toplam {toplamAvans:N2} TL avans verilmiş.";
