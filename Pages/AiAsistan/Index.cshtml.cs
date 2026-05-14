@@ -150,8 +150,12 @@ public class IndexModel : PageModel
           new CultureInfo("tr-TR"));
 
         var calisanlar = await _db.Calisanlar
+        
             .Where(x => x.FirmaId == firmaId)
             .ToListAsync();
+        return string.Join(
+        "\n",
+        calisanlar.Select(x => x.AdSoyad));
 
         Calisan? bulunanCalisan = null;
 
