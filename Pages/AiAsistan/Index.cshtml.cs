@@ -154,7 +154,6 @@ public class IndexModel : PageModel
 
         Calisan? bulunanCalisan = null;
 
-        Calisan? bulunanCalisan = null;
 
 foreach (var c in calisanlar)
 {
@@ -905,8 +904,7 @@ if (bulunanCalisan != null)
     new DateTime(now.Year, 4, 1),
     DateTimeKind.Utc);
 
-        if (text.Contains("mayıs"))
-            return DateTime.SpecifyKind(
+        if (text.Contains("mayıs"))            return DateTime.SpecifyKind(
     new DateTime(now.Year, 5, 1),
     DateTimeKind.Utc);
 
