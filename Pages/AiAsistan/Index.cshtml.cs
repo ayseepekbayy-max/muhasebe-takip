@@ -153,9 +153,6 @@ public class IndexModel : PageModel
         
             .Where(x => x.FirmaId == firmaId)
             .ToListAsync();
-        return string.Join(
-        "\n",
-        calisanlar.Select(x => x.AdSoyad));
 
         Calisan? bulunanCalisan = null;
 
