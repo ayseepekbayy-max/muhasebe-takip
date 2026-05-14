@@ -132,19 +132,7 @@ public class IndexModel : PageModel
 
     private async Task<string> CevapUret(string soru, int firmaId)
     {
-        var debug = await _db.CalisanAvanslari
-        .OrderByDescending(x => x.Tarih)
-        .Take(20)
-        .ToListAsync();
-
-         return string.Join(
-        "\n",
-        debug.Select(x =>
-        $"Ad: {x.Ad} | " +
-        $"CalisanId: {x.CalisanId} | " +
-        $"Tip: {x.Tip} | " +
-        $"Tutar: {x.Tutar} | " +
-        $"Tarih: {x.Tarih:dd.MM.yyyy}"));
+    
         var lower = soru.ToLowerInvariant();
 
         var ay = AyBul(lower);
@@ -232,11 +220,10 @@ if (bulunanCalisan != null)
         {
             var toplam = await _db.CalisanAvanslari
                 .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.CalisanId == bulunanCalisan.Id &&
-                    x.Tip == CalisanHareketTipi.Avans &&
-                    x.Tarih >= ayBaslangic &&
-                    x.Tarih < ayBitis)
+                x.FirmaId == firmaId &&
+                x.CalisanId == bulunanCalisan.Id &&
+                x.Tarih.Month == ayBaslangic.Month &&
+                x.Tarih.Year == ayBaslangic.Year)
                 .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
            if (toplam <= 0)
@@ -264,10 +251,10 @@ if (bulunanCalisan != null)
                     x.FirmaId == firmaId &&
                     x.Tip == CalisanHareketTipi.Avans &&
                     !x.ArsivlendiMi)
-                    .GroupBy(x => x.Calisan!.AdSoyad)
+                    .GroupBy(x => x.CalisanId)
                     .Select(x => new
                     {
-                        Ad = x.Key,
+                        CalisanId = x.Key,
                         Toplam = x.Sum(y => y.Tutar)
                     })
                     .OrderByDescending(x => x.Toplam)
@@ -276,7 +263,14 @@ if (bulunanCalisan != null)
                 if (veri == null)
                     return "Avans kaydı bulunamadı.";
 
-                return $"En fazla avans alan kişi: {veri.Ad} ({veri.Toplam:N2} TL)";
+                var calisan = await _db.Calisanlar
+                .FirstOrDefaultAsync(x => x.Id == veri.CalisanId);
+
+                var ad = calisan?.AdSoyad ?? "Bilinmiyor";
+
+                return
+                $"En fazla avans alan kişi: " +
+                $"{ad} ({veri.Toplam:N2} TL)";
             }
 
             var toplamAvans = await _db.CalisanAvanslari
