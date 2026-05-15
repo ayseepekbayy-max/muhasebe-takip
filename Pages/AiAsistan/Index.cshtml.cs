@@ -287,11 +287,13 @@ if (
             !lower.Contains("en çok")
         )
         {
-            var toplam = await DonemAvansToplamiGetir(
-                firmaId,
-                bulunanCalisan.Id,
-                ayBaslangic,
-                ayBitis);
+            var toplam = await _db.CalisanAvanslari
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.CalisanId == bulunanCalisan.Id &&
+                x.Tip == CalisanHareketTipi.Avans &&
+                !x.ArsivlendiMi)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
             if (toplam <= 0)
             {
@@ -324,11 +326,13 @@ if (lower.Contains("avans"))
 
         foreach (var c in tumCalisanlarEnFazla)
         {
-            var toplam = await DonemAvansToplamiGetir(
-                firmaId,
-                c.Id,
-                ayBaslangic,
-                ayBitis);
+           var toplam = await _db.CalisanAvanslari
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.CalisanId == c.Id &&
+                x.Tip == CalisanHareketTipi.Avans &&
+                !x.ArsivlendiMi)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
             if (toplam > enToplam)
             {
@@ -355,11 +359,13 @@ if (lower.Contains("avans"))
 
     foreach (var c in tumCalisanlarToplam)
     {
-        toplamAvans += await DonemAvansToplamiGetir(
-            firmaId,
-            c.Id,
-            ayBaslangic,
-            ayBitis);
+        toplamAvans += await _db.CalisanAvanslari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == c.Id &&
+            x.Tip == CalisanHareketTipi.Avans &&
+            !x.ArsivlendiMi)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
     }
 
     return
@@ -1039,58 +1045,6 @@ if (lower.Contains("avans"))
             DateTimeKind.Utc);
     }
 
-    private async Task<decimal> DonemAvansToplamiGetir(
-        int firmaId,
-        int calisanId,
-        DateTime ayBaslangic,
-        DateTime ayBitis)
-    {
-        var donemMaasi = await _db.CalisanAvanslari
-            .Where(x =>
-                x.FirmaId == firmaId &&
-                x.CalisanId == calisanId &&
-                x.Tip == CalisanHareketTipi.MaasOdeme &&
-                x.Tarih >= ayBaslangic &&
-                x.Tarih < ayBitis)
-            .OrderByDescending(x => x.Tarih)
-            .FirstOrDefaultAsync();
-
-        if (donemMaasi == null)
-        {
-            donemMaasi = await _db.CalisanAvanslari
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.CalisanId == calisanId &&
-                    x.Tip == CalisanHareketTipi.MaasOdeme &&
-                    x.Tarih < ayBitis)
-                .OrderByDescending(x => x.Tarih)
-                .FirstOrDefaultAsync();
-        }
-
-        var baslangic = donemMaasi?.Tarih ?? DateTime.MinValue;
-
-        var sonrakiMaas = await _db.CalisanAvanslari
-            .Where(x =>
-                x.FirmaId == firmaId &&
-                x.CalisanId == calisanId &&
-                x.Tip == CalisanHareketTipi.MaasOdeme &&
-                x.Tarih > baslangic)
-            .OrderBy(x => x.Tarih)
-            .FirstOrDefaultAsync();
-
-        var bitis = sonrakiMaas?.Tarih ?? DateTime.MaxValue;
-
-        var toplam = await _db.CalisanAvanslari
-        .Where(x =>
-            x.FirmaId == firmaId &&
-            x.CalisanId == calisanId &&
-            x.Tip == CalisanHareketTipi.Avans &&
-            x.Tarih >= baslangic &&
-            x.Tarih < bitis)
-        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
-
-return toplam;
-    }
 }
 
 public class ChatMesaj
