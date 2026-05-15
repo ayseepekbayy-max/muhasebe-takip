@@ -963,93 +963,73 @@ public class IndexModel : PageModel
 
         return "Soruyu anladım ancak henüz buna cevap verecek sistem eklenmedi.";
     }
-
     private async Task<List<CalisanAvans>> AvansHareketleriniGetir(
         int firmaId,
         int calisanId,
         DateTime ayBaslangic)
     {
-    var ayBitis = ayBaslangic.AddMonths(1);
-    var simdi = DateTime.Now;
+        var ayBitis = ayBaslangic.AddMonths(1);
 
-    var buAyMi =
-        ayBaslangic.Month == simdi.Month &&
-        ayBaslangic.Year == simdi.Year;
+        var donemBaslangicMaasi = await _db.CalisanAvanslari
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.CalisanId == calisanId &&
+                x.Tip == CalisanHareketTipi.MaasOdeme &&
+                x.Tarih.Date >= ayBaslangic.Date &&
+                x.Tarih.Date < ayBitis.Date)
+            .OrderBy(x => x.Tarih)
+            .ThenBy(x => x.Id)
+            .FirstOrDefaultAsync();
 
-    var donemBaslangicMaasi = await _db.CalisanAvanslari
-        .Where(x =>
-            x.FirmaId == firmaId &&
-            x.CalisanId == calisanId &&
-            x.Tip == CalisanHareketTipi.MaasOdeme &&
-            x.Tarih >= ayBaslangic &&
-            x.Tarih < ayBitis)
-        .OrderBy(x => x.Tarih)
-        .FirstOrDefaultAsync();
-
-    if (donemBaslangicMaasi == null)
-    {
-        if (buAyMi)
+        if (donemBaslangicMaasi == null)
         {
-            var sonMaas = await _db.CalisanAvanslari
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.CalisanId == calisanId &&
-                    x.Tip == CalisanHareketTipi.MaasOdeme)
-                .OrderByDescending(x => x.Tarih)
-                .FirstOrDefaultAsync();
+            return new List<CalisanAvans>();
+        }
 
-            var aktifBaslangic = sonMaas?.Tarih ?? DateTime.MinValue;
+        var sonrakiMaas = await _db.CalisanAvanslari
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.CalisanId == calisanId &&
+                x.Tip == CalisanHareketTipi.MaasOdeme &&
+                (
+                    x.Tarih.Date > donemBaslangicMaasi.Tarih.Date ||
+                    (
+                        x.Tarih.Date == donemBaslangicMaasi.Tarih.Date &&
+                        x.Id > donemBaslangicMaasi.Id
+                    )
+                ))
+            .OrderBy(x => x.Tarih)
+            .ThenBy(x => x.Id)
+            .FirstOrDefaultAsync();
 
+        var baslangic = donemBaslangicMaasi.Tarih.Date;
+        var bitis = sonrakiMaas?.Tarih.Date;
+
+        if (bitis == null)
+        {
             return await _db.CalisanAvanslari
                 .Where(x =>
                     x.FirmaId == firmaId &&
                     x.CalisanId == calisanId &&
                     x.Tip == CalisanHareketTipi.Avans &&
-                    !x.ArsivlendiMi &&
-                    x.Tarih >= aktifBaslangic)
+                    x.Tarih.Date >= baslangic)
                 .OrderBy(x => x.Tarih)
+                .ThenBy(x => x.Id)
                 .ToListAsync();
         }
 
-        return new List<CalisanAvans>();
-    }
-
-    var sonrakiMaas = await _db.CalisanAvanslari
-        .Where(x =>
-            x.FirmaId == firmaId &&
-            x.CalisanId == calisanId &&
-            x.Tip == CalisanHareketTipi.MaasOdeme &&
-            x.Tarih > donemBaslangicMaasi.Tarih)
-        .OrderBy(x => x.Tarih)
-        .FirstOrDefaultAsync();
-
-    var baslangic = donemBaslangicMaasi.Tarih;
-    var bitis = sonrakiMaas?.Tarih;
-
-    if (bitis == null)
-    {
         return await _db.CalisanAvanslari
             .Where(x =>
                 x.FirmaId == firmaId &&
                 x.CalisanId == calisanId &&
                 x.Tip == CalisanHareketTipi.Avans &&
-                !x.ArsivlendiMi &&
-                x.Tarih >= baslangic)
+                x.Tarih.Date >= baslangic &&
+                x.Tarih.Date <= bitis.Value)
             .OrderBy(x => x.Tarih)
+            .ThenBy(x => x.Id)
             .ToListAsync();
     }
 
-    return await _db.CalisanAvanslari
-        .Where(x =>
-            x.FirmaId == firmaId &&
-            x.CalisanId == calisanId &&
-            x.Tip == CalisanHareketTipi.Avans &&
-            x.Tarih >= baslangic &&
-            x.Tarih <= bitis.Value)
-        .OrderBy(x => x.Tarih)
-        .ToListAsync();
-}
-    
     private DateTime AyBul(string text)
     {
         var now = DateTime.UtcNow;
