@@ -145,8 +145,6 @@ public class IndexModel : PageModel
             ay = DateTime.Now;
         }
 
-        var simdi = DateTime.Now;
-
         var ayBaslangic = DateTime.SpecifyKind(
             new DateTime(ay.Year, ay.Month, 1),
             DateTimeKind.Utc);
@@ -963,71 +961,80 @@ public class IndexModel : PageModel
 
         return "Soruyu anladım ancak henüz buna cevap verecek sistem eklenmedi.";
     }
+
     private async Task<List<CalisanAvans>> AvansHareketleriniGetir(
         int firmaId,
         int calisanId,
         DateTime ayBaslangic)
     {
-        var ayBitis = ayBaslangic.AddMonths(1);
+        var simdi = DateTime.Now;
 
-        var donemBaslangicMaasi = await _db.CalisanAvanslari
-            .Where(x =>
-                x.FirmaId == firmaId &&
-                x.CalisanId == calisanId &&
-                x.Tip == CalisanHareketTipi.MaasOdeme &&
-                x.Tarih.Date >= ayBaslangic.Date &&
-                x.Tarih.Date < ayBitis.Date)
-            .OrderBy(x => x.Tarih)
-            .ThenBy(x => x.Id)
-            .FirstOrDefaultAsync();
+        var buAyMi =
+            ayBaslangic.Month == simdi.Month &&
+            ayBaslangic.Year == simdi.Year;
 
-        if (donemBaslangicMaasi == null)
-        {
-            return new List<CalisanAvans>();
-        }
-
-        var sonrakiMaas = await _db.CalisanAvanslari
-            .Where(x =>
-                x.FirmaId == firmaId &&
-                x.CalisanId == calisanId &&
-                x.Tip == CalisanHareketTipi.MaasOdeme &&
-                (
-                    x.Tarih.Date > donemBaslangicMaasi.Tarih.Date ||
-                    (
-                        x.Tarih.Date == donemBaslangicMaasi.Tarih.Date &&
-                        x.Id > donemBaslangicMaasi.Id
-                    )
-                ))
-            .OrderBy(x => x.Tarih)
-            .ThenBy(x => x.Id)
-            .FirstOrDefaultAsync();
-
-        var baslangic = donemBaslangicMaasi.Tarih.Date;
-        var bitis = sonrakiMaas?.Tarih.Date;
-
-        if (bitis == null)
+        if (buAyMi)
         {
             return await _db.CalisanAvanslari
                 .Where(x =>
                     x.FirmaId == firmaId &&
                     x.CalisanId == calisanId &&
                     x.Tip == CalisanHareketTipi.Avans &&
-                    x.Tarih.Date >= baslangic)
+                    !x.ArsivlendiMi)
                 .OrderBy(x => x.Tarih)
                 .ThenBy(x => x.Id)
                 .ToListAsync();
         }
 
-        return await _db.CalisanAvanslari
+        var kultur = new CultureInfo("tr-TR");
+        var ayAdi = ayBaslangic.ToString("MMMM", kultur).ToLower(kultur);
+
+        var arsivler = await _db.CalisanMaasArsivleri
             .Where(x =>
                 x.FirmaId == firmaId &&
-                x.CalisanId == calisanId &&
-                x.Tip == CalisanHareketTipi.Avans &&
-                x.Tarih.Date >= baslangic &&
-                x.Tarih.Date <= bitis.Value)
-            .OrderBy(x => x.Tarih)
-            .ThenBy(x => x.Id)
+                x.CalisanId == calisanId)
+            .OrderByDescending(x => x.OdemeTarihi)
             .ToListAsync();
+
+        foreach (var arsiv in arsivler)
+        {
+            var detaylar = await _db.CalisanAvanslari
+                .Where(x =>
+                    x.FirmaId == firmaId &&
+                    x.CalisanId == calisanId &&
+                    x.ArsivlendiMi &&
+                    x.Tarih >= arsiv.DonemBaslangic &&
+                    x.Tarih <= arsiv.DonemBitis)
+                .OrderBy(x => x.Tarih)
+                .ThenBy(x => x.Id)
+                .ToListAsync();
+
+            var buAyArsiviMi =
+                AyMetniIceriyor(arsiv.Aciklama, ayAdi) ||
+                detaylar.Any(x =>
+                    x.Tip == CalisanHareketTipi.MaasOdeme &&
+                    AyMetniIceriyor(x.Aciklama, ayAdi));
+
+            if (buAyArsiviMi)
+            {
+                return detaylar
+                    .Where(x => x.Tip == CalisanHareketTipi.Avans)
+                    .OrderBy(x => x.Tarih)
+                    .ThenBy(x => x.Id)
+                    .ToList();
+            }
+        }
+
+        return new List<CalisanAvans>();
+    }
+
+    private bool AyMetniIceriyor(string? metin, string ayAdi)
+    {
+        if (string.IsNullOrWhiteSpace(metin))
+            return false;
+
+        var kultur = new CultureInfo("tr-TR");
+        return metin.ToLower(kultur).Contains(ayAdi);
     }
 
     private DateTime AyBul(string text)
