@@ -287,13 +287,36 @@ if (
             !lower.Contains("en çok")
         )
         {
-            var toplam = await _db.CalisanAvanslari
-            .Where(x =>
-                x.FirmaId == firmaId &&
-                x.CalisanId == bulunanCalisan.Id &&
-                x.Tip == CalisanHareketTipi.Avans &&
-                !x.ArsivlendiMi)
-            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+            decimal toplam = 0;
+
+// BU AY ise aktif kayıtlar
+if (buAyMi)
+{
+    toplam = await _db.CalisanAvanslari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == bulunanCalisan.Id &&
+            x.Tip == CalisanHareketTipi.Avans &&
+            !x.ArsivlendiMi)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+}
+else
+{
+    // geçmiş ay ise arşivden getir
+    var arsiv = await _db.CalisanMaasArsivleri
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == bulunanCalisan.Id &&
+            x.DonemBitis.Month == ayBaslangic.Month &&
+            x.DonemBitis.Year == ayBaslangic.Year)
+        .OrderByDescending(x => x.Id)
+        .FirstOrDefaultAsync();
+
+    if (arsiv != null)
+    {
+        toplam = arsiv.ToplamAvans;
+    }
+}
 
             if (toplam <= 0)
             {
