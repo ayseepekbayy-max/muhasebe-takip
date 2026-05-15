@@ -219,7 +219,11 @@ if (
         return "Çalışan bulunamadı.";
     }
 
-    var hareketler = await _db.CalisanAvanslari
+    List<CalisanAvans> hareketler;
+
+if (buAyMi)
+{
+    hareketler = await _db.CalisanAvanslari
         .Where(x =>
             x.FirmaId == firmaId &&
             x.CalisanId == calisan.Id &&
@@ -228,6 +232,34 @@ if (
         .OrderByDescending(x => x.Tarih)
         .Take(20)
         .ToListAsync();
+}
+else
+{
+    var arsiv = await _db.CalisanMaasArsivleri
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == calisan.Id &&
+            x.DonemBitis.Month == ayBaslangic.Month &&
+            x.DonemBitis.Year == ayBaslangic.Year)
+        .OrderByDescending(x => x.Id)
+        .FirstOrDefaultAsync();
+
+    if (arsiv == null)
+    {
+        return $"{calisan.AdSoyad} için arşiv detayı bulunamadı.";
+    }
+
+    hareketler = await _db.CalisanAvanslari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == calisan.Id &&
+            x.Tip == CalisanHareketTipi.Avans &&
+            x.ArsivlendiMi &&
+            x.Tarih >= arsiv.DonemBaslangic &&
+            x.Tarih <= arsiv.DonemBitis)
+        .OrderByDescending(x => x.Tarih)
+        .ToListAsync();
+}
 
     if (!hareketler.Any())
     {
@@ -313,9 +345,17 @@ else
         .FirstOrDefaultAsync();
 
     if (arsiv != null)
-    {
-        toplam = arsiv.ToplamAvans;
-    }
+{
+    toplam = await _db.CalisanAvanslari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == bulunanCalisan.Id &&
+            x.Tip == CalisanHareketTipi.Avans &&
+            x.ArsivlendiMi &&
+            x.Tarih >= arsiv.DonemBaslangic &&
+            x.Tarih <= arsiv.DonemBitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+}
 }
 
             if (toplam <= 0)
