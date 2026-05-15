@@ -151,8 +151,11 @@ public class IndexModel : PageModel
         }
 
         var toplamMaas = aktifKayitlar
-            .Where(x => x.Tip == CalisanHareketTipi.MaasOdeme)
-            .Sum(x => x.Tutar);
+        .Where(x =>
+            x.Tip == CalisanHareketTipi.MaasOdeme ||
+            x.Tip == CalisanHareketTipi.Diger)
+        .Sum(x => x.Tutar);
+
 
         var toplamAvans = aktifKayitlar
             .Where(x => x.Tip == CalisanHareketTipi.Avans)
@@ -273,12 +276,17 @@ public class IndexModel : PageModel
             .ToListAsync();
 
         ToplamMaas = await _db.CalisanAvanslari
-            .Where(x =>
-                x.CalisanId == id &&
-                x.FirmaId == firmaId &&
-                !x.ArsivlendiMi &&
-                x.Tip == CalisanHareketTipi.MaasOdeme)
-            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+        .Where(x =>
+            x.CalisanId == id &&
+            x.FirmaId == firmaId &&
+            !x.ArsivlendiMi &&
+            (
+                x.Tip == CalisanHareketTipi.MaasOdeme ||
+                x.Tip == CalisanHareketTipi.Diger
+            ))
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+
 
         ToplamAvans = await _db.CalisanAvanslari
             .Where(x =>
