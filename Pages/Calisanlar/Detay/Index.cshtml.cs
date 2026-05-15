@@ -70,46 +70,20 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostAvansAsync(int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
-
-        await YukleAsync(id, firmaId.Value, null);
-
-        if (Calisan == null)
-            return NotFound();
-
-        if (Tutar <= 0)
-        {
-            ModelState.AddModelError("", "Tutar 0'dan büyük olmalı.");
-            return Page();
-        }
-
-        var utcTarih = Tarih.Kind switch
-        {
-            DateTimeKind.Utc => Tarih.Date,
-            DateTimeKind.Local => Tarih.ToUniversalTime().Date,
-            _ => DateTime.SpecifyKind(Tarih.Date, DateTimeKind.Utc)
-        };
-
-        var kayit = new CalisanAvans
-        {
-            FirmaId = firmaId.Value,
-            CalisanId = id,
-            Tarih = utcTarih,
-            Tutar = Tutar,
-            Aciklama = (Aciklama ?? "").Trim(),
-            Tip = CalisanHareketTipi.Avans,
-            ArsivlendiMi = false
-        };
-
-        _db.CalisanAvanslari.Add(kayit);
-        await _db.SaveChangesAsync();
-
-        return RedirectToPage(new { id });
+        return await KayitEkleAsync(id, CalisanHareketTipi.Avans);
     }
 
     public async Task<IActionResult> OnPostMaasAsync(int id)
+    {
+        return await KayitEkleAsync(id, CalisanHareketTipi.MaasOdeme);
+    }
+
+    public async Task<IActionResult> OnPostDigerAsync(int id)
+    {
+        return await KayitEkleAsync(id, CalisanHareketTipi.Diger);
+    }
+
+    private async Task<IActionResult> KayitEkleAsync(int id, CalisanHareketTipi tip)
     {
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
         if (firmaId == null)
@@ -140,7 +114,7 @@ public class IndexModel : PageModel
             Tarih = utcTarih,
             Tutar = Tutar,
             Aciklama = (Aciklama ?? "").Trim(),
-            Tip = CalisanHareketTipi.MaasOdeme,
+            Tip = tip,
             ArsivlendiMi = false
         };
 
@@ -236,40 +210,40 @@ public class IndexModel : PageModel
     }
 
     public async Task<IActionResult> OnPostArsivGeriAcAsync(int id, int arsivId)
-{
-    var firmaId = HttpContext.Session.GetInt32("FirmaId");
-    if (firmaId == null)
-        return RedirectToPage("/Login");
-
-    var arsiv = await _db.CalisanMaasArsivleri
-        .FirstOrDefaultAsync(x =>
-            x.Id == arsivId &&
-            x.CalisanId == id &&
-            x.FirmaId == firmaId.Value);
-
-    if (arsiv == null)
-        return NotFound();
-
-    var kayitlar = await _db.CalisanAvanslari
-        .Where(x =>
-            x.CalisanId == id &&
-            x.FirmaId == firmaId.Value &&
-            x.ArsivlendiMi &&
-            x.Tarih >= arsiv.DonemBaslangic &&
-            x.Tarih <= arsiv.DonemBitis)
-        .ToListAsync();
-
-    foreach (var kayit in kayitlar)
     {
-        kayit.ArsivlendiMi = false;
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var arsiv = await _db.CalisanMaasArsivleri
+            .FirstOrDefaultAsync(x =>
+                x.Id == arsivId &&
+                x.CalisanId == id &&
+                x.FirmaId == firmaId.Value);
+
+        if (arsiv == null)
+            return NotFound();
+
+        var kayitlar = await _db.CalisanAvanslari
+            .Where(x =>
+                x.CalisanId == id &&
+                x.FirmaId == firmaId.Value &&
+                x.ArsivlendiMi &&
+                x.Tarih >= arsiv.DonemBaslangic &&
+                x.Tarih <= arsiv.DonemBitis)
+            .ToListAsync();
+
+        foreach (var kayit in kayitlar)
+        {
+            kayit.ArsivlendiMi = false;
+        }
+
+        _db.CalisanMaasArsivleri.Remove(arsiv);
+
+        await _db.SaveChangesAsync();
+
+        return RedirectToPage(new { id });
     }
-
-    _db.CalisanMaasArsivleri.Remove(arsiv);
-
-    await _db.SaveChangesAsync();
-
-    return RedirectToPage(new { id });
- }
 
     private async Task YukleAsync(int id, int firmaId, int? arsivId)
     {

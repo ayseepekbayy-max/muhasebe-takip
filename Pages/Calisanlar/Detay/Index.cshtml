@@ -59,7 +59,7 @@
 <div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:980px;">
     <h3>Kayıt Ekle</h3>
 
-    <form method="post">
+    <form method="post" asp-route-id="@Model.Calisan.Id">
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <div style="min-width:180px;">
                 <label><b>Tarih</b></label><br />
@@ -80,7 +80,7 @@
         <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
             <button type="submit" asp-page-handler="Avans" class="btn btn-outline-dark btn-sm">Avans Ekle</button>
             <button type="submit" asp-page-handler="Maas" class="btn btn-dark btn-sm">Maaş Ekle</button>
-            <button type="submit" asp-page-handler="diger" class="btn btn-dark btn-sm">Diğer</button>
+            <button type="submit" asp-page-handler="Diger" class="btn btn-secondary btn-sm">Diğer</button>
         </div>
     </form>
 </div>
@@ -112,7 +112,11 @@
                 <tr>
                     <td style="border-bottom:1px solid #333; padding:8px;">@k.Tarih.ToString("dd.MM.yyyy")</td>
                     <td style="border-bottom:1px solid #333; padding:8px;">
-                        @(k.Tip == CalisanHareketTipi.Avans ? "Avans" : "Maaş")
+                        @(k.Tip == CalisanHareketTipi.Avans
+                            ? "Avans"
+                            : k.Tip == CalisanHareketTipi.MaasOdeme
+                                ? "Maaş"
+                                : "Diğer")
                     </td>
                     <td style="border-bottom:1px solid #333; padding:8px;">@k.Tutar.ToString("N2")</td>
                     <td style="border-bottom:1px solid #333; padding:8px;">@k.Aciklama</td>
@@ -168,24 +172,20 @@
                     <td style="border-bottom:1px solid #333; padding:8px;">@a.OdemeTarihi.ToString("dd.MM.yyyy HH:mm")</td>
                     <td style="border-bottom:1px solid #333; padding:8px;">@a.Aciklama</td>
                     <td style="border-bottom:1px solid #333; padding:8px; display:flex; gap:6px; flex-wrap:wrap;">
-    <a class="btn btn-outline-primary btn-sm"
-       href="/Calisanlar/Detay/@Model.Calisan.Id?arsivId=@a.Id">
-        Detayları Gör
-    </a>
+                        <a class="btn btn-outline-primary btn-sm"
+                           href="/Calisanlar/Detay/@Model.Calisan.Id?arsivId=@a.Id">
+                            Detayları Gör
+                        </a>
 
-    <form method="post"
-          asp-page-handler="ArsivGeriAc"
-          asp-route-id="@Model.Calisan.Id"
-          style="display:inline;"
-          onsubmit="return confirm('Bu arşiv tekrar aktif kayıt haline getirilsin mi?');">
-
-        <input type="hidden" name="arsivId" value="@a.Id" />
-
-        <button type="submit" class="btn btn-outline-warning btn-sm">
-            Arşivi Geri Aç
-        </button>
-    </form>
-</td>
+                        <form method="post"
+                              asp-page-handler="ArsivGeriAc"
+                              asp-route-id="@Model.Calisan.Id"
+                              style="display:inline;"
+                              onsubmit="return confirm('Bu arşiv tekrar aktif kayıt haline getirilsin mi?');">
+                            <input type="hidden" name="arsivId" value="@a.Id" />
+                            <button type="submit" class="btn btn-outline-warning btn-sm">Arşivi Geri Aç</button>
+                        </form>
+                    </td>
                 </tr>
             }
         }
@@ -223,7 +223,11 @@
                         <tr>
                             <td style="border-bottom:1px solid #333; padding:8px;">@d.Tarih.ToString("dd.MM.yyyy")</td>
                             <td style="border-bottom:1px solid #333; padding:8px;">
-                                @(d.Tip == CalisanHareketTipi.Avans ? "Avans" : "Maaş")
+                                @(d.Tip == CalisanHareketTipi.Avans
+                                    ? "Avans"
+                                    : d.Tip == CalisanHareketTipi.MaasOdeme
+                                        ? "Maaş"
+                                        : "Diğer")
                             </td>
                             <td style="border-bottom:1px solid #333; padding:8px;">@d.Tutar.ToString("N2")</td>
                             <td style="border-bottom:1px solid #333; padding:8px;">@d.Aciklama</td>
