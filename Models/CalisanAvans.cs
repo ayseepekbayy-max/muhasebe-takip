@@ -5,7 +5,8 @@ namespace MuhasebeTakip2.App.Models;
 public enum CalisanHareketTipi
 {
     Avans = 1,
-    MaasOdeme = 2
+    MaasOdeme = 2,
+    Diger = 3
 }
 
 public class CalisanAvans
