@@ -235,6 +235,42 @@ public class IndexModel : PageModel
         return RedirectToPage(new { id });
     }
 
+    public async Task<IActionResult> OnPostArsivGeriAcAsync(int id, int arsivId)
+{
+    var firmaId = HttpContext.Session.GetInt32("FirmaId");
+    if (firmaId == null)
+        return RedirectToPage("/Login");
+
+    var arsiv = await _db.CalisanMaasArsivleri
+        .FirstOrDefaultAsync(x =>
+            x.Id == arsivId &&
+            x.CalisanId == id &&
+            x.FirmaId == firmaId.Value);
+
+    if (arsiv == null)
+        return NotFound();
+
+    var kayitlar = await _db.CalisanAvanslari
+        .Where(x =>
+            x.CalisanId == id &&
+            x.FirmaId == firmaId.Value &&
+            x.ArsivlendiMi &&
+            x.Tarih >= arsiv.DonemBaslangic &&
+            x.Tarih <= arsiv.DonemBitis)
+        .ToListAsync();
+
+    foreach (var kayit in kayitlar)
+    {
+        kayit.ArsivlendiMi = false;
+    }
+
+    _db.CalisanMaasArsivleri.Remove(arsiv);
+
+    await _db.SaveChangesAsync();
+
+    return RedirectToPage(new { id });
+ }
+
     private async Task YukleAsync(int id, int firmaId, int? arsivId)
     {
         Calisan = await _db.Calisanlar

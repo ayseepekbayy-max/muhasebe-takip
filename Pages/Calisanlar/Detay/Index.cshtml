@@ -166,12 +166,25 @@
                     <td style="border-bottom:1px solid #333; padding:8px;">@a.KalanMaas.ToString("N2")</td>
                     <td style="border-bottom:1px solid #333; padding:8px;">@a.OdemeTarihi.ToString("dd.MM.yyyy HH:mm")</td>
                     <td style="border-bottom:1px solid #333; padding:8px;">@a.Aciklama</td>
-                    <td style="border-bottom:1px solid #333; padding:8px;">
-                        <a class="btn btn-outline-primary btn-sm"
-                           href="/Calisanlar/Detay/@Model.Calisan.Id?arsivId=@a.Id">
-                            Detayları Gör
-                        </a>
-                    </td>
+                    <td style="border-bottom:1px solid #333; padding:8px; display:flex; gap:6px; flex-wrap:wrap;">
+    <a class="btn btn-outline-primary btn-sm"
+       href="/Calisanlar/Detay/@Model.Calisan.Id?arsivId=@a.Id">
+        Detayları Gör
+    </a>
+
+    <form method="post"
+          asp-page-handler="ArsivGeriAc"
+          asp-route-id="@Model.Calisan.Id"
+          style="display:inline;"
+          onsubmit="return confirm('Bu arşiv tekrar aktif kayıt haline getirilsin mi?');">
+
+        <input type="hidden" name="arsivId" value="@a.Id" />
+
+        <button type="submit" class="btn btn-outline-warning btn-sm">
+            Arşivi Geri Aç
+        </button>
+    </form>
+</td>
                 </tr>
             }
         }
