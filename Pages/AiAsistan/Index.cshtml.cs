@@ -212,6 +212,91 @@ if (
 
     var detayTip = HttpContext.Session.GetString(SonDetayTipKey);
 
+    if (detayTip == "MaasToplam" && bulunanCalisan == null)
+{
+    var text = $"{detayTurkceAy} dönemi tüm çalışan maaş detayları:\n\n";
+    var kayitVarMi = false;
+
+    foreach (var c in calisanlar)
+    {
+        var hareketler = await MaasHareketleriniGetir(
+            firmaId,
+            c.Id,
+            detayAyBaslangic);
+
+        if (!hareketler.Any())
+            continue;
+
+        kayitVarMi = true;
+
+        text += $"{c.AdSoyad}:\n";
+
+        foreach (var item in hareketler)
+        {
+            text +=
+                $"- {item.Tarih:dd.MM.yyyy} | " +
+                $"{item.Tutar:N2} TL | " +
+                (item.Tip == CalisanHareketTipi.MaasOdeme ? "Maaş" : "Diğer");
+
+            if (!string.IsNullOrWhiteSpace(item.Aciklama))
+                text += $" | {item.Aciklama}";
+
+            text += "\n";
+        }
+
+        text += "\n";
+    }
+
+    if (!kayitVarMi)
+        return $"{detayTurkceAy} döneminde maaş detayı bulunamadı.";
+
+    return text;
+}
+
+if (detayTip == "MaasCalisan")
+{
+    var sonCalisanAdiMaas = bulunanCalisan?.AdSoyad
+        ?? HttpContext.Session.GetString(SonDetayCalisanKey)
+        ?? _memory.SonCalisaniGetir();
+
+    if (string.IsNullOrWhiteSpace(sonCalisanAdiMaas))
+        return "Detayı gösterilecek çalışan bulunamadı.";
+
+    var calisanMaas = await _db.Calisanlar
+        .FirstOrDefaultAsync(x =>
+            x.FirmaId == firmaId &&
+            x.AdSoyad == sonCalisanAdiMaas);
+
+    if (calisanMaas == null)
+        return "Çalışan bulunamadı.";
+
+    var hareketler = await MaasHareketleriniGetir(
+        firmaId,
+        calisanMaas.Id,
+        detayAyBaslangic);
+
+    if (!hareketler.Any())
+        return $"{calisanMaas.AdSoyad} için {detayTurkceAy} döneminde maaş detayı bulunamadı.";
+
+    var text = $"{calisanMaas.AdSoyad} {detayTurkceAy} dönemi maaş detayları:\n\n";
+
+    foreach (var item in hareketler)
+    {
+        text +=
+            $"- {item.Tarih:dd.MM.yyyy} | " +
+            $"{item.Tutar:N2} TL | " +
+            (item.Tip == CalisanHareketTipi.MaasOdeme ? "Maaş" : "Diğer");
+
+        if (!string.IsNullOrWhiteSpace(item.Aciklama))
+            text += $" | {item.Aciklama}";
+
+        text += "\n";
+    }
+
+    return text;
+}
+
+
     if (detayTip == "Toplam" && bulunanCalisan == null)
     {
         var text = $"{detayTurkceAy} dönemi tüm çalışan avans detayları:\n\n";
@@ -422,59 +507,133 @@ if (
 
         // ÇALIŞAN MAAŞ
 
-        if (
-            bulunanCalisan != null &&
-            lower.Contains("maaş") &&
-            !lower.Contains("ortalama") &&
-            !lower.Contains("toplam") &&
-            !lower.Contains("ne kadar maaş verdim") &&
-            !lower.Contains("maaş gider") &&
-            !lower.Contains("personel gider")
-        )
+if (
+    bulunanCalisan != null &&
+    lower.Contains("maaş") &&
+    !lower.Contains("ortalama") &&
+    !lower.Contains("toplam") &&
+    !lower.Contains("dağılım") &&
+    !lower.Contains("en yüksek") &&
+    !lower.Contains("kim aldı") &&
+    !lower.Contains("maaş gider") &&
+    !lower.Contains("personel gider")
+)
+{
+    var hareketler = await MaasHareketleriniGetir(
+        firmaId,
+        bulunanCalisan.Id,
+        ayBaslangic);
+
+    var toplam = hareketler.Sum(x => x.Tutar);
+
+    SonMaasDetayiniKaydet(bulunanCalisan.AdSoyad, ayBaslangic);
+
+    if (toplam <= 0)
+    {
+        return $"{bulunanCalisan.AdSoyad} için {turkceAy} döneminde maaş ödemesi bulunamadı.";
+    }
+
+    return
+        $"{bulunanCalisan.AdSoyad} isimli çalışana " +
+        $"{turkceAy} döneminde toplam {toplam:N2} TL maaş ödemesi yapılmış.";
+}
+
+// MAAŞ ANALİZİ
+
+if (lower.Contains("maaş"))
+{
+    var maasDagilimi = new List<(string Ad, decimal Toplam)>();
+
+    foreach (var c in calisanlar)
+    {
+        var hareketler = await MaasHareketleriniGetir(
+            firmaId,
+            c.Id,
+            ayBaslangic);
+
+        var toplam = hareketler.Sum(x => x.Tutar);
+
+        if (toplam > 0)
         {
-            return
-                $"{bulunanCalisan.AdSoyad} isimli çalışanın maaşı: " +
-                $"{bulunanCalisan.Maas:N2} TL";
+            maasDagilimi.Add((c.AdSoyad, toplam));
+        }
+    }
+
+    if (
+        lower.Contains("verdim mi") ||
+        lower.Contains("ödedim mi")
+    )
+    {
+        var toplam = maasDagilimi.Sum(x => x.Toplam);
+
+        SonToplamMaasDetayiniKaydet(ayBaslangic);
+
+        if (toplam <= 0)
+            return $"{turkceAy} döneminde maaş ödemesi bulunamadı.";
+
+        return $"{turkceAy} döneminde toplam {toplam:N2} TL maaş ödemesi yapılmış.";
+    }
+
+    if (
+        lower.Contains("toplam") ||
+        lower.Contains("ne kadar")
+    )
+    {
+        var toplam = maasDagilimi.Sum(x => x.Toplam);
+
+        SonToplamMaasDetayiniKaydet(ayBaslangic);
+
+        return $"{turkceAy} döneminde toplam maaş ödemesi: {toplam:N2} TL";
+    }
+
+    if (lower.Contains("ortalama"))
+    {
+        if (!maasDagilimi.Any())
+            return $"{turkceAy} döneminde maaş ödemesi bulunamadı.";
+
+        var ortalama = maasDagilimi.Average(x => x.Toplam);
+
+        return $"{turkceAy} döneminde ortalama maaş ödemesi: {ortalama:N2} TL";
+    }
+
+    if (
+        lower.Contains("en yüksek") ||
+        lower.Contains("kim aldı")
+    )
+    {
+        var enYuksek = maasDagilimi
+            .OrderByDescending(x => x.Toplam)
+            .FirstOrDefault();
+
+        if (enYuksek.Toplam <= 0)
+            return $"{turkceAy} döneminde maaş ödemesi bulunamadı.";
+
+        SonMaasDetayiniKaydet(enYuksek.Ad, ayBaslangic);
+
+        return $"En yüksek maaş ödemesi alan çalışan: {enYuksek.Ad} ({enYuksek.Toplam:N2} TL)";
+    }
+
+    if (
+        lower.Contains("dağılım") ||
+        lower.Contains("dagilim") ||
+        lower.Contains("listele")
+    )
+    {
+        if (!maasDagilimi.Any())
+            return $"{turkceAy} döneminde maaş ödemesi bulunamadı.";
+
+        SonToplamMaasDetayiniKaydet(ayBaslangic);
+
+        var text = $"{turkceAy} dönemi maaş dağılımı:\n\n";
+
+        foreach (var item in maasDagilimi.OrderByDescending(x => x.Toplam))
+        {
+            text += $"- {item.Ad}: {item.Toplam:N2} TL\n";
         }
 
-        // MAAŞ ANALİZİ
-
-        if (lower.Contains("maaş"))
-        {
-            if (lower.Contains("ortalama"))
-            {
-                var ortalama = await _db.Calisanlar
-                    .Where(x => x.FirmaId == firmaId)
-                    .AverageAsync(x => (decimal?)x.Maas) ?? 0;
-
-                return $"Ortalama maaş: {ortalama:N2} TL";
-            }
-
-            if (lower.Contains("en yüksek"))
-            {
-                var calisan = await _db.Calisanlar
-                    .Where(x => x.FirmaId == firmaId)
-                    .OrderByDescending(x => x.Maas)
-                    .FirstOrDefaultAsync();
-
-                if (calisan == null)
-                    return "Çalışan bulunamadı.";
-
-                return $"En yüksek maaşı alan çalışan: {calisan.AdSoyad} ({calisan.Maas:N2} TL)";
-            }
-
-            var toplam = await _db.CalisanAvanslari
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    bulunanCalisan != null &&
-                    x.CalisanId == bulunanCalisan.Id &&
-                    x.Tip == CalisanHareketTipi.MaasOdeme &&
-                    x.Tarih >= ayBaslangic &&
-                    x.Tarih < ayBitis)
-                .SumAsync(x => (decimal?)x.Tutar) ?? 0;
-
-            return $"{turkceAy} ayında toplam maaş ödemesi: {toplam:N2} TL";
-        }
+        return text;
+    }
+}
 
         // ÇALIŞAN PUANTAJ
 
@@ -1078,6 +1237,78 @@ if (
         return new List<CalisanAvans>();
     }
 
+    private async Task<List<CalisanAvans>> MaasHareketleriniGetir(
+    int firmaId,
+    int calisanId,
+    DateTime ayBaslangic)
+{
+    var simdi = DateTime.Now;
+
+    var buAyMi =
+        ayBaslangic.Month == simdi.Month &&
+        ayBaslangic.Year == simdi.Year;
+
+    if (buAyMi)
+    {
+        return await _db.CalisanAvanslari
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.CalisanId == calisanId &&
+                !x.ArsivlendiMi &&
+                (
+                    x.Tip == CalisanHareketTipi.MaasOdeme ||
+                    x.Tip == CalisanHareketTipi.Diger
+                ))
+            .OrderBy(x => x.Tarih)
+            .ThenBy(x => x.Id)
+            .ToListAsync();
+    }
+
+    var kultur = new CultureInfo("tr-TR");
+    var ayAdi = ayBaslangic.ToString("MMMM", kultur).ToLower(kultur);
+
+    var arsivler = await _db.CalisanMaasArsivleri
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == calisanId)
+        .OrderByDescending(x => x.OdemeTarihi)
+        .ToListAsync();
+
+    foreach (var arsiv in arsivler)
+    {
+        var detaylar = await _db.CalisanAvanslari
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.CalisanId == calisanId &&
+                x.ArsivlendiMi &&
+                x.Tarih >= arsiv.DonemBaslangic &&
+                x.Tarih <= arsiv.DonemBitis)
+            .OrderBy(x => x.Tarih)
+            .ThenBy(x => x.Id)
+            .ToListAsync();
+
+        var buAyArsiviMi =
+            AyMetniIceriyor(arsiv.Aciklama, ayAdi) ||
+            detaylar.Any(x =>
+                x.Tip == CalisanHareketTipi.MaasOdeme &&
+                AyMetniIceriyor(x.Aciklama, ayAdi));
+
+        if (buAyArsiviMi)
+        {
+            return detaylar
+                .Where(x =>
+                    x.Tip == CalisanHareketTipi.MaasOdeme ||
+                    x.Tip == CalisanHareketTipi.Diger)
+                .OrderBy(x => x.Tarih)
+                .ThenBy(x => x.Id)
+                .ToList();
+        }
+    }
+
+    return new List<CalisanAvans>();
+}
+
+
     private bool AyMetniIceriyor(string? metin, string ayAdi)
     {
         if (string.IsNullOrWhiteSpace(metin))
@@ -1165,6 +1396,22 @@ private void SonToplamAvansDetayiniKaydet(DateTime ayBaslangic)
     HttpContext.Session.SetInt32(SonDetayAyKey, ayBaslangic.Month);
     HttpContext.Session.SetInt32(SonDetayYilKey, ayBaslangic.Year);
 }
+private void SonMaasDetayiniKaydet(string adSoyad, DateTime ayBaslangic)
+{
+    HttpContext.Session.SetString(SonDetayTipKey, "MaasCalisan");
+    HttpContext.Session.SetString(SonDetayCalisanKey, adSoyad);
+    HttpContext.Session.SetInt32(SonDetayAyKey, ayBaslangic.Month);
+    HttpContext.Session.SetInt32(SonDetayYilKey, ayBaslangic.Year);
+}
+
+private void SonToplamMaasDetayiniKaydet(DateTime ayBaslangic)
+{
+    HttpContext.Session.SetString(SonDetayTipKey, "MaasToplam");
+    HttpContext.Session.Remove(SonDetayCalisanKey);
+    HttpContext.Session.SetInt32(SonDetayAyKey, ayBaslangic.Month);
+    HttpContext.Session.SetInt32(SonDetayYilKey, ayBaslangic.Year);
+}
+
 
 }
 
