@@ -147,10 +147,6 @@ public class IndexModel : PageModel
 
         var simdi = DateTime.Now;
 
-        bool buAyMi =
-            ay.Month == simdi.Month &&
-            ay.Year == simdi.Year;
-
         var ayBaslangic = DateTime.SpecifyKind(
             new DateTime(ay.Year, ay.Month, 1),
             DateTimeKind.Utc);
@@ -973,74 +969,72 @@ public class IndexModel : PageModel
         int calisanId,
         DateTime ayBaslangic)
     {
+        var ayBitis = ayBaslangic.AddMonths(1);
         var simdi = DateTime.Now;
 
         var buAyMi =
             ayBaslangic.Month == simdi.Month &&
             ayBaslangic.Year == simdi.Year;
 
-        if (buAyMi)
-        {
-            return await _db.CalisanAvanslari
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.CalisanId == calisanId &&
-                    x.Tip == CalisanHareketTipi.Avans &&
-                    !x.ArsivlendiMi)
-                .OrderByDescending(x => x.Tarih)
-                .ToListAsync();
-        }
-
-        var ayBitis = ayBaslangic.AddMonths(1);
-
-        var arsivler = await _db.CalisanMaasArsivleri
+        var donemBaslangicArsivi = await _db.CalisanMaasArsivleri
             .Where(x =>
                 x.FirmaId == firmaId &&
                 x.CalisanId == calisanId &&
                 x.DonemBitis >= ayBaslangic &&
                 x.DonemBitis < ayBitis)
             .OrderBy(x => x.DonemBitis)
-            .ToListAsync();
+            .FirstOrDefaultAsync();
 
-        if (!arsivler.Any())
+        if (donemBaslangicArsivi == null)
         {
+            if (buAyMi)
+            {
+                return await _db.CalisanAvanslari
+                    .Where(x =>
+                        x.FirmaId == firmaId &&
+                        x.CalisanId == calisanId &&
+                        x.Tip == CalisanHareketTipi.Avans &&
+                        !x.ArsivlendiMi)
+                    .OrderByDescending(x => x.Tarih)
+                    .ToListAsync();
+            }
+
             return new List<CalisanAvans>();
         }
 
-        var tumHareketler = new List<CalisanAvans>();
+        var sonrakiArsiv = await _db.CalisanMaasArsivleri
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.CalisanId == calisanId &&
+                x.DonemBitis > donemBaslangicArsivi.DonemBitis)
+            .OrderBy(x => x.DonemBitis)
+            .FirstOrDefaultAsync();
 
-        foreach (var arsiv in arsivler)
+        var baslangic = donemBaslangicArsivi.DonemBitis;
+        var bitis = sonrakiArsiv?.DonemBitis;
+
+        if (bitis == null)
         {
-            var oncekiArsiv = await _db.CalisanMaasArsivleri
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.CalisanId == calisanId &&
-                    x.DonemBitis < arsiv.DonemBitis)
-                .OrderByDescending(x => x.DonemBitis)
-                .FirstOrDefaultAsync();
-
-            var baslangic = oncekiArsiv?.DonemBitis ?? DateTime.MinValue;
-            var bitis = arsiv.DonemBitis;
-
-            var hareketler = await _db.CalisanAvanslari
+            return await _db.CalisanAvanslari
                 .Where(x =>
                     x.FirmaId == firmaId &&
                     x.CalisanId == calisanId &&
                     x.Tip == CalisanHareketTipi.Avans &&
-                    x.ArsivlendiMi &&
-                    x.Tarih >= baslangic &&
-                    x.Tarih <= bitis)
+                    !x.ArsivlendiMi &&
+                    x.Tarih >= baslangic)
                 .OrderByDescending(x => x.Tarih)
                 .ToListAsync();
-
-            tumHareketler.AddRange(hareketler);
         }
 
-        return tumHareketler
-            .GroupBy(x => x.Id)
-            .Select(x => x.First())
+        return await _db.CalisanAvanslari
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.CalisanId == calisanId &&
+                x.Tip == CalisanHareketTipi.Avans &&
+                x.Tarih >= baslangic &&
+                x.Tarih <= bitis.Value)
             .OrderByDescending(x => x.Tarih)
-            .ToList();
+            .ToListAsync();
     }
     
     private DateTime AyBul(string text)
