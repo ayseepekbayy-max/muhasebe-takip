@@ -193,6 +193,67 @@ public class IndexModel : PageModel
             _memory.SonCalisaniKaydet(bulunanCalisan.AdSoyad);
         }
 
+        // DETAY VER
+
+if (
+    lower.Contains("detay ver") ||
+    lower.Contains("detay göster") ||
+    lower.Contains("hareketleri göster") ||
+    lower.Contains("listele")
+)
+{
+    var sonCalisanAdi = _memory.SonCalisaniGetir();
+
+    if (string.IsNullOrWhiteSpace(sonCalisanAdi))
+    {
+        return "Detayı gösterilecek çalışan bulunamadı.";
+    }
+
+    var calisan = await _db.Calisanlar
+        .FirstOrDefaultAsync(x =>
+            x.FirmaId == firmaId &&
+            x.AdSoyad == sonCalisanAdi);
+
+    if (calisan == null)
+    {
+        return "Çalışan bulunamadı.";
+    }
+
+    var hareketler = await _db.CalisanAvanslari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == calisan.Id &&
+            x.Tip == CalisanHareketTipi.Avans &&
+            !x.ArsivlendiMi)
+        .OrderByDescending(x => x.Tarih)
+        .Take(20)
+        .ToListAsync();
+
+    if (!hareketler.Any())
+    {
+        return $"{calisan.AdSoyad} için aktif avans kaydı bulunamadı.";
+    }
+
+    var text =
+        $"{calisan.AdSoyad} aktif avans detayları:\n\n";
+
+    foreach (var item in hareketler)
+    {
+        text +=
+            $"- {item.Tarih:dd.MM.yyyy} | " +
+            $"{item.Tutar:N2} TL";
+
+        if (!string.IsNullOrWhiteSpace(item.Aciklama))
+        {
+            text += $" | {item.Aciklama}";
+        }
+
+        text += "\n";
+    }
+
+    return text;
+}
+
         // PERSONEL GİDERİ
 
         if (
