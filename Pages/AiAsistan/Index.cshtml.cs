@@ -18,7 +18,8 @@ public class IndexModel : PageModel
     private const string SonDetayCalisanKey = "AiSonDetayCalisan";
     private const string SonDetayAyKey = "AiSonDetayAy";
     private const string SonDetayYilKey = "AiSonDetayYil";
-    
+    private const string SonDetayTipKey = "AiSonDetayTip";
+
     public IndexModel(
         AppDbContext db,
         NovaReplyService novaReplyService,
@@ -184,62 +185,51 @@ public class IndexModel : PageModel
             _memory.SonCalisaniKaydet(bulunanCalisan.AdSoyad);
         }
 
-        // DETAY VER
+       // DETAY VER
 
-        if (
-            lower.Contains("detay ver") ||
-            lower.Contains("detay göster") ||
-            lower.Contains("hareketleri göster") ||
-            lower.Contains("listele")
-        )
+if (
+    lower.Contains("detay ver") ||
+    lower.Contains("detay göster") ||
+    lower.Contains("hareketleri göster") ||
+    lower.Contains("listele")
+)
+{
+    var detayAyBaslangic = ayBaslangic;
+
+    var kayitliAy = HttpContext.Session.GetInt32(SonDetayAyKey);
+    var kayitliYil = HttpContext.Session.GetInt32(SonDetayYilKey);
+
+    if (!AyIfadesiVarMi(lower) && kayitliAy != null && kayitliYil != null)
+    {
+        detayAyBaslangic = DateTime.SpecifyKind(
+            new DateTime(kayitliYil.Value, kayitliAy.Value, 1),
+            DateTimeKind.Utc);
+    }
+
+    var detayTurkceAy = detayAyBaslangic.ToString(
+        "MMMM",
+        new CultureInfo("tr-TR"));
+
+    var detayTip = HttpContext.Session.GetString(SonDetayTipKey);
+
+    if (detayTip == "Toplam" && bulunanCalisan == null)
+    {
+        var text = $"{detayTurkceAy} dönemi tüm çalışan avans detayları:\n\n";
+        var kayitVarMi = false;
+
+        foreach (var c in calisanlar)
         {
-            var detayAyBaslangic = ayBaslangic;
-
-            var kayitliAy = HttpContext.Session.GetInt32(SonDetayAyKey);
-            var kayitliYil = HttpContext.Session.GetInt32(SonDetayYilKey);
-
-            if (!AyIfadesiVarMi(lower) && kayitliAy != null && kayitliYil != null)
-            {
-                detayAyBaslangic = DateTime.SpecifyKind(
-                    new DateTime(kayitliYil.Value, kayitliAy.Value, 1),
-                    DateTimeKind.Utc);
-            }
-
-            var detayTurkceAy = detayAyBaslangic.ToString(
-                "MMMM",
-                new CultureInfo("tr-TR"));
-
-            var sonCalisanAdi = bulunanCalisan?.AdSoyad;
-
-            if (string.IsNullOrWhiteSpace(sonCalisanAdi))
-                sonCalisanAdi = HttpContext.Session.GetString(SonDetayCalisanKey);
-
-            if (string.IsNullOrWhiteSpace(sonCalisanAdi))
-                sonCalisanAdi = _memory.SonCalisaniGetir();
-
-            if (string.IsNullOrWhiteSpace(sonCalisanAdi))
-                return "Detayı gösterilecek çalışan bulunamadı.";
-
-            var calisan = await _db.Calisanlar
-                .FirstOrDefaultAsync(x =>
-                    x.FirmaId == firmaId &&
-                    x.AdSoyad == sonCalisanAdi);
-
-            if (calisan == null)
-                return "Çalışan bulunamadı.";
-
             var hareketler = await AvansHareketleriniGetir(
                 firmaId,
-                calisan.Id,
+                c.Id,
                 detayAyBaslangic);
 
             if (!hareketler.Any())
-            {
-                return $"{calisan.AdSoyad} için {detayTurkceAy} döneminde avans detayı bulunamadı.";
-            }
+                continue;
 
-            var text =
-                $"{calisan.AdSoyad} {detayTurkceAy} dönemi avans detayları:\n\n";
+            kayitVarMi = true;
+
+            text += $"{c.AdSoyad}:\n";
 
             foreach (var item in hareketler)
             {
@@ -255,8 +245,66 @@ public class IndexModel : PageModel
                 text += "\n";
             }
 
-            return text;
+            text += "\n";
         }
+
+        if (!kayitVarMi)
+        {
+            return $"{detayTurkceAy} döneminde avans detayı bulunamadı.";
+        }
+
+        return text;
+    }
+
+    var sonCalisanAdi = bulunanCalisan?.AdSoyad;
+
+    if (string.IsNullOrWhiteSpace(sonCalisanAdi))
+        sonCalisanAdi = HttpContext.Session.GetString(SonDetayCalisanKey);
+
+    if (string.IsNullOrWhiteSpace(sonCalisanAdi))
+        sonCalisanAdi = _memory.SonCalisaniGetir();
+
+    if (string.IsNullOrWhiteSpace(sonCalisanAdi))
+        return "Detayı gösterilecek çalışan bulunamadı.";
+
+    var calisan = await _db.Calisanlar
+        .FirstOrDefaultAsync(x =>
+            x.FirmaId == firmaId &&
+            x.AdSoyad == sonCalisanAdi);
+
+    if (calisan == null)
+        return "Çalışan bulunamadı.";
+
+    var calisanHareketler = await AvansHareketleriniGetir(
+        firmaId,
+        calisan.Id,
+        detayAyBaslangic);
+
+    if (!calisanHareketler.Any())
+    {
+        return $"{calisan.AdSoyad} için {detayTurkceAy} döneminde avans detayı bulunamadı.";
+    }
+
+    var calisanText =
+        $"{calisan.AdSoyad} {detayTurkceAy} dönemi avans detayları:\n\n";
+
+    foreach (var item in calisanHareketler)
+    {
+        calisanText +=
+            $"- {item.Tarih:dd.MM.yyyy} | " +
+            $"{item.Tutar:N2} TL";
+
+        if (!string.IsNullOrWhiteSpace(item.Aciklama))
+        {
+            calisanText += $" | {item.Aciklama}";
+        }
+
+        calisanText += "\n";
+    }
+
+    return calisanText;
+}
+
 
         // PERSONEL GİDERİ
 
@@ -364,6 +412,8 @@ public class IndexModel : PageModel
 
                 toplamAvans += hareketler.Sum(x => x.Tutar);
             }
+            
+            SonToplamAvansDetayiniKaydet(ayBaslangic);
 
             return
                 $"{turkceAy} döneminde toplam " +
@@ -1101,11 +1151,21 @@ public class IndexModel : PageModel
     }
 
     private void SonAvansDetayiniKaydet(string adSoyad, DateTime ayBaslangic)
-    {
-        HttpContext.Session.SetString(SonDetayCalisanKey, adSoyad);
-        HttpContext.Session.SetInt32(SonDetayAyKey, ayBaslangic.Month);
-        HttpContext.Session.SetInt32(SonDetayYilKey, ayBaslangic.Year);
-    }
+{
+    HttpContext.Session.SetString(SonDetayTipKey, "Calisan");
+    HttpContext.Session.SetString(SonDetayCalisanKey, adSoyad);
+    HttpContext.Session.SetInt32(SonDetayAyKey, ayBaslangic.Month);
+    HttpContext.Session.SetInt32(SonDetayYilKey, ayBaslangic.Year);
+}
+
+private void SonToplamAvansDetayiniKaydet(DateTime ayBaslangic)
+{
+    HttpContext.Session.SetString(SonDetayTipKey, "Toplam");
+    HttpContext.Session.Remove(SonDetayCalisanKey);
+    HttpContext.Session.SetInt32(SonDetayAyKey, ayBaslangic.Month);
+    HttpContext.Session.SetInt32(SonDetayYilKey, ayBaslangic.Year);
+}
+
 }
 
 public class ChatMesaj
