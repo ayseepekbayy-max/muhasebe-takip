@@ -155,32 +155,6 @@ public class IndexModel : PageModel
             "MMMM",
             new CultureInfo("tr-TR"));
 
-        var maasSorusuMu = lower.Contains("maaş");
-
-        if (maasSorusuMu && !AyIfadesiVarMi(lower))
-        {
-            var kayitliTip = HttpContext.Session.GetString(SonDetayTipKey);
-            var kayitliAy = HttpContext.Session.GetInt32(SonDetayAyKey);
-            var kayitliYil = HttpContext.Session.GetInt32(SonDetayYilKey);
-
-            if (
-                (kayitliTip == "MaasToplam" || kayitliTip == "MaasCalisan") &&
-                kayitliAy != null &&
-                kayitliYil != null
-            )
-            {
-                ayBaslangic = DateTime.SpecifyKind(
-                    new DateTime(kayitliYil.Value, kayitliAy.Value, 1),
-                    DateTimeKind.Utc);
-
-                ayBitis = ayBaslangic.AddMonths(1);
-
-                turkceAy = ayBaslangic.ToString(
-                    "MMMM",
-                    new CultureInfo("tr-TR"));
-            }
-        }
-
         var calisanlar = await _db.Calisanlar
             .Where(x => x.FirmaId == firmaId)
             .ToListAsync();
@@ -534,6 +508,8 @@ public class IndexModel : PageModel
         if (
             bulunanCalisan != null &&
             lower.Contains("maaş") &&
+            !lower.Contains("son maaş") &&
+            !lower.Contains("son maas") &&
             !lower.Contains("ortalama") &&
             !lower.Contains("toplam") &&
             !lower.Contains("dağılım") &&
@@ -564,6 +540,38 @@ public class IndexModel : PageModel
         }
 
         // MAAŞ ANALİZİ
+
+        if (
+    lower.Contains("son maaş") ||
+    lower.Contains("son maas") ||
+    lower.Contains("son maaş ödemesi") ||
+    lower.Contains("son maas odemesi")
+)
+{
+    var sonMaas = await _db.CalisanAvanslari
+        .Include(x => x.Calisan)
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            (
+                x.Tip == CalisanHareketTipi.MaasOdeme ||
+                x.Tip == CalisanHareketTipi.Diger
+            ))
+        .OrderByDescending(x => x.Tarih)
+        .ThenByDescending(x => x.Id)
+        .FirstOrDefaultAsync();
+
+    if (sonMaas == null)
+        return "Maaş ödemesi bulunamadı.";
+
+    var calisanAdi = sonMaas.Calisan?.AdSoyad ?? "Çalışan";
+
+    return
+        $"Son maaş ödemesi:\n\n" +
+        $"- Çalışan: {calisanAdi}\n" +
+        $"- Tarih: {sonMaas.Tarih:dd.MM.yyyy}\n" +
+        $"- Tutar: {sonMaas.Tutar:N2} TL";
+}
+
 
         if (lower.Contains("maaş"))
         {
