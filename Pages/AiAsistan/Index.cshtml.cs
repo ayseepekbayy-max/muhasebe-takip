@@ -846,6 +846,40 @@ public class IndexModel : PageModel
             lower.Contains("nakit")
         )
         {
+        if (
+        lower.Contains("giriş") ||
+        lower.Contains("giris")
+    )
+    {
+        var girisToplam = await _db.KasaHareketleri
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.Tip == HareketTipi.Giris &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < ayBitis)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        return $"{turkceAy} dönemi toplam kasa girişi: {girisToplam:N2} TL";
+    }
+
+    if (
+        lower.Contains("çıkış") ||
+        lower.Contains("cikis") ||
+        lower.Contains("çikis") ||
+        lower.Contains("cıkış")
+    )
+    {
+        var cikisToplam = await _db.KasaHareketleri
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.Tip == HareketTipi.Cikis &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < ayBitis)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        return $"{turkceAy} dönemi toplam kasa çıkışı: {cikisToplam:N2} TL";
+    }
+
             var giris = await _db.KasaHareketleri
                 .Where(x =>
                     x.FirmaId == firmaId &&
