@@ -393,22 +393,35 @@ public class IndexModel : PageModel
 
 if (
     lower.Contains("personel gider") ||
-    lower.Contains("çalışan gider") ||
+    lower.Contains("personel gideri") ||
     lower.Contains("personel maliyet") ||
-    lower.Contains("maaş gider")
+    lower.Contains("personel maliyeti") ||
+    lower.Contains("çalışan gider") ||
+    lower.Contains("çalışan gideri") ||
+    lower.Contains("çalışan maliyet") ||
+    lower.Contains("çalışan maliyeti") ||
+    lower.Contains("toplam çalışan maliyeti") ||
+    lower.Contains("maaş gider") ||
+    lower.Contains("maaş maliyet")
 )
 {
     var toplam = await _db.CalisanAvanslari
         .Where(x =>
             x.FirmaId == firmaId &&
-            x.Tip == CalisanHareketTipi.MaasOdeme &&
-            !x.ArsivlendiMi &&
+            (
+                x.Tip == CalisanHareketTipi.MaasOdeme ||
+                x.Tip == CalisanHareketTipi.Diger
+            ) &&
             x.Tarih >= ayBaslangic &&
             x.Tarih < ayBitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-    return $"{turkceAy} ayı personel gideriniz: {toplam:N2} TL";
+    if (toplam <= 0)
+        return $"{turkceAy} döneminde personel gideri bulunamadı.";
+
+    return $"{turkceAy} dönemi toplam personel gideri: {toplam:N2} TL";
 }
+
 
 
 
