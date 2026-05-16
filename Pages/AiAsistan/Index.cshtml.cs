@@ -1301,26 +1301,22 @@ return
     int calisanId,
     DateTime ayBaslangic)
 {
-    var simdi = DateTime.Now;
+    var aktifKayitlar = await _db.CalisanAvanslari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == calisanId &&
+            !x.ArsivlendiMi &&
+            (
+                x.Tip == CalisanHareketTipi.MaasOdeme ||
+                x.Tip == CalisanHareketTipi.Diger
+            ))
+        .OrderBy(x => x.Tarih)
+        .ThenBy(x => x.Id)
+        .ToListAsync();
 
-    var buAyMi =
-        ayBaslangic.Month == simdi.Month &&
-        ayBaslangic.Year == simdi.Year;
-
-    if (buAyMi)
+    if (aktifKayitlar.Any())
     {
-        return await _db.CalisanAvanslari
-            .Where(x =>
-                x.FirmaId == firmaId &&
-                x.CalisanId == calisanId &&
-                !x.ArsivlendiMi &&
-                (
-                    x.Tip == CalisanHareketTipi.MaasOdeme ||
-                    x.Tip == CalisanHareketTipi.Diger
-                ))
-            .OrderBy(x => x.Tarih)
-            .ThenBy(x => x.Id)
-            .ToListAsync();
+        return aktifKayitlar;
     }
 
     var kultur = new CultureInfo("tr-TR");
@@ -1366,6 +1362,7 @@ return
 
     return new List<CalisanAvans>();
 }
+
 
 
     private bool AyMetniIceriyor(string? metin, string ayAdi)
