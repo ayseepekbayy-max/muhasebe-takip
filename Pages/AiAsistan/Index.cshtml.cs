@@ -391,24 +391,26 @@ public class IndexModel : PageModel
 
         // PERSONEL GİDERİ
 
-        if (
-            lower.Contains("personel gider") ||
-            lower.Contains("çalışan gider") ||
-            lower.Contains("personel maliyet") ||
-            lower.Contains("maaş gider")
-        )
-        {
-            var toplam = await _db.CalisanAvanslari
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.Tip == CalisanHareketTipi.MaasOdeme &&
-                    !x.ArsivlendiMi &&
-                    x.Tarih >= ayBaslangic &&
-                    x.Tarih < ayBitis)
-                .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+if (
+    lower.Contains("personel gider") ||
+    lower.Contains("çalışan gider") ||
+    lower.Contains("personel maliyet") ||
+    lower.Contains("maaş gider")
+)
+{
+    var toplam = await _db.CalisanAvanslari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tip == CalisanHareketTipi.MaasOdeme &&
+            !x.ArsivlendiMi &&
+            x.Tarih >= ayBaslangic &&
+            x.Tarih < ayBitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-            return $"{turkceAy} ayı personel gideriniz: {toplam:N2} TL";
-        }
+    return $"{turkceAy} ayı personel gideriniz: {toplam:N2} TL";
+}
+
+
 
         // ÇALIŞAN AVANS
 
