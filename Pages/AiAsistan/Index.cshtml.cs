@@ -594,21 +594,14 @@ public class IndexModel : PageModel
 
             if (lower.Contains("ortalama"))
             {
-                var ortalamaKayitliMaas = await _db.Calisanlar
-                    .Where(x => x.FirmaId == firmaId)
-                    .AverageAsync(x => (decimal?)x.Maas) ?? 0;
+                if (!maasDagilimi.Any())
+                    return $"{turkceAy} döneminde maaş ödemesi bulunamadı.";
 
-                if (maasDagilimi.Any())
-                {
-                    var ortalamaOdeme = maasDagilimi.Average(x => x.Toplam);
+                var ortalamaOdeme = maasDagilimi.Average(x => x.Toplam);
 
-                    return
-                        $"{turkceAy} döneminde ortalama maaş ödemesi: {ortalamaOdeme:N2} TL\n" +
-                        $"Kayıtlı çalışan maaş ortalaması: {ortalamaKayitliMaas:N2} TL";
-                }
-
-                return $"Kayıtlı çalışan maaş ortalaması: {ortalamaKayitliMaas:N2} TL";
+                return $"{turkceAy} döneminde ortalama maaş ödemesi: {ortalamaOdeme:N2} TL";
             }
+
 
             if (
                 lower.Contains("en yüksek") ||
