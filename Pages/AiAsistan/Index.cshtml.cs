@@ -1141,6 +1141,29 @@ if (
 )
 {
     if (
+    lower.Contains("kaç müşteriyle iş yaptım") ||
+    lower.Contains("kac musteriyle is yaptim") ||
+    lower.Contains("kaç müşteri ile iş yaptım") ||
+    lower.Contains("kac musteri ile is yaptim") ||
+    lower.Contains("bu ay kaç müşteriyle") ||
+    lower.Contains("bu ay kac musteriyle") ||
+    lower.Contains("bu ay kaç müşteri ile") ||
+    lower.Contains("bu ay kac musteri ile")
+)
+{
+    var isYapilanMusteriSayisi = await _db.MusteriIsler
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tarih >= ayBaslangic &&
+            x.Tarih < ayBitis)
+        .Select(x => x.MusteriId)
+        .Distinct()
+        .CountAsync();
+
+    return $"{turkceAy} döneminde {isYapilanMusteriSayisi} müşteriyle iş yapılmış.";
+}
+
+    if (
         lower.Contains("kaç müşteri") ||
         lower.Contains("kac musteri") ||
         lower.Contains("kaç müşterim") ||
@@ -1169,27 +1192,6 @@ if (
             .Count();
 
         return $"Toplam müşteri sayınız: {toplamMusteri}";
-    }
-
-    if (
-        lower.Contains("bu ay kaç") ||
-        lower.Contains("bu ay kac") ||
-        lower.Contains("kaç müşteriyle iş yaptım") ||
-        lower.Contains("kac musteriyle is yaptim") ||
-        lower.Contains("kaç müşteri ile iş yaptım") ||
-        lower.Contains("kac musteri ile is yaptim")
-    )
-    {
-        var isYapilanMusteriSayisi = await _db.MusteriIsler
-            .Where(x =>
-                x.FirmaId == firmaId &&
-                x.Tarih >= ayBaslangic &&
-                x.Tarih < ayBitis)
-            .Select(x => x.MusteriId)
-            .Distinct()
-            .CountAsync();
-
-        return $"{turkceAy} döneminde {isYapilanMusteriSayisi} müşteriyle iş yapılmış.";
     }
 
     if (
@@ -1304,8 +1306,9 @@ if (
     )
     {
         return
-            "Cari kartlarda borç/alacak tutarı tutulmadığı için borçlu müşteri listesi çıkarılamıyor.\n" +
-            "Bu liste için CariKart modeline Bakiye/Borc/Alacak alanı veya ayrı cari hareket tablosu eklenmesi gerekir.";
+    "Şu anda borçlu müşteri listesi gösterilemiyor.\n" +
+    "Cari kartlarda müşteri adı ve tipi tutuluyor, fakat borç/alacak tutarı tutulmadığı için kimin borçlu olduğunu hesaplayamıyorum.";
+
     }
 
     var musteriAdlariGenel = await _db.Musteriler

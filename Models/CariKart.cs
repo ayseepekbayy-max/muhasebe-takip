@@ -13,7 +13,7 @@ public class CariKart
     public int? FirmaId { get; set; }
 
     public Firma? Firma { get; set; }
-    
+
     public string Ad { get; set; } = "";
 
     public string Unvan { get; set; } = "";
