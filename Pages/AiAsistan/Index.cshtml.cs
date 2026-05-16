@@ -1266,88 +1266,114 @@ if (
                 "- Finansal durum stabil görünüyor.";
         }
 
-        // KAR ZARAR ANALİZİ
+        // KAR ZARAR VE İŞLETME ANALİZİ
 
-        if (
-            lower.Contains("kar") ||
-            lower.Contains("zarar") ||
-            lower.Contains("gelir gider")
-        )
-        {
-            var toplamGelir = await _db.MusteriIsler
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.Tarih >= ayBaslangic &&
-                    x.Tarih < ayBitis)
-                .SumAsync(x => (decimal?)x.Gelir) ?? 0;
+if (
+    lower.Contains("kar") ||
+    lower.Contains("kâr") ||
+    lower.Contains("zarar") ||
+    lower.Contains("gelir gider") ||
+    lower.Contains("gelir-gider") ||
+    lower.Contains("finansal özet") ||
+    lower.Contains("finansal ozet") ||
+    lower.Contains("şirketin durumu") ||
+    lower.Contains("sirketin durumu") ||
+    lower.Contains("şirket durumu") ||
+    lower.Contains("sirket durumu") ||
+    lower.Contains("işletme analizi") ||
+    lower.Contains("isletme analizi") ||
+    lower.Contains("işletme yorumu") ||
+    lower.Contains("isletme yorumu") ||
+    lower.Contains("akıllı işletme") ||
+    lower.Contains("akilli isletme") ||
+    lower.Contains("performans")
+)
+{
+    var toplamGelir = await _db.MusteriIsler
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tarih >= ayBaslangic &&
+            x.Tarih < ayBitis)
+        .SumAsync(x => (decimal?)x.Gelir) ?? 0;
 
-            var toplamMasraf = await _db.MusteriMasraflar
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.Tarih >= ayBaslangic &&
-                    x.Tarih < ayBitis)
-                .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+    var musteriMasraf = await _db.MusteriMasraflar
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tarih >= ayBaslangic &&
+            x.Tarih < ayBitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-            var personel = await _db.CalisanAvanslari
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.Tarih >= ayBaslangic &&
-                    x.Tarih < ayBitis)
-                .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+    var personelGideri = await _db.CalisanAvanslari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            (
+                x.Tip == CalisanHareketTipi.MaasOdeme ||
+                x.Tip == CalisanHareketTipi.Diger
+            ) &&
+            x.Tarih >= ayBaslangic &&
+            x.Tarih < ayBitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-            var net = toplamGelir - toplamMasraf - personel;
+    var toplamGider = musteriMasraf + personelGideri;
+    var net = toplamGelir - toplamGider;
 
-            string durum;
 
-            if (net > 0)
-                durum = "Şirket bu ay kâr etmiş görünüyor.";
-            else
-                durum = "Şirket bu ay zarar etmiş görünüyor.";
+    string durum;
+    string yorum;
 
-            return
-                $"{turkceAy} ayı finansal özeti:\n\n" +
-                $"- Toplam gelir: {toplamGelir:N2} TL\n" +
-                $"- Toplam masraf: {toplamMasraf:N2} TL\n" +
-                $"- Personel gideri: {personel:N2} TL\n" +
-                $"- Net sonuç: {net:N2} TL\n\n" +
-                durum;
-        }
+    if (net > 0)
+    {
+        durum = "Kâr";
+        yorum = "İşletme bu dönemde kârda görünüyor. Gelirler giderleri karşılamış.";
+    }
+    else if (net < 0)
+    {
+        durum = "Zarar";
+        yorum = "İşletme bu dönemde zararda görünüyor. Giderler gelirlerden yüksek.";
+    }
+    else
+    {
+        durum = "Başabaş";
+        yorum = "İşletme bu dönemde başabaş seviyede görünüyor.";
+    }
 
-        if (
-            lower.Contains("şirket") ||
-            lower.Contains("işletme") ||
-            lower.Contains("genel durum") ||
-            lower.Contains("performans")
-        )
-        {
-            var giris = await _db.KasaHareketleri
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.Tip == HareketTipi.Giris)
-                .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+    if (
+        lower.Contains("kar ettim mi") ||
+        lower.Contains("kâr ettim mi") ||
+        lower.Contains("kar mı") ||
+        lower.Contains("kâr mı")
+    )
+    {
+        if (net > 0)
+            return $"{turkceAy} döneminde kâr etmiş görünüyorsunuz. Net kâr: {net:N2} TL";
 
-            var cikis = await _db.KasaHareketleri
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.Tip == HareketTipi.Cikis)
-                .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+        if (net < 0)
+            return $"{turkceAy} döneminde kâr edilmemiş. Net zarar: {Math.Abs(net):N2} TL";
 
-            var fark = giris - cikis;
+        return $"{turkceAy} döneminde kâr veya zarar görünmüyor. Sonuç başabaş.";
+    }
 
-            string yorum;
+    if (lower.Contains("zarar ettim mi") || lower.Contains("zarar mı"))
+    {
+        if (net < 0)
+            return $"{turkceAy} döneminde zarar etmiş görünüyorsunuz. Net zarar: {Math.Abs(net):N2} TL";
 
-            if (fark > 0)
-                yorum = "Şirket finansal olarak pozitif görünüyor.";
-            else
-                yorum = "Giderler yüksek görünüyor.";
+        if (net > 0)
+            return $"{turkceAy} döneminde zarar edilmemiş. Net kâr: {net:N2} TL";
 
-            return
-                $"İşletme analizi:\n\n" +
-                $"- Toplam gelir: {giris:N2} TL\n" +
-                $"- Toplam gider: {cikis:N2} TL\n" +
-                $"- Net durum: {fark:N2} TL\n\n" +
-                yorum;
-        }
+        return $"{turkceAy} döneminde zarar görünmüyor. Sonuç başabaş.";
+    }
+
+    return
+        $"{turkceAy} dönemi gelir-gider analizi:\n\n" +
+        $"- Toplam gelir: {toplamGelir:N2} TL\n" +
+        $"- Müşteri masrafları: {musteriMasraf:N2} TL\n" +
+        $"- Personel gideri: {personelGideri:N2} TL\n" +
+        $"- Toplam gider: {toplamGider:N2} TL\n" +
+        $"- Net sonuç: {net:N2} TL\n" +
+        $"- Durum: {durum}\n\n" +
+        yorum;
+}
 
         // ÇALIŞAN SAYISI
 
