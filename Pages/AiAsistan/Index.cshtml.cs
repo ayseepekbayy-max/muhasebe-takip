@@ -154,6 +154,31 @@ public class IndexModel : PageModel
         var turkceAy = ayBaslangic.ToString(
             "MMMM",
             new CultureInfo("tr-TR"));
+        var maasSorusuMu = lower.Contains("maaş");
+
+if (maasSorusuMu && !AyIfadesiVarMi(lower))
+{
+    var kayitliTip = HttpContext.Session.GetString(SonDetayTipKey);
+    var kayitliAy = HttpContext.Session.GetInt32(SonDetayAyKey);
+    var kayitliYil = HttpContext.Session.GetInt32(SonDetayYilKey);
+
+    if (
+        (kayitliTip == "MaasToplam" || kayitliTip == "MaasCalisan") &&
+        kayitliAy != null &&
+        kayitliYil != null
+    )
+    {
+        ayBaslangic = DateTime.SpecifyKind(
+            new DateTime(kayitliYil.Value, kayitliAy.Value, 1),
+            DateTimeKind.Utc);
+
+        ayBitis = ayBaslangic.AddMonths(1);
+
+        turkceAy = ayBaslangic.ToString(
+            "MMMM",
+            new CultureInfo("tr-TR"));
+    }
+}
 
         var calisanlar = await _db.Calisanlar
             .Where(x => x.FirmaId == firmaId)
@@ -583,28 +608,18 @@ if (lower.Contains("maaş"))
         lower.Contains("kim aldı")
     )
     {
-        var enYuksekOdeme = maasDagilimi
-            .OrderByDescending(x => x.Toplam)
-            .FirstOrDefault();
-
-        if (enYuksekOdeme.Toplam > 0)
-        {
-            SonMaasDetayiniKaydet(enYuksekOdeme.Ad, ayBaslangic);
-
-            return $"En yüksek maaş ödemesi alan çalışan: {enYuksekOdeme.Ad} ({enYuksekOdeme.Toplam:N2} TL)";
-        }
-
         var enYuksekKayitliMaas = await _db.Calisanlar
-            .Where(x => x.FirmaId == firmaId)
-            .OrderByDescending(x => x.Maas)
-            .FirstOrDefaultAsync();
+    .Where(x => x.FirmaId == firmaId && x.Maas > 0)
+    .OrderByDescending(x => x.Maas)
+    .FirstOrDefaultAsync();
 
-        if (enYuksekKayitliMaas == null)
-            return "Çalışan bulunamadı.";
+if (enYuksekKayitliMaas == null)
+    return $"{turkceAy} döneminde maaş ödemesi bulunamadı.";
 
-        return
-            $"Bu dönemde maaş ödeme kaydı bulunamadı.\n" +
-            $"Kayıtlı maaşı en yüksek çalışan: {enYuksekKayitliMaas.AdSoyad} ({enYuksekKayitliMaas.Maas:N2} TL)";
+return
+    $"Bu dönemde maaş ödeme kaydı bulunamadı.\n" +
+    $"Kayıtlı maaşı en yüksek çalışan: {enYuksekKayitliMaas.AdSoyad} ({enYuksekKayitliMaas.Maas:N2} TL)";
+
     }
 
     if (
@@ -628,12 +643,13 @@ if (lower.Contains("maaş"))
         }
 
         var kayitliMaaslar = await _db.Calisanlar
-            .Where(x => x.FirmaId == firmaId)
-            .OrderByDescending(x => x.Maas)
-            .ToListAsync();
+        .Where(x => x.FirmaId == firmaId && x.Maas > 0)
+        .OrderByDescending(x => x.Maas)
+        .ToListAsync();
 
         if (!kayitliMaaslar.Any())
-            return "Çalışan bulunamadı.";
+        return $"{turkceAy} döneminde maaş ödemesi bulunamadı.";
+
 
         var textKayitli = "Bu dönemde maaş ödeme kaydı bulunamadı.\nKayıtlı maaş dağılımı:\n\n";
 
