@@ -743,6 +743,23 @@ if (
     var yarim = puantajlar.Count(x => x.Durum == PuantajDurum.YarimGun);
     var geldi = puantajlar.Count(x => x.Durum == PuantajDurum.Geldi);
 
+    var beklenenGun = Enumerable
+    .Range(0, ayBitis.Subtract(ayBaslangic).Days)
+    .Select(i => ayBaslangic.AddDays(i))
+    .Count(x =>
+        x.DayOfWeek != DayOfWeek.Sunday);
+
+var kayitliGun = puantajlar
+    .Select(x => x.Tarih.Date)
+    .Distinct()
+    .Count();
+
+var eksikGun = beklenenGun - kayitliGun;
+
+if (eksikGun < 0)
+    eksikGun = 0;
+
+
     if (lower.Contains("kaç gün geldi") || lower.Contains("kac gun geldi"))
         return $"{bulunanCalisan.AdSoyad} {turkceAy} döneminde {geldi} gün geldi.";
 
@@ -763,12 +780,16 @@ if (
             $"- Toplam devamsızlık: {toplamDevamsizlik} gün";
     }
 
-    return
-        $"{bulunanCalisan.AdSoyad} {turkceAy} puantaj özeti:\n\n" +
-        $"- Geldi: {geldi} gün\n" +
-        $"- Gelmedi: {gelmedi} gün\n" +
-        $"- İzinli: {izinli} gün\n" +
-        $"- Yarım gün: {yarim} gün";
+   return
+    $"{bulunanCalisan.AdSoyad} {turkceAy} puantaj özeti:\n\n" +
+    $"- Geldi: {geldi} gün\n" +
+    $"- Gelmedi: {gelmedi} gün\n" +
+    $"- İzinli: {izinli} gün\n" +
+    $"- Yarım gün: {yarim} gün\n" +
+    $"- Kayıtlı gün: {kayitliGun} gün\n" +
+    $"- Beklenen çalışma günü: {beklenenGun} gün\n" +
+    $"- Eksik kayıt: {eksikGun} gün";
+
 }
 
 // PUANTAJ GENEL
