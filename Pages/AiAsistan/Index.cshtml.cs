@@ -1296,11 +1296,13 @@ return
         return new List<CalisanAvans>();
     }
 
-    private async Task<List<CalisanAvans>> MaasHareketleriniGetir(
+   private async Task<List<CalisanAvans>> MaasHareketleriniGetir(
     int firmaId,
     int calisanId,
     DateTime ayBaslangic)
 {
+    var ayBitis = ayBaslangic.AddMonths(1);
+
     var aktifKayitlar = await _db.CalisanAvanslari
         .Where(x =>
             x.FirmaId == firmaId &&
@@ -1309,7 +1311,9 @@ return
             (
                 x.Tip == CalisanHareketTipi.MaasOdeme ||
                 x.Tip == CalisanHareketTipi.Diger
-            ))
+            ) &&
+            x.Tarih >= ayBaslangic &&
+            x.Tarih < ayBitis)
         .OrderBy(x => x.Tarih)
         .ThenBy(x => x.Id)
         .ToListAsync();
@@ -1360,8 +1364,21 @@ return
         }
     }
 
-    return new List<CalisanAvans>();
+    return await _db.CalisanAvanslari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == calisanId &&
+            (
+                x.Tip == CalisanHareketTipi.MaasOdeme ||
+                x.Tip == CalisanHareketTipi.Diger
+            ) &&
+            x.Tarih >= ayBaslangic &&
+            x.Tarih < ayBitis)
+        .OrderBy(x => x.Tarih)
+        .ThenBy(x => x.Id)
+        .ToListAsync();
 }
+
 
 
 
