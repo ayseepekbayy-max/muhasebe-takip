@@ -1133,57 +1133,203 @@ if (
             return $"Toplam stok ürün sayınız: {stokSayisi}";
         }
 
-        // MÜŞTERİ PERFORMANS
+        // MÜŞTERİ ANALİZİ VE PERFORMANS
 
-        if (
-            lower.Contains("en çok kazandıran") ||
-            lower.Contains("en aktif müşteri") ||
-            lower.Contains("müşteri performans")
-        )
-        {
-            var musteri = await _db.MusteriIsler
-                .Include(x => x.Musteri)
-                .Where(x => x.FirmaId == firmaId)
-                .GroupBy(x => x.Musteri!.AdSoyad)
-                .Select(x => new
-                {
-                    Musteri = x.Key,
-                    Toplam = x.Sum(y => y.Gelir)
-                })
-                .OrderByDescending(x => x.Toplam)
-                .FirstOrDefaultAsync();
+if (
+    lower.Contains("müşteri") ||
+    lower.Contains("musteri")
+)
+{
+    if (
+        lower.Contains("kaç müşteri") ||
+        lower.Contains("kac musteri") ||
+        lower.Contains("kaç müşterim") ||
+        lower.Contains("kac musterim") ||
+        lower.Contains("toplam müşteri") ||
+        lower.Contains("toplam musteri")
+    )
+    {
+        var musteriAdlari = await _db.Musteriler
+            .Where(x => x.FirmaId == firmaId)
+            .Select(x => x.AdSoyad)
+            .ToListAsync();
 
-            if (musteri == null)
-                return "Müşteri performans verisi bulunamadı.";
+        var cariMusteriAdlari = await _db.CariKartlar
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.Tip == CariTip.Alici)
+            .Select(x => x.Ad)
+            .ToListAsync();
 
-            return
-                $"En çok kazandıran müşteri: {musteri.Musteri}\n" +
-                $"Toplam gelir: {musteri.Toplam:N2} TL";
-        }
+        var toplamMusteri = musteriAdlari
+            .Concat(cariMusteriAdlari)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim().ToLowerInvariant())
+            .Distinct()
+            .Count();
 
-        // MÜŞTERİ ANALİZİ
+        return $"Toplam müşteri sayınız: {toplamMusteri}";
+    }
 
-        if (
-            lower.Contains("müşteri") ||
-            lower.Contains("musteri")
-        )
-        {
-            var sayi = await _db.Musteriler
-                .CountAsync(x => x.FirmaId == firmaId);
+    if (
+        lower.Contains("bu ay kaç") ||
+        lower.Contains("bu ay kac") ||
+        lower.Contains("kaç müşteriyle iş yaptım") ||
+        lower.Contains("kac musteriyle is yaptim") ||
+        lower.Contains("kaç müşteri ile iş yaptım") ||
+        lower.Contains("kac musteri ile is yaptim")
+    )
+    {
+        var isYapilanMusteriSayisi = await _db.MusteriIsler
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < ayBitis)
+            .Select(x => x.MusteriId)
+            .Distinct()
+            .CountAsync();
 
-            if (
-                lower.Contains("durum") ||
-                lower.Contains("analiz")
-            )
+        return $"{turkceAy} döneminde {isYapilanMusteriSayisi} müşteriyle iş yapılmış.";
+    }
+
+    if (
+        lower.Contains("en çok kazandıran") ||
+        lower.Contains("en cok kazandiran") ||
+        lower.Contains("en fazla kazandıran") ||
+        lower.Contains("en fazla kazandiran")
+    )
+    {
+        var musteri = await _db.MusteriIsler
+            .Include(x => x.Musteri)
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < ayBitis)
+            .GroupBy(x => x.Musteri!.AdSoyad)
+            .Select(x => new
             {
-                return
-                    $"Müşteri analiziniz:\n\n" +
-                    $"- Toplam müşteri sayısı: {sayi}\n" +
-                    "- Müşteri ilişkileri normal görünüyor.";
-            }
+                Musteri = x.Key,
+                Toplam = x.Sum(y => y.Gelir)
+            })
+            .OrderByDescending(x => x.Toplam)
+            .FirstOrDefaultAsync();
 
-            return $"Toplam müşteri sayınız: {sayi}";
-        }
+        if (musteri == null)
+            return $"{turkceAy} döneminde müşteri gelir verisi bulunamadı.";
+
+        return
+            $"{turkceAy} döneminde en çok kazandıran müşteri: {musteri.Musteri}\n" +
+            $"Toplam gelir: {musteri.Toplam:N2} TL";
+    }
+
+    if (
+        lower.Contains("müşteri gelir") ||
+        lower.Contains("musteri gelir") ||
+        lower.Contains("müşteri kazanç") ||
+        lower.Contains("musteri kazanc")
+    )
+    {
+        var toplamGelir = await _db.MusteriIsler
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < ayBitis)
+            .SumAsync(x => (decimal?)x.Gelir) ?? 0;
+
+        return $"{turkceAy} dönemi müşteri gelirleri: {toplamGelir:N2} TL";
+    }
+
+    if (
+        lower.Contains("müşteri durum") ||
+        lower.Contains("musteri durum") ||
+        lower.Contains("müşteri performans") ||
+        lower.Contains("musteri performans")
+    )
+    {
+        var musteriAdlari = await _db.Musteriler
+            .Where(x => x.FirmaId == firmaId)
+            .Select(x => x.AdSoyad)
+            .ToListAsync();
+
+        var cariMusteriAdlari = await _db.CariKartlar
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.Tip == CariTip.Alici)
+            .Select(x => x.Ad)
+            .ToListAsync();
+
+        var toplamMusteri = musteriAdlari
+            .Concat(cariMusteriAdlari)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim().ToLowerInvariant())
+            .Distinct()
+            .Count();
+
+        var cariAliciSayisi = await _db.CariKartlar
+            .CountAsync(x =>
+                x.FirmaId == firmaId &&
+                x.Tip == CariTip.Alici);
+
+        var isYapilanMusteriSayisi = await _db.MusteriIsler
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < ayBitis)
+            .Select(x => x.MusteriId)
+            .Distinct()
+            .CountAsync();
+
+        var toplamGelir = await _db.MusteriIsler
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < ayBitis)
+            .SumAsync(x => (decimal?)x.Gelir) ?? 0;
+
+        return
+            $"{turkceAy} dönemi müşteri durumu:\n\n" +
+            $"- Toplam müşteri sayısı: {toplamMusteri}\n" +
+            $"- Cari karttaki alıcı sayısı: {cariAliciSayisi}\n" +
+            $"- Bu dönem iş yapılan müşteri: {isYapilanMusteriSayisi}\n" +
+            $"- Bu dönem müşteri geliri: {toplamGelir:N2} TL";
+    }
+
+    if (
+        lower.Contains("borçlu müşteri") ||
+        lower.Contains("borclu musteri") ||
+        lower.Contains("borçlu müşteriler") ||
+        lower.Contains("borclu musteriler") ||
+        lower.Contains("müşteri borç") ||
+        lower.Contains("musteri borc")
+    )
+    {
+        return
+            "Cari kartlarda borç/alacak tutarı tutulmadığı için borçlu müşteri listesi çıkarılamıyor.\n" +
+            "Bu liste için CariKart modeline Bakiye/Borc/Alacak alanı veya ayrı cari hareket tablosu eklenmesi gerekir.";
+    }
+
+    var musteriAdlariGenel = await _db.Musteriler
+        .Where(x => x.FirmaId == firmaId)
+        .Select(x => x.AdSoyad)
+        .ToListAsync();
+
+    var cariMusteriAdlariGenel = await _db.CariKartlar
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tip == CariTip.Alici)
+        .Select(x => x.Ad)
+        .ToListAsync();
+
+    var sayi = musteriAdlariGenel
+        .Concat(cariMusteriAdlariGenel)
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Select(x => x.Trim().ToLowerInvariant())
+        .Distinct()
+        .Count();
+
+    return $"Toplam müşteri sayınız: {sayi}";
+}
+
 
         // AYLIK KIYAS
 
