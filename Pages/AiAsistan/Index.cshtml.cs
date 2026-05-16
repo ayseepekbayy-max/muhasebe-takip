@@ -718,74 +718,170 @@ if (
 
         // ÇALIŞAN PUANTAJ
 
-        if (
-            bulunanCalisan != null &&
-            (
-                lower.Contains("puantaj") ||
-                lower.Contains("gelmedi") ||
-                lower.Contains("izin")
-            )
-        )
-        {
-            var puantajlar = await _db.CalisanPuantajlari
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.CalisanId == bulunanCalisan.Id &&
-                    x.Tarih >= ayBaslangic &&
-                    x.Tarih < ayBitis)
-                .ToListAsync();
+if (
+    bulunanCalisan != null &&
+    (
+        lower.Contains("puantaj") ||
+        lower.Contains("puan") ||
+        lower.Contains("gelmedi") ||
+        lower.Contains("devamsız") ||
+        lower.Contains("devamsizlik") ||
+        lower.Contains("izin")
+    )
+)
+{
+    var puantajlar = await _db.CalisanPuantajlari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == bulunanCalisan.Id &&
+            x.Tarih >= ayBaslangic &&
+            x.Tarih < ayBitis)
+        .ToListAsync();
 
-            var gelmedi = puantajlar.Count(x => x.Durum == PuantajDurum.Gelmedi);
-            var izinli = puantajlar.Count(x => x.Durum == PuantajDurum.Izinli);
-            var yarim = puantajlar.Count(x => x.Durum == PuantajDurum.YarimGun);
-            var geldi = puantajlar.Count(x => x.Durum == PuantajDurum.Geldi);
+    var gelmedi = puantajlar.Count(x => x.Durum == PuantajDurum.Gelmedi);
+    var izinli = puantajlar.Count(x => x.Durum == PuantajDurum.Izinli);
+    var yarim = puantajlar.Count(x => x.Durum == PuantajDurum.YarimGun);
+    var geldi = puantajlar.Count(x => x.Durum == PuantajDurum.Geldi);
 
-            return
-                $"{bulunanCalisan.AdSoyad} puantaj özeti:\n\n" +
-                $"- Geldi: {geldi} gün\n" +
-                $"- Gelmedi: {gelmedi} gün\n" +
-                $"- İzinli: {izinli} gün\n" +
-                $"- Yarım gün: {yarim} gün";
-        }
+    if (lower.Contains("kaç gün geldi") || lower.Contains("kac gun geldi"))
+        return $"{bulunanCalisan.AdSoyad} {turkceAy} döneminde {geldi} gün geldi.";
 
-        // PUANTAJ GENEL
+    if (lower.Contains("kaç gün gelmedi") || lower.Contains("kac gun gelmedi") || lower.Contains("gelmedi"))
+        return $"{bulunanCalisan.AdSoyad} {turkceAy} döneminde {gelmedi} gün gelmedi.";
 
-        if (
-            lower.Contains("puantaj") ||
-            lower.Contains("gelmedi") ||
-            lower.Contains("izin")
-        )
-        {
-            var enDevamsiz = await _db.CalisanPuantajlari
-                .Include(x => x.Calisan)
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    (
-                        x.Durum == PuantajDurum.Gelmedi ||
-                        x.Durum == PuantajDurum.Izinli
-                    ))
-                .GroupBy(x => x.Calisan!.AdSoyad)
-                .Select(x => new
-                {
-                    Ad = x.Key,
-                    Sayi = x.Count()
-                })
-                .OrderByDescending(x => x.Sayi)
-                .FirstOrDefaultAsync();
+    if (lower.Contains("izin"))
+        return $"{bulunanCalisan.AdSoyad} {turkceAy} döneminde {izinli} gün izinli görünüyor.";
 
-            if (
-                lower.Contains("en fazla") ||
-                lower.Contains("en çok")
-            )
+    if (lower.Contains("devamsız") || lower.Contains("devamsizlik"))
+    {
+        var toplamDevamsizlik = gelmedi + izinli;
+
+        return
+            $"{bulunanCalisan.AdSoyad} {turkceAy} devamsızlık durumu:\n\n" +
+            $"- Gelmedi: {gelmedi} gün\n" +
+            $"- İzinli: {izinli} gün\n" +
+            $"- Toplam devamsızlık: {toplamDevamsizlik} gün";
+    }
+
+    return
+        $"{bulunanCalisan.AdSoyad} {turkceAy} puantaj özeti:\n\n" +
+        $"- Geldi: {geldi} gün\n" +
+        $"- Gelmedi: {gelmedi} gün\n" +
+        $"- İzinli: {izinli} gün\n" +
+        $"- Yarım gün: {yarim} gün";
+}
+
+// PUANTAJ GENEL
+
+if (
+    lower.Contains("puantaj") ||
+    lower.Contains("puan") ||
+    lower.Contains("gelmedi") ||
+    lower.Contains("devamsız") ||
+    lower.Contains("devamsizlik") ||
+    lower.Contains("izin")
+)
+{
+    var puantajlar = await _db.CalisanPuantajlari
+        .Include(x => x.Calisan)
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tarih >= ayBaslangic &&
+            x.Tarih < ayBitis)
+        .ToListAsync();
+
+    if (!puantajlar.Any())
+        return $"{turkceAy} döneminde puantaj kaydı bulunamadı.";
+
+    if (
+        lower.Contains("en fazla izin") ||
+        lower.Contains("en çok izin") ||
+        lower.Contains("en cok izin") ||
+        lower.Contains("kim en fazla izin") ||
+        lower.Contains("kim en çok izin") ||
+        lower.Contains("kim en cok izin")
+    )
+    {
+        var enIzinli = puantajlar
+            .Where(x => x.Durum == PuantajDurum.Izinli)
+            .GroupBy(x => x.Calisan!.AdSoyad)
+            .Select(x => new
             {
-                if (enDevamsiz == null)
-                    return "Puantaj kaydı bulunamadı.";
+                Ad = x.Key,
+                Sayi = x.Count()
+            })
+            .OrderByDescending(x => x.Sayi)
+            .FirstOrDefault();
 
-                return $"En fazla devamsızlık yapan çalışan: {enDevamsiz.Ad} ({enDevamsiz.Sayi} gün)";
-            }
+        if (enIzinli == null)
+            return $"{turkceAy} döneminde izin kaydı bulunamadı.";
 
-            return "Puantaj analizi tamamlandı.";
-        }
+        return $"{turkceAy} döneminde en fazla izin alan çalışan: {enIzinli.Ad} ({enIzinli.Sayi} gün)";
+    }
+
+    if (
+        lower.Contains("kim en çok gelmedi") ||
+        lower.Contains("kim en cok gelmedi") ||
+        lower.Contains("en çok gelmedi") ||
+        lower.Contains("en cok gelmedi")
+    )
+    {
+        var enCokGelmeyen = puantajlar
+            .Where(x => x.Durum == PuantajDurum.Gelmedi)
+            .GroupBy(x => x.Calisan!.AdSoyad)
+            .Select(x => new
+            {
+                Ad = x.Key,
+                Sayi = x.Count()
+            })
+            .OrderByDescending(x => x.Sayi)
+            .FirstOrDefault();
+
+        if (enCokGelmeyen == null)
+            return $"{turkceAy} döneminde gelmedi kaydı bulunamadı.";
+
+        return $"{turkceAy} döneminde en çok gelmeyen çalışan: {enCokGelmeyen.Ad} ({enCokGelmeyen.Sayi} gün)";
+    }
+
+    if (
+        lower.Contains("en fazla devamsız") ||
+        lower.Contains("en fazla devamsizlik") ||
+        lower.Contains("devamsızlık yapan") ||
+        lower.Contains("devamsizlik yapan")
+    )
+    {
+        var enDevamsiz = puantajlar
+            .Where(x =>
+                x.Durum == PuantajDurum.Gelmedi ||
+                x.Durum == PuantajDurum.Izinli)
+            .GroupBy(x => x.Calisan!.AdSoyad)
+            .Select(x => new
+            {
+                Ad = x.Key,
+                Sayi = x.Count()
+            })
+            .OrderByDescending(x => x.Sayi)
+            .FirstOrDefault();
+
+        if (enDevamsiz == null)
+            return $"{turkceAy} döneminde devamsızlık kaydı bulunamadı.";
+
+        return $"{turkceAy} döneminde en fazla devamsızlık yapan çalışan: {enDevamsiz.Ad} ({enDevamsiz.Sayi} gün)";
+    }
+
+    var toplamGelmedi = puantajlar.Count(x => x.Durum == PuantajDurum.Gelmedi);
+    var toplamIzinli = puantajlar.Count(x => x.Durum == PuantajDurum.Izinli);
+    var toplamYarim = puantajlar.Count(x => x.Durum == PuantajDurum.YarimGun);
+    var toplamGeldi = puantajlar.Count(x => x.Durum == PuantajDurum.Geldi);
+
+    return
+        $"{turkceAy} dönemi genel puantaj özeti:\n\n" +
+        $"- Geldi: {toplamGeldi} gün\n" +
+        $"- Gelmedi: {toplamGelmedi} gün\n" +
+        $"- İzinli: {toplamIzinli} gün\n" +
+        $"- Yarım gün: {toplamYarim} gün";
+}
+
 
         // KASA ANALİZİ
 
