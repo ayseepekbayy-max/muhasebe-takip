@@ -785,10 +785,8 @@ if (eksikGun < 0)
     $"- Geldi: {geldi} gün\n" +
     $"- Gelmedi: {gelmedi} gün\n" +
     $"- İzinli: {izinli} gün\n" +
-    $"- Yarım gün: {yarim} gün\n" +
-    $"- Kayıtlı gün: {kayitliGun} gün\n" +
-    $"- Beklenen çalışma günü: {beklenenGun} gün\n" +
-    $"- Eksik kayıt: {eksikGun} gün";
+    $"- Yarım gün: {yarim} gün";
+
 
 }
 
