@@ -1103,35 +1103,194 @@ if (
 
         // STOK ANALİZİ
 
-        if (lower.Contains("stok"))
+if (
+    lower.Contains("stok") ||
+    lower.Contains("ürün") ||
+    lower.Contains("urun")
+)
+{
+    if (
+        lower.Contains("kaç stok") ||
+        lower.Contains("kac stok") ||
+        lower.Contains("kaç ürün") ||
+        lower.Contains("kac urun") ||
+        lower.Contains("toplam stok") ||
+        lower.Contains("toplam ürün") ||
+        lower.Contains("toplam urun")
+    )
+    {
+        var stokSayisi = await _db.StokUrunler
+            .CountAsync(x => x.FirmaId == firmaId);
+
+        return $"Toplam stok ürün sayınız: {stokSayisi}";
+    }
+
+    if (
+        lower.Contains("stok girişi") ||
+        lower.Contains("stok girisi") ||
+        lower.Contains("ürün girişi") ||
+        lower.Contains("urun girisi") ||
+        lower.Contains("giren stok") ||
+        lower.Contains("giren ürün") ||
+        lower.Contains("giren urun")
+    )
+    {
+        var toplamGiris = await _db.StokHareketleri
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.Tip == StokHareketTipi.Giris &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < ayBitis)
+            .SumAsync(x => (decimal?)x.Miktar) ?? 0;
+
+        return $"{turkceAy} döneminde toplam stok girişi: {toplamGiris:N2}";
+    }
+
+    if (
+        lower.Contains("stok çıkışı") ||
+        lower.Contains("stok cikisi") ||
+        lower.Contains("stok çıkısı") ||
+        lower.Contains("ürün çıkışı") ||
+        lower.Contains("urun cikisi") ||
+        lower.Contains("çıkan stok") ||
+        lower.Contains("cikan stok") ||
+        lower.Contains("çıkan ürün") ||
+        lower.Contains("cikan urun")
+    )
+    {
+        var toplamCikis = await _db.StokHareketleri
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.Tip == StokHareketTipi.Cikis &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < ayBitis)
+            .SumAsync(x => (decimal?)x.Miktar) ?? 0;
+
+        return $"{turkceAy} döneminde toplam stok çıkışı: {toplamCikis:N2}";
+    }
+
+    if (
+        lower.Contains("son stok") ||
+        lower.Contains("stok hareket") ||
+        lower.Contains("hareketleri göster") ||
+        lower.Contains("stok hareketlerini göster")
+    )
+    {
+        var hareketler = await _db.StokHareketleri
+            .Include(x => x.StokUrun)
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < ayBitis)
+            .OrderByDescending(x => x.Tarih)
+            .ThenByDescending(x => x.Id)
+            .Take(10)
+            .ToListAsync();
+
+        if (!hareketler.Any())
+            return $"{turkceAy} döneminde stok hareketi bulunamadı.";
+
+        var text = $"{turkceAy} dönemi stok hareketleri:\n\n";
+
+        foreach (var item in hareketler)
         {
-            if (lower.Contains("hareket"))
-            {
-                var sonHareketler = await _db.StokHareketleri
-                    .Where(x => x.FirmaId == firmaId)
-                    .OrderByDescending(x => x.Tarih)
-                    .Take(5)
-                    .ToListAsync();
+            var urunAdi = !string.IsNullOrWhiteSpace(item.Ad)
+                ? item.Ad
+                : item.StokUrun?.Ad ?? "Ürün";
 
-                if (!sonHareketler.Any())
-                    return "Stok hareketi bulunamadı.";
+            text +=
+                $"- {item.Tarih:dd.MM.yyyy} | " +
+                $"{urunAdi} | " +
+                $"{item.Tip} | " +
+                $"{item.Miktar:N2}";
 
-                var text = "Son stok hareketleri:\n\n";
+            if (!string.IsNullOrWhiteSpace(item.Aciklama))
+                text += $" | {item.Aciklama}";
 
-                foreach (var item in sonHareketler)
-                {
-                    text +=
-                        $"- {item.Ad} | {item.Miktar} | {item.Tarih:dd.MM.yyyy}\n";
-                }
-
-                return text;
-            }
-
-            var stokSayisi = await _db.StokUrunler
-                .CountAsync(x => x.FirmaId == firmaId);
-
-            return $"Toplam stok ürün sayınız: {stokSayisi}";
+            text += "\n";
         }
+
+        return text;
+    }
+
+    if (
+        lower.Contains("en çok hareket") ||
+        lower.Contains("en cok hareket") ||
+        lower.Contains("en hareketli")
+    )
+    {
+        var hareketliUrun = await _db.StokHareketleri
+            .Include(x => x.StokUrun)
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                x.Tarih >= ayBaslangic &&
+                x.Tarih < ayBitis)
+            .GroupBy(x => x.StokUrun != null ? x.StokUrun.Ad : x.Ad)
+            .Select(x => new
+            {
+                Urun = x.Key,
+                ToplamHareket = x.Sum(y => y.Miktar)
+            })
+            .OrderByDescending(x => x.ToplamHareket)
+            .FirstOrDefaultAsync();
+
+        if (hareketliUrun == null)
+            return $"{turkceAy} döneminde stok hareketi bulunamadı.";
+
+        return
+            $"{turkceAy} döneminde en çok hareket gören stok: {hareketliUrun.Urun}\n" +
+            $"Toplam hareket miktarı: {hareketliUrun.ToplamHareket:N2}";
+    }
+
+    if (
+        lower.Contains("stok durum") ||
+        lower.Contains("stok özeti") ||
+        lower.Contains("stok ozeti") ||
+        lower.Contains("stokta ne var") ||
+        lower.Contains("hangi ürün") ||
+        lower.Contains("hangi urun")
+    )
+    {
+        var urunler = await _db.StokUrunler
+            .Where(x => x.FirmaId == firmaId)
+            .OrderBy(x => x.Ad)
+            .ToListAsync();
+
+        if (!urunler.Any())
+            return "Stok ürünü bulunamadı.";
+
+        var text = "Stok durumu:\n\n";
+
+        foreach (var urun in urunler)
+        {
+            var giris = await _db.StokHareketleri
+                .Where(x =>
+                    x.FirmaId == firmaId &&
+                    x.StokUrunId == urun.Id &&
+                    x.Tip == StokHareketTipi.Giris)
+                .SumAsync(x => (decimal?)x.Miktar) ?? 0;
+
+            var cikis = await _db.StokHareketleri
+                .Where(x =>
+                    x.FirmaId == firmaId &&
+                    x.StokUrunId == urun.Id &&
+                    x.Tip == StokHareketTipi.Cikis)
+                .SumAsync(x => (decimal?)x.Miktar) ?? 0;
+
+            var kalan = giris - cikis;
+
+            text += $"- {urun.Ad}: {kalan:N2} {urun.Birim}\n";
+        }
+
+        return text;
+    }
+
+    var toplamUrun = await _db.StokUrunler
+        .CountAsync(x => x.FirmaId == firmaId);
+
+    return $"Toplam stok ürün sayınız: {toplamUrun}";
+}
+
 
         // MÜŞTERİ ANALİZİ VE PERFORMANS
 
