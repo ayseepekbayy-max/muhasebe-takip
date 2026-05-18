@@ -330,7 +330,69 @@ if (
 
         return text;
     }
+    if (detayTip == "PuantajCalisan")
+{
+    var sonCalisanAdi = HttpContext.Session.GetString(SonDetayCalisanKey)
+        ?? _memory.SonCalisaniGetir();
 
+    if (string.IsNullOrWhiteSpace(sonCalisanAdi))
+        return "Detayı gösterilecek çalışan bulunamadı.";
+
+    var calisan = await _db.Calisanlar
+        .FirstOrDefaultAsync(x =>
+            x.FirmaId == firmaId &&
+            x.AdSoyad == sonCalisanAdi);
+
+    if (calisan == null)
+        return "Çalışan bulunamadı.";
+
+    var puantajlar = await _db.CalisanPuantajlari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CalisanId == calisan.Id &&
+            x.Tarih >= detayAyBaslangic &&
+            x.Tarih < detayAyBitis)
+        .OrderBy(x => x.Tarih)
+        .ToListAsync();
+
+    if (!puantajlar.Any())
+        return $"{calisan.AdSoyad} için {detayTurkceAy} döneminde puantaj detayı bulunamadı.";
+
+    var text = $"{calisan.AdSoyad} {detayTurkceAy} dönemi puantaj detayları:\n\n";
+
+    foreach (var item in puantajlar)
+    {
+        text += $"- {item.Tarih:dd.MM.yyyy} | {item.Durum}\n";
+    }
+
+    return text;
+}
+
+if (detayTip == "Puantaj")
+{
+    var puantajlar = await _db.CalisanPuantajlari
+        .Include(x => x.Calisan)
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tarih >= detayAyBaslangic &&
+            x.Tarih < detayAyBitis)
+        .OrderBy(x => x.Tarih)
+        .ThenBy(x => x.Calisan!.AdSoyad)
+        .ToListAsync();
+
+    if (!puantajlar.Any())
+        return $"{detayTurkceAy} döneminde puantaj detayı bulunamadı.";
+
+    var text = $"{detayTurkceAy} dönemi genel puantaj detayları:\n\n";
+
+    foreach (var item in puantajlar)
+    {
+        var ad = item.Calisan?.AdSoyad ?? "Çalışan";
+        text += $"- {item.Tarih:dd.MM.yyyy} | {ad} | {item.Durum}\n";
+    }
+
+    return text;
+}
     if (detayTip == "Musteri")
     {
         var isler = await _db.MusteriIsler
@@ -913,6 +975,7 @@ var kayitliGun = puantajlar
     .Count();
 
 var eksikGun = beklenenGun - kayitliGun;
+SonPuantajDetayiniKaydet(bulunanCalisan.AdSoyad, ayBaslangic);
 
 if (eksikGun < 0)
     eksikGun = 0;
@@ -969,6 +1032,7 @@ if (
 
     if (!puantajlar.Any())
         return $"{turkceAy} döneminde puantaj kaydı bulunamadı.";
+    SonGenelDetayKaydet("Puantaj", ayBaslangic);
 
     if (
         lower.Contains("en fazla izin") ||
@@ -2210,6 +2274,13 @@ if (
     {
         HttpContext.Session.SetString(SonDetayTipKey, "MaasToplam");
         HttpContext.Session.Remove(SonDetayCalisanKey);
+        HttpContext.Session.SetInt32(SonDetayAyKey, ayBaslangic.Month);
+        HttpContext.Session.SetInt32(SonDetayYilKey, ayBaslangic.Year);
+    }
+    private void SonPuantajDetayiniKaydet(string adSoyad, DateTime ayBaslangic)
+    {
+        HttpContext.Session.SetString(SonDetayTipKey, "PuantajCalisan");
+        HttpContext.Session.SetString(SonDetayCalisanKey, adSoyad);
         HttpContext.Session.SetInt32(SonDetayAyKey, ayBaslangic.Month);
         HttpContext.Session.SetInt32(SonDetayYilKey, ayBaslangic.Year);
     }
