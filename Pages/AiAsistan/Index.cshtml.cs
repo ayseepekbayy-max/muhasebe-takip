@@ -188,11 +188,17 @@ public class IndexModel : PageModel
         // DETAY VER
 
         if (
-            lower.Contains("detay ver") ||
-            lower.Contains("detay göster") ||
-            lower.Contains("hareketleri göster") ||
-            lower.Contains("listele")
-        )
+    !lower.Contains("stok") &&
+    !lower.Contains("ürün") &&
+    !lower.Contains("urun") &&
+    (
+        lower.Contains("detay ver") ||
+        lower.Contains("detay göster") ||
+        lower.Contains("hareketleri göster") ||
+        lower.Contains("listele")
+    )
+)
+
         {
             var detayAyBaslangic = ayBaslangic;
 
