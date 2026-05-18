@@ -1689,6 +1689,109 @@ if (
         yorum;
 }
 
+        // GENEL YÖNETİM ÖZETİ
+
+if (
+    lower.Contains("genel yönetim") ||
+    lower.Contains("genel yonetim") ||
+    lower.Contains("yönetim özeti") ||
+    lower.Contains("yonetim ozeti") ||
+    lower.Contains("şirket özeti") ||
+    lower.Contains("sirket ozeti") ||
+    lower.Contains("işletme özeti") ||
+    lower.Contains("isletme ozeti") ||
+    lower.Contains("genel rapor") ||
+    lower.Contains("bu ay özet") ||
+    lower.Contains("bu ay ozet") ||
+    lower.Contains("dikkat etmem gereken")
+)
+{
+    var toplamGelir = await _db.MusteriIsler
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tarih >= ayBaslangic &&
+            x.Tarih < ayBitis)
+        .SumAsync(x => (decimal?)x.Gelir) ?? 0;
+
+    var musteriMasraf = await _db.MusteriMasraflar
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tarih >= ayBaslangic &&
+            x.Tarih < ayBitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var personelGideri = await _db.CalisanAvanslari
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            (
+                x.Tip == CalisanHareketTipi.MaasOdeme ||
+                x.Tip == CalisanHareketTipi.Diger
+            ) &&
+            x.Tarih >= ayBaslangic &&
+            x.Tarih < ayBitis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var toplamGider = musteriMasraf + personelGideri;
+    var net = toplamGelir - toplamGider;
+
+    var kasaGiris = await _db.KasaHareketleri
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tip == HareketTipi.Giris)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var kasaCikis = await _db.KasaHareketleri
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tip == HareketTipi.Cikis)
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var kasaBakiye = kasaGiris - kasaCikis;
+
+    var toplamMusteri = await _db.Musteriler
+        .CountAsync(x => x.FirmaId == firmaId);
+
+    var cariAlici = await _db.CariKartlar
+        .CountAsync(x =>
+            x.FirmaId == firmaId &&
+            x.Tip == CariTip.Alici);
+
+    var cariSatici = await _db.CariKartlar
+        .CountAsync(x =>
+            x.FirmaId == firmaId &&
+            x.Tip == CariTip.Satici);
+
+    var calisanSayisi = await _db.Calisanlar
+        .CountAsync(x => x.FirmaId == firmaId);
+
+    var stokUrunSayisi = await _db.StokUrunler
+        .CountAsync(x => x.FirmaId == firmaId);
+
+    string finansYorumu;
+
+    if (net > 0)
+        finansYorumu = "Bu dönem işletme kârda görünüyor.";
+    else if (net < 0)
+        finansYorumu = "Bu dönem giderler gelirlerden yüksek görünüyor.";
+    else
+        finansYorumu = "Bu dönem işletme başabaş seviyede görünüyor.";
+
+    return
+        $"{turkceAy} dönemi yönetim özeti:\n\n" +
+        $"- Toplam gelir: {toplamGelir:N2} TL\n" +
+        $"- Toplam gider: {toplamGider:N2} TL\n" +
+        $"- Net sonuç: {net:N2} TL\n" +
+        $"- Güncel kasa bakiyesi: {kasaBakiye:N2} TL\n" +
+        $"- Personel gideri: {personelGideri:N2} TL\n" +
+        $"- Müşteri sayısı: {toplamMusteri}\n" +
+        $"- Cari alıcı sayısı: {cariAlici}\n" +
+        $"- Cari satıcı sayısı: {cariSatici}\n" +
+        $"- Çalışan sayısı: {calisanSayisi}\n" +
+        $"- Stok ürün sayısı: {stokUrunSayisi}\n\n" +
+        finansYorumu;
+}
+
+
         // ÇALIŞAN SAYISI
 
         if (
