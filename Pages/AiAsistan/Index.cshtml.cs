@@ -189,10 +189,23 @@ public class IndexModel : PageModel
         // DETAY VER
 
 if (
-    lower.Contains("detay ver") ||
-    lower.Contains("detay göster") ||
-    lower.Contains("hareketleri göster") ||
-    lower.Contains("listele")
+    !lower.Contains("stok") &&
+    !lower.Contains("ürün") &&
+    !lower.Contains("urun") &&
+    !lower.Contains("kasa") &&
+    !lower.Contains("müşteri") &&
+    !lower.Contains("musteri") &&
+    !lower.Contains("maaş") &&
+    !lower.Contains("maas") &&
+    !lower.Contains("avans") &&
+    !lower.Contains("puantaj") &&
+    !lower.Contains("cari") &&
+    (
+        lower.Contains("detay ver") ||
+        lower.Contains("detay göster") ||
+        lower.Contains("hareketleri göster") ||
+        lower.Contains("listele")
+    )
 )
 {
     var detayAyBaslangic = ayBaslangic;
@@ -563,6 +576,7 @@ if (
     if (toplam <= 0)
         return $"{turkceAy} döneminde personel gideri bulunamadı.";
 
+    SonGenelDetayKaydet("PersonelGideri", ayBaslangic);
     return $"{turkceAy} dönemi toplam personel gideri: {toplam:N2} TL";
 }
 
@@ -1133,6 +1147,7 @@ if (
                 x.Tarih < ayBitis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
+        SonGenelDetayKaydet("Kasa", ayBaslangic, "Giris");
         return $"{turkceAy} dönemi toplam kasa girişi: {girisToplam:N2} TL";
     }
 
@@ -1151,6 +1166,7 @@ if (
                 x.Tarih < ayBitis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
+        SonGenelDetayKaydet("Kasa", ayBaslangic, "Cikis");
         return $"{turkceAy} dönemi toplam kasa çıkışı: {cikisToplam:N2} TL";
     }
 
@@ -1235,13 +1251,15 @@ if (
 
             if (lower.Contains("analiz"))
             {
+                SonGenelDetayKaydet("Kasa", ayBaslangic);
+
                 return
                     $"Kasa analiziniz:\n\n" +
                     $"- Toplam giriş: {giris:N2} TL\n" +
                     $"- Toplam çıkış: {cikis:N2} TL\n" +
                     $"- Güncel bakiye: {bakiye:N2} TL";
             }
-
+            SonGenelDetayKaydet("Kasa", ayBaslangic);
             return $"Güncel kasa bakiyesi: {bakiye:N2} TL";
         }
 
@@ -1266,6 +1284,7 @@ if (
         var stokSayisi = await _db.StokUrunler
             .CountAsync(x => x.FirmaId == firmaId);
 
+        SonGenelDetayKaydet("Stok", ayBaslangic);
         return $"Toplam stok ürün sayınız: {stokSayisi}";
     }
 
@@ -1287,6 +1306,7 @@ if (
                 x.Tarih < ayBitis)
             .SumAsync(x => (decimal?)x.Miktar) ?? 0;
 
+        SonGenelDetayKaydet("Stok", ayBaslangic);
         return $"{turkceAy} döneminde toplam stok girişi: {toplamGiris:N2}";
     }
 
@@ -1310,6 +1330,7 @@ if (
                 x.Tarih < ayBitis)
             .SumAsync(x => (decimal?)x.Miktar) ?? 0;
 
+        SonGenelDetayKaydet("Stok", ayBaslangic);
         return $"{turkceAy} döneminde toplam stok çıkışı: {toplamCikis:N2}";
     }
 
@@ -1353,7 +1374,7 @@ if (
 
             text += "\n";
         }
-
+        SonGenelDetayKaydet("Stok", ayBaslangic);
         return text;
     }
 
@@ -1381,6 +1402,7 @@ if (
         if (hareketliUrun == null)
             return $"{turkceAy} döneminde stok hareketi bulunamadı.";
 
+        SonGenelDetayKaydet("Stok", ayBaslangic);
         return
             $"{turkceAy} döneminde en çok hareket gören stok: {hareketliUrun.Urun}\n" +
             $"Toplam hareket miktarı: {hareketliUrun.ToplamHareket:N2}";
@@ -1425,13 +1447,14 @@ if (
 
             text += $"- {urun.Ad}: {kalan:N2} {urun.Birim}\n";
         }
-
+        SonGenelDetayKaydet("Stok", ayBaslangic);
         return text;
     }
 
     var toplamUrun = await _db.StokUrunler
         .CountAsync(x => x.FirmaId == firmaId);
 
+    SonGenelDetayKaydet("Stok", ayBaslangic);
     return $"Toplam stok ürün sayınız: {toplamUrun}";
 }
 
@@ -1463,6 +1486,7 @@ if (
         .Distinct()
         .CountAsync();
 
+    SonGenelDetayKaydet("Musteri", ayBaslangic);
     return $"{turkceAy} döneminde {isYapilanMusteriSayisi} müşteriyle iş yapılmış.";
 }
 
@@ -1494,6 +1518,7 @@ if (
             .Distinct()
             .Count();
 
+        SonGenelDetayKaydet("Musteri", ayBaslangic);
         return $"Toplam müşteri sayınız: {toplamMusteri}";
     }
 
@@ -1522,9 +1547,12 @@ if (
         if (musteri == null)
             return $"{turkceAy} döneminde müşteri gelir verisi bulunamadı.";
 
+        SonGenelDetayKaydet("Musteri", ayBaslangic);
+
         return
             $"{turkceAy} döneminde en çok kazandıran müşteri: {musteri.Musteri}\n" +
             $"Toplam gelir: {musteri.Toplam:N2} TL";
+
     }
 
     if (
@@ -1541,6 +1569,7 @@ if (
                 x.Tarih < ayBitis)
             .SumAsync(x => (decimal?)x.Gelir) ?? 0;
 
+        SonGenelDetayKaydet("Musteri", ayBaslangic);
         return $"{turkceAy} dönemi müşteri gelirleri: {toplamGelir:N2} TL";
     }
 
@@ -1591,6 +1620,8 @@ if (
                 x.Tarih < ayBitis)
             .SumAsync(x => (decimal?)x.Gelir) ?? 0;
 
+        SonGenelDetayKaydet("Musteri", ayBaslangic);
+
         return
             $"{turkceAy} dönemi müşteri durumu:\n\n" +
             $"- Toplam müşteri sayısı: {toplamMusteri}\n" +
@@ -1633,6 +1664,7 @@ if (
         .Distinct()
         .Count();
 
+    SonGenelDetayKaydet("Musteri", ayBaslangic);
     return $"Toplam müşteri sayınız: {sayi}";
 }
 
@@ -1769,7 +1801,6 @@ if (
     var toplamGider = musteriMasraf + personelGideri;
     var net = toplamGelir - toplamGider;
 
-
     string durum;
     string yorum;
 
@@ -1796,6 +1827,8 @@ if (
         lower.Contains("kâr mı")
     )
     {
+        SonGenelDetayKaydet("KarZarar", ayBaslangic);
+
         if (net > 0)
             return $"{turkceAy} döneminde kâr etmiş görünüyorsunuz. Net kâr: {net:N2} TL";
 
@@ -1805,8 +1838,13 @@ if (
         return $"{turkceAy} döneminde kâr veya zarar görünmüyor. Sonuç başabaş.";
     }
 
-    if (lower.Contains("zarar ettim mi") || lower.Contains("zarar mı"))
+    if (
+        lower.Contains("zarar ettim mi") ||
+        lower.Contains("zarar mı")
+    )
     {
+        SonGenelDetayKaydet("KarZarar", ayBaslangic);
+
         if (net < 0)
             return $"{turkceAy} döneminde zarar etmiş görünüyorsunuz. Net zarar: {Math.Abs(net):N2} TL";
 
@@ -1815,6 +1853,8 @@ if (
 
         return $"{turkceAy} döneminde zarar görünmüyor. Sonuç başabaş.";
     }
+
+    SonGenelDetayKaydet("KarZarar", ayBaslangic);
 
     return
         $"{turkceAy} dönemi gelir-gider analizi:\n\n" +
@@ -1826,7 +1866,6 @@ if (
         $"- Durum: {durum}\n\n" +
         yorum;
 }
-
         // GENEL YÖNETİM ÖZETİ
 
 if (
@@ -1913,7 +1952,8 @@ if (
         finansYorumu = "Bu dönem giderler gelirlerden yüksek görünüyor.";
     else
         finansYorumu = "Bu dönem işletme başabaş seviyede görünüyor.";
-
+        
+    SonGenelDetayKaydet("Yonetim", ayBaslangic);
     return
         $"{turkceAy} dönemi yönetim özeti:\n\n" +
         $"- Toplam gelir: {toplamGelir:N2} TL\n" +
