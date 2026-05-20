@@ -1901,11 +1901,11 @@ if (
                 ))
             .Sum(x => x.Tutar);
 
-        var borc = toplamIsGeliri - tahsilat;
+            var borc = toplamIsGeliri - tahsilat;
 
         if (borc > 0 && !borclular.Any(x => Temizle(x.Ad) == musteriAdi))
         {
-            borclular.Add((musteri.AdSoyad, borc));
+            borclular.Add((musteri.AdSoyad ?? "Müşteri", borc));
         }
     }
 
