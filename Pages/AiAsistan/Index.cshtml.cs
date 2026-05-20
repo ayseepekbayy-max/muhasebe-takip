@@ -200,6 +200,10 @@ if (
     !lower.Contains("avans") &&
     !lower.Contains("puantaj") &&
     !lower.Contains("cari") &&
+    !lower.Contains("kim") &&
+    !lower.Contains("kaç") &&
+    !lower.Contains("kac") &&
+    !lower.Contains("ne kadar") &&
     (
         lower.Contains("detay ver") ||
         lower.Contains("detay göster") ||
@@ -294,6 +298,31 @@ if (
 
         return text;
     }
+
+    if (detayTip == "StokUrunler")
+{
+    var urunler = await _db.StokUrunler
+        .Where(x => x.FirmaId == firmaId)
+        .OrderBy(x => x.Ad)
+        .ToListAsync();
+
+    if (!urunler.Any())
+        return "Stok ürünü bulunamadı.";
+
+    var text = "Stok ürünleri:\n\n";
+
+    foreach (var urun in urunler)
+    {
+        text += $"- {urun.Ad}";
+
+        if (!string.IsNullOrWhiteSpace(urun.Kod))
+            text += $" | Kod: {urun.Kod}";
+
+        text += $" | Birim: {urun.Birim}\n";
+    }
+
+    return text;
+}
 
     if (detayTip == "Stok")
     {
@@ -567,6 +596,46 @@ if (detayTip == "Puantaj")
 
         return text;
     }
+
+    if (detayTip == "Calisan")
+{
+    var sonCalisanAdi = bulunanCalisan?.AdSoyad
+        ?? HttpContext.Session.GetString(SonDetayCalisanKey)
+        ?? _memory.SonCalisaniGetir();
+
+    if (string.IsNullOrWhiteSpace(sonCalisanAdi))
+        return "Detayı gösterilecek çalışan bulunamadı.";
+
+    var calisan = await _db.Calisanlar
+        .FirstOrDefaultAsync(x =>
+            x.FirmaId == firmaId &&
+            x.AdSoyad == sonCalisanAdi);
+
+    if (calisan == null)
+        return "Çalışan bulunamadı.";
+
+    var hareketler = await AvansHareketleriniGetir(
+        firmaId,
+        calisan.Id,
+        detayAyBaslangic);
+
+    if (!hareketler.Any())
+        return $"{calisan.AdSoyad} için {detayTurkceAy} döneminde avans detayı bulunamadı.";
+
+    var text = $"{calisan.AdSoyad} {detayTurkceAy} dönemi avans detayları:\n\n";
+
+    foreach (var item in hareketler)
+    {
+        text += $"- {item.Tarih:dd.MM.yyyy} | {item.Tutar:N2} TL";
+
+        if (!string.IsNullOrWhiteSpace(item.Aciklama))
+            text += $" | {item.Aciklama}";
+
+        text += "\n";
+    }
+
+    return text;
+}
 
     if (detayTip == "Toplam" && bulunanCalisan == null)
     {
@@ -1032,6 +1101,7 @@ if (
 
     if (!puantajlar.Any())
         return $"{turkceAy} döneminde puantaj kaydı bulunamadı.";
+
     SonGenelDetayKaydet("Puantaj", ayBaslangic);
 
     if (
@@ -1057,6 +1127,8 @@ if (
         if (enIzinli == null)
             return $"{turkceAy} döneminde izin kaydı bulunamadı.";
 
+        SonPuantajDetayiniKaydet(enIzinli.Ad, ayBaslangic);
+
         return $"{turkceAy} döneminde en fazla izin alan çalışan: {enIzinli.Ad} ({enIzinli.Sayi} gün)";
     }
 
@@ -1080,6 +1152,8 @@ if (
 
         if (enCokGelmeyen == null)
             return $"{turkceAy} döneminde gelmedi kaydı bulunamadı.";
+
+        SonPuantajDetayiniKaydet(enCokGelmeyen.Ad, ayBaslangic);
 
         return $"{turkceAy} döneminde en çok gelmeyen çalışan: {enCokGelmeyen.Ad} ({enCokGelmeyen.Sayi} gün)";
     }
@@ -1107,6 +1181,8 @@ if (
         if (enDevamsiz == null)
             return $"{turkceAy} döneminde devamsızlık kaydı bulunamadı.";
 
+        SonPuantajDetayiniKaydet(enDevamsiz.Ad, ayBaslangic);
+
         return $"{turkceAy} döneminde en fazla devamsızlık yapan çalışan: {enDevamsiz.Ad} ({enDevamsiz.Sayi} gün)";
     }
 
@@ -1122,8 +1198,6 @@ if (
         $"- İzinli: {toplamIzinli} gün\n" +
         $"- Yarım gün: {toplamYarim} gün";
 }
-
-
         // KASA ANALİZİ
 
         if (
@@ -1348,7 +1422,7 @@ if (
         var stokSayisi = await _db.StokUrunler
             .CountAsync(x => x.FirmaId == firmaId);
 
-        SonGenelDetayKaydet("Stok", ayBaslangic);
+       SonGenelDetayKaydet("StokUrunler", ayBaslangic);
         return $"Toplam stok ürün sayınız: {stokSayisi}";
     }
 
@@ -1518,7 +1592,7 @@ if (
     var toplamUrun = await _db.StokUrunler
         .CountAsync(x => x.FirmaId == firmaId);
 
-    SonGenelDetayKaydet("Stok", ayBaslangic);
+    SonGenelDetayKaydet("StokUrunler", ayBaslangic);
     return $"Toplam stok ürün sayınız: {toplamUrun}";
 }
 
