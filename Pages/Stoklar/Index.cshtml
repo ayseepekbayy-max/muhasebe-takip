@@ -2,7 +2,19 @@
 @model MuhasebeTakip2.App.Pages.Stoklar.IndexModel
 
 <h1>Stok</h1>
+@if (TempData["Hata"] != null)
+{
+  <div style="color:red; margin:10px 0;">
+    @TempData["Hata"]
+  </div>
+}
 
+@if (TempData["Basari"] != null)
+{
+  <div style="color:green; margin:10px 0;">
+    @TempData["Basari"]
+  </div>
+}
 <div style="margin:12px 0;">
   <form method="post" asp-page-handler="DisaAktar" style="display:inline;">
     <button type="submit" class="btn btn-outline-success btn-sm">Stokları Excel Olarak İndir</button>

@@ -78,17 +78,15 @@ public StokUrun Yeni { get; set; } = new() { Birim = "Adet" };
         var hareketVar = await _db.StokHareketleri
             .AnyAsync(x => x.StokUrunId == id && x.FirmaId == firmaId);
 
-        if (hareketVar)
+       if (hareketVar)
         {
-            Hata = "Bu ürüne ait stok hareketi olduğu için silinemez.";
-            await ListeyiYukleAsync(firmaId.Value);
-            return Page();
+            TempData["Hata"] = "Bu ürüne ait stok hareketi olduğu için silinemez.";
+            return RedirectToPage();
         }
-
         _db.StokUrunler.Remove(urun);
         await _db.SaveChangesAsync();
 
-        Mesaj = "Ürün silindi.";
+        TempData["Basari"] = "Ürün silindi.";
         return RedirectToPage();
     }
 
