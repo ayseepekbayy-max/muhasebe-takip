@@ -1802,19 +1802,93 @@ if (
     }
 
     if (
-        lower.Contains("borçlu müşteri") ||
-        lower.Contains("borclu musteri") ||
-        lower.Contains("borçlu müşteriler") ||
-        lower.Contains("borclu musteriler") ||
-        lower.Contains("müşteri borç") ||
-        lower.Contains("musteri borc")
-    )
+    lower.Contains("borçlu müşteri") ||
+    lower.Contains("borclu musteri") ||
+    lower.Contains("borçlu müşteriler") ||
+    lower.Contains("borclu musteriler") ||
+    lower.Contains("müşteri borç") ||
+    lower.Contains("musteri borc")
+)
+{
+    string Temizle(string? value)
     {
-        return
-    "Şu anda borçlu müşteri listesi gösterilemiyor.\n" +
-    "Cari kartlarda müşteri adı ve tipi tutuluyor, fakat borç/alacak tutarı tutulmadığı için kimin borçlu olduğunu hesaplayamıyorum.";
-
+        return (value ?? "").Trim().ToLowerInvariant();
     }
+
+    var alicilar = await _db.CariKartlar
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tip == CariTip.Alici)
+        .OrderBy(x => x.Unvan)
+        .ToListAsync();
+
+    if (!alicilar.Any())
+        return "Alıcı cari kart bulunamadı.";
+
+    var musteriIsleri = await _db.MusteriIsler
+        .Include(x => x.Musteri)
+        .Where(x => x.FirmaId == firmaId)
+        .ToListAsync();
+
+    var kasaHareketleri = await _db.KasaHareketleri
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.CariKartId != null)
+        .ToListAsync();
+
+    var borclular = new List<(string Ad, decimal Borc)>();
+
+    foreach (var cari in alicilar)
+    {
+        var cariAdlari = new List<string>
+        {
+            Temizle(cari.Unvan),
+            Temizle(cari.Ad)
+        }
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct()
+        .ToList();
+
+        var toplamIsGeliri = musteriIsleri
+            .Where(x => cariAdlari.Contains(Temizle(x.Musteri?.AdSoyad)))
+            .Sum(x => x.Gelir);
+
+        var tahsilat = kasaHareketleri
+            .Where(x =>
+                x.CariKartId == cari.Id &&
+                x.Tip == HareketTipi.Giris)
+            .Sum(x => x.Tutar);
+
+        var cikis = kasaHareketleri
+            .Where(x =>
+                x.CariKartId == cari.Id &&
+                x.Tip == HareketTipi.Cikis)
+            .Sum(x => x.Tutar);
+
+        var borc = toplamIsGeliri + cikis - tahsilat;
+
+        if (borc > 0)
+        {
+            var ad = !string.IsNullOrWhiteSpace(cari.Unvan)
+                ? cari.Unvan
+                : cari.Ad;
+
+            borclular.Add((ad, borc));
+        }
+    }
+
+    if (!borclular.Any())
+        return "Borçlu müşteri bulunamadı.";
+
+    var text = "Borçlu müşteriler:\n\n";
+
+    foreach (var item in borclular.OrderByDescending(x => x.Borc))
+    {
+        text += $"- {item.Ad}: {item.Borc:N2} TL\n";
+    }
+
+    return text;
+}
 
     var musteriAdlariGenel = await _db.Musteriler
         .Where(x => x.FirmaId == firmaId)
