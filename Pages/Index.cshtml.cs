@@ -34,6 +34,36 @@ public class IndexModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
+        await VerileriYukleAsync(firmaId.Value);
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostSilAsync(int id)
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var hareket = await _db.KasaHareketleri
+            .FirstOrDefaultAsync(x =>
+                x.Id == id &&
+                x.FirmaId == firmaId.Value);
+
+        if (hareket == null)
+        {
+            TempData["Hata"] = "Kasa hareketi bulunamadı.";
+            return RedirectToPage();
+        }
+
+        _db.KasaHareketleri.Remove(hareket);
+        await _db.SaveChangesAsync();
+
+        TempData["Basari"] = "Kasa hareketi silindi.";
+        return RedirectToPage();
+    }
+
+    private async Task VerileriYukleAsync(int firmaId)
+    {
         try
         {
             var bugun = DateTime.UtcNow.Date;
@@ -42,7 +72,7 @@ public class IndexModel : PageModel
 
             BugunGiris = await _db.KasaHareketleri
                 .Where(x =>
-                    x.FirmaId == firmaId.Value &&
+                    x.FirmaId == firmaId &&
                     x.Tarih >= bugun &&
                     x.Tarih < yarin &&
                     x.Tip == HareketTipi.Giris)
@@ -50,7 +80,7 @@ public class IndexModel : PageModel
 
             BugunCikis = await _db.KasaHareketleri
                 .Where(x =>
-                    x.FirmaId == firmaId.Value &&
+                    x.FirmaId == firmaId &&
                     x.Tarih >= bugun &&
                     x.Tarih < yarin &&
                     x.Tip == HareketTipi.Cikis)
@@ -58,52 +88,45 @@ public class IndexModel : PageModel
 
             BuAyGiris = await _db.KasaHareketleri
                 .Where(x =>
-                    x.FirmaId == firmaId.Value &&
+                    x.FirmaId == firmaId &&
                     x.Tarih >= ayBaslangic &&
                     x.Tip == HareketTipi.Giris)
                 .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
             BuAyCikis = await _db.KasaHareketleri
                 .Where(x =>
-                    x.FirmaId == firmaId.Value &&
+                    x.FirmaId == firmaId &&
                     x.Tarih >= ayBaslangic &&
                     x.Tip == HareketTipi.Cikis)
                 .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
             var toplamGiris = await _db.KasaHareketleri
                 .Where(x =>
-                    x.FirmaId == firmaId.Value &&
+                    x.FirmaId == firmaId &&
                     x.Tip == HareketTipi.Giris)
                 .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
             var toplamCikis = await _db.KasaHareketleri
                 .Where(x =>
-                    x.FirmaId == firmaId.Value &&
+                    x.FirmaId == firmaId &&
                     x.Tip == HareketTipi.Cikis)
                 .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
             KasaBakiye = toplamGiris - toplamCikis;
 
             CariSayisi = await _db.CariKartlar
-                .CountAsync(x => x.FirmaId == firmaId.Value);
+                .CountAsync(x => x.FirmaId == firmaId);
 
             CalisanSayisi = await _db.Calisanlar
-                .CountAsync(x => x.FirmaId == firmaId.Value);
+                .CountAsync(x => x.FirmaId == firmaId);
 
-            try
-            {
-                SonHareketler = await _db.KasaHareketleri
-                    .Include(x => x.CariKart)
-                    .Where(x => x.FirmaId == firmaId.Value)
-                    .OrderByDescending(x => x.Tarih)
-                    .ThenByDescending(x => x.Id)
-                    .Take(10)
-                    .ToListAsync();
-            }
-            catch
-            {
-                SonHareketler = new List<KasaHareket>();
-            }
+            SonHareketler = await _db.KasaHareketleri
+                .Include(x => x.CariKart)
+                .Where(x => x.FirmaId == firmaId)
+                .OrderByDescending(x => x.Tarih)
+                .ThenByDescending(x => x.Id)
+                .Take(10)
+                .ToListAsync();
         }
         catch (Exception ex)
         {
@@ -118,7 +141,5 @@ public class IndexModel : PageModel
 
             SayfaHata = ex.Message;
         }
-
-        return Page();
     }
 }

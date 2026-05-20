@@ -35,7 +35,7 @@
         }
 
         table {
-            min-width: 600px !important;
+            min-width: 700px !important;
         }
     }
 </style>
@@ -47,6 +47,20 @@
 <div style="color:#64748b; font-size:14px; margin-bottom:18px;">
     Güncel finans ve işlem özetinizi buradan takip edebilirsiniz.
 </div>
+
+@if (TempData["Hata"] != null)
+{
+    <div style="color:#b42318; margin:10px 0; padding:12px; border:1px solid #fecaca; background:#fef2f2; border-radius:12px;">
+        @TempData["Hata"]
+    </div>
+}
+
+@if (TempData["Basari"] != null)
+{
+    <div style="color:#166534; margin:10px 0; padding:12px; border:1px solid #bbf7d0; background:#f0fdf4; border-radius:12px;">
+        @TempData["Basari"]
+    </div>
+}
 
 @if (!string.IsNullOrWhiteSpace(Model.SayfaHata))
 {
@@ -189,6 +203,10 @@
                                 <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left; color:#334155;">
                                     Açıklama
                                 </th>
+
+                                <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left; color:#334155; width:90px;">
+                                    İşlem
+                                </th>
                             </tr>
                         </thead>
 
@@ -215,6 +233,16 @@
 
                                     <td style="padding:10px; border-bottom:1px solid #eef2f7;">
                                         @h.Aciklama
+                                    </td>
+
+                                    <td style="padding:10px; border-bottom:1px solid #eef2f7;">
+                                        <form method="post" asp-page-handler="Sil" style="display:inline;"
+                                              onsubmit="return confirm('Bu kasa hareketi silinecek. Yine de silmek istiyor musunuz?');">
+                                            <input type="hidden" name="id" value="@h.Id" />
+                                            <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">
+                                                Sil
+                                            </button>
+                                        </form>
                                     </td>
 
                                 </tr>
