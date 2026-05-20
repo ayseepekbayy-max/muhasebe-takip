@@ -299,6 +299,31 @@ if (
         return text;
     }
 
+if (detayTip == "Calisanlar")
+{
+    var liste = await _db.Calisanlar
+        .Where(x => x.FirmaId == firmaId)
+        .OrderBy(x => x.AdSoyad)
+        .ToListAsync();
+
+    if (!liste.Any())
+        return "Çalışan bulunamadı.";
+
+    var text = "Çalışan listesi:\n\n";
+
+    foreach (var item in liste)
+    {
+        text += $"- {item.AdSoyad}";
+
+        if (item.Maas > 0)
+            text += $" | Maaş: {item.Maas:N2} TL";
+
+        text += "\n";
+    }
+
+    return text;
+}
+
     if (detayTip == "StokUrunler")
 {
     var urunler = await _db.StokUrunler
@@ -902,6 +927,8 @@ if (
                     return $"{turkceAy} döneminde maaş ödemesi bulunamadı.";
 
                 var ortalamaOdeme = maasDagilimi.Average(x => x.Toplam);
+
+                SonToplamMaasDetayiniKaydet(ayBaslangic);
 
                 return $"{turkceAy} döneminde ortalama maaş ödemesi: {ortalamaOdeme:N2} TL";
             }
@@ -1868,19 +1895,26 @@ if (
                 .SumAsync(x => (decimal?)x.Gelir) ?? 0;
 
             var gider = await _db.KasaHareketleri
-                .Where(x =>
-                    x.FirmaId == firmaId &&
-                    x.Tip == HareketTipi.Cikis &&
-                    x.Tarih >= ayBaslangic &&
-                    x.Tarih < ayBitis)
-                .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+    .Where(x =>
+        x.FirmaId == firmaId &&
+        x.Tip == HareketTipi.Cikis &&
+        x.Tarih >= ayBaslangic &&
+        x.Tarih < ayBitis)
+    .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-            decimal oran = 0;
+if (gelir <= 0)
+{
+    return
+        $"Risk analizi:\n\n" +
+        $"- Bu dönemde gelir kaydı yok.\n" +
+        $"- Gider toplamı: {gider:N2} TL\n" +
+        "- Gelir olmadığı için gider oranı hesaplanamıyor.\n" +
+        "- Nakit akışı dikkat gerektiriyor.";
+}
 
-            if (gelir > 0)
-                oran = (gider / gelir) * 100;
+var oran = (gider / gelir) * 100;
 
-            if (oran >= 80)
+if (oran >= 80)
             {
                 return
                     $"Risk analizi:\n\n" +
@@ -1897,7 +1931,10 @@ if (
         // KAR ZARAR VE İŞLETME ANALİZİ
 
 if (
-    lower.Contains("kar") ||
+    lower.Contains("kar ettim") ||
+    lower.Contains("kar ediyor") ||
+    lower.Contains("kar mı") ||
+    lower.Contains("kar zarar") ||
     lower.Contains("kâr") ||
     lower.Contains("zarar") ||
     lower.Contains("gelir gider") ||
@@ -2124,9 +2161,10 @@ if (
             var sayi = await _db.Calisanlar
                 .CountAsync(x => x.FirmaId == firmaId);
 
+            SonGenelDetayKaydet("Calisanlar", ayBaslangic);
+
             return $"Toplam çalışan sayınız: {sayi}";
         }
-
         // CARİ ANALİZ
 
         if (
