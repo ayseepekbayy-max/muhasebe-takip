@@ -1013,6 +1013,7 @@ if (
         lower.Contains("puantaj") ||
         lower.Contains("puan") ||
         lower.Contains("gelmedi") ||
+        lower.Contains("gelmeyen") ||
         lower.Contains("devamsız") ||
         lower.Contains("devamsizlik") ||
         lower.Contains("izin")
@@ -1086,6 +1087,7 @@ if (
     lower.Contains("puantaj") ||
     lower.Contains("puan") ||
     lower.Contains("gelmedi") ||
+    lower.Contains("gelmeyen") ||
     lower.Contains("devamsız") ||
     lower.Contains("devamsizlik") ||
     lower.Contains("izin")
@@ -1133,11 +1135,15 @@ if (
     }
 
     if (
-        lower.Contains("kim en çok gelmedi") ||
-        lower.Contains("kim en cok gelmedi") ||
-        lower.Contains("en çok gelmedi") ||
-        lower.Contains("en cok gelmedi")
-    )
+    lower.Contains("kim en çok gelmedi") ||
+    lower.Contains("kim en cok gelmedi") ||
+    lower.Contains("en çok gelmedi") ||
+    lower.Contains("en cok gelmedi") ||
+    lower.Contains("kim en çok gelmeyen") ||
+    lower.Contains("kim en cok gelmeyen") ||
+    lower.Contains("en çok gelmeyen") ||
+    lower.Contains("en cok gelmeyen")
+)
     {
         var enCokGelmeyen = puantajlar
             .Where(x => x.Durum == PuantajDurum.Gelmedi)
