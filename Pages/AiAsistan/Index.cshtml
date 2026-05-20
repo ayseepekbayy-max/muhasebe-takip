@@ -13,10 +13,18 @@
                 <p>Sesli ve yazılı muhasebe asistanı</p>
             </div>
 
-            <div class="ai-status">
+                    <div class="nova-visual" id="novaVisual" data-state="ready">
+            <div class="nova-orb">
                 <span></span>
-                Aktif
+                <span></span>
+                <span></span>
             </div>
+
+            <div class="nova-visual-text">
+                <strong id="novaStateTitle">Hazır</strong>
+                <small id="novaStateText">Hey Nova diyebilirsin</small>
+            </div>
+        </div>
         </div>
 
         <div class="chat-area">
@@ -281,6 +289,103 @@
         width:100%;
     }
 }
+.nova-visual {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255,255,255,0.16);
+    padding: 9px 13px;
+    border-radius: 999px;
+    min-width: 190px;
+}
+
+.nova-orb {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #22c55e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    box-shadow: 0 0 0 rgba(34,197,94,0.45);
+}
+
+.nova-orb span {
+    width: 4px;
+    height: 12px;
+    border-radius: 999px;
+    background: white;
+    opacity: 0.9;
+    animation: novaWave 0.9s infinite ease-in-out;
+}
+
+.nova-orb span:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.nova-orb span:nth-child(3) {
+    animation-delay: 0.30s;
+}
+
+.nova-visual-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+}
+
+.nova-visual-text strong {
+    font-size: 13px;
+}
+
+.nova-visual-text small {
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+.nova-visual[data-state="ready"] .nova-orb {
+    background: #22c55e;
+}
+
+.nova-visual[data-state="listening"] .nova-orb {
+    background: #6366f1;
+    animation: novaPulse 1.25s infinite;
+}
+
+.nova-visual[data-state="thinking"] .nova-orb {
+    background: #f59e0b;
+    animation: novaPulse 1s infinite;
+}
+
+.nova-visual[data-state="speaking"] .nova-orb {
+    background: #06b6d4;
+    animation: novaPulse 0.85s infinite;
+}
+
+.nova-visual[data-state="stopped"] .nova-orb {
+    background: #64748b;
+}
+
+@@keyframes novaPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255,255,255,0.45);
+    }
+    70% {
+        box-shadow: 0 0 0 12px rgba(255,255,255,0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255,255,255,0);
+    }
+}
+
+@@keyframes novaWave {
+    0%, 100% {
+        height: 8px;
+    }
+    50% {
+        height: 18px;
+    }
+}
 </style>
 
 <script>
@@ -291,12 +396,58 @@ let novaAktif = false;
 let isSpeaking = false;
 let soruGonderiliyor = false;
 
+function novaGorselDurum(state, baslik, aciklama){
+
+    const visual = document.getElementById("novaVisual");
+    const title = document.getElementById("novaStateTitle");
+    const text = document.getElementById("novaStateText");
+
+    if(visual){
+        visual.setAttribute("data-state", state);
+    }
+
+    if(title){
+        title.innerText = baslik;
+    }
+
+    if(text){
+        text.innerText = aciklama;
+    }
+}
+
 function novaDurumYaz(metin){
 
     const durum = document.getElementById("novaDurum");
 
     if(durum){
         durum.innerText = metin;
+    }
+
+    const temiz = (metin || "").toLowerCase();
+
+    if(temiz.includes("dinle")){
+        novaGorselDurum("listening", "Dinliyor", "Sorunu bekliyor");
+        return;
+    }
+
+    if(temiz.includes("cevap")){
+        novaGorselDurum("speaking", "Cevaplıyor", "Sesli yanıt veriyor");
+        return;
+    }
+
+    if(temiz.includes("durdur")){
+        novaGorselDurum("stopped", "Durduruldu", "Ses beklemede");
+        return;
+    }
+
+    if(temiz.includes("hata") || temiz.includes("başarısız")){
+        novaGorselDurum("stopped", "Sorun var", "Tekrar deneyebilirsin");
+        return;
+    }
+
+    if(temiz.includes("hazır") || temiz.includes("aktif")){
+        novaGorselDurum("ready", "Hazır", "Hey Nova diyebilirsin");
+        return;
     }
 }
 
@@ -530,6 +681,8 @@ async function soruyuGonder(soru){
     novaDinlemeyiDurdur();
 
     mesajEkle("user", soru);
+    
+    novaGorselDurum("thinking", "Düşünüyor", "Cevap hazırlanıyor");
 
     try{
 
