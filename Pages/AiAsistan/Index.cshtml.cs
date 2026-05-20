@@ -185,7 +185,7 @@ public class IndexModel : PageModel
         {
             _memory.SonCalisaniKaydet(bulunanCalisan.AdSoyad);
         }
-        
+
 // ÇALIŞAN LİSTESİ
 
 if (
@@ -204,12 +204,12 @@ if (
 )
 {
     var liste = await _db.Calisanlar
-        .Where(x => x.FirmaId == firmaId)
-        .OrderBy(x => x.AdSoyad)
-        .ToListAsync();
+    .Where(x => x.FirmaId == firmaId && x.AktifMi)
+    .OrderBy(x => x.AdSoyad)
+    .ToListAsync();
 
     if (!liste.Any())
-        return "Çalışan bulunamadı.";
+        return "Aktif çalışan bulunamadı.";
 
     SonGenelDetayKaydet("Calisanlar", ayBaslangic);
 
@@ -344,9 +344,9 @@ if (
 if (detayTip == "Calisanlar")
 {
     var liste = await _db.Calisanlar
-        .Where(x => x.FirmaId == firmaId)
-        .OrderBy(x => x.AdSoyad)
-        .ToListAsync();
+    .Where(x => x.FirmaId == firmaId && x.AktifMi)
+    .OrderBy(x => x.AdSoyad)
+    .ToListAsync();
 
     if (!liste.Any())
         return "Çalışan bulunamadı.";
