@@ -1,17 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using ClosedXML.Excel;
 using System.IO;
-using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace MuhasebeTakip2.App.Pages.Stoklar;
 
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
+
     public IndexModel(AppDbContext db) => _db = db;
 
     public List<StokUrun> Liste { get; set; } = new();
@@ -19,7 +20,7 @@ public class IndexModel : PageModel
 
     [BindProperty]
     [ValidateNever]
-public StokUrun Yeni { get; set; } = new() { Birim = "Adet" };
+    public StokUrun Yeni { get; set; } = new() { Birim = "Adet" };
 
     public string Hata { get; set; } = "";
     public string Mesaj { get; set; } = "";
@@ -59,7 +60,7 @@ public StokUrun Yeni { get; set; } = new() { Birim = "Adet" };
         _db.StokUrunler.Add(Yeni);
         await _db.SaveChangesAsync();
 
-        Mesaj = "Ürün eklendi.";
+        TempData["Basari"] = "Ürün eklendi.";
         return RedirectToPage();
     }
 
@@ -70,23 +71,29 @@ public StokUrun Yeni { get; set; } = new() { Birim = "Adet" };
             return RedirectToPage("/Login");
 
         var urun = await _db.StokUrunler
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
+            .FirstOrDefaultAsync(x =>
+                x.Id == id &&
+                x.FirmaId == firmaId.Value);
 
         if (urun == null)
-            return RedirectToPage();
-
-        var hareketVar = await _db.StokHareketleri
-            .AnyAsync(x => x.StokUrunId == id && x.FirmaId == firmaId);
-
-       if (hareketVar)
         {
-            TempData["Hata"] = "Bu ürüne ait stok hareketi olduğu için silinemez.";
+            TempData["Hata"] = "Ürün bulunamadı.";
             return RedirectToPage();
         }
+
+        var hareketler = await _db.StokHareketleri
+            .Where(x =>
+                x.StokUrunId == id &&
+                x.FirmaId == firmaId.Value)
+            .ToListAsync();
+
+        if (hareketler.Any())
+            _db.StokHareketleri.RemoveRange(hareketler);
+
         _db.StokUrunler.Remove(urun);
         await _db.SaveChangesAsync();
 
-        TempData["Basari"] = "Ürün silindi.";
+        TempData["Basari"] = "Ürün ve varsa ona ait stok hareketleri silindi.";
         return RedirectToPage();
     }
 
@@ -97,14 +104,16 @@ public StokUrun Yeni { get; set; } = new() { Birim = "Adet" };
             return RedirectToPage("/Login");
 
         var liste = await _db.StokUrunler
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId.Value)
             .OrderBy(x => x.Ad)
             .ToListAsync();
 
         var urunIdleri = liste.Select(x => x.Id).ToList();
 
         var hareketler = await _db.StokHareketleri
-            .Where(x => x.FirmaId == firmaId && urunIdleri.Contains(x.StokUrunId))
+            .Where(x =>
+                x.FirmaId == firmaId.Value &&
+                urunIdleri.Contains(x.StokUrunId))
             .GroupBy(x => x.StokUrunId)
             .Select(g => new
             {
@@ -115,6 +124,7 @@ public StokUrun Yeni { get; set; } = new() { Birim = "Adet" };
             .ToListAsync();
 
         var stokMap = liste.ToDictionary(x => x.Id, _ => 0m);
+
         foreach (var h in hareketler)
             stokMap[h.UrunId] = h.Giris - h.Cikis;
 
@@ -134,6 +144,7 @@ public StokUrun Yeni { get; set; } = new() { Birim = "Adet" };
         header.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 
         int row = 2;
+
         foreach (var s in liste)
         {
             ws.Cell(row, 1).Value = s.Ad ?? "";
@@ -176,7 +187,9 @@ public StokUrun Yeni { get; set; } = new() { Birim = "Adet" };
         var urunIdleri = Liste.Select(x => x.Id).ToList();
 
         var hareketler = await _db.StokHareketleri
-            .Where(x => x.FirmaId == firmaId && urunIdleri.Contains(x.StokUrunId))
+            .Where(x =>
+                x.FirmaId == firmaId &&
+                urunIdleri.Contains(x.StokUrunId))
             .GroupBy(x => x.StokUrunId)
             .Select(g => new
             {
@@ -187,6 +200,7 @@ public StokUrun Yeni { get; set; } = new() { Birim = "Adet" };
             .ToListAsync();
 
         Stoklar = Liste.ToDictionary(x => x.Id, _ => 0m);
+
         foreach (var h in hareketler)
             Stoklar[h.UrunId] = h.Giris - h.Cikis;
     }

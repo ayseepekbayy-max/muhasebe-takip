@@ -1,17 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using ClosedXML.Excel;
 using System.IO;
-using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace MuhasebeTakip2.App.Pages.CariKartlar;
 
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
+
     public IndexModel(AppDbContext db) => _db = db;
 
     public List<CariKart> Alicilar { get; set; } = new();
@@ -19,7 +20,7 @@ public class IndexModel : PageModel
 
     [BindProperty]
     [ValidateNever]
-public CariKart YeniCari { get; set; } = new();
+    public CariKart YeniCari { get; set; } = new();
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -46,8 +47,12 @@ public CariKart YeniCari { get; set; } = new();
             await ListeleriYukleAsync(firmaId.Value);
 
             YeniCari.Unvan = (YeniCari.Unvan ?? "").Trim();
-            YeniCari.Telefon = string.IsNullOrWhiteSpace(YeniCari.Telefon) ? null : YeniCari.Telefon.Trim();
-            YeniCari.VergiNo = string.IsNullOrWhiteSpace(YeniCari.VergiNo) ? null : YeniCari.VergiNo.Trim();
+            YeniCari.Telefon = string.IsNullOrWhiteSpace(YeniCari.Telefon)
+                ? null
+                : YeniCari.Telefon.Trim();
+            YeniCari.VergiNo = string.IsNullOrWhiteSpace(YeniCari.VergiNo)
+                ? null
+                : YeniCari.VergiNo.Trim();
 
             if (string.IsNullOrWhiteSpace(YeniCari.Unvan))
             {
@@ -63,14 +68,12 @@ public CariKart YeniCari { get; set; } = new();
                 : YeniCari.Ad.Trim();
 
             YeniCari.FirmaId = firmaId.Value;
-
-            // PostgreSQL timestamptz için UTC gönder
             YeniCari.OlusturmaTarihi = DateTime.UtcNow;
 
-            _db.Entry(YeniCari).State = EntityState.Added;
-
+            _db.CariKartlar.Add(YeniCari);
             await _db.SaveChangesAsync();
 
+            TempData["Basari"] = "Cari kart eklendi.";
             return RedirectToPage();
         }
         catch (DbUpdateException ex)
@@ -91,13 +94,11 @@ public CariKart YeniCari { get; set; } = new();
     }
 
     public async Task<IActionResult> OnPostSilAsync(int id)
-{
-    var firmaId = HttpContext.Session.GetInt32("FirmaId");
-    if (firmaId == null)
-        return RedirectToPage("/Login");
-
-    try
     {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
         var cari = await _db.CariKartlar
             .FirstOrDefaultAsync(x =>
                 x.Id == id &&
@@ -109,34 +110,21 @@ public CariKart YeniCari { get; set; } = new();
             return RedirectToPage();
         }
 
-        var kullaniliyorMu = await _db.KasaHareketleri
-            .AnyAsync(x =>
+        var kasaHareketleri = await _db.KasaHareketleri
+            .Where(x =>
                 x.CariKartId == id &&
-                x.FirmaId == firmaId.Value);
+                x.FirmaId == firmaId.Value)
+            .ToListAsync();
 
-        if (kullaniliyorMu)
-        {
-            TempData["Hata"] = "Bu cari kart kasa hareketlerinde kullanıldığı için silinemez.";
-            return RedirectToPage();
-        }
+        foreach (var hareket in kasaHareketleri)
+            hareket.CariKartId = null;
 
         _db.CariKartlar.Remove(cari);
         await _db.SaveChangesAsync();
 
-        TempData["Basari"] = "Cari kart silindi.";
+        TempData["Basari"] = "Cari kart silindi. Varsa bağlı kasa hareketleri korunup cari bağlantısı kaldırıldı.";
         return RedirectToPage();
     }
-    catch (DbUpdateException)
-    {
-        TempData["Hata"] = "Bu cari kart başka kayıtlarda kullanıldığı için silinemez.";
-        return RedirectToPage();
-    }
-    catch (Exception ex)
-    {
-        TempData["Hata"] = $"Silme sırasında hata oluştu: {ex.Message}";
-        return RedirectToPage();
-    }
-}
 
     public async Task<IActionResult> OnPostDisaAktarAsync()
     {
@@ -145,7 +133,7 @@ public CariKart YeniCari { get; set; } = new();
             return RedirectToPage("/Login");
 
         var cariler = await _db.CariKartlar
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId.Value)
             .OrderBy(x => x.Unvan)
             .ToListAsync();
 
@@ -165,6 +153,7 @@ public CariKart YeniCari { get; set; } = new();
         header.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 
         int row = 2;
+
         foreach (var c in cariler)
         {
             ws.Cell(row, 1).Value = c.Unvan ?? "";
