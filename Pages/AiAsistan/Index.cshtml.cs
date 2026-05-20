@@ -1881,33 +1881,45 @@ if (
         .ToListAsync();
 
     foreach (var musteri in musteriler)
+{
+    var musteriIsleriListe = musteriIsleri
+        .Where(x => x.MusteriId == musteri.Id)
+        .ToList();
+
+    var toplamIsGeliri = musteriIsleriListe.Sum(x => x.Gelir);
+
+    if (toplamIsGeliri <= 0)
+        continue;
+
+    var musteriIsIdleri = musteriIsleriListe
+        .Select(x => x.Id)
+        .ToList();
+
+    var toplamMasraf = await _db.MusteriMasraflar
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            musteriIsIdleri.Contains(x.MusteriIsId))
+        .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+    var musteriAdi = Temizle(musteri.AdSoyad);
+
+    var tahsilat = kasaHareketleri
+        .Where(x =>
+            x.Tip == HareketTipi.Giris &&
+            x.CariKart != null &&
+            (
+                Temizle(x.CariKart.Unvan) == musteriAdi ||
+                Temizle(x.CariKart.Ad) == musteriAdi
+            ))
+        .Sum(x => x.Tutar);
+
+    var borc = toplamIsGeliri - toplamMasraf - tahsilat;
+
+    if (borc > 0 && !borclular.Any(x => Temizle(x.Ad) == musteriAdi))
     {
-        var toplamIsGeliri = musteriIsleri
-            .Where(x => x.MusteriId == musteri.Id)
-            .Sum(x => x.Gelir);
-
-        if (toplamIsGeliri <= 0)
-            continue;
-
-        var musteriAdi = Temizle(musteri.AdSoyad);
-
-        var tahsilat = kasaHareketleri
-            .Where(x =>
-                x.Tip == HareketTipi.Giris &&
-                x.CariKart != null &&
-                (
-                    Temizle(x.CariKart.Unvan) == musteriAdi ||
-                    Temizle(x.CariKart.Ad) == musteriAdi
-                ))
-            .Sum(x => x.Tutar);
-
-            var borc = toplamIsGeliri - tahsilat;
-
-        if (borc > 0 && !borclular.Any(x => Temizle(x.Ad) == musteriAdi))
-        {
-            borclular.Add((musteri.AdSoyad ?? "Müşteri", borc));
-        }
+        borclular.Add((musteri.AdSoyad ?? "Müşteri", borc));
     }
+}
 
     if (!borclular.Any())
         return "Borçlu müşteri bulunamadı.";
