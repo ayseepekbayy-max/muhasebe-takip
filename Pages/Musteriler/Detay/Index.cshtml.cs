@@ -102,9 +102,55 @@ public class IndexModel : PageModel
             };
 
             _db.MusteriIsler.Add(yeniIs);
-            await _db.SaveChangesAsync();
 
-            return RedirectToPage(new { id });
+if (YeniIsGelir > 0)
+{
+    var musteriAdi = (Musteri.AdSoyad ?? "").Trim();
+
+    CariKart? cariKart = null;
+
+    if (!string.IsNullOrWhiteSpace(musteriAdi))
+    {
+        cariKart = await _db.CariKartlar
+            .FirstOrDefaultAsync(x =>
+                x.FirmaId == firmaId.Value &&
+                x.Tip == CariTip.Alici &&
+                (
+                    x.Unvan == musteriAdi ||
+                    x.Ad == musteriAdi
+                ));
+
+        if (cariKart == null)
+        {
+            cariKart = new CariKart
+            {
+                FirmaId = firmaId.Value,
+                Tip = CariTip.Alici,
+                Unvan = musteriAdi,
+                Ad = musteriAdi,
+                OlusturmaTarihi = DateTime.UtcNow
+            };
+
+            _db.CariKartlar.Add(cariKart);
+        }
+    }
+
+    var kasaHareketi = new KasaHareket
+    {
+        FirmaId = firmaId.Value,
+        Tarih = kayitTarihi,
+        Tip = HareketTipi.Giris,
+        Tutar = YeniIsGelir,
+        Aciklama = $"Müşteri tahsilatı - {musteriAdi} - {YeniIsAdi}",
+        CariKart = cariKart
+    };
+
+    _db.KasaHareketleri.Add(kasaHareketi);
+}
+
+await _db.SaveChangesAsync();
+
+return RedirectToPage(new { id });
         }
         catch (Exception ex)
         {
