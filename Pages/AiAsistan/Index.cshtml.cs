@@ -1815,28 +1815,26 @@ if (
         return (value ?? "").Trim().ToLowerInvariant();
     }
 
-    var alicilar = await _db.CariKartlar
-        .Where(x =>
-            x.FirmaId == firmaId &&
-            x.Tip == CariTip.Alici)
-        .OrderBy(x => x.Unvan)
-        .ToListAsync();
-
-    if (!alicilar.Any())
-        return "Alıcı cari kart bulunamadı.";
-
     var musteriIsleri = await _db.MusteriIsler
         .Include(x => x.Musteri)
         .Where(x => x.FirmaId == firmaId)
         .ToListAsync();
 
     var kasaHareketleri = await _db.KasaHareketleri
+        .Include(x => x.CariKart)
         .Where(x =>
             x.FirmaId == firmaId &&
             x.CariKartId != null)
         .ToListAsync();
 
     var borclular = new List<(string Ad, decimal Borc)>();
+
+    var alicilar = await _db.CariKartlar
+        .Where(x =>
+            x.FirmaId == firmaId &&
+            x.Tip == CariTip.Alici)
+        .OrderBy(x => x.Unvan)
+        .ToListAsync();
 
     foreach (var cari in alicilar)
     {
@@ -1874,6 +1872,40 @@ if (
                 : cari.Ad;
 
             borclular.Add((ad, borc));
+        }
+    }
+
+    var musteriler = await _db.Musteriler
+        .Where(x => x.FirmaId == firmaId)
+        .OrderBy(x => x.AdSoyad)
+        .ToListAsync();
+
+    foreach (var musteri in musteriler)
+    {
+        var toplamIsGeliri = musteriIsleri
+            .Where(x => x.MusteriId == musteri.Id)
+            .Sum(x => x.Gelir);
+
+        if (toplamIsGeliri <= 0)
+            continue;
+
+        var musteriAdi = Temizle(musteri.AdSoyad);
+
+        var tahsilat = kasaHareketleri
+            .Where(x =>
+                x.Tip == HareketTipi.Giris &&
+                x.CariKart != null &&
+                (
+                    Temizle(x.CariKart.Unvan) == musteriAdi ||
+                    Temizle(x.CariKart.Ad) == musteriAdi
+                ))
+            .Sum(x => x.Tutar);
+
+        var borc = toplamIsGeliri - tahsilat;
+
+        if (borc > 0 && !borclular.Any(x => Temizle(x.Ad) == musteriAdi))
+        {
+            borclular.Add((musteri.AdSoyad, borc));
         }
     }
 
