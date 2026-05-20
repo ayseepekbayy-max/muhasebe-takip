@@ -321,7 +321,9 @@
             </div>
         </div>
 
-        <form class="firmova-mini-form" onsubmit="firmovaMiniSor(event)">
+        <form class="firmova-mini-form" id="firmovaMiniForm" onsubmit="firmovaMiniSor(event)">
+        @Html.AntiForgeryToken()
+
             <input id="firmovaMiniInput"
                    type="text"
                    placeholder="Örn: kasa bakiyesi?"
@@ -545,46 +547,51 @@
     }
 
     async function firmovaMiniSor(e) {
-        e.preventDefault();
+    e.preventDefault();
 
-        const input = document.getElementById("firmovaMiniInput");
-        const durum = document.getElementById("firmovaMiniDurum");
+    const form = document.getElementById("firmovaMiniForm");
+    const input = document.getElementById("firmovaMiniInput");
+    const durum = document.getElementById("firmovaMiniDurum");
 
-        if (!input || !input.value.trim()) return;
+    if (!form || !input || !input.value.trim()) return;
 
-        const soru = input.value.trim();
-        input.value = "";
+    const soru = input.value.trim();
+    input.value = "";
 
-        firmovaMiniMesajEkle("user", soru);
+    firmovaMiniMesajEkle("user", soru);
+
+    if (durum) {
+        durum.innerText = "Düşünüyor...";
+    }
+
+    try {
+        const fd = new FormData(form);
+        fd.set("Soru", soru);
+
+        const response = await fetch("/AiAsistan?handler=Ajax", {
+            method: "POST",
+            body: fd
+        });
+
+        if (!response.ok) {
+            throw new Error("Sunucu cevap vermedi.");
+        }
+
+        const data = await response.json();
+        const cevap = data.cevap || "Cevap alınamadı.";
+
+        firmovaMiniMesajEkle("bot", cevap);
 
         if (durum) {
-            durum.innerText = "Düşünüyor...";
-        }
-
-        try {
-            const fd = new FormData();
-            fd.set("Soru", soru);
-
-            const response = await fetch("/AiAsistan?handler=Ajax", {
-                method: "POST",
-                body: fd
-            });
-
-            const data = await response.json();
-            const cevap = data.cevap || "Cevap alınamadı.";
-
-            firmovaMiniMesajEkle("bot", cevap);
-
-            if (durum) {
-                durum.innerText = "Hazır";
-            }
-        }
-        catch {
-            firmovaMiniMesajEkle("bot", "Bağlantı hatası oluştu.");
-
-            if (durum) {
-                durum.innerText = "Hata";
-            }
+            durum.innerText = "Hazır";
         }
     }
+    catch {
+        firmovaMiniMesajEkle("bot", "Bağlantı hatası oluştu.");
+
+        if (durum) {
+            durum.innerText = "Hata";
+        }
+    }
+}
 </script>
