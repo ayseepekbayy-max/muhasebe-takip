@@ -298,3 +298,293 @@
 </div>
 
 </div>
+<!-- FirmovaAI Mini Baloncuk -->
+<div class="firmova-float" id="firmovaFloat">
+    <button type="button" class="firmova-float-btn" onclick="firmovaToggle()">
+        <span class="firmova-pulse"></span>
+        <strong>AI</strong>
+    </button>
+
+    <div class="firmova-mini-panel" id="firmovaPanel">
+        <div class="firmova-mini-header">
+            <div>
+                <strong>FirmovaAI</strong>
+                <small id="firmovaMiniDurum">Hazır</small>
+            </div>
+
+            <button type="button" onclick="firmovaToggle()">×</button>
+        </div>
+
+        <div class="firmova-mini-chat" id="firmovaMiniChat">
+            <div class="firmova-mini-msg bot">
+                Merhaba, nasıl yardımcı olayım?
+            </div>
+        </div>
+
+        <form class="firmova-mini-form" onsubmit="firmovaMiniSor(event)">
+            <input id="firmovaMiniInput"
+                   type="text"
+                   placeholder="Örn: kasa bakiyesi?"
+                   autocomplete="off" />
+
+            <button type="submit">Sor</button>
+        </form>
+
+        <a class="firmova-full-link" href="/AiAsistan">
+            Tam ekran AI Asistanı aç
+        </a>
+    </div>
+</div>
+
+<style>
+    .firmova-float {
+        position: fixed;
+        right: 22px;
+        bottom: 22px;
+        z-index: 9999;
+        font-family: "Segoe UI", Tahoma, sans-serif;
+    }
+
+    .firmova-float-btn {
+        width: 64px;
+        height: 64px;
+        border: none;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4f46e5, #312e81);
+        color: white;
+        box-shadow: 0 14px 35px rgba(49, 46, 129, 0.35);
+        cursor: pointer;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .firmova-float-btn strong {
+        font-size: 18px;
+        position: relative;
+        z-index: 2;
+    }
+
+    .firmova-pulse {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        animation: firmovaPulse 1.6s infinite;
+        background: rgba(99, 102, 241, 0.45);
+    }
+
+    .firmova-mini-panel {
+        position: absolute;
+        right: 0;
+        bottom: 78px;
+        width: 330px;
+        max-width: calc(100vw - 28px);
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.22);
+        overflow: hidden;
+        display: none;
+    }
+
+    .firmova-mini-panel.open {
+        display: block;
+    }
+
+    .firmova-mini-header {
+        background: linear-gradient(135deg, #312e81, #6366f1);
+        color: white;
+        padding: 14px 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .firmova-mini-header small {
+        display: block;
+        font-size: 12px;
+        opacity: 0.85;
+        margin-top: 2px;
+    }
+
+    .firmova-mini-header button {
+        border: none;
+        background: rgba(255,255,255,0.16);
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        font-size: 20px;
+        cursor: pointer;
+        line-height: 1;
+    }
+
+    .firmova-mini-chat {
+        height: 260px;
+        overflow-y: auto;
+        padding: 14px;
+        background: #f8fafc;
+    }
+
+    .firmova-mini-msg {
+        max-width: 85%;
+        padding: 10px 12px;
+        border-radius: 14px;
+        margin-bottom: 10px;
+        font-size: 14px;
+        line-height: 1.35;
+        white-space: pre-line;
+    }
+
+    .firmova-mini-msg.bot {
+        background: white;
+        border: 1px solid #e2e8f0;
+        color: #0f172a;
+        border-bottom-left-radius: 5px;
+    }
+
+    .firmova-mini-msg.user {
+        margin-left: auto;
+        background: #4f46e5;
+        color: white;
+        border-bottom-right-radius: 5px;
+    }
+
+    .firmova-mini-form {
+        display: flex;
+        gap: 8px;
+        padding: 12px;
+        border-top: 1px solid #e5e7eb;
+        background: white;
+    }
+
+    .firmova-mini-form input {
+        flex: 1;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 10px 11px;
+        outline: none;
+        font-size: 14px;
+    }
+
+    .firmova-mini-form button {
+        border: none;
+        border-radius: 12px;
+        padding: 0 14px;
+        background: #4f46e5;
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .firmova-full-link {
+        display: block;
+        padding: 10px 12px 13px;
+        text-align: center;
+        font-size: 13px;
+        color: #4f46e5;
+        text-decoration: none;
+        font-weight: 700;
+    }
+
+    @@keyframes firmovaPulse {
+        0% {
+            transform: scale(1);
+            opacity: 0.55;
+        }
+
+        70% {
+            transform: scale(1.35);
+            opacity: 0;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 0;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .firmova-float {
+            right: 14px;
+            bottom: 14px;
+        }
+
+        .firmova-float-btn {
+            width: 58px;
+            height: 58px;
+        }
+
+        .firmova-mini-panel {
+            width: calc(100vw - 28px);
+            bottom: 72px;
+        }
+    }
+</style>
+
+<script>
+    function firmovaToggle() {
+        const panel = document.getElementById("firmovaPanel");
+
+        if (panel) {
+            panel.classList.toggle("open");
+        }
+    }
+
+    function firmovaMiniMesajEkle(tip, metin) {
+        const chat = document.getElementById("firmovaMiniChat");
+        if (!chat) return;
+
+        const div = document.createElement("div");
+        div.className = "firmova-mini-msg " + tip;
+        div.innerText = metin;
+
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function firmovaMiniSor(e) {
+        e.preventDefault();
+
+        const input = document.getElementById("firmovaMiniInput");
+        const durum = document.getElementById("firmovaMiniDurum");
+
+        if (!input || !input.value.trim()) return;
+
+        const soru = input.value.trim();
+        input.value = "";
+
+        firmovaMiniMesajEkle("user", soru);
+
+        if (durum) {
+            durum.innerText = "Düşünüyor...";
+        }
+
+        try {
+            const fd = new FormData();
+            fd.set("Soru", soru);
+
+            const response = await fetch("/AiAsistan?handler=Ajax", {
+                method: "POST",
+                body: fd
+            });
+
+            const data = await response.json();
+            const cevap = data.cevap || "Cevap alınamadı.";
+
+            firmovaMiniMesajEkle("bot", cevap);
+
+            if (durum) {
+                durum.innerText = "Hazır";
+            }
+        }
+        catch {
+            firmovaMiniMesajEkle("bot", "Bağlantı hatası oluştu.");
+
+            if (durum) {
+                durum.innerText = "Hata";
+            }
+        }
+    }
+</script>
