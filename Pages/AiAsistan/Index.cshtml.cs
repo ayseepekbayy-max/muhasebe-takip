@@ -185,6 +185,48 @@ public class IndexModel : PageModel
         {
             _memory.SonCalisaniKaydet(bulunanCalisan.AdSoyad);
         }
+        
+// ÇALIŞAN LİSTESİ
+
+if (
+    (
+        lower.Contains("çalışan") ||
+        lower.Contains("calisan") ||
+        lower.Contains("personel")
+    ) &&
+    (
+        lower.Contains("listele") ||
+        lower.Contains("listesi") ||
+        lower.Contains("liste") ||
+        lower.Contains("göster") ||
+        lower.Contains("goster")
+    )
+)
+{
+    var liste = await _db.Calisanlar
+        .Where(x => x.FirmaId == firmaId)
+        .OrderBy(x => x.AdSoyad)
+        .ToListAsync();
+
+    if (!liste.Any())
+        return "Çalışan bulunamadı.";
+
+    SonGenelDetayKaydet("Calisanlar", ayBaslangic);
+
+    var text = "Çalışan listesi:\n\n";
+
+    foreach (var item in liste)
+    {
+        text += $"- {item.AdSoyad}";
+
+        if (item.Maas > 0)
+            text += $" | Maaş: {item.Maas:N2} TL";
+
+        text += "\n";
+    }
+
+    return text;
+}
 
         // DETAY VER
 
