@@ -5,6 +5,7 @@ using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using ClosedXML.Excel;
 using System.IO;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace MuhasebeTakip2.App.Pages.CariKartlar;
 
@@ -17,7 +18,8 @@ public class IndexModel : PageModel
     public List<CariKart> Saticilar { get; set; } = new();
 
     [BindProperty]
-    public CariKart YeniCari { get; set; } = new();
+    [ValidateNever]
+public CariKart YeniCari { get; set; } = new();
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -89,22 +91,52 @@ public class IndexModel : PageModel
     }
 
     public async Task<IActionResult> OnPostSilAsync(int id)
+{
+    var firmaId = HttpContext.Session.GetInt32("FirmaId");
+    if (firmaId == null)
+        return RedirectToPage("/Login");
+
+    try
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
-
         var cari = await _db.CariKartlar
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
+            .FirstOrDefaultAsync(x =>
+                x.Id == id &&
+                x.FirmaId == firmaId.Value);
 
-        if (cari != null)
+        if (cari == null)
         {
-            _db.CariKartlar.Remove(cari);
-            await _db.SaveChangesAsync();
+            TempData["Hata"] = "Cari kart bulunamadı.";
+            return RedirectToPage();
         }
 
+        var kullaniliyorMu = await _db.KasaHareketleri
+            .AnyAsync(x =>
+                x.CariKartId == id &&
+                x.FirmaId == firmaId.Value);
+
+        if (kullaniliyorMu)
+        {
+            TempData["Hata"] = "Bu cari kart kasa hareketlerinde kullanıldığı için silinemez.";
+            return RedirectToPage();
+        }
+
+        _db.CariKartlar.Remove(cari);
+        await _db.SaveChangesAsync();
+
+        TempData["Basari"] = "Cari kart silindi.";
         return RedirectToPage();
     }
+    catch (DbUpdateException)
+    {
+        TempData["Hata"] = "Bu cari kart başka kayıtlarda kullanıldığı için silinemez.";
+        return RedirectToPage();
+    }
+    catch (Exception ex)
+    {
+        TempData["Hata"] = $"Silme sırasında hata oluştu: {ex.Message}";
+        return RedirectToPage();
+    }
+}
 
     public async Task<IActionResult> OnPostDisaAktarAsync()
     {

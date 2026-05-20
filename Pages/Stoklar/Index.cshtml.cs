@@ -5,6 +5,7 @@ using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using ClosedXML.Excel;
 using System.IO;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace MuhasebeTakip2.App.Pages.Stoklar;
 
@@ -17,7 +18,8 @@ public class IndexModel : PageModel
     public Dictionary<int, decimal> Stoklar { get; set; } = new();
 
     [BindProperty]
-    public StokUrun Yeni { get; set; } = new() { Birim = "Adet" };
+    [ValidateNever]
+public StokUrun Yeni { get; set; } = new() { Birim = "Adet" };
 
     public string Hata { get; set; } = "";
     public string Mesaj { get; set; } = "";
