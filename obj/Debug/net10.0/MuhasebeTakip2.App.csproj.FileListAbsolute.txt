@@ -222,4 +222,4 @@ C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\refin
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\MuhasebeTakip2.App.pdb
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\MuhasebeTakip2.App.genruntimeconfig.cache
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\ref\MuhasebeTakip2.App.dll
-C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\compressed\ofbx58ey1x-{0}-ic792tu0s7-ic792tu0s7.gz
+C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\compressed\ofbx58ey1x-{0}-fnipvkshe2-fnipvkshe2.gz

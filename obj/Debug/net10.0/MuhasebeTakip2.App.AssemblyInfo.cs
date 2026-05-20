@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MuhasebeTakip2.App")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1072d8ffb2390e79c42c27ebfe3dad77adb32de3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+965805d620a849b2f6cdced197c60d061c615aec")]
 [assembly: System.Reflection.AssemblyProductAttribute("MuhasebeTakip2.App")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MuhasebeTakip2.App")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

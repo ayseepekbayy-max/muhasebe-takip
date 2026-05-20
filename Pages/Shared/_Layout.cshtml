@@ -26,7 +26,7 @@
     @if (!loginSayfasiMi)
     {
         <header>
-            <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark app-navbar border-bottom box-shadow mb-4">
+           <nav class="navbar navbar-expand-lg navbar-toggleable-lg navbar-dark app-navbar border-bottom box-shadow mb-4">
                 <div class="container-fluid px-3">
                     <a class="navbar-brand app-brand" asp-area="" asp-page="/Index">
                         @(string.IsNullOrWhiteSpace(Context.Session.GetString("FirmaAdi"))
@@ -39,9 +39,8 @@
                         <span class="navbar-toggler-icon"></span>
                     </button>
 
-                    <div class="navbar-collapse collapse d-sm-flex align-items-center">
-                        <ul class="navbar-nav app-nav-list d-flex align-items-center gap-2">
-                            @if (Context.Session.GetString("MenuCariKartlar") != "0")
+                        <div class="navbar-collapse collapse d-lg-flex align-items-lg-center">                     
+                            <ul class="navbar-nav app-nav-list d-lg-flex align-items-lg-center gap-2">                            @if (Context.Session.GetString("MenuCariKartlar") != "0")
                             {
                                 <li class="nav-item">
                                     <a class="nav-link" href="/CariKartlar">Cari Kartlar</a>
@@ -109,7 +108,7 @@
                             }
                         </ul>
 
-                        <div class="d-flex align-items-center gap-2 ms-auto app-top-actions">
+                       <div class="d-lg-flex align-items-lg-center gap-2 ms-lg-auto app-top-actions">
                             @if (Context.Session.GetString("FirmaAdi") != null)
                             {
                                 <span class="app-firma-badge">@Context.Session.GetString("FirmaAdi")</span>
