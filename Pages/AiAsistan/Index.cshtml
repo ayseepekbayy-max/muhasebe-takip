@@ -548,41 +548,45 @@ function novaDinlemeyiBaslat(){
 
         novaRecognition.onresult = function(e){
 
-            if(isSpeaking || soruGonderiliyor) return;
+    if(isSpeaking || soruGonderiliyor) return;
 
-            const sonIndex = e.results.length - 1;
+    const sonIndex = e.results.length - 1;
 
-            let metin =
-                e.results[sonIndex][0]
-                .transcript
-                .toLowerCase()
-                .trim();
+    let metin =
+        e.results[sonIndex][0]
+        .transcript
+        .toLowerCase()
+        .trim();
 
-            const novaDendi =
-                metin.includes("hey nova") ||
-                metin.includes("ey nova") ||
-                metin === "nova";
+    const novaDendi =
+        metin.includes("hey nova") ||
+        metin.includes("ey nova") ||
+        metin.startsWith("nova");
 
-            if(!novaAktif && novaDendi){
+    if(novaDendi){
 
-                novaAktif = true;
+        novaAktif = true;
 
-                novaDurumYaz("Nova aktif.");
+        let soruMetni = metin
+            .replace("hey nova", "")
+            .replace("ey nova", "")
+            .replace(/^nova/, "")
+            .trim();
 
-                novaCevapVer("Dinliyorum");
+        if(soruMetni.length > 3){
+            soruyuGonder(soruMetni);
+            return;
+        }
 
-                return;
-            }
+        novaDurumYaz("Nova aktif. Dinliyorum...");
+        novaCevapVer("Dinliyorum");
+        return;
+    }
 
-            if(
-                novaAktif &&
-                metin.length > 3 &&
-                !metin.includes("hey nova")
-            ){
-
-                soruyuGonder(metin);
-            }
-        };
+    if(novaAktif && metin.length > 3){
+        soruyuGonder(metin);
+    }
+};
 
         novaRecognition.onerror = function(){
 
@@ -681,7 +685,7 @@ async function soruyuGonder(soru){
     novaDinlemeyiDurdur();
 
     mesajEkle("user", soru);
-    
+
     novaGorselDurum("thinking", "Düşünüyor", "Cevap hazırlanıyor");
 
     try{
