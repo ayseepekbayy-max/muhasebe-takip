@@ -1,0 +1,219 @@
+@page
+@model MuhasebeTakip2.App.Pages.Maliyet.UretimModel
+
+<h1>Üretim Maliyeti</h1>
+
+<p>
+    <a class="btn btn-outline-dark btn-sm" href="/Maliyet">← Maliyet</a>
+</p>
+
+@if (!string.IsNullOrWhiteSpace(Model.Hata))
+{
+    <div style="color:#b42318; border:1px solid #fecaca; background:#fef2f2; padding:10px 12px; border-radius:10px; margin-bottom:12px;">
+        @Model.Hata
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Mesaj))
+{
+    <div style="color:#166534; border:1px solid #bbf7d0; background:#f0fdf4; padding:10px 12px; border-radius:10px; margin-bottom:12px;">
+        @Model.Mesaj
+    </div>
+}
+
+<form method="post">
+
+    <div style="border:1px solid #444; border-radius:10px; padding:14px; margin-bottom:14px;">
+        <h3>1. Üretim Bilgileri</h3>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+            <div>
+                <label><b>Üretilecek Ürün / İş Adı</b></label><br />
+                <input asp-for="UretimAdi" style="width:100%; padding:8px;" />
+            </div>
+
+            <div>
+                <label><b>Üretim Adedi</b></label><br />
+                <input asp-for="UretimAdedi" type="number" step="0.01" style="width:100%; padding:8px;" />
+            </div>
+        </div>
+    </div>
+
+    <div style="border:1px solid #444; border-radius:10px; padding:14px; margin-bottom:14px;">
+        <h3>2. Plaka Maliyeti</h3>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px;">
+            <div>
+                <label><b>Plaka En (cm)</b></label><br />
+                <input asp-for="PlakaEnCm" type="number" step="0.01" style="width:100%; padding:8px;" />
+            </div>
+
+            <div>
+                <label><b>Plaka Boy (cm)</b></label><br />
+                <input asp-for="PlakaBoyCm" type="number" step="0.01" style="width:100%; padding:8px;" />
+            </div>
+
+            <div>
+                <label><b>Plaka Fiyatı</b></label><br />
+                <input asp-for="PlakaFiyati" type="number" step="0.01" style="width:100%; padding:8px;" />
+            </div>
+
+            <div>
+                <label><b>Parça En (cm)</b></label><br />
+                <input asp-for="ParcaEnCm" type="number" step="0.01" style="width:100%; padding:8px;" />
+            </div>
+
+            <div>
+                <label><b>Parça Boy (cm)</b></label><br />
+                <input asp-for="ParcaBoyCm" type="number" step="0.01" style="width:100%; padding:8px;" />
+            </div>
+
+            <div>
+                <label><b>Parça Adedi</b></label><br />
+                <input asp-for="ParcaAdedi" type="number" step="0.01" style="width:100%; padding:8px;" />
+            </div>
+        </div>
+    </div>
+
+    <div style="border:1px solid #444; border-radius:10px; padding:14px; margin-bottom:14px;">
+        <h3>3. Bantlama Maliyeti</h3>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px;">
+            <div>
+                <label><b>Parça En (cm)</b></label><br />
+                <input asp-for="BantParcaEnCm" type="number" step="0.01" style="width:100%; padding:8px;" />
+            </div>
+
+            <div>
+                <label><b>Parça Boy (cm)</b></label><br />
+                <input asp-for="BantParcaBoyCm" type="number" step="0.01" style="width:100%; padding:8px;" />
+            </div>
+
+            <div>
+                <label><b>Parça Adedi</b></label><br />
+                <input asp-for="BantParcaAdedi" type="number" step="0.01" style="width:100%; padding:8px;" />
+            </div>
+
+            <div>
+                <label><b>Bant Metre Fiyatı</b></label><br />
+                <input asp-for="BantMetreFiyati" type="number" step="0.01" style="width:100%; padding:8px;" />
+            </div>
+        </div>
+
+        <div style="display:flex; gap:18px; flex-wrap:wrap; margin-top:12px;">
+            <label>
+                <input asp-for="BantUstAlt" type="checkbox" />
+                Üst + Alt kenar bantlansın
+            </label>
+
+            <label>
+                <input asp-for="BantSagSol" type="checkbox" />
+                Sağ + Sol kenar bantlansın
+            </label>
+        </div>
+    </div>
+
+    <div style="border:1px solid #444; border-radius:10px; padding:14px; margin-bottom:14px;">
+        <h3>4. Ek Malzemeler</h3>
+
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr>
+                    <th style="text-align:left; border-bottom:1px solid #555; padding:8px;">Stok Ürünü</th>
+                    <th style="text-align:left; border-bottom:1px solid #555; padding:8px;">1 Ürün İçin Kullanım</th>
+                    <th style="text-align:left; border-bottom:1px solid #555; padding:8px;">Birim Maliyet</th>
+                    <th style="text-align:left; border-bottom:1px solid #555; padding:8px;">Toplam Kullanım</th>
+                    <th style="text-align:left; border-bottom:1px solid #555; padding:8px;">Toplam Maliyet</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Model.Malzemeler.Count; i++)
+                {
+                    <tr>
+                        <td style="padding:8px; border-bottom:1px solid #ddd;">
+                            <select asp-for="Malzemeler[i].StokUrunId" style="width:100%; padding:8px;">
+                                <option value="0">-- Ürün Seçin --</option>
+                                @foreach (var item in Model.StokUrunleri)
+                                {
+                                    <option value="@item.Id">@item.Ad (@item.Birim)</option>
+                                }
+                            </select>
+                        </td>
+
+                        <td style="padding:8px; border-bottom:1px solid #ddd;">
+                            <input asp-for="Malzemeler[i].BirParcaKullanimMiktari" type="number" step="0.01" style="width:100%; padding:8px;" />
+                        </td>
+
+                        <td style="padding:8px; border-bottom:1px solid #ddd;">
+                            <input asp-for="Malzemeler[i].BirimMaliyet" type="number" step="0.01" style="width:100%; padding:8px;" />
+                        </td>
+
+                        <td style="padding:8px; border-bottom:1px solid #ddd;">
+                            @Model.Malzemeler[i].ToplamKullanimMiktari.ToString("N2")
+                        </td>
+
+                        <td style="padding:8px; border-bottom:1px solid #ddd;">
+                            @Model.Malzemeler[i].ToplamMaliyet.ToString("N2")
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div style="margin-top:12px;">
+            <label>
+                <input asp-for="StoktanDus" type="checkbox" />
+                Hesaplanan malzemeleri stoktan düş
+            </label>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+        <button type="submit" asp-page-handler="Hesapla" class="btn btn-dark btn-sm">
+            Maliyeti Hesapla
+        </button>
+
+        <button type="submit" asp-page-handler="StokDus" class="btn btn-outline-danger btn-sm">
+            Hesapla ve Stoktan Düş
+        </button>
+    </div>
+
+</form>
+
+<div style="border:1px solid #444; border-radius:10px; padding:14px; margin-bottom:20px;">
+    <h3>5. Sonuç</h3>
+
+    @if (!Model.HesaplandiMi)
+    {
+        <div>Bilgileri girip maliyeti hesaplayın.</div>
+    }
+    else
+    {
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:12px;">
+            <div style="border:1px solid #ddd; border-radius:8px; padding:10px;">
+                <b>Plaka Maliyeti</b>
+                <div style="font-size:20px;">@Model.PlakaMaliyeti.ToString("N2") TL</div>
+            </div>
+
+            <div style="border:1px solid #ddd; border-radius:8px; padding:10px;">
+                <b>Bantlama Maliyeti</b>
+                <div style="font-size:20px;">@Model.BantlamaMaliyeti.ToString("N2") TL</div>
+            </div>
+
+            <div style="border:1px solid #ddd; border-radius:8px; padding:10px;">
+                <b>Malzeme Maliyeti</b>
+                <div style="font-size:20px;">@Model.MalzemeMaliyeti.ToString("N2") TL</div>
+            </div>
+
+            <div style="border:1px solid #ddd; border-radius:8px; padding:10px;">
+                <b>Toplam Maliyet</b>
+                <div style="font-size:20px;">@Model.ToplamMaliyet.ToString("N2") TL</div>
+            </div>
+
+            <div style="border:1px solid #ddd; border-radius:8px; padding:10px;">
+                <b>Birim Maliyet</b>
+                <div style="font-size:20px;">@Model.BirimMaliyet.ToString("N2") TL</div>
+            </div>
+        </div>
+    }
+</div>
