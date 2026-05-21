@@ -23,6 +23,9 @@ public class RegisterModel : PageModel
     public string KullaniciAdi { get; set; } = "";
 
     [BindProperty]
+    public string Email { get; set; } = "";
+
+    [BindProperty]
     public string Sifre { get; set; } = "";
 
     public string Hata { get; set; } = "";
@@ -37,6 +40,7 @@ public class RegisterModel : PageModel
     {
         FirmaAdi = (FirmaAdi ?? "").Trim();
         KullaniciAdi = (KullaniciAdi ?? "").Trim();
+        Email = (Email ?? "").Trim().ToLowerInvariant();
         Sifre = (Sifre ?? "").Trim();
 
         if (string.IsNullOrWhiteSpace(FirmaAdi))
@@ -51,6 +55,17 @@ public class RegisterModel : PageModel
             return Page();
         }
 
+        if (string.IsNullOrWhiteSpace(Email))
+        {
+            Hata = "Mail adresi boş olamaz.";
+            return Page();
+        }
+
+        if (!Email.Contains("@") || !Email.Contains("."))
+        {
+            Hata = "Geçerli bir mail adresi girin.";
+            return Page();
+        }
         if (string.IsNullOrWhiteSpace(Sifre))
         {
             Hata = "Şifre boş olamaz.";
@@ -63,10 +78,12 @@ public class RegisterModel : PageModel
             return Page();
         }
 
-        var kullaniciVarMi = await _db.Kullanicilar.AnyAsync(x => x.KullaniciAdi == KullaniciAdi);
+        var kullaniciVarMi = await _db.Kullanicilar.AnyAsync(x =>
+        x.KullaniciAdi == KullaniciAdi ||
+        x.Email == Email);
         if (kullaniciVarMi)
         {
-            Hata = "Bu kullanıcı adı zaten kullanılıyor.";
+            Hata = "Bu kullanıcı adı veya mail adresi zaten kullanılıyor.";
             return Page();
         }
 
@@ -93,6 +110,7 @@ public class RegisterModel : PageModel
             var kullanici = new Kullanici
             {
                 KullaniciAdi = KullaniciAdi,
+                Email = Email,
                 Sifre = PasswordHelper.Hash(Sifre),
                 FirmaId = firma.Id,
                 Rol = "Kullanici"

@@ -35,7 +35,9 @@ public class LoginModel : PageModel
 
         var kullanici = await _db.Kullanicilar
             .Include(x => x.Firma)
-            .FirstOrDefaultAsync(x => x.KullaniciAdi == KullaniciAdi);
+            .FirstOrDefaultAsync(x =>
+            x.KullaniciAdi == KullaniciAdi ||
+            x.Email == KullaniciAdi.ToLower());
 
         if (kullanici == null)
         {

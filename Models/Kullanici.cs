@@ -6,7 +6,13 @@ namespace MuhasebeTakip2.App.Models
 
         public string KullaniciAdi { get; set; } = "";
 
+        public string Email { get; set; } = "";
+
         public string Sifre { get; set; } = "";
+
+        public string? SifreSifirlamaKodu { get; set; }
+
+        public DateTime? SifreSifirlamaKodGecerlilik { get; set; }
 
         public int FirmaId { get; set; }
         public Firma? Firma { get; set; }

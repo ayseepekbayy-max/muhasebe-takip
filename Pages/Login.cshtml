@@ -42,6 +42,13 @@
             </div>
         </div>
 
+        @if (TempData["Mesaj"] != null)
+        {
+            <div style="color:#166534; border:1px solid #bbf7d0; background:#f0fdf4; padding:10px 12px; border-radius:10px; margin-bottom:16px;">
+                @TempData["Mesaj"]
+            </div>
+        }
+
         @if (!string.IsNullOrEmpty(Model.Hata))
         {
             <div style="color:#b42318; border:1px solid #fecaca; background:#fef2f2; padding:10px 12px; border-radius:10px; margin-bottom:16px;">
@@ -51,8 +58,7 @@
 
         <form method="post">
             <div style="margin-bottom:16px;">
-                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;">Kullanıcı Adı</label>
-                <input asp-for="KullaniciAdi" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:12px;" />
+            <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;">Kullanıcı Adı veya Mail</label>                <input asp-for="KullaniciAdi" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:12px;" />
             </div>
 
             <div style="margin-bottom:20px;">
@@ -77,9 +83,11 @@
                 </a>
             </div>
 
-            <div style="margin-top:14px; text-align:center; font-size:13px; color:#64748b;">
-                Hesabın yok mu?
-            </div>
+            <div style="margin-top:14px; text-align:center; font-size:13px;">
+        <a href="/SifremiUnuttum" style="color:#312e81; font-weight:700; text-decoration:none;">
+            Şifremi Unuttum
+        </a>
+</div>
         </form>
     </div>
 </div>

@@ -4,6 +4,7 @@ using MuhasebeTakip2.App.Models;
 using Microsoft.AspNetCore.Http;
 using MuhasebeTakip2.App.Helpers;
 using MuhasebeTakip2.App.Services.Ai;
+using MuhasebeTakip2.App.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,6 +43,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     }
 });
 
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("EmailSettings"));
+
+builder.Services.AddScoped<EmailService>();
 var app = builder.Build();
 
 // Veritabanını migration ile güncelle
@@ -202,10 +207,12 @@ app.Use(async (context, next) =>
         return;
     }
 
-    var izinliSayfalar =
+        var izinliSayfalar =
         path == "/" ||
         path.StartsWith("/login") ||
         path.StartsWith("/register") ||
+        path.StartsWith("/sifremiunuttum") ||
+        path.StartsWith("/sifresifirla") ||
         path.StartsWith("/error") ||
         path.StartsWith("/css") ||
         path.StartsWith("/js") ||
