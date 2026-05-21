@@ -198,27 +198,29 @@ public class UretimModel : PageModel
     }
 
     private decimal HesaplaBantlamaMaliyeti()
-    {
-        if (BantParcaEnCm <= 0 || BantParcaBoyCm <= 0 || BantMetreFiyati <= 0)
-            return 0;
+{
+    var en = ParcaEnCm;
+    var boy = ParcaBoyCm;
+    var adet = ParcaAdedi > 0 ? ParcaAdedi : UretimAdedi;
 
-        var adet = BantParcaAdedi > 0 ? BantParcaAdedi : UretimAdedi;
+    if (en <= 0 || boy <= 0 || adet <= 0 || BantMetreFiyati <= 0)
+        return 0;
 
-        decimal toplamCm = 0;
+    decimal toplamCm = 0;
 
-        if (BantUstAlt)
-            toplamCm += BantParcaEnCm * 2;
+    if (BantUstAlt)
+        toplamCm += en * 2;
 
-        if (BantSagSol)
-            toplamCm += BantParcaBoyCm * 2;
+    if (BantSagSol)
+        toplamCm += boy * 2;
 
-        if (!BantUstAlt && !BantSagSol)
-            toplamCm = (BantParcaEnCm + BantParcaBoyCm) * 2;
+    if (!BantUstAlt && !BantSagSol)
+        toplamCm = (en + boy) * 2;
 
-        var toplamMetre = toplamCm / 100m * adet;
+    var toplamMetre = toplamCm / 100m * adet;
 
-        return toplamMetre * BantMetreFiyati;
-    }
+    return toplamMetre * BantMetreFiyati;
+}
 
     private decimal HesaplaMalzemeMaliyeti()
     {
