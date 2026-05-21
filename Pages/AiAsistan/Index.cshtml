@@ -69,6 +69,13 @@
 
         <form method="post" class="input-area" id="soruFormu">
 
+        <div id="mobilNovaBaslat" class="mobil-nova-baslat" style="display:none;">
+    <button type="button" onclick="sesliSor()" class="mobil-nova-btn">
+        Nova’yı Başlat
+    </button>
+    <div>Mobilde sesli kullanım için bir kez başlatman gerekir.</div>
+</div>
+
             <textarea id="soruKutusu"
                       asp-for="Soru"
                       rows="2"
@@ -385,6 +392,29 @@
     50% {
         height: 18px;
     }
+}
+.mobil-nova-baslat {
+    margin-bottom: 14px;
+    padding: 14px;
+    border-radius: 16px;
+    background: #eef2ff;
+    color: #312e81;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.mobil-nova-btn {
+    width: 100%;
+    border: none;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #4f46e5, #312e81);
+    color: white;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
 }
 </style>
 
@@ -724,9 +754,15 @@ function sesliSor(){
 
     novaAktif = true;
 
-    novaDurumYaz("Nova aktif.");
+    const mobilBaslat = document.getElementById("mobilNovaBaslat");
 
-    novaDinlemeyiBaslat();
+    if(mobilBaslat){
+        mobilBaslat.style.display = "none";
+    }
+
+    novaDurumYaz("Nova aktif. Dinliyorum...");
+
+    novaCevapVer("Dinliyorum");
 }
 
 function cevabiOku(){
@@ -766,6 +802,17 @@ window.addEventListener("load", function(){
 
     novaDurumYaz("Nova hazır. 'Hey Nova' diyebilirsin.");
 
+   const mobilMi = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const mobilBaslat = document.getElementById("mobilNovaBaslat");
+
+if(mobilMi){
+    if(mobilBaslat){
+        mobilBaslat.style.display = "block";
+    }
+
+    novaDurumYaz("Mobilde başlamak için Nova’yı Başlat butonuna bas.");
+}
+else{
     setTimeout(() => {
 
         try{
@@ -774,6 +821,7 @@ window.addEventListener("load", function(){
         catch{}
 
     }, 1200);
+}
 });
 
 document.addEventListener("DOMContentLoaded", function(){
