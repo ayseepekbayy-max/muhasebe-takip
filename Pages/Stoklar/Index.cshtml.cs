@@ -18,21 +18,13 @@ public class IndexModel : PageModel
     public List<StokUrun> Liste { get; set; } = new();
     public Dictionary<int, decimal> Stoklar { get; set; } = new();
     public Dictionary<int, decimal> SonBirimFiyatlar { get; set; } = new();
-    public Dictionary<int, decimal> SonKoliFiyatlar { get; set; } = new();
+    public Dictionary<int, decimal> SonKdvOranlari { get; set; } = new();
+    public Dictionary<int, decimal> SonKdvDahilBirimFiyatlar { get; set; } = new();
     public Dictionary<int, decimal> StokDegerleri { get; set; } = new();
 
     [BindProperty]
     [ValidateNever]
     public StokUrun Yeni { get; set; } = new() { Birim = "Adet" };
-
-    [BindProperty]
-    public decimal Miktar { get; set; }
-
-    [BindProperty]
-    public decimal BirimFiyat { get; set; }
-
-    [BindProperty]
-    public decimal KoliFiyat { get; set; }
 
     public string Hata { get; set; } = "";
     public string Mesaj { get; set; } = "";
@@ -67,43 +59,12 @@ public class IndexModel : PageModel
         if (string.IsNullOrWhiteSpace(Yeni.Birim))
             Yeni.Birim = "Adet";
 
-        if (Miktar < 0)
-        {
-            Hata = "Miktar 0'dan küçük olamaz.";
-            await ListeyiYukleAsync(firmaId.Value);
-            return Page();
-        }
-
-        if (BirimFiyat < 0 || KoliFiyat < 0)
-        {
-            Hata = "Fiyat alanları 0'dan küçük olamaz.";
-            await ListeyiYukleAsync(firmaId.Value);
-            return Page();
-        }
-
         Yeni.FirmaId = firmaId.Value;
 
         _db.StokUrunler.Add(Yeni);
         await _db.SaveChangesAsync();
 
-        if (Miktar > 0)
-        {
-            _db.StokHareketleri.Add(new StokHareket
-            {
-                FirmaId = firmaId.Value,
-                StokUrunId = Yeni.Id,
-                Tarih = DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc),
-                Tip = StokHareketTipi.Giris,
-                Miktar = Miktar,
-                BirimFiyat = BirimFiyat,
-                KoliFiyat = KoliFiyat,
-                Aciklama = "İlk stok girişi"
-            });
-
-            await _db.SaveChangesAsync();
-        }
-
-        TempData["Basari"] = "Ürün eklendi.";
+        TempData["Basari"] = "Ürün kartı eklendi. Stok girişi için Detay sayfasını kullanabilirsiniz.";
         return RedirectToPage();
     }
 
@@ -155,11 +116,12 @@ public class IndexModel : PageModel
         ws.Cell(1, 2).Value = "Kod";
         ws.Cell(1, 3).Value = "Birim";
         ws.Cell(1, 4).Value = "Mevcut Stok";
-        ws.Cell(1, 5).Value = "Birim Fiyat";
-        ws.Cell(1, 6).Value = "Koli Fiyatı";
-        ws.Cell(1, 7).Value = "Stok Değeri";
+        ws.Cell(1, 5).Value = "Son Birim Fiyat";
+        ws.Cell(1, 6).Value = "Son KDV Oranı";
+        ws.Cell(1, 7).Value = "KDV Dahil Birim Fiyat";
+        ws.Cell(1, 8).Value = "Stok Değeri";
 
-        var header = ws.Range(1, 1, 1, 7);
+        var header = ws.Range(1, 1, 1, 8);
         header.Style.Font.Bold = true;
         header.Style.Fill.BackgroundColor = XLColor.LightGray;
         header.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
@@ -175,9 +137,10 @@ public class IndexModel : PageModel
             ws.Cell(row, 3).Value = s.Birim ?? "";
             ws.Cell(row, 4).Value = Stoklar.ContainsKey(s.Id) ? Stoklar[s.Id] : 0;
             ws.Cell(row, 5).Value = SonBirimFiyatlar.ContainsKey(s.Id) ? SonBirimFiyatlar[s.Id] : 0;
-            ws.Cell(row, 6).Value = SonKoliFiyatlar.ContainsKey(s.Id) ? SonKoliFiyatlar[s.Id] : 0;
-            ws.Cell(row, 7).Value = StokDegerleri.ContainsKey(s.Id) ? StokDegerleri[s.Id] : 0;
-            ws.Range(row, 4, row, 7).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(row, 6).Value = SonKdvOranlari.ContainsKey(s.Id) ? SonKdvOranlari[s.Id] : 0;
+            ws.Cell(row, 7).Value = SonKdvDahilBirimFiyatlar.ContainsKey(s.Id) ? SonKdvDahilBirimFiyatlar[s.Id] : 0;
+            ws.Cell(row, 8).Value = StokDegerleri.ContainsKey(s.Id) ? StokDegerleri[s.Id] : 0;
+            ws.Range(row, 4, row, 8).Style.NumberFormat.Format = "#,##0.00";
             row++;
         }
 
@@ -185,7 +148,7 @@ public class IndexModel : PageModel
 
         if (row > 2)
         {
-            var range = ws.Range(1, 1, row - 1, 7);
+            var range = ws.Range(1, 1, row - 1, 8);
             range.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             range.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
         }
@@ -227,7 +190,8 @@ public class IndexModel : PageModel
 
         Stoklar = Liste.ToDictionary(x => x.Id, _ => 0m);
         SonBirimFiyatlar = Liste.ToDictionary(x => x.Id, _ => 0m);
-        SonKoliFiyatlar = Liste.ToDictionary(x => x.Id, _ => 0m);
+        SonKdvOranlari = Liste.ToDictionary(x => x.Id, _ => 0m);
+        SonKdvDahilBirimFiyatlar = Liste.ToDictionary(x => x.Id, _ => 0m);
         StokDegerleri = Liste.ToDictionary(x => x.Id, _ => 0m);
 
         foreach (var h in hareketler)
@@ -246,8 +210,9 @@ public class IndexModel : PageModel
         {
             var son = grup.First();
             SonBirimFiyatlar[son.StokUrunId] = son.BirimFiyat;
-            SonKoliFiyatlar[son.StokUrunId] = son.KoliFiyat;
-            StokDegerleri[son.StokUrunId] = Stoklar[son.StokUrunId] * son.BirimFiyat;
+            SonKdvOranlari[son.StokUrunId] = son.KdvOrani;
+            SonKdvDahilBirimFiyatlar[son.StokUrunId] = son.KdvDahilBirimFiyat;
+            StokDegerleri[son.StokUrunId] = Stoklar[son.StokUrunId] * son.KdvDahilBirimFiyat;
         }
     }
 }

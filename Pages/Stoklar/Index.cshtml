@@ -40,8 +40,8 @@
   </div>
 }
 
-<div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:1080px;">
-  <h3>Yeni Ürün Ekle</h3>
+<div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:900px;">
+  <h3>Yeni Ürün Kartı</h3>
 
   <form method="post" asp-page-handler="Ekle">
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -55,29 +55,14 @@
         <input asp-for="Yeni.Kod" style="width:100%; padding:8px;" />
       </div>
 
-      <div style="min-width:150px;">
+      <div style="min-width:160px;">
         <label><b>Birim</b></label><br />
         <input asp-for="Yeni.Birim" style="width:100%; padding:8px;" />
-      </div>
-
-      <div style="min-width:150px;">
-        <label><b>Adet / Miktar</b></label><br />
-        <input asp-for="Miktar" type="number" step="0.01" style="width:100%; padding:8px;" />
-      </div>
-
-      <div style="min-width:150px;">
-        <label><b>Birim Fiyat</b></label><br />
-        <input asp-for="BirimFiyat" type="number" step="0.01" style="width:100%; padding:8px;" />
-      </div>
-
-      <div style="min-width:150px;">
-        <label><b>Koli Fiyatı</b></label><br />
-        <input asp-for="KoliFiyat" type="number" step="0.01" style="width:100%; padding:8px;" />
       </div>
     </div>
 
     <div style="margin-top:10px;">
-      <button type="submit" class="btn btn-dark btn-sm">Ekle</button>
+      <button type="submit" class="btn btn-dark btn-sm">Ürün Kartı Ekle</button>
       <a class="btn btn-outline-dark btn-sm" href="/">Kasa</a>
     </div>
   </form>
@@ -92,8 +77,9 @@
       <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Kod</th>
       <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Birim</th>
       <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Stok</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Birim Fiyat</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Koli Fiyatı</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Son Alış</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">KDV</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">KDV Dahil</th>
       <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Stok Değeri</th>
       <th style="border-bottom:1px solid #555; padding:8px; width:240px;">İşlem</th>
     </tr>
@@ -101,7 +87,7 @@
   <tbody>
     @if (Model.Liste.Count == 0)
     {
-      <tr><td colspan="8" style="padding:8px;">Henüz ürün yok.</td></tr>
+      <tr><td colspan="9" style="padding:8px;">Henüz ürün yok.</td></tr>
     }
     else
     {
@@ -111,9 +97,10 @@
           <td style="border-bottom:1px solid #333; padding:8px;">@u.Ad</td>
           <td style="border-bottom:1px solid #333; padding:8px;">@u.Kod</td>
           <td style="border-bottom:1px solid #333; padding:8px;">@u.Birim</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@Model.Stoklar[u.Id]</td>
+          <td style="border-bottom:1px solid #333; padding:8px;">@Model.Stoklar[u.Id].ToString("N2")</td>
           <td style="border-bottom:1px solid #333; padding:8px;">@Model.SonBirimFiyatlar[u.Id].ToString("N2")</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@Model.SonKoliFiyatlar[u.Id].ToString("N2")</td>
+          <td style="border-bottom:1px solid #333; padding:8px;">%@Model.SonKdvOranlari[u.Id].ToString("N2")</td>
+          <td style="border-bottom:1px solid #333; padding:8px;">@Model.SonKdvDahilBirimFiyatlar[u.Id].ToString("N2")</td>
           <td style="border-bottom:1px solid #333; padding:8px;">@Model.StokDegerleri[u.Id].ToString("N2")</td>
           <td style="border-bottom:1px solid #333; padding:8px;">
             <a class="btn btn-outline-primary btn-sm" href="/Stoklar/Detay/@u.Id">Detay</a>

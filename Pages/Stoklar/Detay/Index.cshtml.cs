@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
@@ -17,6 +17,7 @@ public class IndexModel : PageModel
     public decimal ToplamGiris { get; set; }
     public decimal ToplamCikis { get; set; }
     public decimal Stok => ToplamGiris - ToplamCikis;
+    public decimal StokDegeri { get; set; }
 
     public string Hata { get; set; } = "";
 
@@ -28,6 +29,12 @@ public class IndexModel : PageModel
 
     [BindProperty]
     public decimal BirimFiyat { get; set; }
+
+    [BindProperty]
+    public decimal KdvOrani { get; set; } = 20;
+
+    [BindProperty]
+    public decimal KoliAdedi { get; set; }
 
     [BindProperty]
     public decimal KoliFiyat { get; set; }
@@ -48,104 +55,117 @@ public class IndexModel : PageModel
         Tarih = DateTime.Today;
         Miktar = 0;
         BirimFiyat = 0;
+        KdvOrani = 20;
+        KoliAdedi = 0;
         KoliFiyat = 0;
         Aciklama = "";
+
         return Page();
     }
 
     public async Task<IActionResult> OnPostGirisAsync(int id)
-{
-    var firmaId = HttpContext.Session.GetInt32("FirmaId");
-    if (firmaId == null)
-        return RedirectToPage("/Login");
-
-    await YukleAsync(id, firmaId.Value);
-    if (Urun == null)
-        return NotFound();
-
-    if (Miktar <= 0)
     {
-        ModelState.AddModelError("", "Miktar 0'dan büyük olmalı.");
-        return Page();
-    }
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
 
-    try
-    {
-        var kayitTarihi = DateTime.SpecifyKind(Tarih.Date, DateTimeKind.Utc);
-
-          _db.StokHareketleri.Add(new StokHareket
-        {
-            FirmaId = firmaId.Value,
-            StokUrunId = id,
-            Tarih = kayitTarihi,
-            Tip = StokHareketTipi.Giris,
-            Miktar = Miktar,
-            BirimFiyat = BirimFiyat,
-            KoliFiyat = KoliFiyat,
-            Aciklama = (Aciklama ?? "").Trim()
-        });
-
-        await _db.SaveChangesAsync();
-        return RedirectToPage(new { id });
-    }
-    catch (Exception ex)
-    {
-        var detay = ex.InnerException?.Message ?? ex.Message;
-        Hata = "Stok giriş kaydı eklenirken hata oluştu: " + detay;
         await YukleAsync(id, firmaId.Value);
-        return Page();
+        if (Urun == null)
+            return NotFound();
+
+        if (Miktar <= 0)
+        {
+            ModelState.AddModelError("", "Miktar 0'dan büyük olmalı.");
+            return Page();
+        }
+
+        if (BirimFiyat < 0 || KdvOrani < 0 || KoliAdedi < 0 || KoliFiyat < 0)
+        {
+            ModelState.AddModelError("", "Fiyat, KDV ve koli alanları 0'dan küçük olamaz.");
+            return Page();
+        }
+
+        try
+        {
+            var kayitTarihi = DateTime.SpecifyKind(Tarih.Date, DateTimeKind.Utc);
+
+            _db.StokHareketleri.Add(new StokHareket
+            {
+                FirmaId = firmaId.Value,
+                StokUrunId = id,
+                Tarih = kayitTarihi,
+                Tip = StokHareketTipi.Giris,
+                Miktar = Miktar,
+                BirimFiyat = BirimFiyat,
+                KdvOrani = KdvOrani,
+                KoliAdedi = KoliAdedi,
+                KoliFiyat = KoliFiyat,
+                Aciklama = (Aciklama ?? "").Trim()
+            });
+
+            await _db.SaveChangesAsync();
+            return RedirectToPage(new { id });
+        }
+        catch (Exception ex)
+        {
+            var detay = ex.InnerException?.Message ?? ex.Message;
+            Hata = "Stok giriş kaydı eklenirken hata oluştu: " + detay;
+            await YukleAsync(id, firmaId.Value);
+            return Page();
+        }
     }
-}
 
     public async Task<IActionResult> OnPostCikisAsync(int id)
-{
-    var firmaId = HttpContext.Session.GetInt32("FirmaId");
-    if (firmaId == null)
-        return RedirectToPage("/Login");
-
-    await YukleAsync(id, firmaId.Value);
-    if (Urun == null)
-        return NotFound();
-
-    if (Miktar <= 0)
     {
-        ModelState.AddModelError("", "Miktar 0'dan büyük olmalı.");
-        return Page();
-    }
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
 
-    if (Stok < Miktar)
-    {
-        ModelState.AddModelError("", "Mevcut stoktan fazla çıkış yapılamaz.");
-        return Page();
-    }
-
-    try
-    {
-        var kayitTarihi = DateTime.SpecifyKind(Tarih.Date, DateTimeKind.Utc);
-
-         _db.StokHareketleri.Add(new StokHareket
-        {
-            FirmaId = firmaId.Value,
-            StokUrunId = id,
-            Tarih = kayitTarihi,
-            Tip = StokHareketTipi.Cikis,
-            Miktar = Miktar,
-            BirimFiyat = 0,
-            KoliFiyat = 0,
-            Aciklama = (Aciklama ?? "").Trim()
-        });
-
-        await _db.SaveChangesAsync();
-        return RedirectToPage(new { id });
-    }
-    catch (Exception ex)
-    {
-        var detay = ex.InnerException?.Message ?? ex.Message;
-        Hata = "Stok çıkış kaydı eklenirken hata oluştu: " + detay;
         await YukleAsync(id, firmaId.Value);
-        return Page();
+        if (Urun == null)
+            return NotFound();
+
+        if (Miktar <= 0)
+        {
+            ModelState.AddModelError("", "Miktar 0'dan büyük olmalı.");
+            return Page();
+        }
+
+        if (Stok < Miktar)
+        {
+            ModelState.AddModelError("", "Mevcut stoktan fazla çıkış yapılamaz.");
+            return Page();
+        }
+
+        try
+        {
+            var kayitTarihi = DateTime.SpecifyKind(Tarih.Date, DateTimeKind.Utc);
+
+            _db.StokHareketleri.Add(new StokHareket
+            {
+                FirmaId = firmaId.Value,
+                StokUrunId = id,
+                Tarih = kayitTarihi,
+                Tip = StokHareketTipi.Cikis,
+                Miktar = Miktar,
+                BirimFiyat = 0,
+                KdvOrani = 0,
+                KoliAdedi = 0,
+                KoliFiyat = 0,
+                Aciklama = (Aciklama ?? "").Trim()
+            });
+
+            await _db.SaveChangesAsync();
+            return RedirectToPage(new { id });
+        }
+        catch (Exception ex)
+        {
+            var detay = ex.InnerException?.Message ?? ex.Message;
+            Hata = "Stok çıkış kaydı eklenirken hata oluştu: " + detay;
+            await YukleAsync(id, firmaId.Value);
+            return Page();
+        }
     }
-}
 
     public async Task<IActionResult> OnPostSilAsync(int id, int id2)
     {
@@ -173,7 +193,7 @@ public class IndexModel : PageModel
         catch (Exception ex)
         {
             var detay = ex.InnerException?.Message ?? ex.Message;
-            Hata = "Stok giriş kaydı eklenirken hata oluştu: " + detay;
+            Hata = "Stok hareketi silinirken hata oluştu: " + detay;
             await YukleAsync(id, firmaId.Value);
             return Page();
         }
@@ -201,5 +221,13 @@ public class IndexModel : PageModel
         ToplamCikis = await _db.StokHareketleri
             .Where(x => x.StokUrunId == id && x.FirmaId == firmaId && x.Tip == StokHareketTipi.Cikis)
             .SumAsync(x => (decimal?)x.Miktar) ?? 0;
+
+        var sonGiris = Hareketler
+            .Where(x => x.Tip == StokHareketTipi.Giris)
+            .OrderByDescending(x => x.Tarih)
+            .ThenByDescending(x => x.Id)
+            .FirstOrDefault();
+
+        StokDegeri = sonGiris == null ? 0 : Stok * sonGiris.KdvDahilBirimFiyat;
     }
 }
