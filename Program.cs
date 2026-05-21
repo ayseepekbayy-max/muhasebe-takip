@@ -150,14 +150,17 @@ using (var scope = app.Services.CreateScope())
         .FirstOrDefault(x => x.KullaniciAdi == "admin");
 
     if (admin != null)
-    {
-        admin.Rol = "SuperAdmin";
+{
+    admin.Rol = "SuperAdmin";
 
-        if (admin.Firma != null)
-            admin.Firma.AktifMi = true;
+    if (string.IsNullOrWhiteSpace(admin.Email))
+        admin.Email = "ankmobilyasistemleri@gmail.com";
 
-        db.SaveChanges();
-    }
+    if (admin.Firma != null)
+        admin.Firma.AktifMi = true;
+
+    db.SaveChanges();
+}
 }
 
 // Configure the HTTP request pipeline.
