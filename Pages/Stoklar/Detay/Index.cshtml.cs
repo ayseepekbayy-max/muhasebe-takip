@@ -27,6 +27,12 @@ public class IndexModel : PageModel
     public decimal Miktar { get; set; }
 
     [BindProperty]
+    public decimal BirimFiyat { get; set; }
+
+    [BindProperty]
+    public decimal KoliFiyat { get; set; }
+
+    [BindProperty]
     public string? Aciklama { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
@@ -41,8 +47,9 @@ public class IndexModel : PageModel
 
         Tarih = DateTime.Today;
         Miktar = 0;
+        BirimFiyat = 0;
+        KoliFiyat = 0;
         Aciklama = "";
-
         return Page();
     }
 
@@ -66,13 +73,15 @@ public class IndexModel : PageModel
     {
         var kayitTarihi = DateTime.SpecifyKind(Tarih.Date, DateTimeKind.Utc);
 
-        _db.StokHareketleri.Add(new StokHareket
+          _db.StokHareketleri.Add(new StokHareket
         {
             FirmaId = firmaId.Value,
             StokUrunId = id,
             Tarih = kayitTarihi,
             Tip = StokHareketTipi.Giris,
             Miktar = Miktar,
+            BirimFiyat = BirimFiyat,
+            KoliFiyat = KoliFiyat,
             Aciklama = (Aciklama ?? "").Trim()
         });
 
@@ -114,13 +123,15 @@ public class IndexModel : PageModel
     {
         var kayitTarihi = DateTime.SpecifyKind(Tarih.Date, DateTimeKind.Utc);
 
-        _db.StokHareketleri.Add(new StokHareket
+         _db.StokHareketleri.Add(new StokHareket
         {
             FirmaId = firmaId.Value,
             StokUrunId = id,
             Tarih = kayitTarihi,
             Tip = StokHareketTipi.Cikis,
             Miktar = Miktar,
+            BirimFiyat = 0,
+            KoliFiyat = 0,
             Aciklama = (Aciklama ?? "").Trim()
         });
 

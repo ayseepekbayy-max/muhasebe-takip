@@ -57,16 +57,26 @@
         <input asp-for="Tarih" type="date" style="padding:8px; width:180px;" />
       </div>
 
-      <div style="min-width:180px;">
-        <label><b>Miktar</b></label><br />
-        <input asp-for="Miktar" type="number" step="0.01" style="padding:8px; width:180px;" />
+      <div style="min-width:160px;">
+        <label><b>Adet / Miktar</b></label><br />
+        <input asp-for="Miktar" type="number" step="0.01" style="padding:8px; width:160px;" />
+      </div>
+
+      <div style="min-width:160px;">
+        <label><b>Birim Fiyat</b></label><br />
+        <input asp-for="BirimFiyat" type="number" step="0.01" style="padding:8px; width:160px;" />
+      </div>
+
+      <div style="min-width:160px;">
+        <label><b>Koli Fiyatı</b></label><br />
+        <input asp-for="KoliFiyat" type="number" step="0.01" style="padding:8px; width:160px;" />
       </div>
 
       <div style="flex:1; min-width:260px;">
         <label><b>Açıklama</b></label><br />
         <input asp-for="Aciklama" style="padding:8px; width:100%;" />
       </div>
-    </div>
+          </div>
 
     <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
       <button type="submit" asp-page-handler="Giris" class="btn btn-outline-dark btn-sm">Stok Giriş</button>
@@ -83,6 +93,9 @@
       <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Tarih</th>
       <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Tip</th>
       <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Miktar</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Birim Fiyat</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Koli Fiyatı</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Toplam</th>
       <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Açıklama</th>
       <th style="border-bottom:1px solid #555; padding:8px; width:120px;">İşlem</th>
     </tr>
@@ -90,8 +103,7 @@
   <tbody>
     @if (Model.Hareketler.Count == 0)
     {
-      <tr><td colspan="5" style="padding:8px;">Henüz hareket yok.</td></tr>
-    }
+      <tr><td colspan="8" style="padding:8px;">Henüz hareket yok.</td></tr>    }
     else
     {
       @foreach (var h in Model.Hareketler)
@@ -100,6 +112,9 @@
           <td style="border-bottom:1px solid #333; padding:8px;">@h.Tarih.ToShortDateString()</td>
           <td style="border-bottom:1px solid #333; padding:8px;">@(h.Tip == StokHareketTipi.Giris ? "Giriş" : "Çıkış")</td>
           <td style="border-bottom:1px solid #333; padding:8px;">@h.Miktar</td>
+          <td style="border-bottom:1px solid #333; padding:8px;">@h.BirimFiyat.ToString("N2")</td>
+          <td style="border-bottom:1px solid #333; padding:8px;">@h.KoliFiyat.ToString("N2")</td>
+          <td style="border-bottom:1px solid #333; padding:8px;">@h.ToplamTutar.ToString("N2")</td>
           <td style="border-bottom:1px solid #333; padding:8px;">@h.Aciklama</td>
           <td style="border-bottom:1px solid #333; padding:8px;">
             <form method="post" asp-page-handler="Sil" style="display:inline;"

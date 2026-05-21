@@ -26,8 +26,16 @@ public class StokHareket
     public StokHareketTipi Tip { get; set; } = StokHareketTipi.Giris;
 
     [Range(0.01, 999999999)]
-    public decimal Miktar { get; set; }
+public decimal Miktar { get; set; }
 
-    [MaxLength(250)]
-    public string Aciklama { get; set; } = "";
+[Range(0, 999999999)]
+public decimal BirimFiyat { get; set; }
+
+[Range(0, 999999999)]
+public decimal KoliFiyat { get; set; }
+
+public decimal ToplamTutar => Miktar * BirimFiyat;
+
+[MaxLength(250)]
+public string Aciklama { get; set; } = "";
 }
