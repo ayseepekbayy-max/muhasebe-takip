@@ -20,6 +20,7 @@
         }
 
         <form method="post">
+        @Html.AntiForgeryToken()
 
             <input asp-for="Email" type="hidden" />
 
