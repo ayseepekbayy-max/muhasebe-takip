@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿﻿﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
@@ -19,53 +19,24 @@ public class UretimModel : PageModel
     public string UretimAdi { get; set; } = "";
 
     [BindProperty]
-    public decimal UretimAdedi { get; set; }
+    public decimal UretimAdedi { get; set; } = 1;
 
     [BindProperty]
-    public decimal PlakaEnCm { get; set; }
+    public List<PlakaSatiri> Plakalar { get; set; } = new();
 
     [BindProperty]
-    public decimal PlakaBoyCm { get; set; }
-
-    [BindProperty]
-    public decimal PlakaFiyati { get; set; }
-
-    [BindProperty]
-    public decimal ParcaEnCm { get; set; }
-
-    [BindProperty]
-    public decimal ParcaBoyCm { get; set; }
-
-    [BindProperty]
-    public decimal ParcaAdedi { get; set; }
-
-    [BindProperty]
-    public decimal BantParcaEnCm { get; set; }
-
-    [BindProperty]
-    public decimal BantParcaBoyCm { get; set; }
-
-    [BindProperty]
-    public decimal BantParcaAdedi { get; set; }
-
-    [BindProperty]
-    public decimal BantMetreFiyati { get; set; }
-
-    [BindProperty]
-    public bool BantUstAlt { get; set; } = true;
-
-    [BindProperty]
-    public bool BantSagSol { get; set; } = true;
-
-    [BindProperty]
-    public bool StoktanDus { get; set; }
+    public List<PlakaSatiri> Arkaliklar { get; set; } = new();
 
     [BindProperty]
     public List<MalzemeSatiri> Malzemeler { get; set; } = new();
 
+    [BindProperty]
+    public bool StoktanDus { get; set; }
+
     public List<StokUrun> StokUrunleri { get; set; } = new();
 
     public decimal PlakaMaliyeti { get; set; }
+    public decimal ArkalikMaliyeti { get; set; }
     public decimal BantlamaMaliyeti { get; set; }
     public decimal MalzemeMaliyeti { get; set; }
     public decimal ToplamMaliyet { get; set; }
@@ -94,8 +65,7 @@ public class UretimModel : PageModel
             return RedirectToPage("/Login");
 
         await StoklariYukleAsync(firmaId.Value);
-        MalzemeSatirlariniTamamla();
-
+        SatirlariTamamla();
         Hesapla();
 
         HesaplandiMi = true;
@@ -109,8 +79,7 @@ public class UretimModel : PageModel
             return RedirectToPage("/Login");
 
         await StoklariYukleAsync(firmaId.Value);
-        MalzemeSatirlariniTamamla();
-
+        SatirlariTamamla();
         Hesapla();
         HesaplandiMi = true;
 
@@ -129,8 +98,9 @@ public class UretimModel : PageModel
             Hata = "Stoktan düşülecek malzeme bulunamadı.";
             return Page();
         }
+    
 
-        foreach (var satir in kullanilacaklar)
+            foreach (var satir in kullanilacaklar)
         {
             var urun = await _db.StokUrunler
                 .FirstOrDefaultAsync(x =>
@@ -164,83 +134,97 @@ public class UretimModel : PageModel
         Mesaj = "Malzemeler stoktan düşüldü.";
         return Page();
     }
-
-    private void Hesapla()
+        private void Hesapla()
     {
         UretimAdi = (UretimAdi ?? "").Trim();
 
         if (UretimAdedi <= 0)
             UretimAdedi = 1;
 
-        PlakaMaliyeti = HesaplaPlakaMaliyeti();
-        BantlamaMaliyeti = HesaplaBantlamaMaliyeti();
+        PlakaMaliyeti = HesaplaPlakaGrubu(Plakalar, bantlamaDahil: true);
+        ArkalikMaliyeti = HesaplaPlakaGrubu(Arkaliklar, bantlamaDahil: false);
         MalzemeMaliyeti = HesaplaMalzemeMaliyeti();
 
-        ToplamMaliyet = PlakaMaliyeti + BantlamaMaliyeti + MalzemeMaliyeti;
+        BantlamaMaliyeti = Plakalar.Sum(x => x.BantlamaMaliyeti);
+        ToplamMaliyet = PlakaMaliyeti + ArkalikMaliyeti + BantlamaMaliyeti + MalzemeMaliyeti;
         BirimMaliyet = UretimAdedi > 0 ? ToplamMaliyet / UretimAdedi : 0;
     }
 
-    private decimal HesaplaPlakaMaliyeti()
+    private decimal HesaplaPlakaGrubu(List<PlakaSatiri> satirlar, bool bantlamaDahil)
     {
-        if (PlakaEnCm <= 0 || PlakaBoyCm <= 0 || PlakaFiyati <= 0 || ParcaEnCm <= 0 || ParcaBoyCm <= 0)
-            return 0;
+        decimal toplam = 0;
 
-        var adet = ParcaAdedi > 0 ? ParcaAdedi : UretimAdedi;
+        foreach (var satir in satirlar)
+        {
+            satir.Aciklama = (satir.Aciklama ?? "").Trim();
+            satir.PlakaMaliyeti = 0;
+            satir.BantlamaMaliyeti = 0;
+            satir.ToplamMaliyet = 0;
 
-        var plakaAlanM2 = (PlakaEnCm * PlakaBoyCm) / 10000m;
-        var parcaAlanM2 = (ParcaEnCm * ParcaBoyCm) / 10000m;
-        var toplamParcaAlanM2 = parcaAlanM2 * adet;
+            if (satir.PlakaEnCm <= 0 ||
+                satir.PlakaBoyCm <= 0 ||
+                satir.PlakaFiyati <= 0 ||
+                satir.ParcaEnCm <= 0 ||
+                satir.ParcaBoyCm <= 0 ||
+                satir.ParcaAdedi <= 0)
+            {
+                continue;
+            }
 
-        if (plakaAlanM2 <= 0)
-            return 0;
+            var plakaAlanM2 = (satir.PlakaEnCm * satir.PlakaBoyCm) / 10000m;
+            var parcaAlanM2 = (satir.ParcaEnCm * satir.ParcaBoyCm) / 10000m;
+            var toplamParcaAlanM2 = parcaAlanM2 * satir.ParcaAdedi;
 
-        return toplamParcaAlanM2 / plakaAlanM2 * PlakaFiyati;
+            if (plakaAlanM2 <= 0)
+                continue;
+
+            satir.PlakaMaliyeti =
+                toplamParcaAlanM2 / plakaAlanM2 * satir.PlakaFiyati;
+
+            if (bantlamaDahil && satir.BantMetreFiyati > 0)
+            {
+                decimal toplamCm = 0;
+
+                if (satir.BantUstAlt)
+                    toplamCm += satir.ParcaEnCm * 2;
+
+                if (satir.BantSagSol)
+                    toplamCm += satir.ParcaBoyCm * 2;
+
+                if (!satir.BantUstAlt && !satir.BantSagSol)
+                    toplamCm = (satir.ParcaEnCm + satir.ParcaBoyCm) * 2;
+
+                var toplamMetre = toplamCm / 100m * satir.ParcaAdedi;
+                satir.BantlamaMaliyeti = toplamMetre * satir.BantMetreFiyati;
+            }
+
+            satir.ToplamMaliyet = satir.PlakaMaliyeti + satir.BantlamaMaliyeti;
+            toplam += satir.PlakaMaliyeti;
+        }
+
+        return toplam;
     }
-
-    private decimal HesaplaBantlamaMaliyeti()
-{
-    var en = ParcaEnCm;
-    var boy = ParcaBoyCm;
-    var adet = ParcaAdedi > 0 ? ParcaAdedi : UretimAdedi;
-
-    if (en <= 0 || boy <= 0 || adet <= 0 || BantMetreFiyati <= 0)
-        return 0;
-
-    decimal toplamCm = 0;
-
-    if (BantUstAlt)
-        toplamCm += en * 2;
-
-    if (BantSagSol)
-        toplamCm += boy * 2;
-
-    if (!BantUstAlt && !BantSagSol)
-        toplamCm = (en + boy) * 2;
-
-    var toplamMetre = toplamCm / 100m * adet;
-
-    return toplamMetre * BantMetreFiyati;
-}
-
-    private decimal HesaplaMalzemeMaliyeti()
+        private decimal HesaplaMalzemeMaliyeti()
     {
         decimal toplam = 0;
 
         foreach (var satir in Malzemeler)
         {
+            satir.ToplamKullanimMiktari = 0;
+            satir.ToplamMaliyet = 0;
+
             if (satir.BirParcaKullanimMiktari <= 0)
                 continue;
 
-            var adet = UretimAdedi > 0 ? UretimAdedi : 1;
-
-            satir.ToplamKullanimMiktari = satir.BirParcaKullanimMiktari * adet;
+            satir.ToplamKullanimMiktari =
+                satir.BirParcaKullanimMiktari * UretimAdedi;
 
             if (satir.BirimMaliyet <= 0 && satir.StokUrunId > 0)
-            {
                 satir.BirimMaliyet = SonAlisFiyatiGetir(satir.StokUrunId);
-            }
 
-            satir.ToplamMaliyet = satir.ToplamKullanimMiktari * satir.BirimMaliyet;
+            satir.ToplamMaliyet =
+                satir.ToplamKullanimMiktari * satir.BirimMaliyet;
+
             toplam += satir.ToplamMaliyet;
         }
 
@@ -290,33 +274,75 @@ public class UretimModel : PageModel
     private void FormuHazirla()
     {
         UretimAdedi = 1;
-        BantUstAlt = true;
-        BantSagSol = true;
-        KdvVarsayilanMalzemeSatirlari();
-    }
 
-    private void MalzemeSatirlariniTamamla()
-    {
-        Malzemeler ??= new List<MalzemeSatiri>();
+        Plakalar = Enumerable.Range(0, 4)
+            .Select(_ => new PlakaSatiri())
+            .ToList();
 
-        while (Malzemeler.Count < 5)
-            Malzemeler.Add(new MalzemeSatiri());
-    }
+        Arkaliklar = Enumerable.Range(0, 1)
+            .Select(_ => new PlakaSatiri())
+            .ToList();
 
-    private void KdvVarsayilanMalzemeSatirlari()
-    {
-        Malzemeler = Enumerable
-            .Range(0, 5)
+        Malzemeler = Enumerable.Range(0, 8)
             .Select(_ => new MalzemeSatiri())
             .ToList();
     }
+
+    private void SatirlariTamamla()
+    {
+        Plakalar ??= new List<PlakaSatiri>();
+        Arkaliklar ??= new List<PlakaSatiri>();
+        Malzemeler ??= new List<MalzemeSatiri>();
+
+        if (!Plakalar.Any())
+            Plakalar.Add(new PlakaSatiri());
+
+        if (!Arkaliklar.Any())
+            Arkaliklar.Add(new PlakaSatiri());
+
+        while (Malzemeler.Count < 8)
+            Malzemeler.Add(new MalzemeSatiri());
+    }
+    }
+
+public class PlakaSatiri
+{
+    public string Aciklama { get; set; } = "";
+
+    public decimal PlakaEnCm { get; set; }
+
+    public decimal PlakaBoyCm { get; set; }
+
+    public decimal PlakaFiyati { get; set; }
+
+    public decimal ParcaEnCm { get; set; }
+
+    public decimal ParcaBoyCm { get; set; }
+
+    public decimal ParcaAdedi { get; set; }
+
+    public decimal BantMetreFiyati { get; set; }
+
+    public bool BantUstAlt { get; set; } = true;
+
+    public bool BantSagSol { get; set; } = true;
+
+    public decimal PlakaMaliyeti { get; set; }
+
+    public decimal BantlamaMaliyeti { get; set; }
+
+    public decimal ToplamMaliyet { get; set; }
 }
 
 public class MalzemeSatiri
 {
     public int StokUrunId { get; set; }
+
     public decimal BirParcaKullanimMiktari { get; set; }
+
     public decimal BirimMaliyet { get; set; }
+
     public decimal ToplamKullanimMiktari { get; set; }
+
     public decimal ToplamMaliyet { get; set; }
 }
