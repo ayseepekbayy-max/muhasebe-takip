@@ -186,6 +186,135 @@ public class IndexModel : PageModel
             _memory.SonCalisaniKaydet(bulunanCalisan.AdSoyad);
         }
 
+        // MALİYET ANALİZİ
+
+if (
+    lower.Contains("maliyet") ||
+    lower.Contains("üretim maliyeti") ||
+    lower.Contains("uretim maliyeti")
+)
+{
+    var maliyetQuery = _db.MaliyetKayitlari
+        .Where(x => x.FirmaId == firmaId);
+
+    if (
+        lower.Contains("son maliyet") ||
+        lower.Contains("son üretim") ||
+        lower.Contains("son uretim") ||
+        lower.Contains("son hesap")
+    )
+    {
+        var sonKayit = await maliyetQuery
+            .OrderByDescending(x => x.HesapTarihi)
+            .ThenByDescending(x => x.Id)
+            .FirstOrDefaultAsync();
+
+        if (sonKayit == null)
+            return "Henüz kayıtlı maliyet hesabı bulunamadı.";
+
+        return
+            $"{sonKayit.UretimAdi} son maliyet hesabı:\n\n" +
+            $"- Üretim adedi: {sonKayit.UretimAdedi:N2}\n" +
+            $"- Plaka maliyeti: {sonKayit.PlakaMaliyeti:N2} TL\n" +
+            $"- Bantlama maliyeti: {sonKayit.BantlamaMaliyeti:N2} TL\n" +
+            $"- Arkalık maliyeti: {sonKayit.ArkalikMaliyeti:N2} TL\n" +
+            $"- Malzeme maliyeti: {sonKayit.MalzemeMaliyeti:N2} TL\n" +
+            $"- Toplam maliyet: {sonKayit.ToplamMaliyet:N2} TL\n" +
+            $"- Birim maliyet: {sonKayit.BirimMaliyet:N2} TL\n" +
+            $"- Tarih: {sonKayit.HesapTarihi:dd.MM.yyyy HH:mm}";
+    }
+
+    if (
+        lower.Contains("en pahalı") ||
+        lower.Contains("en pahali") ||
+        lower.Contains("en yüksek maliyet") ||
+        lower.Contains("en yuksek maliyet")
+    )
+    {
+        var enPahali = await maliyetQuery
+            .OrderByDescending(x => x.ToplamMaliyet)
+            .ThenByDescending(x => x.HesapTarihi)
+            .FirstOrDefaultAsync();
+
+        if (enPahali == null)
+            return "Henüz kayıtlı maliyet hesabı bulunamadı.";
+
+        return
+            $"En yüksek maliyetli üretim: {enPahali.UretimAdi}\n\n" +
+            $"- Toplam maliyet: {enPahali.ToplamMaliyet:N2} TL\n" +
+            $"- Birim maliyet: {enPahali.BirimMaliyet:N2} TL\n" +
+            $"- Tarih: {enPahali.HesapTarihi:dd.MM.yyyy HH:mm}";
+    }
+
+    var tumKayitlar = await maliyetQuery
+        .OrderByDescending(x => x.HesapTarihi)
+        .ThenByDescending(x => x.Id)
+        .ToListAsync();
+
+    if (!tumKayitlar.Any())
+        return "Henüz kayıtlı maliyet hesabı bulunamadı.";
+
+    var temizSoru = lower
+        .Replace("maliyeti", "")
+        .Replace("maliyet", "")
+        .Replace("plaka", "")
+        .Replace("bantlama", "")
+        .Replace("arkalık", "")
+        .Replace("arkalik", "")
+        .Replace("malzeme", "")
+        .Replace("birim", "")
+        .Replace("toplam", "")
+        .Replace("ne kadar", "")
+        .Replace("kaç", "")
+        .Replace("kac", "")
+        .Replace("tl", "")
+        .Trim();
+
+    var kayit = tumKayitlar.FirstOrDefault(x =>
+        !string.IsNullOrWhiteSpace(x.UretimAdi) &&
+        (
+            lower.Contains(x.UretimAdi.ToLowerInvariant()) ||
+            x.UretimAdi.ToLowerInvariant().Contains(temizSoru)
+        ));
+
+    if (kayit == null)
+    {
+        var liste = "Bu isimde maliyet kaydı bulamadım.\n\nKayıtlı son maliyetler:\n";
+
+        foreach (var item in tumKayitlar.Take(5))
+        {
+            liste += $"- {item.UretimAdi}: {item.ToplamMaliyet:N2} TL\n";
+        }
+
+        return liste;
+    }
+
+    if (lower.Contains("plaka"))
+        return $"{kayit.UretimAdi} plaka maliyeti: {kayit.PlakaMaliyeti:N2} TL";
+
+    if (lower.Contains("bantlama") || lower.Contains("bant"))
+        return $"{kayit.UretimAdi} bantlama maliyeti: {kayit.BantlamaMaliyeti:N2} TL";
+
+    if (lower.Contains("arkalık") || lower.Contains("arkalik"))
+        return $"{kayit.UretimAdi} arkalık maliyeti: {kayit.ArkalikMaliyeti:N2} TL";
+
+    if (lower.Contains("malzeme"))
+        return $"{kayit.UretimAdi} malzeme maliyeti: {kayit.MalzemeMaliyeti:N2} TL";
+
+    if (lower.Contains("birim"))
+        return $"{kayit.UretimAdi} birim maliyeti: {kayit.BirimMaliyet:N2} TL";
+
+    return
+        $"{kayit.UretimAdi} maliyet özeti:\n\n" +
+        $"- Üretim adedi: {kayit.UretimAdedi:N2}\n" +
+        $"- Plaka maliyeti: {kayit.PlakaMaliyeti:N2} TL\n" +
+        $"- Bantlama maliyeti: {kayit.BantlamaMaliyeti:N2} TL\n" +
+        $"- Arkalık maliyeti: {kayit.ArkalikMaliyeti:N2} TL\n" +
+        $"- Malzeme maliyeti: {kayit.MalzemeMaliyeti:N2} TL\n" +
+        $"- Toplam maliyet: {kayit.ToplamMaliyet:N2} TL\n" +
+        $"- Birim maliyet: {kayit.BirimMaliyet:N2} TL";
+}
+
 // ÇALIŞAN LİSTESİ
 
 if (

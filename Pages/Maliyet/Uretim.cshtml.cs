@@ -71,7 +71,10 @@ public class UretimModel : PageModel
         SatirlariTamamla();
         Hesapla();
 
+        await MaliyetKaydiOlusturAsync(firmaId.Value);
+
         HesaplandiMi = true;
+        Mesaj = "Maliyet hesabı kaydedildi.";
         return Page();
     }
 
@@ -131,9 +134,11 @@ public class UretimModel : PageModel
             });
         }
 
+        await MaliyetKaydiOlusturAsync(firmaId.Value);
+
         await _db.SaveChangesAsync();
 
-        Mesaj = "Malzemeler stoktan düşüldü.";
+        Mesaj = "Maliyet hesabı kaydedildi ve malzemeler stoktan düşüldü.";
         return Page();
     }
 
@@ -160,7 +165,33 @@ public class UretimModel : PageModel
                 ? ToplamMaliyet / UretimAdedi
                 : 0;
     }
+    
+    private async Task MaliyetKaydiOlusturAsync(int firmaId)
+{
+    if (string.IsNullOrWhiteSpace(UretimAdi))
+        return;
 
+    if (ToplamMaliyet <= 0)
+        return;
+
+    var kayit = new MaliyetKaydi
+    {
+        FirmaId = firmaId,
+        UretimAdi = UretimAdi.Trim(),
+        UretimAdedi = UretimAdedi,
+        PlakaMaliyeti = PlakaMaliyeti,
+        BantlamaMaliyeti = BantlamaMaliyeti,
+        ArkalikMaliyeti = ArkalikMaliyeti,
+        MalzemeMaliyeti = MalzemeMaliyeti,
+        ToplamMaliyet = ToplamMaliyet,
+        BirimMaliyet = BirimMaliyet,
+        HesapTarihi = DateTime.UtcNow
+    };
+
+    _db.MaliyetKayitlari.Add(kayit);
+
+    await _db.SaveChangesAsync();
+}
     private decimal HesaplaPlakaGrubu(List<PlakaSatiri> satirlar)
     {
         decimal toplam = 0;

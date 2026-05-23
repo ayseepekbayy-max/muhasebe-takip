@@ -23,4 +23,5 @@ public class AppDbContext : DbContext
     public DbSet<Cek> Cekler { get; set; } = default!;
     public DbSet<CalisanPuantaj> CalisanPuantajlari { get; set; } = default!;
     public DbSet<CalisanMaasArsiv> CalisanMaasArsivleri { get; set; } = default!;
+    public DbSet<MaliyetKaydi> MaliyetKayitlari { get; set; } = default!;
 }
