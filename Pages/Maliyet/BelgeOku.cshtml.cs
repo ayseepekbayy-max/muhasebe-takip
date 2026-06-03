@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.Mvc;
@@ -133,6 +134,21 @@ public class BelgeOkuModel : PageModel
             MalzemeMaliyeti = ToplamMaliyet,
             ToplamMaliyet = ToplamMaliyet,
             BirimMaliyet = ToplamMaliyet,
+            Kaynak = "Belge",
+            DetayJson = JsonSerializer.Serialize(new MaliyetKaydiDetay
+            {
+                BelgeKalemleri = Kalemler
+                    .Select(x => new MaliyetDetaySatiri
+                    {
+                        Aciklama = x.Aciklama,
+                        Adet = 1,
+                        BirimFiyat = x.ToplamTutar,
+                        Toplam = x.ToplamTutar,
+                        Not = "Belgeden otomatik okundu."
+                    })
+                    .ToList()
+            }),
+            OkunanMetin = OkunanMetin ?? "",
             HesapTarihi = DateTime.UtcNow
         });
 

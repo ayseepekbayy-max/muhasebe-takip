@@ -102,6 +102,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTWFsaXlldFxCZWxnZU9rdS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/Maliyet/Detay.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTWFsaXlldFxEZXRheS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/Maliyet/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTWFsaXlldFxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
@@ -116,6 +120,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/Maliyet/Uretim.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTWFsaXlldFxVcmV0aW0uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/Maliyet/_MaliyetDetayTablo.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcTWFsaXlldFxfTWFsaXlldERldGF5VGFibG8uY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/Musteriler/Detay/Index.cshtml]

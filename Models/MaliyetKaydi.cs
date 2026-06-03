@@ -23,5 +23,11 @@ public class MaliyetKaydi
 
     public decimal BirimMaliyet { get; set; }
 
+    public string Kaynak { get; set; } = "Üretim";
+
+    public string DetayJson { get; set; } = "";
+
+    public string OkunanMetin { get; set; } = "";
+
     public DateTime HesapTarihi { get; set; } = DateTime.UtcNow;
 }

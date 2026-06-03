@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using System.Text.Json;
 
 namespace MuhasebeTakip2.App.Pages.Maliyet;
 
@@ -167,31 +168,98 @@ public class UretimModel : PageModel
     }
     
     private async Task MaliyetKaydiOlusturAsync(int firmaId)
-{
-    if (string.IsNullOrWhiteSpace(UretimAdi))
-        return;
-
-    if (ToplamMaliyet <= 0)
-        return;
-
-    var kayit = new MaliyetKaydi
     {
-        FirmaId = firmaId,
-        UretimAdi = UretimAdi.Trim(),
-        UretimAdedi = UretimAdedi,
-        PlakaMaliyeti = PlakaMaliyeti,
-        BantlamaMaliyeti = BantlamaMaliyeti,
-        ArkalikMaliyeti = ArkalikMaliyeti,
-        MalzemeMaliyeti = MalzemeMaliyeti,
-        ToplamMaliyet = ToplamMaliyet,
-        BirimMaliyet = BirimMaliyet,
-        HesapTarihi = DateTime.UtcNow
-    };
+        if (string.IsNullOrWhiteSpace(UretimAdi))
+            return;
 
-    _db.MaliyetKayitlari.Add(kayit);
+        if (ToplamMaliyet <= 0)
+            return;
 
-    await _db.SaveChangesAsync();
-}
+        var detay = MaliyetDetayiOlustur();
+
+        var kayit = new MaliyetKaydi
+        {
+            FirmaId = firmaId,
+            UretimAdi = UretimAdi.Trim(),
+            UretimAdedi = UretimAdedi,
+            PlakaMaliyeti = PlakaMaliyeti,
+            BantlamaMaliyeti = BantlamaMaliyeti,
+            ArkalikMaliyeti = ArkalikMaliyeti,
+            MalzemeMaliyeti = MalzemeMaliyeti,
+            ToplamMaliyet = ToplamMaliyet,
+            BirimMaliyet = BirimMaliyet,
+            Kaynak = "Üretim",
+            DetayJson = JsonSerializer.Serialize(detay),
+            HesapTarihi = DateTime.UtcNow
+        };
+
+        _db.MaliyetKayitlari.Add(kayit);
+
+        await _db.SaveChangesAsync();
+    }
+
+    private MaliyetKaydiDetay MaliyetDetayiOlustur()
+    {
+        return new MaliyetKaydiDetay
+        {
+            Plakalar = Plakalar
+                .Where(x => x.ToplamMaliyet > 0)
+                .Select(x => new MaliyetDetaySatiri
+                {
+                    Aciklama = string.IsNullOrWhiteSpace(x.Aciklama) ? "Plaka" : x.Aciklama,
+                    Olcu = $"Plaka {x.PlakaEnCm:N2}x{x.PlakaBoyCm:N2} cm / Parça {x.ParcaEnCm:N2}x{x.ParcaBoyCm:N2} cm",
+                    Adet = x.ParcaAdedi,
+                    BirimFiyat = x.PlakaFiyati,
+                    Toplam = x.ToplamMaliyet,
+                    Not = "Plaka alanına göre hesaplandı."
+                })
+                .ToList(),
+
+            Bantlamalar = Bantlamalar
+                .Where(x => x.ToplamMaliyet > 0)
+                .Select(x => new MaliyetDetaySatiri
+                {
+                    Aciklama = string.IsNullOrWhiteSpace(x.Aciklama) ? "Bantlama" : x.Aciklama,
+                    Olcu = $"Parça {x.ParcaEnCm:N2}x{x.ParcaBoyCm:N2} cm",
+                    Adet = x.ParcaAdedi,
+                    BirimFiyat = x.BantMetreFiyati,
+                    Toplam = x.ToplamMaliyet,
+                    Not = $"Toplam metre: {x.ToplamMetre:N2} m"
+                })
+                .ToList(),
+
+            Arkaliklar = Arkaliklar
+                .Where(x => x.ToplamMaliyet > 0)
+                .Select(x => new MaliyetDetaySatiri
+                {
+                    Aciklama = string.IsNullOrWhiteSpace(x.Aciklama) ? "Arkalık" : x.Aciklama,
+                    Olcu = $"Plaka {x.PlakaEnCm:N2}x{x.PlakaBoyCm:N2} cm / Parça {x.ParcaEnCm:N2}x{x.ParcaBoyCm:N2} cm",
+                    Adet = x.ParcaAdedi,
+                    BirimFiyat = x.PlakaFiyati,
+                    Toplam = x.ToplamMaliyet,
+                    Not = "Arkalık plaka maliyeti."
+                })
+                .ToList(),
+
+            Malzemeler = Malzemeler
+                .Where(x => x.ToplamMaliyet > 0)
+                .Select(x =>
+                {
+                    var stok = StokUrunleri.FirstOrDefault(u => u.Id == x.StokUrunId);
+
+                    return new MaliyetDetaySatiri
+                    {
+                        Aciklama = stok != null ? stok.Ad : "Ek malzeme",
+                        Olcu = stok != null ? stok.Birim : "",
+                        Adet = x.ToplamKullanimMiktari,
+                        BirimFiyat = x.BirimMaliyet,
+                        Toplam = x.ToplamMaliyet,
+                        Not = $"1 ürün için kullanım: {x.BirParcaKullanimMiktari:N2}"
+                    };
+                })
+                .ToList()
+        };
+    }
     private decimal HesaplaPlakaGrubu(List<PlakaSatiri> satirlar)
     {
         decimal toplam = 0;
