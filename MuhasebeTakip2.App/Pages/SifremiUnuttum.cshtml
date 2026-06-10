@@ -1,0 +1,39 @@
+@page "/SifremiUnuttum"
+@model MuhasebeTakip2.App.Pages.SifremiUnuttumModel
+@{
+    ViewData["Title"] = "Şifremi Unuttum";
+}
+
+<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(to bottom,#ffffff,#eef2ff,#c7d2fe); padding:30px;">
+    <div style="width:430px; max-width:100%; background:white; border-radius:20px; padding:34px; box-shadow:0 18px 40px rgba(15,23,42,0.12); border:1px solid #dbe4ee;">
+
+        <div style="text-align:center; margin-bottom:24px;">
+            <div style="font-size:26px; font-weight:800; color:#312e81;">Şifremi Unuttum</div>
+            <div style="margin-top:8px; color:#64748b;">Mail adresinize doğrulama kodu gönderilecek</div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Hata))
+        {
+            <div style="color:#b42318; border:1px solid #fecaca; background:#fef2f2; padding:10px 12px; border-radius:10px; margin-bottom:16px;">
+                @Model.Hata
+            </div>
+        }
+
+        <form method="post">
+         @Html.AntiForgeryToken()
+
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;">Mail Adresi</label>
+                <input asp-for="Email" type="email" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:12px;" />
+            </div>
+
+            <button type="submit" style="width:100%; padding:13px; border:none; border-radius:14px; background:#6366f1; color:white; font-size:16px; font-weight:800;">
+                Kod Gönder
+            </button>
+
+            <a href="/Login" style="margin-top:12px; display:block; text-align:center; color:#312e81; font-weight:700; text-decoration:none;">
+                Giriş sayfasına dön
+            </a>
+        </form>
+    </div>
+</div>

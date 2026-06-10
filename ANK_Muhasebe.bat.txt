@@ -1,0 +1,3 @@
+cd /d C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App
+dotnet run
+pause

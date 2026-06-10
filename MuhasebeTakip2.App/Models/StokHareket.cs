@@ -1,0 +1,53 @@
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace MuhasebeTakip2.App.Models;
+
+public enum StokHareketTipi
+{
+    Giris = 1,
+    Cikis = 2
+}
+
+public class StokHareket
+{
+    public int Id { get; set; }
+
+    public int? FirmaId { get; set; }
+
+    public Firma? Firma { get; set; }
+
+    public string Ad { get; set; } = "";
+
+    public int StokUrunId { get; set; }
+    public StokUrun? StokUrun { get; set; }
+
+    public DateTime Tarih { get; set; } = DateTime.Today;
+
+    public StokHareketTipi Tip { get; set; } = StokHareketTipi.Giris;
+
+    [Range(0.01, 999999999)]
+    public decimal Miktar { get; set; }
+
+    [Range(0, 999999999)]
+    public decimal BirimFiyat { get; set; }
+
+    [Range(0, 100)]
+    public decimal KdvOrani { get; set; }
+
+    [Range(0, 999999999)]
+    public decimal KoliAdedi { get; set; }
+
+    [Range(0, 999999999)]
+    public decimal KoliFiyat { get; set; }
+
+    public decimal AraToplam => Miktar * BirimFiyat;
+
+    public decimal KdvTutari => AraToplam * KdvOrani / 100;
+
+    public decimal ToplamTutar => AraToplam + KdvTutari;
+
+    public decimal KdvDahilBirimFiyat => Miktar > 0 ? ToplamTutar / Miktar : 0;
+
+    [MaxLength(250)]
+    public string Aciklama { get; set; } = "";
+}

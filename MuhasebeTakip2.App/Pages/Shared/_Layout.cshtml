@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - ANK</title>
+    <script type="importmap"></script>
+
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/MuhasebeTakip2.App.styles.css" asp-append-version="true" />
+</head>
+<body autocomplete="off">
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll("input").forEach(x => x.setAttribute("autocomplete", "off"));
+        });
+    </script>
+
+    @{
+        var rol = (Context.Session.GetString("Rol") ?? "").Trim().ToLower();
+        var path = Context.Request.Path.Value?.ToLower() ?? "";
+        var loginSayfasiMi = path == "/login";
+    }
+
+    @if (!loginSayfasiMi)
+    {
+        <header>
+           <nav class="navbar navbar-expand-lg navbar-toggleable-lg navbar-dark app-navbar border-bottom box-shadow mb-4">
+                <div class="container-fluid px-3">
+                    <a class="navbar-brand app-brand" asp-area="" asp-page="/Index">
+                        @(string.IsNullOrWhiteSpace(Context.Session.GetString("FirmaAdi"))
+                            ? "Muhasebe Takip"
+                            : Context.Session.GetString("FirmaAdi"))
+                    </a>
+
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
+                            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+
+                        <div class="navbar-collapse collapse d-lg-flex align-items-lg-center">                     
+                            <ul class="navbar-nav app-nav-list d-lg-flex align-items-lg-center gap-2">                            @if (Context.Session.GetString("MenuCariKartlar") != "0")
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/CariKartlar">Cari Kartlar</a>
+                                </li>
+                            }
+
+                            @if (Context.Session.GetString("MenuKasa") != "0")
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-area="" asp-page="/Index">Kasa</a>
+                                </li>
+                            }
+
+                            @if (Context.Session.GetString("MenuRaporlar") != "0")
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/Raporlar">Raporlar</a>
+                                </li>
+                            }
+
+                            @if (Context.Session.GetString("MenuCalisanlar") != "0")
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/Calisanlar">Çalışanlar</a>
+                                </li>
+                            }
+
+                            @if (Context.Session.GetString("MenuMusteriler") != "0")
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/Musteriler">Müşteriler</a>
+                                </li>
+                            }
+
+                            @if (Context.Session.GetString("MenuStoklar") != "0")
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/Stoklar">Stok</a>
+                                </li>
+                            }
+
+                            @if (Context.Session.GetString("MenuMaliyet") != "0")
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/Maliyet">Maliyet</a>
+                                </li>
+                            }
+
+                            <li class="nav-item">
+                                <a class="nav-link" href="/AiAsistan">AI Asistan</a>
+                            </li>
+
+                            @if (Context.Session.GetString("MenuCekler") != "0")
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/Cekler">Çekler</a>
+                                </li>
+                            }
+
+                            @if (rol == "superadmin")
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/SuperAdmin/Index">Süper Admin</a>
+                                </li>
+                            }
+                        </ul>
+
+                       <div class="d-lg-flex align-items-lg-center gap-2 ms-lg-auto app-top-actions">
+                            @if (Context.Session.GetString("FirmaAdi") != null)
+                            {
+                                <span class="app-firma-badge">@Context.Session.GetString("FirmaAdi")</span>
+                            }
+
+                            @if (Context.Session.GetString("KullaniciAdi") != null)
+                            {
+                                <a class="app-top-btn" href="/Ayarlar">Ayarlar</a>
+                                <a class="app-top-btn app-top-btn-danger" href="/Logout">Çıkış</a>
+                            }
+                            else
+                            {
+                                <a class="app-top-btn" href="/Login">Giriş</a>
+                                <a class="app-top-btn" href="/Register">Kayıt Ol</a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </header>
+    }
+
+    <div class="@(loginSayfasiMi ? "" : "container app-main-container")" style="@(loginSayfasiMi ? "width:100%; max-width:none; padding:0; margin:0;" : "")">        <main role="main" class="pb-4">
+            @RenderBody()
+        </main>
+    </div>
+
+    @if (!loginSayfasiMi)
+    {
+        <footer class="border-top footer text-muted app-footer">
+            <div class="container">
+                &copy; 2026 - MuhasebeTakip2.App
+            </div>
+        </footer>
+    }
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,117 @@
+@page
+@model MuhasebeTakip2.App.Pages.SuperAdmin.DetayModel
+@{
+    ViewData["Title"] = "Firma Detayı";
+}
+
+<div style="max-width:1100px; margin:30px auto; padding:0 16px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; gap:12px; flex-wrap:wrap;">
+        <div>
+            <h2 style="margin:0; font-weight:800; color:#111827;">Firma Detayı</h2>
+            <div style="color:#667085; margin-top:6px;">Firma ve kullanıcı bilgilerini buradan görüntüleyebilirsiniz.</div>
+        </div>
+
+        <a href="/SuperAdmin/Index"
+           style="padding:10px 14px; border:1px solid #d0d5dd; border-radius:12px; background:#fff; color:#111827; text-decoration:none; font-weight:600;">
+            ← Süper Admin’e Dön
+        </a>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Mesaj))
+    {
+        <div style="background:#ecfdf3; color:#027a48; border:1px solid #abefc6; padding:12px 14px; border-radius:12px; margin-bottom:18px;">
+            @Model.Mesaj
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.Hata))
+    {
+        <div style="background:#fff1f2; color:#b42318; border:1px solid #fecdd3; padding:12px 14px; border-radius:12px; margin-bottom:18px;">
+            @Model.Hata
+        </div>
+    }
+
+    @if (Model.Firma != null)
+    {
+        <div style="display:grid; grid-template-columns:320px 1fr; gap:22px;">
+            <div style="background:#fff; border:1px solid #eaecf0; border-radius:20px; padding:24px; box-shadow:0 10px 30px rgba(15,23,42,0.06);">
+                <h4 style="margin:0 0 18px 0; color:#111827; font-weight:700;">Firma Bilgileri</h4>
+
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:13px; color:#667085; margin-bottom:4px;">Firma Adı</div>
+                    <div style="font-size:18px; font-weight:700; color:#111827;">@Model.Firma.FirmaAdi</div>
+                </div>
+
+                <div style="margin-bottom:18px;">
+                    <div style="font-size:13px; color:#667085; margin-bottom:6px;">Durum</div>
+                    @if (Model.Firma.AktifMi)
+                    {
+                        <span style="display:inline-block; padding:6px 12px; border-radius:999px; background:#ecfdf3; color:#027a48; font-size:13px; font-weight:700;">
+                            Aktif
+                        </span>
+                    }
+                    else
+                    {
+                        <span style="display:inline-block; padding:6px 12px; border-radius:999px; background:#fff1f2; color:#b42318; font-size:13px; font-weight:700;">
+                            Pasif
+                        </span>
+                    }
+                </div>
+
+                <div style="font-size:14px; color:#667085;">
+                    Toplam kullanıcı: <strong>@Model.Kullanicilar.Count</strong>
+                </div>
+            </div>
+
+            <div style="background:#fff; border:1px solid #eaecf0; border-radius:20px; padding:24px; box-shadow:0 10px 30px rgba(15,23,42,0.06);">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+                    <h4 style="margin:0; color:#111827; font-weight:700;">Kullanıcılar</h4>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#f9fafb; color:#344054;">
+                                <th style="text-align:left; padding:12px; border-bottom:1px solid #eaecf0;">Kullanıcı Adı</th>
+                                <th style="text-align:left; padding:12px; border-bottom:1px solid #eaecf0;">Rol</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var k in Model.Kullanicilar)
+                            {
+                                <tr>
+                                    <td style="padding:12px; border-bottom:1px solid #f2f4f7; font-weight:600; color:#111827;">
+                                        @k.KullaniciAdi
+                                    </td>
+                                    <td style="padding:12px; border-bottom:1px solid #f2f4f7;">
+                                        @if (k.Rol == "SuperAdmin")
+                                        {
+                                            <span style="display:inline-block; padding:5px 10px; border-radius:999px; background:#eff8ff; color:#175cd3; font-size:13px; font-weight:700;">
+                                                SuperAdmin
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span style="display:inline-block; padding:5px 10px; border-radius:999px; background:#f2f4f7; color:#344054; font-size:13px; font-weight:700;">
+                                                Kullanici
+                                            </span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+
+                            @if (!Model.Kullanicilar.Any())
+                            {
+                                <tr>
+                                    <td colspan="3" style="padding:18px; text-align:center; color:#667085;">
+                                        Bu firmaya ait kullanıcı bulunmuyor.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>

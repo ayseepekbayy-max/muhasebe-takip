@@ -1,0 +1,216 @@
+@page
+@model MuhasebeTakip2.App.Pages.Maliyet.UretimModel
+@{
+    ViewData["Title"] = "Üretim Maliyeti";
+}
+
+<h1>Üretim Maliyeti</h1>
+<p><a class="btn btn-outline-dark btn-sm" href="/Maliyet">← Maliyet</a></p>
+
+@if (!string.IsNullOrWhiteSpace(Model.Hata))
+{
+    <div class="alert error">@Model.Hata</div>
+}
+@if (!string.IsNullOrWhiteSpace(Model.Mesaj))
+{
+    <div class="alert ok">@Model.Mesaj</div>
+}
+
+<form method="post">
+    <section class="box">
+        <h2>1. Üretim Bilgileri</h2>
+        <div class="grid two">
+            <label>Üretilecek Ürün / İş Adı <input asp-for="UretimAdi" /></label>
+            <label>Üretilecek Ürün Adedi <input asp-for="UretimAdedi" type="number" step="0.01" /></label>
+        </div>
+    </section>
+
+    <section class="box">
+        <div class="title-row">
+            <div>
+                <h2>2. Plaka Maliyeti</h2>
+                <p>Gövde, kapak, raf gibi farklı ölçüleri ayrı satır girin.</p>
+            </div>
+            <button type="button" class="soft" onclick="addPlaka()">+ Plaka Satırı Ekle</button>
+        </div>
+        <div class="scroll">
+            <table class="plaka-table">
+                <thead>
+                    <tr>
+                        <th>Açıklama</th><th>Plaka En</th><th>Plaka Boy</th><th>Plaka Fiyatı</th>
+                        <th>Parça En</th><th>Parça Boy</th><th>Parça Adedi</th><th>Toplam</th>
+                    </tr>
+                </thead>
+                <tbody id="plakaRows">
+                    @for (var i = 0; i < Model.Plakalar.Count; i++)
+                    {
+                        <tr data-plaka-row>
+                            <td><input asp-for="Plakalar[i].Aciklama" placeholder="Örn: Kapak" /></td>
+                            <td><input asp-for="Plakalar[i].PlakaEnCm" type="number" step="0.01" /></td>
+                            <td><input asp-for="Plakalar[i].PlakaBoyCm" type="number" step="0.01" /></td>
+                            <td><input asp-for="Plakalar[i].PlakaFiyati" type="number" step="0.01" /></td>
+                            <td><input asp-for="Plakalar[i].ParcaEnCm" type="number" step="0.01" /></td>
+                            <td><input asp-for="Plakalar[i].ParcaBoyCm" type="number" step="0.01" /></td>
+                            <td><input asp-for="Plakalar[i].ParcaAdedi" type="number" step="0.01" /></td>
+                            <td>@Model.Plakalar[i].ToplamMaliyet.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="box">
+        <div class="title-row">
+            <div>
+                <h2>3. Bantlama Maliyeti</h2>
+                <p>Kesilen parçaların bantlama ölçülerini eski mantıkla ayrı girin.</p>
+            </div>
+            <button type="button" class="soft" onclick="addBantlama()">+ Bantlama Satırı Ekle</button>
+        </div>
+        <div class="scroll">
+            <table class="bant-table">
+                <thead>
+                    <tr>
+                        <th>Açıklama</th><th>Parça En</th><th>Parça Boy</th><th>Parça Adedi</th><th>Bant Metre Fiyatı</th><th>Bant Kenarları</th><th>Toplam Metre</th><th>Toplam</th>
+                    </tr>
+                </thead>
+                <tbody id="bantlamaRows">
+                    @for (var i = 0; i < Model.Bantlamalar.Count; i++)
+                    {
+                        <tr data-bantlama-row>
+                            <td><input asp-for="Bantlamalar[i].Aciklama" placeholder="Örn: Kapak bant" /></td>
+                            <td><input asp-for="Bantlamalar[i].ParcaEnCm" type="number" step="0.01" /></td>
+                            <td><input asp-for="Bantlamalar[i].ParcaBoyCm" type="number" step="0.01" /></td>
+                            <td><input asp-for="Bantlamalar[i].ParcaAdedi" type="number" step="0.01" /></td>
+                            <td><input asp-for="Bantlamalar[i].BantMetreFiyati" type="number" step="0.01" /></td>
+                            <td class="checks">
+                                <label><input type="hidden" name="Bantlamalar[@i].BantUstAlt" value="false" /><input name="Bantlamalar[@i].BantUstAlt" type="checkbox" value="true" @(Model.Bantlamalar[i].BantUstAlt ? "checked" : "") /> Üst/Alt</label>
+                                <label><input type="hidden" name="Bantlamalar[@i].BantSagSol" value="false" /><input name="Bantlamalar[@i].BantSagSol" type="checkbox" value="true" @(Model.Bantlamalar[i].BantSagSol ? "checked" : "") /> Sağ/Sol</label>
+                            </td>
+                            <td>@Model.Bantlamalar[i].ToplamMetre.ToString("N2")</td>
+                            <td>@Model.Bantlamalar[i].ToplamMaliyet.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+    <section class="box">
+        <div class="title-row">
+            <div>
+                <h2>4. Plaka Maliyeti (Arkalık)</h2>
+                <p>Arkalık ölçülerini ve farklı plaka tiplerini burada girin.</p>
+            </div>
+            <button type="button" class="soft" onclick="addArkalik()">+ Arkalık Satırı Ekle</button>
+        </div>
+        <div class="scroll">
+            <table class="small-table">
+                <thead><tr><th>Açıklama</th><th>Plaka En</th><th>Plaka Boy</th><th>Plaka Fiyatı</th><th>Parça En</th><th>Parça Boy</th><th>Parça Adedi</th><th>Toplam</th></tr></thead>
+                <tbody id="arkalikRows">
+                    @for (var i = 0; i < Model.Arkaliklar.Count; i++)
+                    {
+                        <tr data-arkalik-row>
+                            <td><input asp-for="Arkaliklar[i].Aciklama" placeholder="Örn: Arkalık" /></td>
+                            <td><input asp-for="Arkaliklar[i].PlakaEnCm" type="number" step="0.01" /></td>
+                            <td><input asp-for="Arkaliklar[i].PlakaBoyCm" type="number" step="0.01" /></td>
+                            <td><input asp-for="Arkaliklar[i].PlakaFiyati" type="number" step="0.01" /></td>
+                            <td><input asp-for="Arkaliklar[i].ParcaEnCm" type="number" step="0.01" /></td>
+                            <td><input asp-for="Arkaliklar[i].ParcaBoyCm" type="number" step="0.01" /></td>
+                            <td><input asp-for="Arkaliklar[i].ParcaAdedi" type="number" step="0.01" /></td>
+                            <td>@Model.Arkaliklar[i].ToplamMaliyet.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="box">
+        <div class="title-row">
+            <div>
+                <h2>5. Ek Malzemeler</h2>
+                <p>Vida, menteşe, ray, kulp gibi ürünleri ihtiyaç oldukça artırın.</p>
+            </div>
+            <button type="button" class="soft" onclick="addMalzeme()">+ Malzeme Satırı Ekle</button>
+        </div>
+        <div class="scroll">
+            <table class="material-table">
+                <thead><tr><th>Stok Ürünü</th><th>1 Ürün İçin Kullanım</th><th>Birim Maliyet</th><th>Toplam Kullanım</th><th>Toplam Maliyet</th></tr></thead>
+                <tbody id="malzemeRows">
+                    @for (var i = 0; i < Model.Malzemeler.Count; i++)
+                    {
+                        <tr data-malzeme-row>
+                            <td>
+                                <select asp-for="Malzemeler[i].StokUrunId">
+                                    <option value="0">-- Ürün Seçin --</option>
+                                    @foreach (var item in Model.StokUrunleri)
+                                    {
+                                        <option value="@item.Id">@item.Ad (@item.Birim)</option>
+                                    }
+                                </select>
+                            </td>
+                            <td><input asp-for="Malzemeler[i].BirParcaKullanimMiktari" type="number" step="0.01" /></td>
+                            <td><input asp-for="Malzemeler[i].BirimMaliyet" type="number" step="0.01" /></td>
+                            <td>@Model.Malzemeler[i].ToplamKullanimMiktari.ToString("N2")</td>
+                            <td>@Model.Malzemeler[i].ToplamMaliyet.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <label class="stock-check"><input asp-for="StoktanDus" type="checkbox" /> Hesaplanan ek malzemeleri stoktan düş</label>
+    </section>
+
+    <div class="actions">
+        <button type="submit" asp-page-handler="Hesapla" class="primary">Maliyeti Hesapla</button>
+        <button type="submit" asp-page-handler="StokDus" class="danger">Hesapla ve Stoktan Düş</button>
+    </div>
+</form>
+
+<section class="box result">
+    <h2>6. Sonuç</h2>
+    @if (!Model.HesaplandiMi)
+    {
+        <div>Bilgileri girip maliyeti hesaplayın.</div>
+    }
+    else
+    {
+        <div class="result-grid">
+            <div><b>Plaka Maliyeti</b><span>@Model.PlakaMaliyeti.ToString("N2") TL</span></div>
+            <div><b>Bantlama Maliyeti</b><span>@Model.BantlamaMaliyeti.ToString("N2") TL</span></div>
+            <div><b>Arkalık Maliyeti</b><span>@Model.ArkalikMaliyeti.ToString("N2") TL</span></div>
+            <div><b>Malzeme Maliyeti</b><span>@Model.MalzemeMaliyeti.ToString("N2") TL</span></div>
+            <div><b>Toplam Maliyet</b><span>@Model.ToplamMaliyet.ToString("N2") TL</span></div>
+            <div><b>Birim Maliyet</b><span>@Model.BirimMaliyet.ToString("N2") TL</span></div>
+        </div>
+    }
+</section>
+
+<select id="stokOptions" style="display:none;">
+    <option value="0">-- Ürün Seçin --</option>
+    @foreach (var item in Model.StokUrunleri)
+    {
+        <option value="@item.Id">@item.Ad (@item.Birim)</option>
+    }
+</select>
+
+<style>
+    .alert{padding:10px 12px;border-radius:10px;margin-bottom:12px}.error{color:#b42318;background:#fef2f2;border:1px solid #fecaca}.ok{color:#166534;background:#f0fdf4;border:1px solid #bbf7d0}
+    .box{border:1px solid #444;border-radius:10px;padding:18px;margin-bottom:16px;background:#f8fafc}.box h2{margin:0 0 12px;color:#0f2747;font-size:28px;font-weight:800}.box p{margin:0;color:#475569}
+    .title-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.grid{display:grid;gap:12px}.two{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+    label{font-weight:700;color:#0f172a}input,select{width:100%;min-height:40px;padding:8px 10px;border:1px solid #dbe4ee;border-radius:10px;background:white;font-size:15px}input[type=checkbox]{width:auto;min-height:auto}
+    .scroll{width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse}.plaka-table,.small-table{min-width:850px}.bant-table{min-width:980px}.material-table{min-width:860px}th{text-align:left;border-bottom:1px solid #64748b;padding:8px;color:#1e293b;white-space:nowrap}td{border-bottom:1px solid #e2e8f0;padding:8px;vertical-align:top;min-width:95px}td:first-child{min-width:150px}.checks{min-width:150px}.checks label{display:block;font-weight:500;margin-bottom:6px;white-space:nowrap}
+    .soft,.primary,.danger{border:none;border-radius:12px;padding:11px 14px;font-weight:800;cursor:pointer}.soft{background:#eef2ff;color:#312e81;border:1px solid #c7d2fe}.primary{background:#4f46e5;color:white}.danger{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.stock-check{display:block;margin-top:14px}
+    .result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.result-grid div{border:1px solid #dbe4ee;background:white;border-radius:10px;padding:12px}.result-grid span{display:block;margin-top:8px;font-size:22px;font-weight:800;color:#312e81}
+    @@media(max-width:768px){.title-row{flex-direction:column}.soft,.primary,.danger{width:100%}.box h2{font-size:23px}}
+</style>
+
+<script>
+    function input(name,type,ph){var x=document.createElement('input');x.name=name;x.type=type||'number';x.step='0.01';if(ph)x.placeholder=ph;return x;}
+    function cell(c){var td=document.createElement('td');if(typeof c==='string')td.innerText=c;else td.appendChild(c);return td;}
+    function addPlaka(){var i=document.querySelectorAll('[data-plaka-row]').length;var r=document.createElement('tr');r.setAttribute('data-plaka-row','');r.appendChild(cell(input('Plakalar['+i+'].Aciklama','text','Örn: Raf')));['PlakaEnCm','PlakaBoyCm','PlakaFiyati','ParcaEnCm','ParcaBoyCm','ParcaAdedi'].forEach(function(n){r.appendChild(cell(input('Plakalar['+i+'].'+n)));});r.appendChild(cell('0,00'));document.getElementById('plakaRows').appendChild(r);}
+    function addBantlama(){var i=document.querySelectorAll('[data-bantlama-row]').length;var r=document.createElement('tr');r.setAttribute('data-bantlama-row','');r.appendChild(cell(input('Bantlamalar['+i+'].Aciklama','text','Örn: Kapak bant')));['ParcaEnCm','ParcaBoyCm','ParcaAdedi','BantMetreFiyati'].forEach(function(n){r.appendChild(cell(input('Bantlamalar['+i+'].'+n)));});var c=document.createElement('td');c.className='checks';c.innerHTML='<label><input type="hidden" name="Bantlamalar['+i+'].BantUstAlt" value="false"><input name="Bantlamalar['+i+'].BantUstAlt" type="checkbox" value="true" checked> Üst/Alt</label><label><input type="hidden" name="Bantlamalar['+i+'].BantSagSol" value="false"><input name="Bantlamalar['+i+'].BantSagSol" type="checkbox" value="true" checked> Sağ/Sol</label>';r.appendChild(c);r.appendChild(cell('0,00'));r.appendChild(cell('0,00'));document.getElementById('bantlamaRows').appendChild(r);}
+    function addArkalik(){var i=document.querySelectorAll('[data-arkalik-row]').length;var r=document.createElement('tr');r.setAttribute('data-arkalik-row','');r.appendChild(cell(input('Arkaliklar['+i+'].Aciklama','text','Örn: Arkalık')));['PlakaEnCm','PlakaBoyCm','PlakaFiyati','ParcaEnCm','ParcaBoyCm','ParcaAdedi'].forEach(function(n){r.appendChild(cell(input('Arkaliklar['+i+'].'+n)));});r.appendChild(cell('0,00'));document.getElementById('arkalikRows').appendChild(r);}
+    function addMalzeme(){var i=document.querySelectorAll('[data-malzeme-row]').length;var r=document.createElement('tr');r.setAttribute('data-malzeme-row','');var s=document.createElement('select');s.name='Malzemeler['+i+'].StokUrunId';s.innerHTML=document.getElementById('stokOptions').innerHTML;r.appendChild(cell(s));r.appendChild(cell(input('Malzemeler['+i+'].BirParcaKullanimMiktari')));r.appendChild(cell(input('Malzemeler['+i+'].BirimMaliyet')));r.appendChild(cell('0,00'));r.appendChild(cell('0,00'));document.getElementById('malzemeRows').appendChild(r);}
+</script>

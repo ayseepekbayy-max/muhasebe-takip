@@ -1,0 +1,58 @@
+@page
+@model MuhasebeTakip2.App.Pages.Kasa.HareketlerModel
+
+<h1>Kasa Hareketleri</h1>
+
+<div style="margin:12px 0;">
+    <form method="post" asp-page-handler="DisaAktar" style="display:inline;">
+        <button type="submit" class="btn btn-outline-success btn-sm">
+    Kasa Hareketlerini Excel Olarak İndir
+</button>
+    </form>
+</div>
+<p>
+  <a href="/">← Kasa</a>
+  <span style="margin:0 10px;">|</span>
+  <a href="/Kasa/HareketEkle">+ Hareket Ekle</a>
+</p>
+
+<table style="width:100%; border-collapse:collapse;">
+  <thead>
+    <tr>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Tarih</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Tip</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Tutar</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Cari</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Açıklama</th>
+      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">İşlem</th>
+    </tr>
+  </thead>
+
+  <tbody>
+  @if (Model.Hareketler.Count == 0)
+  {
+    <tr><td colspan="6" style="padding:8px;">Henüz hareket yok.</td></tr>
+  }
+  else
+  {
+    @foreach (var h in Model.Hareketler)
+    {
+      <tr>
+        <td style="border-bottom:1px solid #333; padding:8px;">@h.Tarih.ToShortDateString()</td>
+        <td style="border-bottom:1px solid #333; padding:8px;">@h.Tip</td>
+        <td style="border-bottom:1px solid #333; padding:8px;">@h.Tutar</td>
+        <td style="border-bottom:1px solid #333; padding:8px;">@(h.CariKart?.Unvan ?? "-")</td>
+        <td style="border-bottom:1px solid #333; padding:8px;">@h.Aciklama</td>
+        <td style="border-bottom:1px solid #333; padding:8px;">
+          <a href="/Kasa/HareketDuzenle/@h.Id">Düzenle</a>
+
+          <form method="post" asp-page-handler="Sil" style="display:inline;" onsubmit="return confirm('Silinsin mi?');">
+            <input type="hidden" name="id" value="@h.Id" />
+            <button type="submit">Sil</button>
+          </form>
+        </td>
+      </tr>
+    }
+  }
+  </tbody>
+</table>

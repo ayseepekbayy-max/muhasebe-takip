@@ -1,0 +1,175 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+  color: var(--bs-secondary-color);
+  text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+  text-align: start;
+}
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f6f7fb;
+    color: #1f2937;
+}
+
+.hero {
+    min-height: 75vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    background: linear-gradient(135deg, #111827, #312e81, #7c3aed);
+    color: white;
+    text-align: center;
+}
+
+.hero-content {
+    max-width: 850px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.15);
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+.hero h1 {
+    font-size: 64px;
+    margin: 10px 0;
+}
+
+.hero p {
+    font-size: 21px;
+    line-height: 1.7;
+    color: #e5e7eb;
+}
+
+.hero-buttons {
+    margin-top: 35px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 14px 24px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.btn-primary {
+    background: white;
+    color: #312e81;
+}
+
+.btn-secondary {
+    border: 1px solid white;
+    color: white;
+}
+
+.section {
+    padding: 70px 20px;
+    max-width: 1150px;
+    margin: auto;
+}
+
+.section h2 {
+    text-align: center;
+    font-size: 36px;
+    margin-bottom: 40px;
+}
+
+.cards,
+.project-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.card,
+.project {
+    background: white;
+    padding: 30px;
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.card h3,
+.project h3 {
+    margin-top: 0;
+    color: #312e81;
+}
+
+.card p,
+.project p {
+    line-height: 1.7;
+    color: #4b5563;
+}
+
+.dark {
+    max-width: none;
+    background: #111827;
+    color: white;
+}
+
+.dark .project-list {
+    max-width: 1150px;
+    margin: auto;
+}
+
+.dark .project {
+    background: #1f2937;
+}
+
+.dark .project p {
+    color: #d1d5db;
+}
+
+.dark .project h3 {
+    color: #a78bfa;
+}
+
+@media (max-width: 768px) {
+    .hero h1 {
+        font-size: 42px;
+    }
+
+    .hero p {
+        font-size: 18px;
+    }
+
+    .cards,
+    .project-list {
+        grid-template-columns: 1fr;
+    }
+}

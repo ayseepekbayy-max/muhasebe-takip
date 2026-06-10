@@ -1,0 +1,50 @@
+@page "{id:int}"
+@using MuhasebeTakip2.App.Models
+@model MuhasebeTakip2.App.Pages.Kasa.HareketDuzenleModel
+
+<h1>Hareket Düzenle</h1>
+
+@if (!ViewData.ModelState.IsValid)
+{
+  <div style="color:red; margin:10px 0;">
+    @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+    {
+      <div>@err.ErrorMessage</div>
+    }
+  </div>
+}
+
+<form method="post">
+  <input type="hidden" asp-for="Hareket.Id" />
+
+  <div style="margin-bottom:10px;">
+    <label><b>Tarih</b></label><br />
+    <input asp-for="Hareket.Tarih" type="date" />
+  </div>
+
+  <div style="margin-bottom:10px;">
+    <label><b>Tip</b></label><br />
+    <select asp-for="Hareket.Tip">
+      <option value="@((int)HareketTipi.Giris)">Giriş</option>
+      <option value="@((int)HareketTipi.Cikis)">Çıkış</option>
+    </select>
+  </div>
+
+  <div style="margin-bottom:10px;">
+    <label><b>Tutar</b></label><br />
+    <input asp-for="Hareket.Tutar" type="number" step="0.01" />
+  </div>
+
+  <div style="margin-bottom:10px;">
+    <label><b>Açıklama</b></label><br />
+    <input asp-for="Hareket.Aciklama" style="width:360px; max-width:100%;" />
+  </div>
+
+  <div style="margin-bottom:10px;">
+    <label><b>Cari (opsiyonel)</b></label><br />
+    <select asp-for="Hareket.CariKartId" asp-items="Model.CariSecenekleri"></select>
+  </div>
+
+  <button type="submit" style="padding:10px 14px;">Kaydet</button>
+  <a href="/" style="margin-left:10px;">İptal</a>
+</form>

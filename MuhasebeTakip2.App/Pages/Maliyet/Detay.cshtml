@@ -1,0 +1,185 @@
+@page "{id:int}"
+@model MuhasebeTakip2.App.Pages.Maliyet.DetayModel
+
+@{
+    ViewData["Title"] = "Maliyet Detayı";
+    var kayit = Model.Kayit;
+}
+
+<h1>Maliyet Detayı</h1>
+
+<p>
+    <a class="back-btn" href="/Maliyet">← Maliyet Arşivi</a>
+    <button type="button" class="print-btn" onclick="window.print()">Yazdır / PDF Kaydet</button>
+</p>
+
+@if (kayit == null)
+{
+    <section class="detail-box">
+        Kayıt bulunamadı.
+    </section>
+}
+else
+{
+    <section class="detail-box">
+        <div class="title-row">
+            <div>
+                <h2>@kayit.UretimAdi</h2>
+                <p>
+                    @kayit.HesapTarihi.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                    · Kaynak: @kayit.Kaynak
+                </p>
+            </div>
+        </div>
+
+        <div class="summary-grid">
+            <div><b>Üretim Adedi</b><span>@kayit.UretimAdedi.ToString("N2")</span></div>
+            <div><b>Plaka</b><span>@kayit.PlakaMaliyeti.ToString("N2") TL</span></div>
+            <div><b>Bantlama</b><span>@kayit.BantlamaMaliyeti.ToString("N2") TL</span></div>
+            <div><b>Arkalık</b><span>@kayit.ArkalikMaliyeti.ToString("N2") TL</span></div>
+            <div><b>Malzeme</b><span>@kayit.MalzemeMaliyeti.ToString("N2") TL</span></div>
+            <div><b>Toplam</b><span>@kayit.ToplamMaliyet.ToString("N2") TL</span></div>
+            <div><b>Birim</b><span>@kayit.BirimMaliyet.ToString("N2") TL</span></div>
+        </div>
+    </section>
+
+    @await Html.PartialAsync("_MaliyetDetayTablo", ("Plaka Detayları", Model.Detay.Plakalar))
+    @await Html.PartialAsync("_MaliyetDetayTablo", ("Bantlama Detayları", Model.Detay.Bantlamalar))
+    @await Html.PartialAsync("_MaliyetDetayTablo", ("Arkalık Detayları", Model.Detay.Arkaliklar))
+    @await Html.PartialAsync("_MaliyetDetayTablo", ("Malzeme Detayları", Model.Detay.Malzemeler))
+    @await Html.PartialAsync("_MaliyetDetayTablo", ("Belgeden Okunan Kalemler", Model.Detay.BelgeKalemleri))
+
+    @if (!string.IsNullOrWhiteSpace(kayit.OkunanMetin))
+    {
+        <section class="detail-box">
+            <h2>Okunan Belge Metni</h2>
+            <pre>@kayit.OkunanMetin</pre>
+        </section>
+    }
+}
+
+<style>
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 14px;
+        border: 1px solid #dbe4ee;
+        border-radius: 12px;
+        color: #0f172a;
+        background: white;
+        font-weight: 800;
+        text-decoration: none;
+    }
+
+    .print-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 8px;
+        padding: 10px 14px;
+        border: 1px solid #c7d2fe;
+        border-radius: 12px;
+        color: #312e81;
+        background: #eef2ff;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .detail-box {
+        border: 1px solid #444;
+        border-radius: 10px;
+        padding: 22px;
+        margin: 16px 0;
+        max-width: 1120px;
+        background: #f8fafc;
+    }
+
+    .detail-box h2 {
+        margin: 0 0 8px;
+        color: #0f2747;
+        font-size: 28px;
+        font-weight: 800;
+    }
+
+    .detail-box p {
+        margin: 0;
+        color: #475569;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    .summary-grid div {
+        border: 1px solid #dbe4ee;
+        border-radius: 10px;
+        padding: 12px;
+        background: white;
+    }
+
+    .summary-grid b {
+        display: block;
+        color: #334155;
+        margin-bottom: 8px;
+    }
+
+    .summary-grid span {
+        font-size: 20px;
+        font-weight: 800;
+        color: #312e81;
+    }
+
+    pre {
+        white-space: pre-wrap;
+        max-height: 420px;
+        overflow: auto;
+        background: white;
+        border: 1px solid #dbe4ee;
+        border-radius: 10px;
+        padding: 12px;
+    }
+
+    @@media print {
+        body {
+            background: white !important;
+        }
+
+        .back-btn,
+        .print-btn,
+        header,
+        nav {
+            display: none !important;
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        .detail-box,
+        .detail-table-box {
+            max-width: none !important;
+            border: 1px solid #cbd5e1 !important;
+            page-break-inside: avoid;
+            background: white !important;
+        }
+
+        table {
+            min-width: 0 !important;
+            font-size: 12px;
+        }
+
+        th,
+        td {
+            padding: 6px !important;
+        }
+
+        pre {
+            max-height: none !important;
+            overflow: visible !important;
+        }
+    }
+</style>

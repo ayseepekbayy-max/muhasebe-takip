@@ -1,0 +1,80 @@
+@model (string Baslik, List<MuhasebeTakip2.App.Models.MaliyetDetaySatiri> Satirlar)
+
+@if (Model.Satirlar.Any())
+{
+    <section class="detail-table-box">
+        <h2>@Model.Baslik</h2>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Açıklama</th>
+                        <th>Ölçü / Birim</th>
+                        <th>Adet / Miktar</th>
+                        <th>Birim Fiyat</th>
+                        <th>Toplam</th>
+                        <th>Not</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var item in Model.Satirlar)
+                    {
+                        <tr>
+                            <td>@item.Aciklama</td>
+                            <td>@item.Olcu</td>
+                            <td>@item.Adet.ToString("N2")</td>
+                            <td>@item.BirimFiyat.ToString("N2") TL</td>
+                            <td><strong>@item.Toplam.ToString("N2") TL</strong></td>
+                            <td>@item.Not</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+<style>
+    .detail-table-box {
+        border: 1px solid #dbe4ee;
+        border-radius: 10px;
+        padding: 18px;
+        margin: 16px 0;
+        max-width: 1120px;
+        background: white;
+    }
+
+    .detail-table-box h2 {
+        margin: 0 0 12px;
+        color: #0f2747;
+        font-size: 24px;
+        font-weight: 800;
+    }
+
+    .table-wrap {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        min-width: 880px;
+        border-collapse: collapse;
+    }
+
+    th {
+        text-align: left;
+        padding: 10px;
+        border-bottom: 1px solid #64748b;
+        color: #1e293b;
+        white-space: nowrap;
+    }
+
+    td {
+        padding: 10px;
+        border-bottom: 1px solid #e2e8f0;
+        vertical-align: top;
+    }
+</style>
