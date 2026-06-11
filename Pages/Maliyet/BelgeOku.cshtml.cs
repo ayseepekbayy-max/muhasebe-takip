@@ -7,6 +7,7 @@ using System.Xml.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MuhasebeTakip2.App.Data;
+using MuhasebeTakip2.App.Helpers;
 using MuhasebeTakip2.App.Models;
 using UglyToad.PdfPig;
 
@@ -105,6 +106,33 @@ public class BelgeOkuModel : PageModel
         return Page();
     }
 
+    public IActionResult OnPostMetinOku()
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        UretimAdi = string.IsNullOrWhiteSpace(UretimAdi)
+            ? "OCR ile okunan belge"
+            : UretimAdi.Trim();
+
+        if (string.IsNullOrWhiteSpace(OkunanMetin))
+        {
+            Hata = "OCR sonucunda okunabilir metin bulunamadı.";
+            return Page();
+        }
+
+        Kalemler = KalemleriBul(OkunanMetin);
+        ToplamMaliyet = Kalemler.Sum(x => x.ToplamTutar);
+
+        Mesaj = Kalemler.Any()
+            ? "OCR metni okundu. Bulunan tutarları kontrol edip arşive kaydedebilirsiniz."
+            : "OCR metni okundu ancak net bir maliyet satırı bulunamadı. Toplam tutarı elle girerek kaydedebilirsiniz.";
+
+        return Page();
+    }
+
     public async Task<IActionResult> OnPostKaydetAsync()
     {
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
@@ -156,6 +184,44 @@ public class BelgeOkuModel : PageModel
 
         TempData["Mesaj"] = "Belgeden okunan maliyet arşive kaydedildi.";
         return RedirectToPage("/Maliyet/Index");
+    }
+
+    public IActionResult OnPostAktarAsync()
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        UretimAdi = (UretimAdi ?? "").Trim();
+
+        if (string.IsNullOrWhiteSpace(UretimAdi))
+            UretimAdi = "Belgeden aktarılan maliyet";
+
+        if (!Kalemler.Any() && !string.IsNullOrWhiteSpace(OkunanMetin))
+            Kalemler = KalemleriBul(OkunanMetin);
+
+        if (!Kalemler.Any())
+        {
+            Hata = "Üretim maliyetine aktarılacak maliyet kalemi bulunamadı.";
+            return Page();
+        }
+
+        HttpContext.Session.SetObject("MaliyetBelgeAktarim", new MaliyetBelgeAktarim
+        {
+            UretimAdi = UretimAdi,
+            OkunanMetin = OkunanMetin ?? "",
+            Kalemler = Kalemler
+                .Where(x => x.ToplamTutar > 0)
+                .Select(x => new MaliyetBelgeAktarimKalemi
+                {
+                    Aciklama = x.Aciklama,
+                    Tutar = x.ToplamTutar
+                })
+                .ToList()
+        });
+
+        return RedirectToPage("/Maliyet/Uretim");
     }
 
     private static string MetinCikar(string fileName, byte[] bytes)

@@ -42,10 +42,18 @@
 
 <div class="dashboard-responsive">
 
-<h1 style="color:#0f172a; font-size:2.3rem; margin-bottom:6px;">Dashboard</h1>
+<div style="margin-bottom:22px;">
+    <div style="display:inline-block; padding:8px 14px; border-radius:999px; background:#eef2ff; color:#3730a3; font-weight:700; font-size:13px; margin-bottom:10px;">
+        Firmova ERP
+    </div>
 
-<div style="color:#64748b; font-size:14px; margin-bottom:18px;">
-    Güncel finans ve işlem özetinizi buradan takip edebilirsiniz.
+    <h1 style="color:#0f172a; font-size:2.5rem; margin:0 0 6px; font-weight:900;">
+        Kontrol Paneli
+    </h1>
+
+    <div style="color:#64748b; font-size:15px;">
+        Bugünkü finans hareketlerinizi, kasa durumunuzu ve işletme özetinizi tek ekrandan takip edin.
+    </div>
 </div>
 
 @if (TempData["Hata"] != null)
@@ -302,13 +310,13 @@
 <div class="firmova-float" id="firmovaFloat">
     <button type="button" class="firmova-float-btn" onclick="firmovaToggle()">
         <span class="firmova-pulse"></span>
-        <strong>AI</strong>
+        <strong>Nova</strong>
     </button>
 
     <div class="firmova-mini-panel" id="firmovaPanel">
         <div class="firmova-mini-header">
             <div>
-                <strong>FirmovaAI</strong>
+                <strong>Nova Asistan</strong>
                 <small id="firmovaMiniDurum">Hazır</small>
             </div>
 

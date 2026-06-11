@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
+using MuhasebeTakip2.App.Helpers;
 using MuhasebeTakip2.App.Models;
 using System.Text.Json;
 
@@ -58,6 +59,7 @@ public class UretimModel : PageModel
 
         FormuHazirla();
         await StoklariYukleAsync(firmaId.Value);
+        BelgeAktariminiUygula();
 
         return Page();
     }
@@ -249,7 +251,9 @@ public class UretimModel : PageModel
 
                     return new MaliyetDetaySatiri
                     {
-                        Aciklama = stok != null ? stok.Ad : "Ek malzeme",
+                        Aciklama = stok != null
+                            ? stok.Ad
+                            : string.IsNullOrWhiteSpace(x.Aciklama) ? "Ek malzeme" : x.Aciklama,
                         Olcu = stok != null ? stok.Birim : "",
                         Adet = x.ToplamKullanimMiktari,
                         BirimFiyat = x.BirimMaliyet,
@@ -435,6 +439,37 @@ public class UretimModel : PageModel
             .ToList();
     }
 
+    private void BelgeAktariminiUygula()
+    {
+        var aktarim = HttpContext.Session.GetObject<MaliyetBelgeAktarim>("MaliyetBelgeAktarim");
+
+        if (aktarim == null)
+            return;
+
+        HttpContext.Session.Remove("MaliyetBelgeAktarim");
+
+        if (!string.IsNullOrWhiteSpace(aktarim.UretimAdi))
+            UretimAdi = aktarim.UretimAdi;
+
+        UretimAdedi = 1;
+
+        var aktarilanMalzemeler = aktarim.Kalemler
+            .Where(x => x.Tutar > 0)
+            .Select(x => new MalzemeSatiri
+            {
+                Aciklama = x.Aciklama,
+                BirParcaKullanimMiktari = 1,
+                BirimMaliyet = x.Tutar
+            })
+            .ToList();
+
+        while (aktarilanMalzemeler.Count < 8)
+            aktarilanMalzemeler.Add(new MalzemeSatiri());
+
+        Malzemeler = aktarilanMalzemeler;
+        Mesaj = "Belgeden okunan maliyet kalemleri Ek Malzemeler bölümüne aktarıldı. Kontrol edip Maliyeti Hesapla diyebilirsiniz.";
+    }
+
     private void SatirlariTamamla()
     {
         Plakalar ??= new List<PlakaSatiri>();
@@ -500,6 +535,8 @@ public class BantlamaSatiri
 
 public class MalzemeSatiri
 {
+    public string Aciklama { get; set; } = "";
+
     public int StokUrunId { get; set; }
 
     public decimal BirParcaKullanimMiktari { get; set; }
