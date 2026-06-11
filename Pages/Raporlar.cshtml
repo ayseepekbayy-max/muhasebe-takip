@@ -1,54 +1,138 @@
 @page
 @model MuhasebeTakip2.App.Pages.RaporlarModel
+@{
+    ViewData["Title"] = "Raporlar";
+    var bugunNet = Model.BugunGiris - Model.BugunCikis;
+    var ayNet = Model.AyGiris - Model.AyCikis;
+    var maxAkis = new[] { Model.BugunGiris, Model.BugunCikis, Model.AyGiris, Model.AyCikis, 1m }.Max();
+    decimal Width(decimal value) => Math.Max(4, Math.Round((value / maxAkis) * 100, 0));
+}
 
-<h1>Raporlar</h1>
+<div class="app-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Finans Raporları</span>
+            <h1>Raporlar</h1>
+            <p>Günlük ve aylık kasa akışını, cari dağılımı ve çalışan sayısını özetleyin.</p>
+        </div>
 
-<div style="margin:12px 0;">
-  <form method="post" asp-page-handler="DisaAktar" style="display:inline;">
-    <button type="submit" class="btn btn-outline-success btn-sm">Raporları Excel Olarak İndir</button>
-  </form>
-</div>
+        <div class="app-page-actions">
+            <form method="post" asp-page-handler="DisaAktar">
+                <button type="submit" class="btn btn-outline-success">Excel İndir</button>
+            </form>
+            <a class="btn btn-outline-dark" href="/">Kasa</a>
+        </div>
+    </section>
 
-<p>
-  <a class="btn btn-outline-dark btn-sm" href="/">← Kasa</a>
-</p>
+    <section class="metric-grid">
+        <article class="metric-card metric-card-positive">
+            <span>Bugün Giriş</span>
+            <strong>@Model.BugunGiris.ToString("N2")</strong>
+        </article>
+        <article class="metric-card metric-card-negative">
+            <span>Bugün Çıkış</span>
+            <strong>@Model.BugunCikis.ToString("N2")</strong>
+        </article>
+        <article class="metric-card">
+            <span>Bu Ay Giriş</span>
+            <strong>@Model.AyGiris.ToString("N2")</strong>
+        </article>
+        <article class="metric-card metric-card-negative">
+            <span>Bu Ay Çıkış</span>
+            <strong>@Model.AyCikis.ToString("N2")</strong>
+        </article>
+    </section>
 
-<div style="display:flex; gap:24px; flex-wrap:wrap; margin:16px 0;">
+    <section class="dashboard-content-grid reports-grid">
+        <div class="dashboard-stack">
+            <section class="dashboard-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <h2>Kasa Akışı</h2>
+                        <p>Bugün ve bu ay için giriş/çıkış karşılaştırması</p>
+                    </div>
+                </div>
 
-  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:220px;">
-    <div><b>Bugün Giriş</b></div>
-    <div style="font-size:20px;">@Model.BugunGiris</div>
-  </div>
+                <div class="report-bars">
+                    <div class="report-bar-row">
+                        <span>Bugün Giriş</span>
+                        <div><i style="width:@Width(Model.BugunGiris)%"></i></div>
+                        <strong>@Model.BugunGiris.ToString("N2")</strong>
+                    </div>
+                    <div class="report-bar-row danger">
+                        <span>Bugün Çıkış</span>
+                        <div><i style="width:@Width(Model.BugunCikis)%"></i></div>
+                        <strong>@Model.BugunCikis.ToString("N2")</strong>
+                    </div>
+                    <div class="report-bar-row">
+                        <span>Bu Ay Giriş</span>
+                        <div><i style="width:@Width(Model.AyGiris)%"></i></div>
+                        <strong>@Model.AyGiris.ToString("N2")</strong>
+                    </div>
+                    <div class="report-bar-row danger">
+                        <span>Bu Ay Çıkış</span>
+                        <div><i style="width:@Width(Model.AyCikis)%"></i></div>
+                        <strong>@Model.AyCikis.ToString("N2")</strong>
+                    </div>
+                </div>
+            </section>
 
-  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:220px;">
-    <div><b>Bugün Çıkış</b></div>
-    <div style="font-size:20px;">@Model.BugunCikis</div>
-  </div>
+            <section class="dashboard-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <h2>Net Durum</h2>
+                        <p>Kasa ve dönem netleri</p>
+                    </div>
+                </div>
 
-  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:220px;">
-    <div><b>Bu Ay Giriş</b></div>
-    <div style="font-size:20px;">@Model.AyGiris</div>
-  </div>
+                <div class="summary-grid report-summary-grid">
+                    <article>
+                        <span>Bugün Net</span>
+                        <strong>@bugunNet.ToString("N2")</strong>
+                    </article>
+                    <article>
+                        <span>Bu Ay Net</span>
+                        <strong>@ayNet.ToString("N2")</strong>
+                    </article>
+                    <article>
+                        <span>Kasa Bakiye</span>
+                        <strong>@Model.KasaBakiye.ToString("N2")</strong>
+                    </article>
+                    <article>
+                        <span>Çalışan Sayısı</span>
+                        <strong>@Model.CalisanSayisi</strong>
+                    </article>
+                </div>
+            </section>
+        </div>
 
-  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:220px;">
-    <div><b>Bu Ay Çıkış</b></div>
-    <div style="font-size:20px;">@Model.AyCikis</div>
-  </div>
+        <aside class="dashboard-panel quick-actions-panel">
+            <div class="panel-title-row">
+                <div>
+                    <h2>Cari Dağılım</h2>
+                    <p>Alıcı ve satıcı kart sayıları</p>
+                </div>
+            </div>
 
-  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:220px;">
-    <div><b>Kasa Bakiye (Toplam)</b></div>
-    <div style="font-size:20px;">@Model.KasaBakiye</div>
-  </div>
+            <div class="report-total-card">
+                <span>Toplam Cari</span>
+                <strong>@Model.CariSayisi</strong>
+            </div>
 
-  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:220px;">
-    <div><b>Cari Sayısı</b></div>
-    <div style="font-size:20px;">@Model.CariSayisi</div>
-    <div style="opacity:.8;">Alıcı: @Model.AliciSayisi / Satıcı: @Model.SaticiSayisi</div>
-  </div>
-
-  <div style="padding:12px; border:1px solid #444; border-radius:8px; min-width:220px;">
-    <div><b>Çalışan Sayısı</b></div>
-    <div style="font-size:20px;">@Model.CalisanSayisi</div>
-  </div>
-
+            <div class="quick-action-list">
+                <a class="quick-action" href="/CariKartlar">
+                    <span>A</span>
+                    <strong>Alıcı: @Model.AliciSayisi</strong>
+                </a>
+                <a class="quick-action" href="/CariKartlar">
+                    <span>S</span>
+                    <strong>Satıcı: @Model.SaticiSayisi</strong>
+                </a>
+                <a class="quick-action primary" href="/Kasa/Hareketler">
+                    <span>K</span>
+                    <strong>Kasa Hareketleri</strong>
+                </a>
+            </div>
+        </aside>
+    </section>
 </div>

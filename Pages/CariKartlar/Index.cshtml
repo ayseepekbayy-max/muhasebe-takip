@@ -1,165 +1,198 @@
 @page
 @using MuhasebeTakip2.App.Models
 @model MuhasebeTakip2.App.Pages.CariKartlar.IndexModel
-
-<h1>Cari Kartlar</h1>
-
-@if (TempData["Hata"] != null)
-{
-    <div class="alert alert-danger">
-        @TempData["Hata"]
-    </div>
+@{
+    ViewData["Title"] = "Cari Kartlar";
 }
 
-@if (TempData["Basari"] != null)
-{
-    <div class="alert alert-success">
-        @TempData["Basari"]
-    </div>
-}
+<div class="app-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Cari Yönetimi</span>
+            <h1>Cari Kartlar</h1>
+            <p>Alıcı ve satıcı kartlarını hızlıca oluşturun, arayın ve detay hareketlerine geçin.</p>
+        </div>
 
-<div style="margin:12px 0;">
-  <form method="post" asp-page-handler="DisaAktar" style="display:inline;">
-    <button type="submit" class="btn btn-outline-success btn-sm">Cari Kartları Excel Olarak İndir</button>
-  </form>
-</div>
+        <div class="app-page-actions">
+            <form method="post" asp-page-handler="DisaAktar">
+                <button type="submit" class="btn btn-outline-success">Excel İndir</button>
+            </form>
+            <a class="btn btn-outline-dark" href="/">Kasa</a>
+        </div>
+    </section>
 
-@if (!ViewData.ModelState.IsValid)
-{
-  <div style="color:red; margin:10px 0;">
-    @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+    @if (TempData["Hata"] != null)
     {
-      <div>@err.ErrorMessage</div>
+        <div class="app-alert app-alert-danger">@TempData["Hata"]</div>
     }
-  </div>
+
+    @if (TempData["Basari"] != null)
+    {
+        <div class="app-alert app-alert-success">@TempData["Basari"]</div>
+    }
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="app-alert app-alert-danger">
+            @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@err.ErrorMessage</div>
+            }
+        </div>
+    }
+
+    <section class="app-form-panel">
+        <div class="panel-title-row">
+            <div>
+                <h2>Yeni Cari Ekle</h2>
+                <p>Ünvan, tip ve iletişim bilgilerini girerek yeni cari kart oluşturun.</p>
+            </div>
+        </div>
+
+        <form method="post" asp-page-handler="Ekle" class="app-form-grid">
+            <div class="form-field form-field-wide">
+                <label asp-for="YeniCari.Unvan">Ünvan</label>
+                <input asp-for="YeniCari.Unvan" />
+            </div>
+
+            <div class="form-field">
+                <label asp-for="YeniCari.Tip">Tip</label>
+                <select asp-for="YeniCari.Tip">
+                    <option value="@((int)CariTip.Alici)">Alıcı</option>
+                    <option value="@((int)CariTip.Satici)">Satıcı</option>
+                </select>
+            </div>
+
+            <div class="form-field">
+                <label asp-for="YeniCari.Telefon">Telefon</label>
+                <input asp-for="YeniCari.Telefon" />
+            </div>
+
+            <div class="form-field">
+                <label asp-for="YeniCari.VergiNo">Vergi No</label>
+                <input asp-for="YeniCari.VergiNo" />
+            </div>
+
+            <div class="form-actions-row">
+                <button type="submit" class="btn btn-primary">Cari Ekle</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="app-filter-bar">
+        <div class="form-field">
+            <label for="cariSearch">Cari ara</label>
+            <input id="cariSearch" type="search" placeholder="Ünvan veya telefon yazın" data-table-search="cari-row" />
+        </div>
+        <div class="filter-summary">
+            <strong>@(Model.Alicilar.Count + Model.Saticilar.Count)</strong>
+            <span>toplam cari</span>
+        </div>
+    </section>
+
+    <section class="two-column-grid">
+        <div class="dashboard-panel">
+            <div class="panel-title-row">
+                <div>
+                    <h2>Alıcılar</h2>
+                    <p>@Model.Alicilar.Count kayıt</p>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table class="modern-table compact-table">
+                    <thead>
+                        <tr>
+                            <th>Ünvan</th>
+                            <th>Telefon</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Alicilar.Count == 0)
+                        {
+                            <tr><td colspan="3" class="empty-row">Henüz alıcı yok.</td></tr>
+                        }
+                        else
+                        {
+                            @foreach (var c in Model.Alicilar)
+                            {
+                                <tr class="cari-row" data-search="@($"{c.Unvan} {c.Telefon}")">
+                                    <td><strong>@c.Unvan</strong></td>
+                                    <td>@(string.IsNullOrWhiteSpace(c.Telefon) ? "-" : c.Telefon)</td>
+                                    <td class="table-actions-cell">
+                                        <a class="btn btn-outline-primary btn-sm" href="/CariKartlar/Detay/@c.Id">Detay</a>
+                                        <form method="post" asp-page-handler="Sil" class="inline-form" onsubmit="return confirm('Cari silinsin mi?');">
+                                            <input type="hidden" name="id" value="@c.Id" />
+                                            <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <div class="panel-title-row">
+                <div>
+                    <h2>Satıcılar</h2>
+                    <p>@Model.Saticilar.Count kayıt</p>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table class="modern-table compact-table">
+                    <thead>
+                        <tr>
+                            <th>Ünvan</th>
+                            <th>Telefon</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Saticilar.Count == 0)
+                        {
+                            <tr><td colspan="3" class="empty-row">Henüz satıcı yok.</td></tr>
+                        }
+                        else
+                        {
+                            @foreach (var c in Model.Saticilar)
+                            {
+                                <tr class="cari-row" data-search="@($"{c.Unvan} {c.Telefon}")">
+                                    <td><strong>@c.Unvan</strong></td>
+                                    <td>@(string.IsNullOrWhiteSpace(c.Telefon) ? "-" : c.Telefon)</td>
+                                    <td class="table-actions-cell">
+                                        <a class="btn btn-outline-primary btn-sm" href="/CariKartlar/Detay/@c.Id">Detay</a>
+                                        <form method="post" asp-page-handler="Sil" class="inline-form" onsubmit="return confirm('Cari silinsin mi?');">
+                                            <input type="hidden" name="id" value="@c.Id" />
+                                            <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('[data-table-search]').forEach(function (input) {
+            input.addEventListener('input', function () {
+                const targetClass = input.dataset.tableSearch;
+                const query = input.value.toLocaleLowerCase('tr-TR').trim();
+
+                document.querySelectorAll('.' + targetClass).forEach(function (row) {
+                    const text = (row.dataset.search || row.innerText).toLocaleLowerCase('tr-TR');
+                    row.hidden = query.length > 0 && !text.includes(query);
+                });
+            });
+        });
+    </script>
 }
-
-<div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:650px;">
-  <h3>Yeni Cari Ekle</h3>
-
-  <form method="post" asp-page-handler="Ekle">
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <div style="flex: 1; min-width:220px;">
-        <label><b>Ünvan</b></label><br />
-        <input asp-for="YeniCari.Unvan" style="width:100%; padding:8px;" />
-      </div>
-
-      <div style="min-width:180px;">
-        <label><b>Tip</b></label><br />
-        <select asp-for="YeniCari.Tip" style="width:100%; padding:8px;">
-          <option value="@((int)CariTip.Alici)">Alıcı</option>
-          <option value="@((int)CariTip.Satici)">Satıcı</option>
-        </select>
-      </div>
-    </div>
-
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-      <div style="flex: 1; min-width:220px;">
-        <label><b>Telefon</b></label><br />
-        <input asp-for="YeniCari.Telefon" style="width:100%; padding:8px;" />
-      </div>
-
-      <div style="flex: 1; min-width:220px;">
-        <label><b>Vergi No (opsiyonel)</b></label><br />
-        <input asp-for="YeniCari.VergiNo" style="width:100%; padding:8px;" />
-      </div>
-    </div>
-
-    <div style="margin-top:10px;">
-      <button type="submit" style="padding:10px 14px;">Ekle</button>
-      <a class="btn btn-outline-dark btn-sm" href="/">Kasa</a>
-    </div>
-  </form>
-</div>
-
-<div style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;">
-  <div style="flex:1; min-width:320px;">
-    <h3>Alıcılar</h3>
-
-    <table style="width:100%; border-collapse:collapse;">
-      <thead>
-        <tr>
-          <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Ünvan</th>
-          <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Telefon</th>
-          <th style="border-bottom:1px solid #555; padding:8px; width:110px;">İşlem</th>
-          <th style="border-bottom:1px solid #555; padding:8px; width:90px;">Detay</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        @if (Model.Alicilar.Count == 0)
-        {
-          <tr><td colspan="4" style="padding:8px;">Henüz alıcı yok.</td></tr>
-        }
-        else
-        {
-          @foreach (var c in Model.Alicilar)
-          {
-            <tr>
-              <td style="border-bottom:1px solid #333; padding:8px;">@c.Unvan</td>
-              <td style="border-bottom:1px solid #333; padding:8px;">@c.Telefon</td>
-
-              <td style="border-bottom:1px solid #333; padding:8px;">
-                <form method="post" asp-page-handler="Sil"
-                      style="display:inline;"
-                      onsubmit="return confirm('Cari silinsin mi?');">
-                  <input type="hidden" name="id" value="@c.Id" />
-                  <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
-                </form>
-              </td>
-
-              <td style="border-bottom:1px solid #333; padding:8px;">
-                <a class="btn btn-outline-primary btn-sm" href="/CariKartlar/Detay/@c.Id">Detay</a>
-              </td>
-            </tr>
-          }
-        }
-      </tbody>
-    </table>
-  </div>
-
-  <div style="flex:1; min-width:320px;">
-    <h3>Satıcılar</h3>
-
-    <table style="width:100%; border-collapse:collapse;">
-      <thead>
-        <tr>
-          <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Ünvan</th>
-          <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Telefon</th>
-          <th style="border-bottom:1px solid #555; padding:8px; width:110px;">İşlem</th>
-          <th style="border-bottom:1px solid #555; padding:8px; width:90px;">Detay</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        @if (Model.Saticilar.Count == 0)
-        {
-          <tr><td colspan="4" style="padding:8px;">Henüz satıcı yok.</td></tr>
-        }
-        else
-        {
-          @foreach (var c in Model.Saticilar)
-          {
-            <tr>
-              <td style="border-bottom:1px solid #333; padding:8px;">@c.Unvan</td>
-              <td style="border-bottom:1px solid #333; padding:8px;">@c.Telefon</td>
-
-              <td style="border-bottom:1px solid #333; padding:8px;">
-                <form method="post" asp-page-handler="Sil"
-                      style="display:inline;"
-                      onsubmit="return confirm('Cari silinsin mi?');">
-                  <input type="hidden" name="id" value="@c.Id" />
-                  <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
-                </form>
-              </td>
-
-              <td style="border-bottom:1px solid #333; padding:8px;">
-                <a class="btn btn-outline-primary btn-sm" href="/CariKartlar/Detay/@c.Id">Detay</a>
-              </td>
-            </tr>
-          }
-        }
-      </tbody>
-    </table>
-  </div>
-</div>
