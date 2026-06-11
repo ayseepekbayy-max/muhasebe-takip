@@ -5,46 +5,83 @@
 }
 
 <div class="auth-page">
-    <section class="auth-card">
-        <div class="auth-brand">
-            <span>F</span>
-            <strong>Firmova ERP</strong>
-            <p>Lütfen kullanıcı bilgileriniz ile giriş yapın.</p>
-        </div>
-
-        @if (TempData["Mesaj"] != null)
-        {
-            <div class="app-alert app-alert-success">@TempData["Mesaj"]</div>
-        }
-
-        @if (!string.IsNullOrEmpty(Model.Hata))
-        {
-            <div class="app-alert app-alert-danger">@Model.Hata</div>
-        }
-
-        <form method="post" class="auth-form">
-            <div class="form-field">
-                <label asp-for="KullaniciAdi">Kullanıcı Adı veya Mail</label>
-                <input asp-for="KullaniciAdi" />
-            </div>
-
-            <div class="form-field">
-                <label asp-for="Sifre">Şifre</label>
-                <div class="password-row">
-                    <input asp-for="Sifre" id="sifreInput" type="password" />
-                    <button type="button" onclick="sifreGosterGizle(event)">Göster</button>
+    <section class="auth-shell">
+        <aside class="auth-info-panel">
+            <div class="auth-info-brand">
+                <span>F</span>
+                <div>
+                    <strong>Firmova ERP</strong>
+                    <small>Muhasebe takip paneli</small>
                 </div>
             </div>
 
-            <div class="auth-actions">
-                <button type="submit" class="btn btn-primary">Giriş Yap</button>
-                <a class="btn btn-outline-dark" href="/Register">Kayıt Ol</a>
+            <div class="auth-info-copy">
+                <h1>İşletmenizin günlük finans akışı tek ekranda.</h1>
+                <p>Kasa, cari, stok ve rapor süreçlerini sade bir panelden takip edin.</p>
             </div>
 
-            <div class="auth-secondary-action">
-                <a href="/SifremiUnuttum">Şifremi Unuttum</a>
+            <div class="auth-feature-list">
+                <div>
+                    <span>K</span>
+                    <strong>Kasa Takibi</strong>
+                    <small>Giriş, çıkış ve bakiye kontrolü</small>
+                </div>
+                <div>
+                    <span>C</span>
+                    <strong>Cari Yönetimi</strong>
+                    <small>Alıcı ve satıcı hareketleri</small>
+                </div>
+                <div>
+                    <span>R</span>
+                    <strong>Hızlı Raporlar</strong>
+                    <small>Günlük ve aylık özetler</small>
+                </div>
             </div>
-        </form>
+        </aside>
+
+        <section class="auth-card">
+            <div class="auth-brand">
+                <span>F</span>
+                <strong>Firmova ERP</strong>
+                <p>Lütfen kullanıcı bilgileriniz ile giriş yapın.</p>
+            </div>
+
+            @if (TempData["Mesaj"] != null)
+            {
+                <div class="app-alert app-alert-success">@TempData["Mesaj"]</div>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.Hata))
+            {
+                <div class="app-alert app-alert-danger">@Model.Hata</div>
+            }
+
+            <form method="post" class="auth-form">
+                <div class="form-field">
+                    <label asp-for="KullaniciAdi">Kullanıcı Adı veya Mail</label>
+                    <input asp-for="KullaniciAdi" />
+                </div>
+
+                <div class="form-field">
+                    <label asp-for="Sifre">Şifre</label>
+                    <div class="password-row">
+                        <input asp-for="Sifre" id="sifreInput" type="password" />
+                        <button type="button" onclick="sifreGosterGizle(event)">Göster</button>
+                    </div>
+                </div>
+
+                <div class="auth-actions">
+                    <button type="submit" class="btn btn-primary">Giriş Yap</button>
+                    <a class="btn btn-outline-dark" href="/Register">Kayıt Ol</a>
+                </div>
+
+                <div class="auth-secondary-action">
+                    <a href="/SifremiUnuttum">Şifremi Unuttum</a>
+                </div>
+
+                <p class="auth-security-note">Oturum bilgileriniz firma hesabınızla korunur.</p>
+            </form>
+        </section>
     </section>
 </div>
 

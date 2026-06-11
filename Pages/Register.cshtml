@@ -6,47 +6,84 @@
 }
 
 <div class="auth-page">
-    <section class="auth-card">
-        <div class="auth-brand">
-            <span>F</span>
-            <strong>Firmova ERP</strong>
-            <p>Yeni firma hesabınızı oluşturun.</p>
-        </div>
-
-        @if (!string.IsNullOrEmpty(Model.Hata))
-        {
-            <div class="app-alert app-alert-danger">@Model.Hata</div>
-        }
-
-        <form method="post" class="auth-form">
-            <div class="form-field">
-                <label asp-for="FirmaAdi">Firma Adı</label>
-                <input asp-for="FirmaAdi" />
-            </div>
-
-            <div class="form-field">
-                <label asp-for="KullaniciAdi">Kullanıcı Adı</label>
-                <input asp-for="KullaniciAdi" />
-            </div>
-
-            <div class="form-field">
-                <label asp-for="Email">Mail Adresi</label>
-                <input asp-for="Email" type="email" />
-            </div>
-
-            <div class="form-field">
-                <label asp-for="Sifre">Şifre</label>
-                <div class="password-row">
-                    <input asp-for="Sifre" id="registerPassword" type="password" />
-                    <button type="button" onclick="togglePassword()"><span id="registerToggleText">Göster</span></button>
+    <section class="auth-shell">
+        <aside class="auth-info-panel">
+            <div class="auth-info-brand">
+                <span>F</span>
+                <div>
+                    <strong>Firmova ERP</strong>
+                    <small>Yeni firma hesabı</small>
                 </div>
             </div>
 
-            <div class="auth-actions">
-                <button type="submit" class="btn btn-primary">Kayıt Ol</button>
-                <a class="btn btn-outline-dark" href="/Login">Giriş Yap</a>
+            <div class="auth-info-copy">
+                <h1>Firmanız için düzenli bir muhasebe başlangıcı.</h1>
+                <p>Hesabınızı oluşturun, kasa ve cari takibine aynı panelden başlayın.</p>
             </div>
-        </form>
+
+            <div class="auth-feature-list">
+                <div>
+                    <span>1</span>
+                    <strong>Firma hesabı</strong>
+                    <small>Veriler firma bazında ayrılır</small>
+                </div>
+                <div>
+                    <span>2</span>
+                    <strong>Yetkili kullanıcı</strong>
+                    <small>İlk kullanıcı yönetici olur</small>
+                </div>
+                <div>
+                    <span>3</span>
+                    <strong>Hazır panel</strong>
+                    <small>Kasa, stok ve rapor ekranları</small>
+                </div>
+            </div>
+        </aside>
+
+        <section class="auth-card">
+            <div class="auth-brand">
+                <span>F</span>
+                <strong>Firmova ERP</strong>
+                <p>Yeni firma hesabınızı oluşturun.</p>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Hata))
+            {
+                <div class="app-alert app-alert-danger">@Model.Hata</div>
+            }
+
+            <form method="post" class="auth-form">
+                <div class="form-field">
+                    <label asp-for="FirmaAdi">Firma Adı</label>
+                    <input asp-for="FirmaAdi" />
+                </div>
+
+                <div class="form-field">
+                    <label asp-for="KullaniciAdi">Kullanıcı Adı</label>
+                    <input asp-for="KullaniciAdi" />
+                </div>
+
+                <div class="form-field">
+                    <label asp-for="Email">Mail Adresi</label>
+                    <input asp-for="Email" type="email" />
+                </div>
+
+                <div class="form-field">
+                    <label asp-for="Sifre">Şifre</label>
+                    <div class="password-row">
+                        <input asp-for="Sifre" id="registerPassword" type="password" />
+                        <button type="button" onclick="togglePassword()"><span id="registerToggleText">Göster</span></button>
+                    </div>
+                </div>
+
+                <div class="auth-actions">
+                    <button type="submit" class="btn btn-primary">Kayıt Ol</button>
+                    <a class="btn btn-outline-dark" href="/Login">Giriş Yap</a>
+                </div>
+
+                <p class="auth-security-note">Firma hesabınız oluşturulduktan sonra panele giriş yapabilirsiniz.</p>
+            </form>
+        </section>
     </section>
 </div>
 
