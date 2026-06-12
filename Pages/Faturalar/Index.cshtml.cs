@@ -83,8 +83,8 @@ public class IndexModel : PageModel
             CariKartId = Yeni.CariKartId,
             FaturaNo = faturaNo,
             Tip = Yeni.Tip,
-            Tarih = Yeni.Tarih.Date,
-            VadeTarihi = Yeni.VadeTarihi?.Date,
+            Tarih = ToUtcDate(Yeni.Tarih),
+            VadeTarihi = Yeni.VadeTarihi.HasValue ? ToUtcDate(Yeni.VadeTarihi.Value) : null,
             AraToplam = araToplam,
             KdvToplam = kdvTutar,
             GenelToplam = genelToplam,
@@ -152,7 +152,7 @@ public class IndexModel : PageModel
         {
             FirmaId = firmaId.Value,
             CariKartId = fatura.CariKartId,
-            Tarih = Odeme.Tarih.Date,
+            Tarih = ToUtcDate(Odeme.Tarih),
             Tip = kasaTipi,
             Tutar = islenecekTutar,
             Aciklama = $"{islemAdi} - {fatura.FaturaNo} - {fatura.CariKart?.Unvan}"
@@ -195,6 +195,11 @@ public class IndexModel : PageModel
 
         if (Odeme.Tarih == default)
             Odeme.Tarih = DateTime.UtcNow.Date;
+    }
+
+    private static DateTime ToUtcDate(DateTime value)
+    {
+        return DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
     }
 
     public class FaturaForm
