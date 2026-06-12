@@ -1,0 +1,241 @@
+@page
+@using MuhasebeTakip2.App.Models
+@model MuhasebeTakip2.App.Pages.Faturalar.IndexModel
+@{
+    ViewData["Title"] = "Faturalar";
+}
+
+<div class="app-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Fatura / Tahsilat / Ödeme</span>
+            <h1>Faturalar</h1>
+            <p>Satış ve alış faturalarını kaydedin; tahsilat ve ödemeleri otomatik kasaya işleyin.</p>
+        </div>
+
+        <div class="app-page-actions">
+            <a class="btn btn-outline-dark" href="/Kasa/Hareketler">Kasa Hareketleri</a>
+            <a class="btn btn-outline-dark" href="/CariKartlar">Cari Kartlar</a>
+        </div>
+    </section>
+
+    @if (TempData["Hata"] != null)
+    {
+        <div class="app-alert app-alert-danger">@TempData["Hata"]</div>
+    }
+
+    @if (TempData["Basari"] != null)
+    {
+        <div class="app-alert app-alert-success">@TempData["Basari"]</div>
+    }
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="app-alert app-alert-danger">
+            @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@err.ErrorMessage</div>
+            }
+        </div>
+    }
+
+    <section class="metric-grid">
+        <article class="metric-card metric-card-positive">
+            <span>Satış Faturaları</span>
+            <strong>@Model.ToplamSatis.ToString("N2")</strong>
+        </article>
+        <article class="metric-card metric-card-negative">
+            <span>Alış Faturaları</span>
+            <strong>@Model.ToplamAlis.ToString("N2")</strong>
+        </article>
+        <article class="metric-card">
+            <span>Bekleyen Tahsilat</span>
+            <strong>@Model.BekleyenTahsilat.ToString("N2")</strong>
+        </article>
+        <article class="metric-card metric-card-negative">
+            <span>Bekleyen Ödeme</span>
+            <strong>@Model.BekleyenOdeme.ToString("N2")</strong>
+        </article>
+    </section>
+
+    <section class="app-form-panel">
+        <div class="panel-title-row">
+            <div>
+                <h2>Yeni Fatura</h2>
+                <p>İlk sürümde tek kalemli fatura oluşturulur; tahsilat/ödeme listeden işlenir.</p>
+            </div>
+        </div>
+
+        <form method="post" asp-page-handler="Ekle" class="app-form-grid invoice-form-grid">
+            <div class="form-field form-field-wide">
+                <label asp-for="Yeni.CariKartId">Cari</label>
+                <select asp-for="Yeni.CariKartId">
+                    <option value="0">Cari seçin</option>
+                    @foreach (var cari in Model.Cariler)
+                    {
+                        <option value="@cari.Id">@cari.Unvan (@(cari.Tip == CariTip.Alici ? "Alıcı" : "Satıcı"))</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-field">
+                <label asp-for="Yeni.Tip">Fatura Tipi</label>
+                <select asp-for="Yeni.Tip">
+                    <option value="@FaturaTipi.Satis">Satış</option>
+                    <option value="@FaturaTipi.Alis">Alış</option>
+                </select>
+            </div>
+
+            <div class="form-field">
+                <label asp-for="Yeni.FaturaNo">Fatura No</label>
+                <input asp-for="Yeni.FaturaNo" placeholder="Boşsa otomatik" />
+            </div>
+
+            <div class="form-field">
+                <label asp-for="Yeni.Tarih">Tarih</label>
+                <input asp-for="Yeni.Tarih" type="date" />
+            </div>
+
+            <div class="form-field">
+                <label asp-for="Yeni.VadeTarihi">Vade</label>
+                <input asp-for="Yeni.VadeTarihi" type="date" />
+            </div>
+
+            <div class="form-field form-field-wide">
+                <label asp-for="Yeni.KalemAciklama">Kalem Açıklaması</label>
+                <input asp-for="Yeni.KalemAciklama" placeholder="Ürün/hizmet açıklaması" />
+            </div>
+
+            <div class="form-field">
+                <label asp-for="Yeni.Miktar">Miktar</label>
+                <input asp-for="Yeni.Miktar" type="number" step="0.01" min="0" />
+            </div>
+
+            <div class="form-field">
+                <label asp-for="Yeni.BirimFiyat">Birim Fiyat</label>
+                <input asp-for="Yeni.BirimFiyat" type="number" step="0.01" min="0" />
+            </div>
+
+            <div class="form-field">
+                <label asp-for="Yeni.KdvOrani">KDV %</label>
+                <input asp-for="Yeni.KdvOrani" type="number" step="0.01" min="0" />
+            </div>
+
+            <div class="form-field form-field-wide">
+                <label asp-for="Yeni.Aciklama">Not</label>
+                <input asp-for="Yeni.Aciklama" placeholder="Opsiyonel açıklama" />
+            </div>
+
+            <div class="form-actions-row">
+                <button type="submit" class="btn btn-primary">Fatura Oluştur</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="app-filter-bar">
+        <div class="form-field">
+            <label for="invoiceSearch">Fatura ara</label>
+            <input id="invoiceSearch" type="search" placeholder="Fatura no, cari veya açıklama" />
+        </div>
+        <div class="form-field filter-small">
+            <label for="invoiceTypeFilter">Tip</label>
+            <select id="invoiceTypeFilter">
+                <option value="">Tümü</option>
+                <option value="satis">Satış</option>
+                <option value="alis">Alış</option>
+            </select>
+        </div>
+    </section>
+
+    <section class="dashboard-panel">
+        <div class="panel-title-row">
+            <div>
+                <h2>Fatura Listesi</h2>
+                <p>@Model.Faturalar.Count kayıt</p>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="modern-table invoice-table">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>No</th>
+                        <th>Tip</th>
+                        <th>Cari</th>
+                        <th>Toplam</th>
+                        <th>Ödenen</th>
+                        <th>Kalan</th>
+                        <th>Durum</th>
+                        <th>Tahsilat / Ödeme</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Faturalar.Count == 0)
+                    {
+                        <tr><td colspan="9" class="empty-row">Henüz fatura yok.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var fatura in Model.Faturalar)
+                        {
+                            var satisMi = fatura.Tip == FaturaTipi.Satis;
+                            var kapaliMi = fatura.KalanTutar <= 0;
+                            <tr class="invoice-row" data-type="@(satisMi ? "satis" : "alis")" data-search="@($"{fatura.FaturaNo} {fatura.CariKart?.Unvan} {fatura.Aciklama} {fatura.Tip}")">
+                                <td>@fatura.Tarih.ToString("dd.MM.yyyy")</td>
+                                <td><strong>@fatura.FaturaNo</strong></td>
+                                <td><span class="status-pill @(satisMi ? "status-pill-income" : "status-pill-expense")">@(satisMi ? "Satış" : "Alış")</span></td>
+                                <td>@(fatura.CariKart?.Unvan ?? "-")</td>
+                                <td class="amount-cell">@fatura.GenelToplam.ToString("N2")</td>
+                                <td>@fatura.OdenenToplam.ToString("N2")</td>
+                                <td class="amount-cell @(kapaliMi ? "amount-income" : "amount-expense")">@Math.Max(0, fatura.KalanTutar).ToString("N2")</td>
+                                <td>
+                                    <span class="status-pill @(kapaliMi ? "status-pill-income" : "status-pill-expense")">
+                                        @(kapaliMi ? "Kapandı" : fatura.OdenenToplam > 0 ? "Kısmi" : "Açık")
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (kapaliMi)
+                                    {
+                                        <span class="text-muted">Tamamlandı</span>
+                                    }
+                                    else
+                                    {
+                                        <form method="post" asp-page-handler="Odeme" class="invoice-payment-form">
+                                            <input type="hidden" asp-for="Odeme.FaturaId" value="@fatura.Id" />
+                                            <input asp-for="Odeme.Tutar" type="number" step="0.01" min="0" max="@fatura.KalanTutar" placeholder="Tutar" />
+                                            <input asp-for="Odeme.Tarih" type="date" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" />
+                                            <button type="submit" class="btn btn-outline-primary btn-sm">@(satisMi ? "Tahsil Et" : "Öde")</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        const invoiceSearch = document.getElementById('invoiceSearch');
+        const invoiceTypeFilter = document.getElementById('invoiceTypeFilter');
+
+        function filterInvoiceRows() {
+            const query = (invoiceSearch?.value || '').toLocaleLowerCase('tr-TR').trim();
+            const type = invoiceTypeFilter?.value || '';
+
+            document.querySelectorAll('.invoice-row').forEach(function (row) {
+                const text = (row.dataset.search || row.innerText).toLocaleLowerCase('tr-TR');
+                const typeOk = !type || row.dataset.type === type;
+                const textOk = !query || text.includes(query);
+                row.hidden = !(typeOk && textOk);
+            });
+        }
+
+        invoiceSearch?.addEventListener('input', filterInvoiceRows);
+        invoiceTypeFilter?.addEventListener('change', filterInvoiceRows);
+    </script>
+}

@@ -2344,3 +2344,59 @@ a.app-top-btn {
         grid-template-columns: 1fr;
     }
 }
+/* HAMBURGER MENU CONTRAST */
+.app-menu-toggle,
+.navbar-toggler {
+    background: #111827 !important;
+    border-color: rgba(255, 255, 255, 0.26) !important;
+    border-radius: 8px !important;
+}
+
+.app-menu-toggle:focus,
+.navbar-toggler:focus {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.16) !important;
+}
+
+.app-menu-toggle .navbar-toggler-icon,
+.navbar-toggler .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 1%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2.2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+}
+/* INVOICE MODULE */
+.invoice-form-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.invoice-table {
+    min-width: 1120px;
+}
+
+.invoice-payment-form {
+    display: grid;
+    grid-template-columns: 110px 145px auto;
+    gap: 8px;
+    align-items: center;
+    min-width: 330px;
+}
+
+.invoice-payment-form input {
+    min-height: 34px;
+    padding: 6px 8px !important;
+    font-size: 13px;
+}
+
+@media (max-width: 1199.98px) {
+    .invoice-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .invoice-form-grid,
+    .invoice-payment-form {
+        grid-template-columns: 1fr;
+    }
+
+    .invoice-payment-form {
+        min-width: 220px;
+    }
+}

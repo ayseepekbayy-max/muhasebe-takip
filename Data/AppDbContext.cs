@@ -13,6 +13,8 @@ public class AppDbContext : DbContext
     public DbSet<Kullanici> Kullanicilar { get; set; } = default!;
     public DbSet<CariKart> CariKartlar { get; set; } = default!;
     public DbSet<KasaHareket> KasaHareketleri { get; set; } = default!;
+    public DbSet<Fatura> Faturalar { get; set; } = default!;
+    public DbSet<FaturaKalem> FaturaKalemleri { get; set; } = default!;
     public DbSet<Calisan> Calisanlar { get; set; } = default!;
     public DbSet<CalisanAvans> CalisanAvanslari { get; set; } = default!;
     public DbSet<Musteri> Musteriler { get; set; } = default!;

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MuhasebeTakip2.App.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MuhasebeTakip2.App.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260612093344_FaturaTahsilatOdemeModulu")]
+    partial class FaturaTahsilatOdemeModulu
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -282,7 +285,7 @@ namespace MuhasebeTakip2.App.Migrations
                     b.Property<decimal>("AraToplam")
                         .HasColumnType("numeric");
 
-                    b.Property<int?>("CariKartId")
+                    b.Property<int>("CariKartId")
                         .HasColumnType("integer");
 
                     b.Property<string>("FaturaNo")
@@ -808,7 +811,9 @@ namespace MuhasebeTakip2.App.Migrations
                 {
                     b.HasOne("MuhasebeTakip2.App.Models.CariKart", "CariKart")
                         .WithMany()
-                        .HasForeignKey("CariKartId");
+                        .HasForeignKey("CariKartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("MuhasebeTakip2.App.Models.Firma", "Firma")
                         .WithMany()
