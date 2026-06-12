@@ -164,6 +164,29 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 
+
+    public async Task<IActionResult> OnPostSilAsync(int id)
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var fatura = await _db.Faturalar
+            .Include(x => x.Kalemler)
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+
+        if (fatura == null)
+        {
+            TempData["Hata"] = "Fatura bulunamadı.";
+            return RedirectToPage();
+        }
+
+        _db.Faturalar.Remove(fatura);
+        await _db.SaveChangesAsync();
+
+        TempData["Basari"] = "Fatura silindi.";
+        return RedirectToPage();
+    }
     private async Task VerileriYukleAsync(int firmaId)
     {
         Cariler = await _db.CariKartlar

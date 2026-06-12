@@ -168,12 +168,13 @@
                         <th>Kalan</th>
                         <th>Durum</th>
                         <th>Tahsilat / Ödeme</th>
+                        <th>İşlem</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (Model.Faturalar.Count == 0)
                     {
-                        <tr><td colspan="9" class="empty-row">Henüz fatura yok.</td></tr>
+                        <tr><td colspan="10" class="empty-row">Henüz fatura yok.</td></tr>
                     }
                     else
                     {
@@ -208,6 +209,12 @@
                                             <button type="submit" class="btn btn-outline-primary btn-sm">@(satisMi ? "Tahsil Et" : "Öde")</button>
                                         </form>
                                     }
+                                </td>
+                                <td>
+                                    <form method="post" asp-page-handler="Sil" class="inline-form" onsubmit="return confirm('Bu fatura silinecek. Daha önce kasaya işlenen tahsilat/ödeme hareketleri silinmez. Devam edilsin mi?');">
+                                        <input type="hidden" name="id" value="@fatura.Id" />
+                                        <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
+                                    </form>
                                 </td>
                             </tr>
                         }
