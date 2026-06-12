@@ -2400,3 +2400,68 @@ a.app-top-btn {
         min-width: 220px;
     }
 }
+/* MULTI LINE INVOICE */
+.invoice-lines-panel {
+    grid-column: 1 / -1;
+    padding: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.invoice-lines-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.invoice-lines-header h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.invoice-lines-header p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.invoice-lines-table {
+    min-width: 760px;
+}
+
+.invoice-lines-table input {
+    width: 100%;
+    min-height: 36px;
+    padding: 6px 8px !important;
+    font-size: 13px;
+}
+
+.invoice-lines-table th:nth-child(1) {
+    width: 42%;
+}
+
+.invoice-lines-table th:nth-child(2),
+.invoice-lines-table th:nth-child(3),
+.invoice-lines-table th:nth-child(4) {
+    width: 15%;
+}
+
+.invoice-lines-table th:nth-child(5) {
+    width: 90px;
+}
+
+@media (max-width: 768px) {
+    .invoice-lines-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .invoice-lines-header .btn {
+        width: 100%;
+    }
+}

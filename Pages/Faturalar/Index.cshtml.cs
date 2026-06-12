@@ -46,33 +46,72 @@ public class IndexModel : PageModel
             return RedirectToPage("/Login");
 
         Yeni.Aciklama = (Yeni.Aciklama ?? "").Trim();
-        Yeni.KalemAciklama = (Yeni.KalemAciklama ?? "").Trim();
+        Yeni.Kalemler ??= new List<FaturaKalemForm>();
 
         if (Yeni.CariKartId <= 0)
             ModelState.AddModelError("", "Cari seçimi zorunludur.");
-
-        if (string.IsNullOrWhiteSpace(Yeni.KalemAciklama))
-            ModelState.AddModelError("", "Fatura açıklaması zorunludur.");
-
-        if (Yeni.Miktar <= 0)
-            ModelState.AddModelError("", "Miktar sıfırdan büyük olmalıdır.");
-
-        if (Yeni.BirimFiyat <= 0)
-            ModelState.AddModelError("", "Birim fiyat sıfırdan büyük olmalıdır.");
 
         var cariVarMi = await _db.CariKartlar.AnyAsync(x => x.Id == Yeni.CariKartId && x.FirmaId == firmaId.Value);
         if (!cariVarMi)
             ModelState.AddModelError("", "Seçilen cari bulunamadı.");
 
+        var doluKalemler = Yeni.Kalemler
+            .Select(x => new FaturaKalemForm
+            {
+                Aciklama = (x.Aciklama ?? "").Trim(),
+                Miktar = x.Miktar,
+                BirimFiyat = x.BirimFiyat,
+                KdvOrani = x.KdvOrani
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.Aciklama) || x.Miktar > 0 || x.BirimFiyat > 0)
+            .ToList();
+
+        if (!doluKalemler.Any())
+            ModelState.AddModelError("", "En az bir fatura kalemi girilmelidir.");
+
+        for (var i = 0; i < doluKalemler.Count; i++)
+        {
+            var kalem = doluKalemler[i];
+            var satir = i + 1;
+
+            if (string.IsNullOrWhiteSpace(kalem.Aciklama))
+                ModelState.AddModelError("", $"{satir}. kalem açıklaması zorunludur.");
+
+            if (kalem.Miktar <= 0)
+                ModelState.AddModelError("", $"{satir}. kalem miktarı sıfırdan büyük olmalıdır.");
+
+            if (kalem.BirimFiyat <= 0)
+                ModelState.AddModelError("", $"{satir}. kalem birim fiyatı sıfırdan büyük olmalıdır.");
+
+            if (kalem.KdvOrani < 0)
+                ModelState.AddModelError("", $"{satir}. kalem KDV oranı negatif olamaz.");
+        }
+
         if (!ModelState.IsValid)
         {
+            Yeni.Kalemler = doluKalemler.Any() ? doluKalemler : Yeni.Kalemler;
             await VerileriYukleAsync(firmaId.Value);
             return Page();
         }
 
-        var araToplam = Yeni.Miktar * Yeni.BirimFiyat;
-        var kdvTutar = araToplam * Yeni.KdvOrani / 100m;
-        var genelToplam = araToplam + kdvTutar;
+        var faturaKalemleri = doluKalemler.Select(kalem =>
+        {
+            var araToplam = kalem.Miktar * kalem.BirimFiyat;
+            var kdvTutar = araToplam * kalem.KdvOrani / 100m;
+            var genelToplam = araToplam + kdvTutar;
+
+            return new FaturaKalem
+            {
+                Aciklama = kalem.Aciklama,
+                Miktar = kalem.Miktar,
+                BirimFiyat = kalem.BirimFiyat,
+                KdvOrani = kalem.KdvOrani,
+                AraToplam = araToplam,
+                KdvTutar = kdvTutar,
+                GenelToplam = genelToplam
+            };
+        }).ToList();
+
         var faturaNo = string.IsNullOrWhiteSpace(Yeni.FaturaNo)
             ? $"FTR-{DateTime.Now:yyyyMMdd-HHmmss}"
             : Yeni.FaturaNo.Trim();
@@ -85,25 +124,13 @@ public class IndexModel : PageModel
             Tip = Yeni.Tip,
             Tarih = ToUtcDate(Yeni.Tarih),
             VadeTarihi = Yeni.VadeTarihi.HasValue ? ToUtcDate(Yeni.VadeTarihi.Value) : null,
-            AraToplam = araToplam,
-            KdvToplam = kdvTutar,
-            GenelToplam = genelToplam,
+            AraToplam = faturaKalemleri.Sum(x => x.AraToplam),
+            KdvToplam = faturaKalemleri.Sum(x => x.KdvTutar),
+            GenelToplam = faturaKalemleri.Sum(x => x.GenelToplam),
             OdenenToplam = 0,
             Aciklama = Yeni.Aciklama,
             OlusturmaTarihi = DateTime.UtcNow,
-            Kalemler = new List<FaturaKalem>
-            {
-                new()
-                {
-                    Aciklama = Yeni.KalemAciklama,
-                    Miktar = Yeni.Miktar,
-                    BirimFiyat = Yeni.BirimFiyat,
-                    KdvOrani = Yeni.KdvOrani,
-                    AraToplam = araToplam,
-                    KdvTutar = kdvTutar,
-                    GenelToplam = genelToplam
-                }
-            }
+            Kalemler = faturaKalemleri
         };
 
         _db.Faturalar.Add(fatura);
@@ -164,7 +191,6 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 
-
     public async Task<IActionResult> OnPostSilAsync(int id)
     {
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
@@ -187,6 +213,7 @@ public class IndexModel : PageModel
         TempData["Basari"] = "Fatura silindi.";
         return RedirectToPage();
     }
+
     private async Task VerileriYukleAsync(int firmaId)
     {
         Cariler = await _db.CariKartlar
@@ -210,11 +237,21 @@ public class IndexModel : PageModel
         if (Yeni.Tarih == default)
             Yeni.Tarih = DateTime.UtcNow.Date;
 
-        if (Yeni.Miktar <= 0)
-            Yeni.Miktar = 1;
+        Yeni.Kalemler ??= new List<FaturaKalemForm>();
 
-        if (Yeni.KdvOrani <= 0)
-            Yeni.KdvOrani = 20;
+        if (!Yeni.Kalemler.Any())
+        {
+            Yeni.Kalemler.Add(new FaturaKalemForm());
+        }
+
+        foreach (var kalem in Yeni.Kalemler)
+        {
+            if (kalem.Miktar <= 0)
+                kalem.Miktar = 1;
+
+            if (kalem.KdvOrani <= 0)
+                kalem.KdvOrani = 20;
+        }
 
         if (Odeme.Tarih == default)
             Odeme.Tarih = DateTime.UtcNow.Date;
@@ -232,11 +269,16 @@ public class IndexModel : PageModel
         public FaturaTipi Tip { get; set; } = FaturaTipi.Satis;
         public DateTime Tarih { get; set; } = DateTime.UtcNow.Date;
         public DateTime? VadeTarihi { get; set; }
-        public string KalemAciklama { get; set; } = "";
+        public List<FaturaKalemForm> Kalemler { get; set; } = new() { new FaturaKalemForm() };
+        public string Aciklama { get; set; } = "";
+    }
+
+    public class FaturaKalemForm
+    {
+        public string Aciklama { get; set; } = "";
         public decimal Miktar { get; set; } = 1;
         public decimal BirimFiyat { get; set; }
         public decimal KdvOrani { get; set; } = 20;
-        public string Aciklama { get; set; } = "";
     }
 
     public class OdemeForm
