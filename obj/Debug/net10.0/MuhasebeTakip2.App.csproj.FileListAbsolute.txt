@@ -32,6 +32,13 @@ C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\Mono.
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\Newtonsoft.Json.dll
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\Npgsql.dll
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
+C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.Core.dll
+C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.DocumentLayoutAnalysis.dll
+C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.Fonts.dll
+C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.Package.dll
+C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.Tokenization.dll
+C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.Tokens.dll
+C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.dll
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\RBush.dll
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\SixLabors.Fonts.dll
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\SQLitePCLRaw.batteries_v2.dll
@@ -148,6 +155,7 @@ C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\rjsmc
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\scopedcss\Pages\Shared\_Layout.cshtml.rz.scp.css
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\scopedcss\bundle\MuhasebeTakip2.App.styles.css
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\scopedcss\projectbundle\MuhasebeTakip2.App.bundle.scp.css
+C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\compressed\ofbx58ey1x-{0}-0q64dpl9mq-0q64dpl9mq.gz
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\compressed\tctdeb33dv-{0}-61n19gt1b8-61n19gt1b8.gz
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\compressed\gk8j1gud4z-{0}-xtxxf3hu2r-xtxxf3hu2r.gz
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\compressed\hchll0gisf-{0}-bqjiyaj88i-bqjiyaj88i.gz
@@ -222,11 +230,3 @@ C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\refin
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\MuhasebeTakip2.App.pdb
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\MuhasebeTakip2.App.genruntimeconfig.cache
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\ref\MuhasebeTakip2.App.dll
-C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.Core.dll
-C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.DocumentLayoutAnalysis.dll
-C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.Fonts.dll
-C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.Package.dll
-C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.Tokenization.dll
-C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.Tokens.dll
-C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.dll
-C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\compressed\ofbx58ey1x-{0}-p9z3b580lp-p9z3b580lp.gz

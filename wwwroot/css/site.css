@@ -2910,13 +2910,15 @@ a.app-top-btn {
 /* FIRMA LOGO AND ATTACHMENTS */
 .settings-logo-preview,
 .invoice-company-logo {
-    max-width: 120px;
-    max-height: 72px;
+    max-width: 250px;
+    max-height: 120px;
+    width: auto;
+    height: auto;
     object-fit: contain;
     border-radius: 8px;
     background: #ffffff;
-    border: 1px solid rgba(15, 23, 42, 0.1);
-    padding: 6px;
+    border: none;
+    padding: 0;
 }
 
 .settings-toggle-grid {
@@ -3202,4 +3204,8 @@ a.app-top-btn {
         max-height: 40px !important;
         margin: 0 0 4px !important;
     }
+}
+.invoice-brand-mark,
+.invoice-logo-fallback {
+    display: none !important;
 }
