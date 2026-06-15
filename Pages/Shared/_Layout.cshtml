@@ -79,7 +79,9 @@
                                 <li class="nav-item"><a class="nav-link" href="/Maliyet">Maliyet</a></li>
                             }
 
-                            <li class="nav-item"><a class="nav-link" href="/AiAsistan">AI Asistan</a></li>
+                                                        <li class="nav-item"><a class="nav-link" href="/AiAsistan">AI Asistan</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/Araclar/ExcelIceAktar">Excel Aktar</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/Araclar/Yedekleme">Yedekleme</a></li>
 
                             @if (Context.Session.GetString("MenuCekler") != "0")
                             {
@@ -91,6 +93,11 @@
                                 <li class="nav-item"><a class="nav-link" href="/SuperAdmin/Index">Süper Admin</a></li>
                             }
                         </ul>
+
+                                                <form class="app-global-search" method="get" action="/Ara">
+                            <input name="q" type="search" placeholder="Genel ara" />
+                            <button type="submit">Ara</button>
+                        </form>
 
                         <div class="app-top-actions">
                             @if (!string.IsNullOrWhiteSpace(firmaAdi))

@@ -1,0 +1,48 @@
+@page
+@model MuhasebeTakip2.App.Pages.Araclar.ExcelIceAktarModel
+@{
+    ViewData["Title"] = "Excel İçe Aktarma";
+}
+
+<div class="app-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Araçlar</span>
+            <h1>Excel İçe Aktarma</h1>
+            <p>Cari kartları ve stok ürünlerini Excel dosyasından toplu ekleyin.</p>
+        </div>
+        <div class="app-page-actions">
+            <a class="btn btn-outline-dark" href="/Araclar/ExcelIceAktar?handler=Sablon&tur=Cari">Cari Şablonu</a>
+            <a class="btn btn-outline-dark" href="/Araclar/ExcelIceAktar?handler=Sablon&tur=Stok">Stok Şablonu</a>
+        </div>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Hata))
+    {
+        <div class="app-alert app-alert-danger">@Model.Hata</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.Mesaj))
+    {
+        <div class="app-alert app-alert-success">@Model.Mesaj</div>
+    }
+
+    <section class="app-form-panel">
+        <div class="panel-title-row"><div><h2>Dosya Yükle</h2><p>İlk satır başlık olmalıdır. Şablon indirerek başlayabilirsiniz.</p></div></div>
+        <form method="post" enctype="multipart/form-data" class="app-form-grid">
+            <div class="form-field">
+                <label asp-for="Tur">Aktarım Türü</label>
+                <select asp-for="Tur">
+                    <option value="Cari">Cari Kartlar</option>
+                    <option value="Stok">Stok Ürünleri</option>
+                </select>
+            </div>
+            <div class="form-field form-field-wide">
+                <label asp-for="Dosya">Excel Dosyası</label>
+                <input asp-for="Dosya" type="file" accept=".xlsx,.xls" />
+            </div>
+            <div class="form-actions-row">
+                <button type="submit" class="btn btn-primary">İçe Aktar</button>
+            </div>
+        </form>
+    </section>
+</div>

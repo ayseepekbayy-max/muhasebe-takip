@@ -1,4 +1,4 @@
-﻿@page
+@page
 @using MuhasebeTakip2.App.Models
 @model MuhasebeTakip2.App.Pages.IndexModel
 @{
@@ -58,6 +58,32 @@
 
     <section class="dashboard-content-grid">
         <div class="dashboard-stack">
+            <section class="dashboard-panel notification-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <h2>Bildirim / Hatırlatma</h2>
+                        <p>Vade, çek ve stok uyarıları</p>
+                    </div>
+                </div>
+
+                @if (Model.Bildirimler.Count == 0)
+                {
+                    <div class="empty-state">Şu an önemli bir hatırlatma yok.</div>
+                }
+                else
+                {
+                    <div class="notification-list">
+                        @foreach (var bildirim in Model.Bildirimler)
+                        {
+                            <a class="notification-item @(bildirim.Kritik ? "notification-critical" : "")" href="@bildirim.Url">
+                                <span>@bildirim.Tur</span>
+                                <strong>@bildirim.Baslik</strong>
+                                <small>@bildirim.Aciklama</small>
+                            </a>
+                        }
+                    </div>
+                }
+            </section>
             <section class="dashboard-panel balance-panel">
                 <div class="panel-title-row">
                     <div>
