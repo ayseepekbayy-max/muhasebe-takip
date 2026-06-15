@@ -2895,3 +2895,15 @@ a.app-top-btn {
         margin-top: 10px !important;
     }
 }
+/* EXCEL EXPORT ACTIONS */
+.export-action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+@media (max-width: 768px) {
+    .export-action-grid {
+        grid-template-columns: 1fr;
+    }
+}

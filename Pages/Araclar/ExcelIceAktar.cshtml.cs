@@ -65,12 +65,32 @@ public class ExcelIceAktarModel : PageModel
             ws.Cell(2, 4).Value = "1234567890";
         }
 
-        ws.Row(1).Style.Font.Bold = true;
-        ws.Columns().AdjustToContents();
-
+        StilUygula(ws);
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);
         return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"{tur.ToLower()}_ice_aktarma_sablonu.xlsx");
+    }
+
+    public async Task<IActionResult> OnGetDisaAktarAsync(string tur = "Cari")
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        using var workbook = new XLWorkbook();
+
+        if (tur.Equals("Stok", StringComparison.OrdinalIgnoreCase))
+            await StoklariDisaAktarAsync(workbook, firmaId.Value);
+        else if (tur.Equals("Fatura", StringComparison.OrdinalIgnoreCase))
+            await FaturalariDisaAktarAsync(workbook, firmaId.Value);
+        else if (tur.Equals("Kasa", StringComparison.OrdinalIgnoreCase))
+            await KasaDisaAktarAsync(workbook, firmaId.Value);
+        else
+            await CarileriDisaAktarAsync(workbook, firmaId.Value);
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"{tur.ToLower()}_disa_aktarim_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -103,6 +123,106 @@ public class ExcelIceAktarModel : PageModel
         }
 
         return Page();
+    }
+
+    private async Task CarileriDisaAktarAsync(XLWorkbook workbook, int firmaId)
+    {
+        var ws = workbook.Worksheets.Add("Cari Kartlar");
+        ws.Cell(1, 1).Value = "Ünvan";
+        ws.Cell(1, 2).Value = "Tip";
+        ws.Cell(1, 3).Value = "Telefon";
+        ws.Cell(1, 4).Value = "Vergi No";
+
+        var liste = await _db.CariKartlar.Where(x => x.FirmaId == firmaId).OrderBy(x => x.Unvan).ToListAsync();
+        var row = 2;
+        foreach (var item in liste)
+        {
+            ws.Cell(row, 1).Value = item.Unvan;
+            ws.Cell(row, 2).Value = item.Tip == CariTip.Alici ? "Alıcı" : "Satıcı";
+            ws.Cell(row, 3).Value = item.Telefon ?? "";
+            ws.Cell(row, 4).Value = item.VergiNo ?? "";
+            row++;
+        }
+        StilUygula(ws);
+    }
+
+    private async Task StoklariDisaAktarAsync(XLWorkbook workbook, int firmaId)
+    {
+        var ws = workbook.Worksheets.Add("Stoklar");
+        ws.Cell(1, 1).Value = "Ürün Adı";
+        ws.Cell(1, 2).Value = "Kod";
+        ws.Cell(1, 3).Value = "Birim";
+        ws.Cell(1, 4).Value = "Mevcut Stok";
+
+        var liste = await _db.StokUrunler.Where(x => x.FirmaId == firmaId).OrderBy(x => x.Ad).ToListAsync();
+        var hareketler = await _db.StokHareketleri.Where(x => x.FirmaId == firmaId).GroupBy(x => x.StokUrunId).Select(g => new
+        {
+            UrunId = g.Key,
+            Giris = g.Where(x => x.Tip == StokHareketTipi.Giris).Sum(x => (decimal?)x.Miktar) ?? 0,
+            Cikis = g.Where(x => x.Tip == StokHareketTipi.Cikis).Sum(x => (decimal?)x.Miktar) ?? 0
+        }).ToListAsync();
+        var stoklar = hareketler.ToDictionary(x => x.UrunId, x => x.Giris - x.Cikis);
+
+        var row = 2;
+        foreach (var item in liste)
+        {
+            ws.Cell(row, 1).Value = item.Ad;
+            ws.Cell(row, 2).Value = item.Kod;
+            ws.Cell(row, 3).Value = item.Birim;
+            ws.Cell(row, 4).Value = stoklar.TryGetValue(item.Id, out var stok) ? stok : 0;
+            row++;
+        }
+        StilUygula(ws);
+    }
+
+    private async Task FaturalariDisaAktarAsync(XLWorkbook workbook, int firmaId)
+    {
+        var ws = workbook.Worksheets.Add("Faturalar");
+        ws.Cell(1, 1).Value = "Tarih";
+        ws.Cell(1, 2).Value = "Fatura No";
+        ws.Cell(1, 3).Value = "Tip";
+        ws.Cell(1, 4).Value = "Cari";
+        ws.Cell(1, 5).Value = "Genel Toplam";
+        ws.Cell(1, 6).Value = "Ödenen";
+        ws.Cell(1, 7).Value = "Kalan";
+
+        var liste = await _db.Faturalar.Include(x => x.CariKart).Where(x => x.FirmaId == firmaId).OrderByDescending(x => x.Tarih).ToListAsync();
+        var row = 2;
+        foreach (var item in liste)
+        {
+            ws.Cell(row, 1).Value = item.Tarih;
+            ws.Cell(row, 2).Value = item.FaturaNo;
+            ws.Cell(row, 3).Value = item.Tip == FaturaTipi.Satis ? "Satış" : "Alış";
+            ws.Cell(row, 4).Value = item.CariKart?.Unvan ?? "";
+            ws.Cell(row, 5).Value = item.GenelToplam;
+            ws.Cell(row, 6).Value = item.OdenenToplam;
+            ws.Cell(row, 7).Value = item.KalanTutar;
+            row++;
+        }
+        StilUygula(ws);
+    }
+
+    private async Task KasaDisaAktarAsync(XLWorkbook workbook, int firmaId)
+    {
+        var ws = workbook.Worksheets.Add("Kasa");
+        ws.Cell(1, 1).Value = "Tarih";
+        ws.Cell(1, 2).Value = "Tip";
+        ws.Cell(1, 3).Value = "Tutar";
+        ws.Cell(1, 4).Value = "Cari";
+        ws.Cell(1, 5).Value = "Açıklama";
+
+        var liste = await _db.KasaHareketleri.Include(x => x.CariKart).Where(x => x.FirmaId == firmaId).OrderByDescending(x => x.Tarih).ToListAsync();
+        var row = 2;
+        foreach (var item in liste)
+        {
+            ws.Cell(row, 1).Value = item.Tarih;
+            ws.Cell(row, 2).Value = item.Tip == HareketTipi.Giris ? "Giriş" : "Çıkış";
+            ws.Cell(row, 3).Value = item.Tutar;
+            ws.Cell(row, 4).Value = item.CariKart?.Unvan ?? "";
+            ws.Cell(row, 5).Value = item.Aciklama;
+            row++;
+        }
+        StilUygula(ws);
     }
 
     private async Task<int> CarileriIceAktarAsync(IXLWorksheet ws, int firmaId)
@@ -188,6 +308,13 @@ public class ExcelIceAktarModel : PageModel
 
         await _db.SaveChangesAsync();
         return eklenen;
+    }
+
+    private static void StilUygula(IXLWorksheet ws)
+    {
+        ws.Row(1).Style.Font.Bold = true;
+        ws.Row(1).Style.Fill.BackgroundColor = XLColor.LightGray;
+        ws.Columns().AdjustToContents();
     }
 
     private static string? BosMu(string value)
