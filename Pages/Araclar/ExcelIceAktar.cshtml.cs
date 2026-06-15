@@ -132,20 +132,80 @@ public class ExcelIceAktarModel : PageModel
         ws.Cell(1, 2).Value = "Tip";
         ws.Cell(1, 3).Value = "Telefon";
         ws.Cell(1, 4).Value = "Vergi No";
+        ws.Cell(1, 5).Value = "Satış Faturası";
+        ws.Cell(1, 6).Value = "Tahsilat";
+        ws.Cell(1, 7).Value = "Kalan Tahsilat";
+        ws.Cell(1, 8).Value = "Alış Faturası";
+        ws.Cell(1, 9).Value = "Ödeme";
+        ws.Cell(1, 10).Value = "Kalan Ödeme";
+        ws.Cell(1, 11).Value = "Net Bakiye";
+        ws.Cell(1, 12).Value = "Durum";
 
-        var liste = await _db.CariKartlar.Where(x => x.FirmaId == firmaId).OrderBy(x => x.Unvan).ToListAsync();
+        var liste = await _db.CariKartlar
+            .Where(x => x.FirmaId == firmaId)
+            .OrderBy(x => x.Unvan)
+            .ToListAsync();
+
+        var faturaOzetleri = await _db.Faturalar
+            .Where(x => x.FirmaId == firmaId && x.CariKartId != null)
+            .GroupBy(x => x.CariKartId!.Value)
+            .Select(g => new
+            {
+                CariId = g.Key,
+                Satis = g.Where(x => x.Tip == FaturaTipi.Satis).Sum(x => (decimal?)x.GenelToplam) ?? 0,
+                Alis = g.Where(x => x.Tip == FaturaTipi.Alis).Sum(x => (decimal?)x.GenelToplam) ?? 0
+            })
+            .ToDictionaryAsync(x => x.CariId);
+
+        var kasaOzetleri = await _db.KasaHareketleri
+            .Where(x => x.FirmaId == firmaId && x.CariKartId != null)
+            .GroupBy(x => x.CariKartId!.Value)
+            .Select(g => new
+            {
+                CariId = g.Key,
+                Tahsilat = g.Where(x => x.Tip == HareketTipi.Giris).Sum(x => (decimal?)x.Tutar) ?? 0,
+                Odeme = g.Where(x => x.Tip == HareketTipi.Cikis).Sum(x => (decimal?)x.Tutar) ?? 0
+            })
+            .ToDictionaryAsync(x => x.CariId);
+
         var row = 2;
         foreach (var item in liste)
         {
+            faturaOzetleri.TryGetValue(item.Id, out var fatura);
+            kasaOzetleri.TryGetValue(item.Id, out var kasa);
+
+            var satis = fatura?.Satis ?? 0;
+            var alis = fatura?.Alis ?? 0;
+            var tahsilat = kasa?.Tahsilat ?? 0;
+            var odeme = kasa?.Odeme ?? 0;
+            var kalanTahsilat = Math.Max(0, satis - tahsilat);
+            var kalanOdeme = Math.Max(0, alis - odeme);
+            var netBakiye = kalanTahsilat - kalanOdeme;
+
             ws.Cell(row, 1).Value = item.Unvan;
             ws.Cell(row, 2).Value = item.Tip == CariTip.Alici ? "Alıcı" : "Satıcı";
             ws.Cell(row, 3).Value = item.Telefon ?? "";
             ws.Cell(row, 4).Value = item.VergiNo ?? "";
+            ws.Cell(row, 5).Value = satis;
+            ws.Cell(row, 6).Value = tahsilat;
+            ws.Cell(row, 7).Value = kalanTahsilat;
+            ws.Cell(row, 8).Value = alis;
+            ws.Cell(row, 9).Value = odeme;
+            ws.Cell(row, 10).Value = kalanOdeme;
+            ws.Cell(row, 11).Value = netBakiye;
+            ws.Cell(row, 12).Value = netBakiye > 0 ? "Alacak" : netBakiye < 0 ? "Borç" : "Kapalı";
             row++;
         }
+
+        if (row > 2)
+        {
+            ws.Range(2, 5, row - 1, 11).Style.NumberFormat.Format = "#,##0.00";
+            ws.Range(1, 1, row - 1, 12).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            ws.Range(1, 1, row - 1, 12).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+        }
+
         StilUygula(ws);
     }
-
     private async Task StoklariDisaAktarAsync(XLWorkbook workbook, int firmaId)
     {
         var ws = workbook.Worksheets.Add("Stoklar");
