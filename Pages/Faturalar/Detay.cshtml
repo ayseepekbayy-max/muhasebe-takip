@@ -37,7 +37,8 @@
             <div class="invoice-company-block">
                 @if (!string.IsNullOrWhiteSpace(firma?.LogoYolu))
                 {
-                    <img class="invoice-company-logo" src="@firma.LogoYolu" alt="Firma logosu" />
+                    <img class="invoice-company-logo" src="@firma.LogoYolu" alt="Firma logosu" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';" />
+                    <span class="invoice-brand-mark invoice-logo-fallback">F</span>
                 }
                 else
                 {

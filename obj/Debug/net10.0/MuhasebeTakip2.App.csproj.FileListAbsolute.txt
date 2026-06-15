@@ -229,4 +229,4 @@ C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyT
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.Tokenization.dll
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.Tokens.dll
 C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\bin\Debug\net10.0\UglyToad.PdfPig.dll
-C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\compressed\ofbx58ey1x-{0}-tnec4marwo-tnec4marwo.gz
+C:\Users\aysee\Desktop\MuhasebeTakip2\MuhasebeTakip2.App\obj\Debug\net10.0\compressed\ofbx58ey1x-{0}-p9z3b580lp-p9z3b580lp.gz
