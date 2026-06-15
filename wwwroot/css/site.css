@@ -2995,3 +2995,181 @@ a.app-top-btn {
         flex-direction: column;
     }
 }
+/* ONE PAGE INVOICE PRINT */
+@page {
+    size: A4 portrait;
+    margin: 8mm;
+}
+
+@media print {
+    html,
+    body {
+        width: 210mm !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        font-size: 10px !important;
+        line-height: 1.22 !important;
+        overflow: visible !important;
+    }
+
+    body * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .no-print,
+    .app-header,
+    .app-footer,
+    .app-page-header,
+    .dashboard-panel.no-print,
+    .firmova-float,
+    .navbar,
+    footer {
+        display: none !important;
+    }
+
+    .app-main-container,
+    .container-fluid,
+    main,
+    .pb-4,
+    .app-page,
+    .invoice-detail-page {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: block !important;
+        gap: 0 !important;
+    }
+
+    .invoice-print-sheet {
+        width: 100% !important;
+        max-width: 194mm !important;
+        min-height: 0 !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .invoice-print-header {
+        grid-template-columns: minmax(0, 1fr) auto !important;
+        gap: 8px !important;
+        padding-bottom: 6px !important;
+        margin-bottom: 6px !important;
+        border-bottom: 1px solid #d7dee8 !important;
+    }
+
+    .invoice-company-logo,
+    .invoice-brand-mark {
+        width: 44px !important;
+        height: 44px !important;
+        max-width: 44px !important;
+        max-height: 44px !important;
+        margin-bottom: 4px !important;
+        padding: 2px !important;
+    }
+
+    .invoice-print-header h2 {
+        font-size: 17px !important;
+        margin: 0 0 2px !important;
+    }
+
+    .invoice-print-header p,
+    .invoice-print-header small,
+    .invoice-info-grid span,
+    .invoice-note span,
+    .invoice-total-panel span {
+        font-size: 9px !important;
+        margin: 1px 0 !important;
+    }
+
+    .invoice-print-meta {
+        gap: 4px !important;
+    }
+
+    .invoice-print-meta strong {
+        font-size: 15px !important;
+    }
+
+    .status-pill {
+        padding: 3px 7px !important;
+        font-size: 9px !important;
+        line-height: 1.1 !important;
+    }
+
+    .invoice-info-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 6px !important;
+        margin-bottom: 6px !important;
+    }
+
+    .invoice-info-grid article,
+    .invoice-note {
+        padding: 6px !important;
+        border-radius: 6px !important;
+        background: #f8fafc !important;
+    }
+
+    .invoice-info-grid strong,
+    .invoice-note p {
+        font-size: 10px !important;
+        margin: 2px 0 0 !important;
+    }
+
+    .invoice-note {
+        margin-bottom: 6px !important;
+    }
+
+    .invoice-print-table-wrap {
+        margin-top: 4px !important;
+    }
+
+    .table-wrap {
+        overflow: visible !important;
+    }
+
+    .modern-table,
+    .invoice-print-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 9px !important;
+    }
+
+    .modern-table th,
+    .modern-table td,
+    .invoice-print-table th,
+    .invoice-print-table td {
+        padding: 4px 5px !important;
+        line-height: 1.15 !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        vertical-align: top !important;
+    }
+
+    .invoice-print-table tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .invoice-total-panel {
+        width: 240px !important;
+        gap: 2px !important;
+        margin-top: 6px !important;
+        margin-left: auto !important;
+        font-size: 9px !important;
+    }
+
+    .invoice-total-panel div {
+        padding: 3px 0 !important;
+        gap: 8px !important;
+    }
+
+    .invoice-total-final {
+        font-size: 10px !important;
+    }
+}
