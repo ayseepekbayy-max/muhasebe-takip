@@ -37,7 +37,11 @@
             <div class="invoice-company-block">
                 @if (!string.IsNullOrWhiteSpace(firma?.LogoYolu))
                 {
-                    <img class="invoice-company-logo" src="@firma.LogoYolu" alt="Firma logosu" />
+                    var logoYolu = firma.LogoYolu.StartsWith("/")
+                        ? "~" + firma.LogoYolu
+                        : "~/" + firma.LogoYolu;
+
+                    <img class="invoice-company-logo" src="@Url.Content(logoYolu)" alt="Firma logosu" />
                 }
                 <h2>@(firma?.FirmaAdi ?? "Firmova ERP")</h2>
                 @if (!string.IsNullOrWhiteSpace(firma?.Adres)) { <p>@firma.Adres</p> }
