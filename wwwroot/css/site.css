@@ -2644,3 +2644,54 @@ a.app-top-btn {
         padding: 8px;
     }
 }
+/* STATEMENT AND NUMBER SETTINGS */
+.invoice-number-settings {
+    align-items: end;
+}
+
+.form-check-field {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #334155;
+    font-weight: 700;
+}
+
+.form-check-field input {
+    width: 18px;
+    height: 18px;
+    accent-color: #4f46e5;
+}
+
+.statement-panel {
+    break-inside: avoid;
+}
+
+.statement-table td,
+.statement-table th {
+    white-space: nowrap;
+}
+
+.statement-table td:nth-child(3) {
+    min-width: 240px;
+    white-space: normal;
+}
+
+@media print {
+    .app-page-actions,
+    .app-sidebar,
+    .app-topbar,
+    .navbar,
+    footer {
+        display: none !important;
+    }
+
+    .app-page,
+    .dashboard-panel,
+    .statement-panel {
+        box-shadow: none !important;
+        border: 0 !important;
+        padding: 0 !important;
+    }
+}

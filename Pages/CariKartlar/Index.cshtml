@@ -122,6 +122,7 @@
                                     <td>@(string.IsNullOrWhiteSpace(c.Telefon) ? "-" : c.Telefon)</td>
                                     <td class="table-actions-cell">
                                         <a class="btn btn-outline-primary btn-sm" href="/CariKartlar/Detay/@c.Id">Detay</a>
+                                        <a class="btn btn-outline-dark btn-sm" asp-page="/CariKartlar/Ekstre" asp-route-id="@c.Id">Ekstre</a>
                                         <form method="post" asp-page-handler="Sil" class="inline-form" onsubmit="return confirm('Cari silinsin mi?');">
                                             <input type="hidden" name="id" value="@c.Id" />
                                             <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
@@ -166,6 +167,7 @@
                                     <td>@(string.IsNullOrWhiteSpace(c.Telefon) ? "-" : c.Telefon)</td>
                                     <td class="table-actions-cell">
                                         <a class="btn btn-outline-primary btn-sm" href="/CariKartlar/Detay/@c.Id">Detay</a>
+                                        <a class="btn btn-outline-dark btn-sm" asp-page="/CariKartlar/Ekstre" asp-route-id="@c.Id">Ekstre</a>
                                         <form method="post" asp-page-handler="Sil" class="inline-form" onsubmit="return confirm('Cari silinsin mi?');">
                                             <input type="hidden" name="id" value="@c.Id" />
                                             <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>

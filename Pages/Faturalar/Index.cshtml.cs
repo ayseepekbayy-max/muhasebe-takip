@@ -29,6 +29,9 @@ public class IndexModel : PageModel
     [BindProperty]
     public OdemeForm Odeme { get; set; } = new();
 
+    [BindProperty]
+    public NumaraAyariForm NumaraAyari { get; set; } = new();
+
     public async Task<IActionResult> OnGetAsync()
     {
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
@@ -37,6 +40,29 @@ public class IndexModel : PageModel
 
         await VerileriYukleAsync(firmaId.Value);
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostAyarKaydetAsync()
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var ayar = await _db.FaturaNumaraAyarlari.FirstOrDefaultAsync(x => x.FirmaId == firmaId.Value);
+        if (ayar == null)
+        {
+            ayar = new FaturaNumaraAyari { FirmaId = firmaId.Value };
+            _db.FaturaNumaraAyarlari.Add(ayar);
+        }
+
+        ayar.Prefix = string.IsNullOrWhiteSpace(NumaraAyari.Prefix) ? "FTR" : NumaraAyari.Prefix.Trim().ToUpperInvariant();
+        ayar.SonNumara = Math.Max(0, NumaraAyari.SonNumara);
+        ayar.SiraUzunlugu = Math.Clamp(NumaraAyari.SiraUzunlugu, 3, 8);
+        ayar.YilEkle = NumaraAyari.YilEkle;
+
+        await _db.SaveChangesAsync();
+        TempData["Basari"] = "Fatura numarası ayarları kaydedildi.";
+        return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostEkleAsync()
@@ -55,37 +81,8 @@ public class IndexModel : PageModel
         if (!cariVarMi)
             ModelState.AddModelError("", "Seçilen cari bulunamadı.");
 
-        var doluKalemler = Yeni.Kalemler
-            .Select(x => new FaturaKalemForm
-            {
-                Aciklama = (x.Aciklama ?? "").Trim(),
-                Miktar = x.Miktar,
-                BirimFiyat = x.BirimFiyat,
-                KdvOrani = x.KdvOrani
-            })
-            .Where(x => !string.IsNullOrWhiteSpace(x.Aciklama) || x.BirimFiyat > 0)
-            .ToList();
-
-        if (!doluKalemler.Any())
-            ModelState.AddModelError("", "En az bir fatura kalemi girilmelidir.");
-
-        for (var i = 0; i < doluKalemler.Count; i++)
-        {
-            var kalem = doluKalemler[i];
-            var satir = i + 1;
-
-            if (string.IsNullOrWhiteSpace(kalem.Aciklama))
-                ModelState.AddModelError("", $"{satir}. kalem açıklaması zorunludur.");
-
-            if (kalem.Miktar <= 0)
-                ModelState.AddModelError("", $"{satir}. kalem miktarı sıfırdan büyük olmalıdır.");
-
-            if (kalem.BirimFiyat <= 0)
-                ModelState.AddModelError("", $"{satir}. kalem birim fiyatı sıfırdan büyük olmalıdır.");
-
-            if (kalem.KdvOrani < 0)
-                ModelState.AddModelError("", $"{satir}. kalem KDV oranı negatif olamaz.");
-        }
+        var doluKalemler = TemizKalemler(Yeni.Kalemler);
+        KalemleriDogrula(doluKalemler);
 
         if (!ModelState.IsValid)
         {
@@ -94,26 +91,9 @@ public class IndexModel : PageModel
             return Page();
         }
 
-        var faturaKalemleri = doluKalemler.Select(kalem =>
-        {
-            var araToplam = kalem.Miktar * kalem.BirimFiyat;
-            var kdvTutar = araToplam * kalem.KdvOrani / 100m;
-            var genelToplam = araToplam + kdvTutar;
-
-            return new FaturaKalem
-            {
-                Aciklama = kalem.Aciklama,
-                Miktar = kalem.Miktar,
-                BirimFiyat = kalem.BirimFiyat,
-                KdvOrani = kalem.KdvOrani,
-                AraToplam = araToplam,
-                KdvTutar = kdvTutar,
-                GenelToplam = genelToplam
-            };
-        }).ToList();
-
+        var faturaKalemleri = FaturaKalemleriOlustur(doluKalemler);
         var faturaNo = string.IsNullOrWhiteSpace(Yeni.FaturaNo)
-            ? $"FTR-{DateTime.Now:yyyyMMdd-HHmmss}"
+            ? await SiradakiFaturaNoAsync(firmaId.Value)
             : Yeni.FaturaNo.Trim();
 
         var fatura = new Fatura
@@ -235,15 +215,22 @@ public class IndexModel : PageModel
         BekleyenTahsilat = Faturalar.Where(x => x.Tip == FaturaTipi.Satis).Sum(x => Math.Max(0, x.KalanTutar));
         BekleyenOdeme = Faturalar.Where(x => x.Tip == FaturaTipi.Alis).Sum(x => Math.Max(0, x.KalanTutar));
 
+        var ayar = await GetOrCreateNumaraAyariAsync(firmaId);
+        NumaraAyari = new NumaraAyariForm
+        {
+            Prefix = ayar.Prefix,
+            SonNumara = ayar.SonNumara,
+            SiraUzunlugu = ayar.SiraUzunlugu,
+            YilEkle = ayar.YilEkle,
+            SiradakiOrnek = NumaraOlustur(ayar, ayar.SonNumara + 1)
+        };
+
         if (Yeni.Tarih == default)
             Yeni.Tarih = DateTime.UtcNow.Date;
 
         Yeni.Kalemler ??= new List<FaturaKalemForm>();
-
         if (!Yeni.Kalemler.Any())
-        {
             Yeni.Kalemler.Add(new FaturaKalemForm());
-        }
 
         foreach (var kalem in Yeni.Kalemler)
         {
@@ -258,7 +245,95 @@ public class IndexModel : PageModel
             Odeme.Tarih = DateTime.UtcNow.Date;
     }
 
-    private static DateTime ToUtcDate(DateTime value)
+    private async Task<string> SiradakiFaturaNoAsync(int firmaId)
+    {
+        var ayar = await GetOrCreateNumaraAyariAsync(firmaId);
+        ayar.SonNumara += 1;
+        return NumaraOlustur(ayar, ayar.SonNumara);
+    }
+
+    private async Task<FaturaNumaraAyari> GetOrCreateNumaraAyariAsync(int firmaId)
+    {
+        var ayar = await _db.FaturaNumaraAyarlari.FirstOrDefaultAsync(x => x.FirmaId == firmaId);
+        if (ayar != null)
+            return ayar;
+
+        ayar = new FaturaNumaraAyari { FirmaId = firmaId, Prefix = "FTR", SonNumara = 0, SiraUzunlugu = 4, YilEkle = true };
+        _db.FaturaNumaraAyarlari.Add(ayar);
+        await _db.SaveChangesAsync();
+        return ayar;
+    }
+
+    private static string NumaraOlustur(FaturaNumaraAyari ayar, int sira)
+    {
+        var parcalar = new List<string> { ayar.Prefix };
+        if (ayar.YilEkle)
+            parcalar.Add(DateTime.Now.Year.ToString());
+
+        parcalar.Add(sira.ToString().PadLeft(ayar.SiraUzunlugu, '0'));
+        return string.Join("-", parcalar);
+    }
+
+    internal static List<FaturaKalemForm> TemizKalemler(IEnumerable<FaturaKalemForm> kalemler)
+    {
+        return kalemler
+            .Select(x => new FaturaKalemForm
+            {
+                Aciklama = (x.Aciklama ?? "").Trim(),
+                Miktar = x.Miktar,
+                BirimFiyat = x.BirimFiyat,
+                KdvOrani = x.KdvOrani
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.Aciklama) || x.BirimFiyat > 0)
+            .ToList();
+    }
+
+    private void KalemleriDogrula(List<FaturaKalemForm> kalemler)
+    {
+        if (!kalemler.Any())
+            ModelState.AddModelError("", "En az bir fatura kalemi girilmelidir.");
+
+        for (var i = 0; i < kalemler.Count; i++)
+        {
+            var kalem = kalemler[i];
+            var satir = i + 1;
+
+            if (string.IsNullOrWhiteSpace(kalem.Aciklama))
+                ModelState.AddModelError("", $"{satir}. kalem açıklaması zorunludur.");
+
+            if (kalem.Miktar <= 0)
+                ModelState.AddModelError("", $"{satir}. kalem miktarı sıfırdan büyük olmalıdır.");
+
+            if (kalem.BirimFiyat <= 0)
+                ModelState.AddModelError("", $"{satir}. kalem birim fiyatı sıfırdan büyük olmalıdır.");
+
+            if (kalem.KdvOrani < 0)
+                ModelState.AddModelError("", $"{satir}. kalem KDV oranı negatif olamaz.");
+        }
+    }
+
+    internal static List<FaturaKalem> FaturaKalemleriOlustur(IEnumerable<FaturaKalemForm> kalemler)
+    {
+        return kalemler.Select(kalem =>
+        {
+            var araToplam = kalem.Miktar * kalem.BirimFiyat;
+            var kdvTutar = araToplam * kalem.KdvOrani / 100m;
+            var genelToplam = araToplam + kdvTutar;
+
+            return new FaturaKalem
+            {
+                Aciklama = kalem.Aciklama,
+                Miktar = kalem.Miktar,
+                BirimFiyat = kalem.BirimFiyat,
+                KdvOrani = kalem.KdvOrani,
+                AraToplam = araToplam,
+                KdvTutar = kdvTutar,
+                GenelToplam = genelToplam
+            };
+        }).ToList();
+    }
+
+    internal static DateTime ToUtcDate(DateTime value)
     {
         return DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
     }
@@ -287,5 +362,14 @@ public class IndexModel : PageModel
         public int FaturaId { get; set; }
         public decimal Tutar { get; set; }
         public DateTime Tarih { get; set; } = DateTime.UtcNow.Date;
+    }
+
+    public class NumaraAyariForm
+    {
+        public string Prefix { get; set; } = "FTR";
+        public int SonNumara { get; set; }
+        public int SiraUzunlugu { get; set; } = 4;
+        public bool YilEkle { get; set; } = true;
+        public string SiradakiOrnek { get; set; } = "";
     }
 }

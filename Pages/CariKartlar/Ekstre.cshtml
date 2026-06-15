@@ -1,0 +1,75 @@
+@page "{id:int}"
+@model MuhasebeTakip2.App.Pages.CariKartlar.EkstreModel
+@{
+    ViewData["Title"] = "Cari Ekstresi";
+    var bakiyePozitif = Model.Bakiye >= 0;
+}
+
+<div class="app-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Cari Ekstresi</span>
+            <h1>@Model.Cari?.Unvan</h1>
+            <p>Bu cariye ait faturalar, tahsilatlar, ödemeler ve yürüyen bakiye.</p>
+        </div>
+        <div class="app-page-actions">
+            <button type="button" class="btn btn-primary" onclick="window.print()">PDF / Yazdır</button>
+            <a class="btn btn-outline-dark" href="/CariKartlar">Cari Kartlar</a>
+        </div>
+    </section>
+
+    <section class="metric-grid">
+        <article class="metric-card metric-card-negative"><span>Toplam Borç</span><strong>@Model.ToplamBorc.ToString("N2")</strong></article>
+        <article class="metric-card metric-card-positive"><span>Toplam Alacak</span><strong>@Model.ToplamAlacak.ToString("N2")</strong></article>
+        <article class="metric-card @(bakiyePozitif ? "metric-card-negative" : "metric-card-positive")"><span>Bakiye</span><strong>@Model.Bakiye.ToString("N2")</strong></article>
+    </section>
+
+    <section class="dashboard-panel statement-panel">
+        <div class="panel-title-row"><div><h2>Ekstre Hareketleri</h2><p>@Model.Satirlar.Count kayıt</p></div></div>
+        <div class="table-wrap">
+            <table class="modern-table statement-table">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Tür</th>
+                        <th>Açıklama</th>
+                        <th>Borç</th>
+                        <th>Alacak</th>
+                        <th>Bakiye</th>
+                        <th>Bağlantı</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Satirlar.Count == 0)
+                    {
+                        <tr><td colspan="7" class="empty-row">Bu cari için henüz hareket yok.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var satir in Model.Satirlar)
+                        {
+                            <tr>
+                                <td>@satir.Tarih.ToString("dd.MM.yyyy")</td>
+                                <td>@satir.Tur</td>
+                                <td>@satir.Aciklama</td>
+                                <td class="amount-cell amount-expense">@(satir.Borc > 0 ? satir.Borc.ToString("N2") : "-")</td>
+                                <td class="amount-cell amount-income">@(satir.Alacak > 0 ? satir.Alacak.ToString("N2") : "-")</td>
+                                <td class="amount-cell @(satir.Bakiye >= 0 ? "amount-expense" : "amount-income")">@satir.Bakiye.ToString("N2")</td>
+                                <td>
+                                    @if (satir.FaturaId.HasValue)
+                                    {
+                                        <a class="btn btn-outline-primary btn-sm" asp-page="/Faturalar/Detay" asp-route-id="@satir.FaturaId.Value">Fatura</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
