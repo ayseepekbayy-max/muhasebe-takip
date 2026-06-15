@@ -45,7 +45,7 @@
                         <ul class="navbar-nav app-nav-list">
                             @if (Context.Session.GetString("MenuCariKartlar") != "0")
                             {
-                                <li class="nav-item"><a class="nav-link" href="/CariKartlar">Cari Kartlar</a></li>
+                                <li class="nav-item"><a class="nav-link" href="/CariKartlar">Cari</a></li>
                             }
 
                             @if (Context.Session.GetString("MenuKasa") != "0")
@@ -53,58 +53,61 @@
                                 <li class="nav-item"><a class="nav-link" asp-area="" asp-page="/Index">Kasa</a></li>
                             }
 
-                            @if (Context.Session.GetString("MenuRaporlar") != "0")
-                            {
-                                <li class="nav-item"><a class="nav-link" href="/Raporlar">Raporlar</a></li>
                             <li class="nav-item"><a class="nav-link" href="/Faturalar">Faturalar</a></li>
-                            }
-
-                            @if (Context.Session.GetString("MenuCalisanlar") != "0")
-                            {
-                                <li class="nav-item"><a class="nav-link" href="/Calisanlar">Çalışanlar</a></li>
-                            }
-
-                            @if (Context.Session.GetString("MenuMusteriler") != "0")
-                            {
-                                <li class="nav-item"><a class="nav-link" href="/Musteriler">Müşteriler</a></li>
-                            }
 
                             @if (Context.Session.GetString("MenuStoklar") != "0")
                             {
                                 <li class="nav-item"><a class="nav-link" href="/Stoklar">Stok</a></li>
                             }
 
-                            @if (Context.Session.GetString("MenuMaliyet") != "0")
+                            @if (Context.Session.GetString("MenuRaporlar") != "0")
                             {
-                                <li class="nav-item"><a class="nav-link" href="/Maliyet">Maliyet</a></li>
+                                <li class="nav-item"><a class="nav-link" href="/Raporlar">Raporlar</a></li>
                             }
 
-                                                        <li class="nav-item"><a class="nav-link" href="/AiAsistan">AI Asistan</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/Araclar/ExcelIceAktar">Excel Aktar</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/Araclar/Yedekleme">Yedekleme</a></li>
+                            <li class="nav-item dropdown app-nav-dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">İşletme</a>
+                                <ul class="dropdown-menu app-dropdown-menu">
+                                    @if (Context.Session.GetString("MenuCalisanlar") != "0")
+                                    {
+                                        <li><a class="dropdown-item" href="/Calisanlar">Çalışanlar</a></li>
+                                    }
+                                    @if (Context.Session.GetString("MenuMusteriler") != "0")
+                                    {
+                                        <li><a class="dropdown-item" href="/Musteriler">Müşteriler</a></li>
+                                    }
+                                    @if (Context.Session.GetString("MenuMaliyet") != "0")
+                                    {
+                                        <li><a class="dropdown-item" href="/Maliyet">Maliyet</a></li>
+                                    }
+                                    @if (Context.Session.GetString("MenuCekler") != "0")
+                                    {
+                                        <li><a class="dropdown-item" href="/Cekler">Çekler</a></li>
+                                    }
+                                </ul>
+                            </li>
 
-                            @if (Context.Session.GetString("MenuCekler") != "0")
-                            {
-                                <li class="nav-item"><a class="nav-link" href="/Cekler">Çekler</a></li>
-                            }
-
-                            @if (rol == "superadmin")
-                            {
-                                <li class="nav-item"><a class="nav-link" href="/SuperAdmin/Index">Süper Admin</a></li>
-                            }
+                            <li class="nav-item dropdown app-nav-dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Araçlar</a>
+                                <ul class="dropdown-menu app-dropdown-menu">
+                                    <li><a class="dropdown-item" href="/Ara">Genel Arama</a></li>
+                                    <li><a class="dropdown-item" href="/Araclar/ExcelIceAktar">Excel İçe Aktar</a></li>
+                                    <li><a class="dropdown-item" href="/Araclar/Yedekleme">Yedekleme</a></li>
+                                    <li><a class="dropdown-item" href="/AiAsistan">AI Asistan</a></li>
+                                    @if (rol == "superadmin")
+                                    {
+                                        <li><hr class="dropdown-divider" /></li>
+                                        <li><a class="dropdown-item" href="/SuperAdmin/Index">Süper Admin</a></li>
+                                    }
+                                </ul>
+                            </li>
                         </ul>
 
-                                                <form class="app-global-search" method="get" action="/Ara">
-                            <input name="q" type="search" placeholder="Genel ara" />
-                            <button type="submit">Ara</button>
+                        <form class="app-global-search" method="get" action="/Ara">
+                            <input name="q" type="search" placeholder="Ara" />
                         </form>
 
                         <div class="app-top-actions">
-                            @if (!string.IsNullOrWhiteSpace(firmaAdi))
-                            {
-                                <span class="app-firma-badge">@firmaAdi</span>
-                            }
-
                             @if (!string.IsNullOrWhiteSpace(kullaniciAdi))
                             {
                                 <a class="app-top-btn" href="/Ayarlar">Ayarlar</a>
