@@ -2907,3 +2907,91 @@ a.app-top-btn {
         grid-template-columns: 1fr;
     }
 }
+/* FIRMA LOGO AND ATTACHMENTS */
+.settings-logo-preview,
+.invoice-company-logo {
+    max-width: 120px;
+    max-height: 72px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    padding: 6px;
+}
+
+.settings-toggle-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.settings-toggle-grid label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 10px;
+    background: #f8fafc;
+    font-weight: 700;
+}
+
+.invoice-company-block p {
+    margin: 4px 0 0;
+}
+
+.invoice-company-block p span + span::before {
+    content: " • ";
+    color: #94a3b8;
+}
+
+.attachment-form {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.attachment-form input[type="file"] {
+    min-height: 42px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 10px;
+    padding: 8px;
+    background: #ffffff;
+}
+
+.attachment-list {
+    display: grid;
+    gap: 10px;
+}
+
+.attachment-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 10px;
+    background: #ffffff;
+    text-decoration: none;
+    color: #0f172a;
+}
+
+.attachment-item span {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .settings-toggle-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .attachment-item {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

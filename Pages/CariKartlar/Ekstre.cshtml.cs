@@ -9,17 +9,23 @@ namespace MuhasebeTakip2.App.Pages.CariKartlar;
 public class EkstreModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IWebHostEnvironment _env;
 
-    public EkstreModel(AppDbContext db)
+    public EkstreModel(AppDbContext db, IWebHostEnvironment env)
     {
         _db = db;
+        _env = env;
     }
 
     public CariKart? Cari { get; set; }
     public List<EkstreSatiri> Satirlar { get; set; } = new();
+    public List<EkDosya> Dosyalar { get; set; } = new();
     public decimal ToplamBorc { get; set; }
     public decimal ToplamAlacak { get; set; }
     public decimal Bakiye => ToplamBorc - ToplamAlacak;
+
+    [BindProperty]
+    public IFormFile? EkDosya { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
@@ -27,55 +33,96 @@ public class EkstreModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        Cari = await _db.CariKartlar.FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+        await YukleAsync(id, firmaId.Value);
         if (Cari == null)
             return NotFound();
 
-        var faturalar = await _db.Faturalar
-            .Where(x => x.FirmaId == firmaId.Value && x.CariKartId == id)
-            .OrderBy(x => x.Tarih)
-            .ToListAsync();
+        return Page();
+    }
 
-        var hareketler = await _db.KasaHareketleri
-            .Where(x => x.FirmaId == firmaId.Value && x.CariKartId == id)
-            .OrderBy(x => x.Tarih)
-            .ToListAsync();
+    public async Task<IActionResult> OnPostDosyaEkleAsync(int id)
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var cariVarMi = await _db.CariKartlar.AnyAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+        if (!cariVarMi)
+            return NotFound();
+
+        if (EkDosya == null || EkDosya.Length == 0)
+        {
+            TempData["Hata"] = "Lütfen bir dosya seçin.";
+            return RedirectToPage(new { id });
+        }
+
+        var uzanti = Path.GetExtension(EkDosya.FileName).ToLowerInvariant();
+        var izinli = new[] { ".pdf", ".png", ".jpg", ".jpeg", ".webp", ".xlsx", ".xls", ".docx" };
+        if (!izinli.Contains(uzanti))
+        {
+            TempData["Hata"] = "PDF, resim, Excel veya Word dosyası yükleyebilirsiniz.";
+            return RedirectToPage(new { id });
+        }
+
+        var klasor = Path.Combine(_env.WebRootPath, "uploads", "cariler");
+        Directory.CreateDirectory(klasor);
+        var dosyaAdi = $"cari-{id}-{Guid.NewGuid():N}{uzanti}";
+        var fizikselYol = Path.Combine(klasor, dosyaAdi);
+        await using var fs = System.IO.File.Create(fizikselYol);
+        await EkDosya.CopyToAsync(fs);
+
+        _db.EkDosyalar.Add(new EkDosya
+        {
+            FirmaId = firmaId.Value,
+            CariKartId = id,
+            DosyaAdi = Path.GetFileName(EkDosya.FileName),
+            DosyaYolu = $"/uploads/cariler/{dosyaAdi}",
+            IcerikTipi = EkDosya.ContentType,
+            Boyut = EkDosya.Length,
+            YuklemeTarihi = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+
+        TempData["Basari"] = "Dosya cariye eklendi.";
+        return RedirectToPage(new { id });
+    }
+
+    private async Task YukleAsync(int id, int firmaId)
+    {
+        Cari = await _db.CariKartlar.FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
+        if (Cari == null)
+            return;
+
+        var faturalar = await _db.Faturalar.Where(x => x.FirmaId == firmaId && x.CariKartId == id).OrderBy(x => x.Tarih).ToListAsync();
+        var hareketler = await _db.KasaHareketleri.Where(x => x.FirmaId == firmaId && x.CariKartId == id).OrderBy(x => x.Tarih).ToListAsync();
 
         foreach (var fatura in faturalar)
         {
-            var borc = fatura.Tip == FaturaTipi.Satis ? fatura.GenelToplam : 0;
-            var alacak = fatura.Tip == FaturaTipi.Alis ? fatura.GenelToplam : 0;
             Satirlar.Add(new EkstreSatiri
             {
                 Tarih = fatura.Tarih,
                 Tur = fatura.Tip == FaturaTipi.Satis ? "Satış Faturası" : "Alış Faturası",
                 Aciklama = fatura.FaturaNo,
-                Borc = borc,
-                Alacak = alacak,
+                Borc = fatura.Tip == FaturaTipi.Satis ? fatura.GenelToplam : 0,
+                Alacak = fatura.Tip == FaturaTipi.Alis ? fatura.GenelToplam : 0,
                 FaturaId = fatura.Id
             });
         }
 
         foreach (var hareket in hareketler)
         {
-            var borc = hareket.Tip == HareketTipi.Cikis ? hareket.Tutar : 0;
-            var alacak = hareket.Tip == HareketTipi.Giris ? hareket.Tutar : 0;
             Satirlar.Add(new EkstreSatiri
             {
                 Tarih = hareket.Tarih,
                 Tur = hareket.Tip == HareketTipi.Giris ? "Tahsilat" : "Ödeme",
                 Aciklama = hareket.Aciklama,
-                Borc = borc,
-                Alacak = alacak,
+                Borc = hareket.Tip == HareketTipi.Cikis ? hareket.Tutar : 0,
+                Alacak = hareket.Tip == HareketTipi.Giris ? hareket.Tutar : 0,
                 FaturaId = hareket.FaturaId
             });
         }
 
-        Satirlar = Satirlar
-            .OrderBy(x => x.Tarih)
-            .ThenBy(x => x.Tur)
-            .ToList();
-
+        Satirlar = Satirlar.OrderBy(x => x.Tarih).ThenBy(x => x.Tur).ToList();
         decimal bakiye = 0;
         foreach (var satir in Satirlar)
         {
@@ -86,7 +133,7 @@ public class EkstreModel : PageModel
         ToplamBorc = Satirlar.Sum(x => x.Borc);
         ToplamAlacak = Satirlar.Sum(x => x.Alacak);
 
-        return Page();
+        Dosyalar = await _db.EkDosyalar.Where(x => x.FirmaId == firmaId && x.CariKartId == id).OrderByDescending(x => x.YuklemeTarihi).ToListAsync();
     }
 
     public class EkstreSatiri

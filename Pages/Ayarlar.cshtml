@@ -1,123 +1,76 @@
 @page
 @model MuhasebeTakip2.App.Pages.AyarlarModel
-
-<h1 style="color:#0f172a; font-size:2.1rem; margin-bottom:6px;">Ayarlar</h1>
-<div style="color:#64748b; font-size:14px; margin-bottom:18px;">
-    Firma, kullanıcı ve menü görünürlüğü ayarlarınızı buradan yönetebilirsiniz.
-</div>
-
-@if (!string.IsNullOrWhiteSpace(Model.Mesaj))
-{
-    <div style="color:#166534; margin:10px 0; padding:12px; border:1px solid #bbf7d0; background:#f0fdf4; border-radius:12px;">
-        @Model.Mesaj
-    </div>
+@{
+    ViewData["Title"] = "Ayarlar";
 }
 
-@if (!string.IsNullOrWhiteSpace(Model.Hata))
-{
-    <div style="color:#b42318; margin:10px 0; padding:12px; border:1px solid #fecaca; background:#fef2f2; border-radius:12px;">
-        @Model.Hata
-    </div>
-}
+<div class="app-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Yönetim</span>
+            <h1>Ayarlar</h1>
+            <p>Firma bilgileri, logo, kullanıcı ve menü görünürlüğünü buradan yönetin.</p>
+        </div>
+    </section>
 
-<div style="display:grid; gap:20px; max-width:860px;">
+    @if (!string.IsNullOrWhiteSpace(Model.Mesaj))
+    {
+        <div class="app-alert app-alert-success">@Model.Mesaj</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.Hata))
+    {
+        <div class="app-alert app-alert-danger">@Model.Hata</div>
+    }
 
-    <div style="border:1px solid #e2e8f0; border-radius:18px; padding:22px; background:white; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
-        <h3 style="margin-top:0; color:#0f172a;">Firma Bilgileri</h3>
-        <p style="color:#64748b; margin-top:6px; margin-bottom:18px;">Giriş yapan firmanın görünen adını buradan güncelleyebilirsiniz.</p>
-
-        <form method="post" asp-page-handler="FirmaGuncelle">
-            <div style="margin-bottom:14px;">
-                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;"><b>Firma Adı</b></label>
-                <input asp-for="FirmaAdi" style="width:100%; padding:10px;" />
+    <section class="app-form-panel">
+        <div class="panel-title-row">
+            <div>
+                <h2>Firma Bilgileri ve Logo</h2>
+                <p>Bu bilgiler fatura çıktılarında ve belge başlıklarında kullanılır.</p>
             </div>
+            @if (!string.IsNullOrWhiteSpace(Model.LogoYolu))
+            {
+                <img class="settings-logo-preview" src="@Model.LogoYolu" alt="Firma logosu" />
+            }
+        </div>
 
-            <button type="submit" class="btn btn-dark btn-sm">Firma Adını Güncelle</button>
+        <form method="post" asp-page-handler="FirmaGuncelle" enctype="multipart/form-data" class="app-form-grid">
+            <div class="form-field form-field-wide"><label asp-for="FirmaAdi">Firma Adı</label><input asp-for="FirmaAdi" /></div>
+            <div class="form-field form-field-wide"><label asp-for="Adres">Adres</label><input asp-for="Adres" /></div>
+            <div class="form-field"><label asp-for="Telefon">Telefon</label><input asp-for="Telefon" /></div>
+            <div class="form-field"><label asp-for="Email">E-posta</label><input asp-for="Email" type="email" /></div>
+            <div class="form-field"><label asp-for="VergiDairesi">Vergi Dairesi</label><input asp-for="VergiDairesi" /></div>
+            <div class="form-field"><label asp-for="VergiNo">Vergi No</label><input asp-for="VergiNo" /></div>
+            <div class="form-field form-field-wide"><label asp-for="LogoDosyasi">Logo</label><input asp-for="LogoDosyasi" type="file" accept=".png,.jpg,.jpeg,.webp" /></div>
+            <div class="form-actions-row"><button type="submit" class="btn btn-primary">Firma Bilgilerini Kaydet</button></div>
         </form>
-    </div>
+    </section>
 
-    <div style="border:1px solid #e2e8f0; border-radius:18px; padding:22px; background:white; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
-        <h3 style="margin-top:0; color:#0f172a;">Kullanıcı Bilgileri</h3>
-        <p style="color:#64748b; margin-top:6px; margin-bottom:18px;">Kullanıcı adınızı ve isterseniz şifrenizi güvenli şekilde güncelleyebilirsiniz.</p>
-
-        <form method="post" asp-page-handler="KullaniciGuncelle">
-            <div style="margin-bottom:14px;">
-                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;"><b>Kullanıcı Adı</b></label>
-                <input asp-for="KullaniciAdi" style="width:100%; padding:10px;" />
-            </div>
-
-            <div style="margin-bottom:14px;">
-                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;"><b>Mevcut Şifre</b></label>
-                <input asp-for="MevcutSifre" type="password" style="width:100%; padding:10px;" />
-            </div>
-
-            <div style="margin-bottom:14px;">
-                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;"><b>Yeni Şifre</b></label>
-                <input asp-for="YeniSifre" type="password" style="width:100%; padding:10px;" />
-            </div>
-
-            <div style="margin-bottom:14px;">
-                <label style="display:block; font-weight:700; margin-bottom:6px; color:#475569;"><b>Yeni Şifre Tekrar</b></label>
-                <input asp-for="YeniSifreTekrar" type="password" style="width:100%; padding:10px;" />
-            </div>
-
-            <button type="submit" class="btn btn-dark btn-sm">Kullanıcı Bilgilerini Güncelle</button>
+    <section class="app-form-panel">
+        <div class="panel-title-row"><div><h2>Kullanıcı Bilgileri</h2><p>Kullanıcı adınızı ve şifrenizi güncelleyin.</p></div></div>
+        <form method="post" asp-page-handler="KullaniciGuncelle" class="app-form-grid">
+            <div class="form-field form-field-wide"><label asp-for="KullaniciAdi">Kullanıcı Adı</label><input asp-for="KullaniciAdi" /></div>
+            <div class="form-field"><label asp-for="MevcutSifre">Mevcut Şifre</label><input asp-for="MevcutSifre" type="password" /></div>
+            <div class="form-field"><label asp-for="YeniSifre">Yeni Şifre</label><input asp-for="YeniSifre" type="password" /></div>
+            <div class="form-field"><label asp-for="YeniSifreTekrar">Yeni Şifre Tekrar</label><input asp-for="YeniSifreTekrar" type="password" /></div>
+            <div class="form-actions-row"><button type="submit" class="btn btn-outline-primary">Kullanıcı Bilgilerini Güncelle</button></div>
         </form>
-    </div>
+    </section>
 
-    <div style="border:1px solid #e2e8f0; border-radius:18px; padding:22px; background:white; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
-        <h3 style="margin-top:0; color:#0f172a;">Menü Görünürlük Ayarları</h3>
-        <p style="color:#64748b; margin-top:6px; margin-bottom:18px;">
-            Firmanız için hangi kategorilerin görüneceğini buradan açıp kapatabilirsiniz.
-        </p>
-
+    <section class="app-form-panel">
+        <div class="panel-title-row"><div><h2>Menü Görünürlüğü</h2><p>Firmanız için hangi kategorilerin görüneceğini seçin.</p></div></div>
         <form method="post" asp-page-handler="MenuKaydet">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px;">
-
-                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
-                    <input asp-for="MenuCariKartlar" type="checkbox" />
-                    Cari Kartlar
-                </label>
-
-                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
-                    <input asp-for="MenuKasa" type="checkbox" />
-                    Kasa
-                </label>
-
-                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
-                    <input asp-for="MenuRaporlar" type="checkbox" />
-                    Raporlar
-                </label>
-
-                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
-                    <input asp-for="MenuCalisanlar" type="checkbox" />
-                    Çalışanlar
-                </label>
-
-                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
-                    <input asp-for="MenuMusteriler" type="checkbox" />
-                    Müşteriler
-                </label>
-
-                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
-                    <input asp-for="MenuStoklar" type="checkbox" />
-                    Stok
-                </label>
-
-                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
-                    <input asp-for="MenuMaliyet" type="checkbox" />
-                    Maliyet
-                </label>
-
-                <label style="display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">
-                    <input asp-for="MenuCekler" type="checkbox" />
-                    Çekler
-                </label>
+            <div class="settings-toggle-grid">
+                <label><input asp-for="MenuCariKartlar" type="checkbox" /> Cari Kartlar</label>
+                <label><input asp-for="MenuKasa" type="checkbox" /> Kasa</label>
+                <label><input asp-for="MenuRaporlar" type="checkbox" /> Raporlar</label>
+                <label><input asp-for="MenuCalisanlar" type="checkbox" /> Çalışanlar</label>
+                <label><input asp-for="MenuMusteriler" type="checkbox" /> Müşteriler</label>
+                <label><input asp-for="MenuStoklar" type="checkbox" /> Stok</label>
+                <label><input asp-for="MenuMaliyet" type="checkbox" /> Maliyet</label>
+                <label><input asp-for="MenuCekler" type="checkbox" /> Çekler</label>
             </div>
-
-            <div style="margin-top:20px;">
-                <button type="submit" class="btn btn-dark btn-sm">Menü Ayarlarını Kaydet</button>
-            </div>
+            <div class="form-actions-row"><button type="submit" class="btn btn-outline-primary">Menü Ayarlarını Kaydet</button></div>
         </form>
-    </div>
+    </section>
 </div>
