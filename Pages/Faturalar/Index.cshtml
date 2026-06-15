@@ -239,10 +239,13 @@
                                     }
                                 </td>
                                 <td>
-                                    <form method="post" asp-page-handler="Sil" class="inline-form" onsubmit="return confirm('Bu fatura silinecek. Daha önce kasaya işlenen tahsilat/ödeme hareketleri silinmez. Devam edilsin mi?');">
-                                        <input type="hidden" name="id" value="@fatura.Id" />
-                                        <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
-                                    </form>
+                                    <div class="invoice-action-stack">
+                                        <a class="btn btn-outline-primary btn-sm" asp-page="/Faturalar/Detay" asp-route-id="@fatura.Id">Detay</a>
+                                        <form method="post" asp-page-handler="Sil" class="inline-form" onsubmit="return confirm('Bu fatura silinecek. Daha önce kasaya işlenen tahsilat/ödeme hareketleri silinmez. Devam edilsin mi?');">
+                                            <input type="hidden" name="id" value="@fatura.Id" />
+                                            <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         }

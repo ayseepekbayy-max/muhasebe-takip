@@ -11,7 +11,7 @@ public class KasaHareket
     public int Id { get; set; }
 
     public int? FirmaId { get; set; }
-    
+
     public Firma? Firma { get; set; }
 
     public DateTime Tarih { get; set; } = DateTime.Now;
@@ -25,4 +25,8 @@ public class KasaHareket
     public int? CariKartId { get; set; }
 
     public CariKart? CariKart { get; set; }
+
+    public int? FaturaId { get; set; }
+
+    public Fatura? Fatura { get; set; }
 }

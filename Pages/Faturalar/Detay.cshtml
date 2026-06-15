@@ -1,0 +1,144 @@
+@page "{id:int}"
+@using MuhasebeTakip2.App.Models
+@model MuhasebeTakip2.App.Pages.Faturalar.DetayModel
+@{
+    ViewData["Title"] = $"Fatura {Model.Fatura?.FaturaNo}";
+    var fatura = Model.Fatura!;
+    var satisMi = fatura.Tip == FaturaTipi.Satis;
+    var kapaliMi = fatura.KalanTutar <= 0;
+}
+
+<div class="app-page invoice-detail-page">
+    <section class="app-page-header no-print">
+        <div>
+            <span class="app-page-eyebrow">Fatura Detayı</span>
+            <h1>@fatura.FaturaNo</h1>
+            <p>@(satisMi ? "Satış faturası" : "Alış faturası") hareketlerini, kalemlerini ve ödeme durumunu tek ekranda izleyin.</p>
+        </div>
+
+        <div class="app-page-actions">
+            <a class="btn btn-outline-dark" href="/Faturalar">Faturalara Dön</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()">PDF / Yazdır</button>
+        </div>
+    </section>
+
+    <section class="invoice-print-sheet">
+        <div class="invoice-print-header">
+            <div>
+                <span class="invoice-brand-mark">F</span>
+                <h2>Firmova ERP</h2>
+                <p>Muhasebe, kasa ve işletme takibi</p>
+            </div>
+            <div class="invoice-print-meta">
+                <span class="status-pill @(satisMi ? "status-pill-income" : "status-pill-expense")">@(satisMi ? "Satış" : "Alış")</span>
+                <strong>@fatura.FaturaNo</strong>
+                <small>@fatura.Tarih.ToString("dd.MM.yyyy")</small>
+            </div>
+        </div>
+
+        <div class="invoice-info-grid">
+            <article>
+                <span>Cari</span>
+                <strong>@(fatura.CariKart?.Unvan ?? "-")</strong>
+            </article>
+            <article>
+                <span>Vade</span>
+                <strong>@(fatura.VadeTarihi?.ToString("dd.MM.yyyy") ?? "-")</strong>
+            </article>
+            <article>
+                <span>Durum</span>
+                <strong>@(kapaliMi ? "Kapandı" : fatura.OdenenToplam > 0 ? "Kısmi ödendi" : "Açık")</strong>
+            </article>
+            <article>
+                <span>Kalan</span>
+                <strong>@Math.Max(0, fatura.KalanTutar).ToString("N2")</strong>
+            </article>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(fatura.Aciklama))
+        {
+            <div class="invoice-note">
+                <span>Not</span>
+                <p>@fatura.Aciklama</p>
+            </div>
+        }
+
+        <div class="table-wrap invoice-print-table-wrap">
+            <table class="modern-table invoice-print-table">
+                <thead>
+                    <tr>
+                        <th>Kalem Açıklaması</th>
+                        <th>Miktar</th>
+                        <th>Birim Fiyat</th>
+                        <th>KDV %</th>
+                        <th>Ara Toplam</th>
+                        <th>KDV</th>
+                        <th>Toplam</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var kalem in fatura.Kalemler)
+                    {
+                        <tr>
+                            <td>@kalem.Aciklama</td>
+                            <td>@kalem.Miktar.ToString("N2")</td>
+                            <td>@kalem.BirimFiyat.ToString("N2")</td>
+                            <td>@kalem.KdvOrani.ToString("N2")</td>
+                            <td>@kalem.AraToplam.ToString("N2")</td>
+                            <td>@kalem.KdvTutar.ToString("N2")</td>
+                            <td class="amount-cell">@kalem.GenelToplam.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="invoice-total-panel">
+            <div><span>Ara Toplam</span><strong>@fatura.AraToplam.ToString("N2")</strong></div>
+            <div><span>KDV Toplam</span><strong>@fatura.KdvToplam.ToString("N2")</strong></div>
+            <div><span>Genel Toplam</span><strong>@fatura.GenelToplam.ToString("N2")</strong></div>
+            <div><span>Ödenen</span><strong>@fatura.OdenenToplam.ToString("N2")</strong></div>
+            <div class="invoice-total-final"><span>Kalan</span><strong>@Math.Max(0, fatura.KalanTutar).ToString("N2")</strong></div>
+        </div>
+    </section>
+
+    <section class="dashboard-panel no-print">
+        <div class="panel-title-row">
+            <div>
+                <h2>Tahsilat / Ödeme Geçmişi</h2>
+                <p>@Model.Hareketler.Count hareket</p>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Tip</th>
+                        <th>Açıklama</th>
+                        <th>Tutar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Hareketler.Count == 0)
+                    {
+                        <tr><td colspan="4" class="empty-row">Bu faturaya bağlı tahsilat/ödeme kaydı yok.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var hareket in Model.Hareketler)
+                        {
+                            <tr>
+                                <td>@hareket.Tarih.ToString("dd.MM.yyyy")</td>
+                                <td><span class="status-pill @(hareket.Tip == HareketTipi.Giris ? "status-pill-income" : "status-pill-expense")">@(hareket.Tip == HareketTipi.Giris ? "Tahsilat" : "Ödeme")</span></td>
+                                <td>@hareket.Aciklama</td>
+                                <td class="amount-cell @(hareket.Tip == HareketTipi.Giris ? "amount-income" : "amount-expense")">@hareket.Tutar.ToString("N2")</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

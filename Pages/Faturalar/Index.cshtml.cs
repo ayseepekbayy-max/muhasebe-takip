@@ -63,7 +63,7 @@ public class IndexModel : PageModel
                 BirimFiyat = x.BirimFiyat,
                 KdvOrani = x.KdvOrani
             })
-            .Where(x => !string.IsNullOrWhiteSpace(x.Aciklama) || x.Miktar > 0 || x.BirimFiyat > 0)
+            .Where(x => !string.IsNullOrWhiteSpace(x.Aciklama) || x.BirimFiyat > 0)
             .ToList();
 
         if (!doluKalemler.Any())
@@ -179,6 +179,7 @@ public class IndexModel : PageModel
         {
             FirmaId = firmaId.Value,
             CariKartId = fatura.CariKartId,
+            FaturaId = fatura.Id,
             Tarih = ToUtcDate(Odeme.Tarih),
             Tip = kasaTipi,
             Tutar = islenecekTutar,
