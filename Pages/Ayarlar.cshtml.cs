@@ -91,13 +91,24 @@ public class AyarlarModel : PageModel
                 return Page();
             }
 
-            var klasor = Path.Combine(_env.WebRootPath, "uploads", "logos");
-            Directory.CreateDirectory(klasor);
-            var dosyaAdi = $"firma-{firma.Id}-{Guid.NewGuid():N}{uzanti}";
-            var fizikselYol = Path.Combine(klasor, dosyaAdi);
-            await using var fs = System.IO.File.Create(fizikselYol);
-            await LogoDosyasi.CopyToAsync(fs);
-            firma.LogoYolu = $"/uploads/logos/{dosyaAdi}";
+            if (LogoDosyasi.Length > 1024 * 1024)
+            {
+                Hata = "Logo dosyası en fazla 1 MB olabilir.";
+                await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+                return Page();
+            }
+
+            var icerikTipi = uzanti switch
+            {
+                ".png" => "image/png",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".webp" => "image/webp",
+                _ => LogoDosyasi.ContentType
+            };
+
+            await using var ms = new MemoryStream();
+            await LogoDosyasi.CopyToAsync(ms);
+            firma.LogoYolu = $"data:{icerikTipi};base64,{Convert.ToBase64String(ms.ToArray())}";
         }
 
         await _db.SaveChangesAsync();

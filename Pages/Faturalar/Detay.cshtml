@@ -38,11 +38,11 @@
                 <h2>@(firma?.FirmaAdi ?? "Firmova ERP")</h2>
                 @if (!string.IsNullOrWhiteSpace(firma?.LogoYolu))
                 {
-                    var logoYolu = firma.LogoYolu.StartsWith("/")
-                        ? "~" + firma.LogoYolu
-                        : "~/" + firma.LogoYolu;
+                    var logoSrc = firma.LogoYolu.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
+                        ? firma.LogoYolu
+                        : Url.Content(firma.LogoYolu.StartsWith("/") ? "~" + firma.LogoYolu : "~/" + firma.LogoYolu);
 
-                    <img class="invoice-company-logo" src="@Url.Content(logoYolu)" alt="" onerror="this.style.display='none';" />
+                    <img class="invoice-company-logo" src="@logoSrc" alt="" onerror="this.style.display='none';" />
                 }
                 @if (!string.IsNullOrWhiteSpace(firma?.Adres)) { <p>@firma.Adres</p> }
                 <p>
