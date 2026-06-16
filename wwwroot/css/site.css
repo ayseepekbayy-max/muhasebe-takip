@@ -3209,3 +3209,14 @@ a.app-top-btn {
 .invoice-logo-fallback {
     display: none !important;
 }
+/* COMPANY LOGO UNDER TITLE */
+.invoice-company-block .invoice-company-logo {
+    display: block;
+    margin: 8px 0 10px;
+}
+
+@media print {
+    .invoice-company-block .invoice-company-logo {
+        margin: 5px 0 6px !important;
+    }
+}

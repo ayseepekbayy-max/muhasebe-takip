@@ -35,6 +35,7 @@
     <section class="invoice-print-sheet">
         <div class="invoice-print-header">
             <div class="invoice-company-block">
+                <h2>@(firma?.FirmaAdi ?? "Firmova ERP")</h2>
                 @if (!string.IsNullOrWhiteSpace(firma?.LogoYolu))
                 {
                     var logoYolu = firma.LogoYolu.StartsWith("/")
@@ -43,7 +44,6 @@
 
                     <img class="invoice-company-logo" src="@Url.Content(logoYolu)" alt="" onerror="this.style.display='none';" />
                 }
-                <h2>@(firma?.FirmaAdi ?? "Firmova ERP")</h2>
                 @if (!string.IsNullOrWhiteSpace(firma?.Adres)) { <p>@firma.Adres</p> }
                 <p>
                     @if (!string.IsNullOrWhiteSpace(firma?.Telefon)) { <span>@firma.Telefon</span> }
