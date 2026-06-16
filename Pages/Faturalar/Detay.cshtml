@@ -41,7 +41,7 @@
                         ? "~" + firma.LogoYolu
                         : "~/" + firma.LogoYolu;
 
-                    <img class="invoice-company-logo" src="@Url.Content(logoYolu)" alt="Firma logosu" />
+                    <img class="invoice-company-logo" src="@Url.Content(logoYolu)" alt="" onerror="this.style.display='none';" />
                 }
                 <h2>@(firma?.FirmaAdi ?? "Firmova ERP")</h2>
                 @if (!string.IsNullOrWhiteSpace(firma?.Adres)) { <p>@firma.Adres</p> }

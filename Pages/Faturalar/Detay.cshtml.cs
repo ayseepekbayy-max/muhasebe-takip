@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using Microsoft.AspNetCore.Hosting;
 
 namespace MuhasebeTakip2.App.Pages.Faturalar;
 
