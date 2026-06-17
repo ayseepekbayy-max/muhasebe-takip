@@ -46,36 +46,6 @@
     <section class="app-form-panel">
         <div class="panel-title-row">
             <div>
-                <h2>Fatura Numarası Ayarları</h2>
-                <p>Fatura no boş bırakılırsa sıradaki numara otomatik verilir. Sıradaki örnek: <strong>@Model.NumaraAyari.SiradakiOrnek</strong></p>
-            </div>
-        </div>
-        <form method="post" asp-page-handler="AyarKaydet" class="app-form-grid invoice-number-settings">
-            <div class="form-field">
-                <label asp-for="NumaraAyari.Prefix">Ön Ek</label>
-                <input asp-for="NumaraAyari.Prefix" placeholder="FTR" />
-            </div>
-            <div class="form-field">
-                <label asp-for="NumaraAyari.SonNumara">Son Numara</label>
-                <input asp-for="NumaraAyari.SonNumara" type="number" min="0" />
-            </div>
-            <div class="form-field">
-                <label asp-for="NumaraAyari.SiraUzunlugu">Sıra Uzunluğu</label>
-                <input asp-for="NumaraAyari.SiraUzunlugu" type="number" min="3" max="8" />
-            </div>
-            <label class="form-check-field">
-                <input asp-for="NumaraAyari.YilEkle" type="checkbox" />
-                <span>Yılı numaraya ekle</span>
-            </label>
-            <div class="form-actions-row">
-                <button type="submit" class="btn btn-outline-primary">Ayarları Kaydet</button>
-            </div>
-        </form>
-    </section>
-
-    <section class="app-form-panel">
-        <div class="panel-title-row">
-            <div>
                 <h2>Yeni Fatura</h2>
                 <p>Aynı faturaya birden fazla ürün veya hizmet kalemi ekleyebilirsiniz.</p>
             </div>

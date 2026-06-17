@@ -42,29 +42,6 @@ public class IndexModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostAyarKaydetAsync()
-    {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
-
-        var ayar = await _db.FaturaNumaraAyarlari.FirstOrDefaultAsync(x => x.FirmaId == firmaId.Value);
-        if (ayar == null)
-        {
-            ayar = new FaturaNumaraAyari { FirmaId = firmaId.Value };
-            _db.FaturaNumaraAyarlari.Add(ayar);
-        }
-
-        ayar.Prefix = string.IsNullOrWhiteSpace(NumaraAyari.Prefix) ? "FTR" : NumaraAyari.Prefix.Trim().ToUpperInvariant();
-        ayar.SonNumara = Math.Max(0, NumaraAyari.SonNumara);
-        ayar.SiraUzunlugu = Math.Clamp(NumaraAyari.SiraUzunlugu, 3, 8);
-        ayar.YilEkle = NumaraAyari.YilEkle;
-
-        await _db.SaveChangesAsync();
-        TempData["Basari"] = "Fatura numarası ayarları kaydedildi.";
-        return RedirectToPage();
-    }
-
     public async Task<IActionResult> OnPostEkleAsync()
     {
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
@@ -322,7 +299,7 @@ public class IndexModel : PageModel
 
             return new FaturaKalem
             {
-                Aciklama = kalem.Aciklama,
+                Aciklama = kalem.Aciklama ?? "",
                 Miktar = kalem.Miktar,
                 BirimFiyat = kalem.BirimFiyat,
                 KdvOrani = kalem.KdvOrani,
@@ -346,12 +323,12 @@ public class IndexModel : PageModel
         public DateTime Tarih { get; set; } = DateTime.UtcNow.Date;
         public DateTime? VadeTarihi { get; set; }
         public List<FaturaKalemForm> Kalemler { get; set; } = new() { new FaturaKalemForm() };
-        public string Aciklama { get; set; } = "";
+        public string? Aciklama { get; set; }
     }
 
     public class FaturaKalemForm
     {
-        public string Aciklama { get; set; } = "";
+        public string? Aciklama { get; set; }
         public decimal Miktar { get; set; } = 1;
         public decimal BirimFiyat { get; set; }
         public decimal KdvOrani { get; set; } = 20;

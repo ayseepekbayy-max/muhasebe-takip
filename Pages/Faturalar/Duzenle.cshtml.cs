@@ -171,7 +171,7 @@ public class DuzenleModel : PageModel
             var kdvTutar = araToplam * kalem.KdvOrani / 100m;
             return new FaturaKalem
             {
-                Aciklama = kalem.Aciklama,
+                Aciklama = kalem.Aciklama ?? "",
                 Miktar = kalem.Miktar,
                 BirimFiyat = kalem.BirimFiyat,
                 KdvOrani = kalem.KdvOrani,
@@ -196,12 +196,12 @@ public class DuzenleModel : PageModel
         public DateTime Tarih { get; set; } = DateTime.UtcNow.Date;
         public DateTime? VadeTarihi { get; set; }
         public List<FaturaKalemForm> Kalemler { get; set; } = new() { new FaturaKalemForm() };
-        public string Aciklama { get; set; } = "";
+        public string? Aciklama { get; set; }
     }
 
     public class FaturaKalemForm
     {
-        public string Aciklama { get; set; } = "";
+        public string? Aciklama { get; set; }
         public decimal Miktar { get; set; } = 1;
         public decimal BirimFiyat { get; set; }
         public decimal KdvOrani { get; set; } = 20;
