@@ -1,0 +1,40 @@
+@page
+@model MuhasebeTakip2.App.Pages.Araclar.YedeklemeModel
+@{
+    ViewData["Title"] = "Yedekleme";
+}
+
+<div class="app-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Araçlar</span>
+            <h1>Yedekleme / Geri Yükleme</h1>
+            <p>Cari, stok, fatura, kasa ve çek verilerinizi JSON yedek dosyası olarak saklayın.</p>
+        </div>
+        <div class="app-page-actions">
+            <a class="btn btn-primary" href="/Araclar/Yedekleme?handler=Indir">Yedek İndir</a>
+        </div>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Hata))
+    {
+        <div class="app-alert app-alert-danger">@Model.Hata</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.Mesaj))
+    {
+        <div class="app-alert app-alert-success">@Model.Mesaj</div>
+    }
+
+    <section class="app-form-panel">
+        <div class="panel-title-row"><div><h2>Güvenli Geri Yükleme</h2><p>Mevcut kayıtlar silinmez. Aynı görünen kayıtlar tekrar eklenmez.</p></div></div>
+        <form method="post" asp-page-handler="GeriYukle" enctype="multipart/form-data" class="app-form-grid">
+            <div class="form-field form-field-wide">
+                <label asp-for="YedekDosyasi">Yedek Dosyası</label>
+                <input asp-for="YedekDosyasi" type="file" accept=".json" />
+            </div>
+            <div class="form-actions-row">
+                <button type="submit" class="btn btn-outline-primary" onclick="return confirm('Yedek dosyasındaki eksik kayıtlar eklenecek. Mevcut kayıtlar silinmez. Devam edilsin mi?');">Geri Yükle</button>
+            </div>
+        </form>
+    </section>
+</div>

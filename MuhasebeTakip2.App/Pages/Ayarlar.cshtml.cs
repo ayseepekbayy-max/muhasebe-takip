@@ -9,50 +9,36 @@ namespace MuhasebeTakip2.App.Pages;
 public class AyarlarModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IWebHostEnvironment _env;
 
-    public AyarlarModel(AppDbContext db)
+    public AyarlarModel(AppDbContext db, IWebHostEnvironment env)
     {
         _db = db;
+        _env = env;
     }
 
-    [BindProperty]
-    public string KullaniciAdi { get; set; } = "";
+    [BindProperty] public string KullaniciAdi { get; set; } = "";
+    [BindProperty] public string MevcutSifre { get; set; } = "";
+    [BindProperty] public string YeniSifre { get; set; } = "";
+    [BindProperty] public string YeniSifreTekrar { get; set; } = "";
 
-    [BindProperty]
-    public string MevcutSifre { get; set; } = "";
+    [BindProperty] public string FirmaAdi { get; set; } = "";
+    [BindProperty] public string Adres { get; set; } = "";
+    [BindProperty] public string Telefon { get; set; } = "";
+    [BindProperty] public string Email { get; set; } = "";
+    [BindProperty] public string VergiDairesi { get; set; } = "";
+    [BindProperty] public string VergiNo { get; set; } = "";
+    [BindProperty] public IFormFile? LogoDosyasi { get; set; }
+    public string LogoYolu { get; set; } = "";
 
-    [BindProperty]
-    public string YeniSifre { get; set; } = "";
-
-    [BindProperty]
-    public string YeniSifreTekrar { get; set; } = "";
-
-    [BindProperty]
-    public string FirmaAdi { get; set; } = "";
-
-    [BindProperty]
-    public bool MenuCariKartlar { get; set; } = true;
-
-    [BindProperty]
-    public bool MenuKasa { get; set; } = true;
-
-    [BindProperty]
-    public bool MenuRaporlar { get; set; } = true;
-
-    [BindProperty]
-    public bool MenuCalisanlar { get; set; } = true;
-
-    [BindProperty]
-    public bool MenuMusteriler { get; set; } = true;
-
-    [BindProperty]
-    public bool MenuStoklar { get; set; } = true;
-
-    [BindProperty]
-    public bool MenuMaliyet { get; set; } = true;
-
-    [BindProperty]
-    public bool MenuCekler { get; set; } = true;
+    [BindProperty] public bool MenuCariKartlar { get; set; } = true;
+    [BindProperty] public bool MenuKasa { get; set; } = true;
+    [BindProperty] public bool MenuRaporlar { get; set; } = true;
+    [BindProperty] public bool MenuCalisanlar { get; set; } = true;
+    [BindProperty] public bool MenuMusteriler { get; set; } = true;
+    [BindProperty] public bool MenuStoklar { get; set; } = true;
+    [BindProperty] public bool MenuMaliyet { get; set; } = true;
+    [BindProperty] public bool MenuCekler { get; set; } = true;
 
     public string Mesaj { get; set; } = "";
     public string Hata { get; set; } = "";
@@ -61,35 +47,82 @@ public class AyarlarModel : PageModel
     {
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
         var kullaniciId = HttpContext.Session.GetInt32("KullaniciId");
+        if (firmaId == null || kullaniciId == null)
+            return RedirectToPage("/Login");
 
+        await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostFirmaGuncelleAsync()
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var kullaniciId = HttpContext.Session.GetInt32("KullaniciId");
         if (firmaId == null || kullaniciId == null)
             return RedirectToPage("/Login");
 
         var firma = await _db.Firmalar.FirstOrDefaultAsync(x => x.Id == firmaId.Value);
-        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId.Value);
-
-        if (firma == null || kullanici == null)
+        if (firma == null)
             return RedirectToPage("/Login");
 
-        KullaniciAdi = kullanici.KullaniciAdi;
-        FirmaAdi = firma.FirmaAdi;
+        FirmaAdi = (FirmaAdi ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(FirmaAdi))
+        {
+            Hata = "Firma adı boş olamaz.";
+            await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+            return Page();
+        }
 
-        MenuCariKartlar = firma.MenuCariKartlar;
-        MenuKasa = firma.MenuKasa;
-        MenuRaporlar = firma.MenuRaporlar;
-        MenuCalisanlar = firma.MenuCalisanlar;
-        MenuMusteriler = firma.MenuMusteriler;
-        MenuStoklar = firma.MenuStoklar;
-        MenuMaliyet = firma.MenuMaliyet;
-        MenuCekler = firma.MenuCekler;
+        firma.FirmaAdi = FirmaAdi;
+        firma.Adres = (Adres ?? "").Trim();
+        firma.Telefon = (Telefon ?? "").Trim();
+        firma.Email = (Email ?? "").Trim();
+        firma.VergiDairesi = (VergiDairesi ?? "").Trim();
+        firma.VergiNo = (VergiNo ?? "").Trim();
 
+        if (LogoDosyasi != null && LogoDosyasi.Length > 0)
+        {
+            var uzanti = Path.GetExtension(LogoDosyasi.FileName).ToLowerInvariant();
+            var izinli = new[] { ".png", ".jpg", ".jpeg", ".webp" };
+            if (!izinli.Contains(uzanti))
+            {
+                Hata = "Logo için PNG, JPG veya WEBP yükleyin.";
+                await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+                return Page();
+            }
+
+            if (LogoDosyasi.Length > 1024 * 1024)
+            {
+                Hata = "Logo dosyası en fazla 1 MB olabilir.";
+                await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+                return Page();
+            }
+
+            var icerikTipi = uzanti switch
+            {
+                ".png" => "image/png",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".webp" => "image/webp",
+                _ => LogoDosyasi.ContentType
+            };
+
+            await using var ms = new MemoryStream();
+            await LogoDosyasi.CopyToAsync(ms);
+            firma.LogoYolu = $"data:{icerikTipi};base64,{Convert.ToBase64String(ms.ToArray())}";
+        }
+
+        await _db.SaveChangesAsync();
+        HttpContext.Session.SetString("FirmaAdi", firma.FirmaAdi);
+        Mesaj = "Firma bilgileri güncellendi.";
+        await BilgileriYukle(firmaId.Value, kullaniciId.Value);
         return Page();
     }
 
     public async Task<IActionResult> OnPostKullaniciGuncelleAsync()
     {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
         var kullaniciId = HttpContext.Session.GetInt32("KullaniciId");
-        if (kullaniciId == null)
+        if (firmaId == null || kullaniciId == null)
             return RedirectToPage("/Login");
 
         var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId.Value);
@@ -97,61 +130,43 @@ public class AyarlarModel : PageModel
             return RedirectToPage("/Login");
 
         KullaniciAdi = (KullaniciAdi ?? "").Trim();
-        MevcutSifre = (MevcutSifre ?? "").Trim();
-        YeniSifre = (YeniSifre ?? "").Trim();
-        YeniSifreTekrar = (YeniSifreTekrar ?? "").Trim();
-
         if (string.IsNullOrWhiteSpace(KullaniciAdi))
         {
             Hata = "Kullanıcı adı boş olamaz.";
-            await MenuBilgileriniYukle();
+            await BilgileriYukle(firmaId.Value, kullaniciId.Value);
             return Page();
         }
 
-        var ayniAdKullananVar = await _db.Kullanicilar
-            .AnyAsync(x => x.Id != kullanici.Id && x.KullaniciAdi == KullaniciAdi);
-
+        var ayniAdKullananVar = await _db.Kullanicilar.AnyAsync(x => x.Id != kullanici.Id && x.KullaniciAdi == KullaniciAdi);
         if (ayniAdKullananVar)
         {
             Hata = "Bu kullanıcı adı zaten kullanılıyor.";
-            await MenuBilgileriniYukle();
+            await BilgileriYukle(firmaId.Value, kullaniciId.Value);
             return Page();
         }
 
         kullanici.KullaniciAdi = KullaniciAdi;
-
-        // Şifre değiştirilecekse mevcut şifre zorunlu
         if (!string.IsNullOrWhiteSpace(YeniSifre) || !string.IsNullOrWhiteSpace(YeniSifreTekrar))
         {
             if (string.IsNullOrWhiteSpace(MevcutSifre))
             {
                 Hata = "Şifre değiştirmek için mevcut şifrenizi girin.";
-                await MenuBilgileriniYukle();
+                await BilgileriYukle(firmaId.Value, kullaniciId.Value);
                 return Page();
             }
 
-            bool mevcutSifreDogru =
-                PasswordHelper.Verify(MevcutSifre, kullanici.Sifre) ||
-                kullanici.Sifre == MevcutSifre;
-
+            var mevcutSifreDogru = PasswordHelper.Verify(MevcutSifre, kullanici.Sifre) || kullanici.Sifre == MevcutSifre;
             if (!mevcutSifreDogru)
             {
                 Hata = "Mevcut şifre yanlış.";
-                await MenuBilgileriniYukle();
+                await BilgileriYukle(firmaId.Value, kullaniciId.Value);
                 return Page();
             }
 
-            if (YeniSifre != YeniSifreTekrar)
+            if (YeniSifre != YeniSifreTekrar || YeniSifre.Length < 4)
             {
-                Hata = "Yeni şifreler birbiriyle aynı değil.";
-                await MenuBilgileriniYukle();
-                return Page();
-            }
-
-            if (YeniSifre.Length < 4)
-            {
-                Hata = "Yeni şifre en az 4 karakter olmalı.";
-                await MenuBilgileriniYukle();
+                Hata = "Yeni şifreler aynı olmalı ve en az 4 karakter içermeli.";
+                await BilgileriYukle(firmaId.Value, kullaniciId.Value);
                 return Page();
             }
 
@@ -159,57 +174,17 @@ public class AyarlarModel : PageModel
         }
 
         await _db.SaveChangesAsync();
-
         HttpContext.Session.SetString("KullaniciAdi", kullanici.KullaniciAdi);
-
         Mesaj = "Kullanıcı bilgileri güncellendi.";
-        await MenuBilgileriniYukle();
-        return Page();
-    }
-
-    public async Task<IActionResult> OnPostFirmaGuncelleAsync()
-    {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
-
-        FirmaAdi = (FirmaAdi ?? "").Trim();
-
-        if (string.IsNullOrWhiteSpace(FirmaAdi))
-        {
-            Hata = "Firma adı boş olamaz.";
-            await MenuBilgileriniYukle();
-            return Page();
-        }
-
-        var firma = await _db.Firmalar.FirstOrDefaultAsync(x => x.Id == firmaId.Value);
-        if (firma == null)
-            return RedirectToPage("/Login");
-
-        var ayniAdliFirmaVar = await _db.Firmalar
-            .AnyAsync(x => x.Id != firma.Id && x.FirmaAdi == FirmaAdi);
-
-        if (ayniAdliFirmaVar)
-        {
-            Hata = "Bu firma adı zaten kullanılıyor.";
-            await MenuBilgileriniYukle();
-            return Page();
-        }
-
-        firma.FirmaAdi = FirmaAdi;
-        await _db.SaveChangesAsync();
-
-        HttpContext.Session.SetString("FirmaAdi", firma.FirmaAdi);
-
-        Mesaj = "Firma adı güncellendi.";
-        await MenuBilgileriniYukle();
+        await BilgileriYukle(firmaId.Value, kullaniciId.Value);
         return Page();
     }
 
     public async Task<IActionResult> OnPostMenuKaydetAsync()
     {
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
+        var kullaniciId = HttpContext.Session.GetInt32("KullaniciId");
+        if (firmaId == null || kullaniciId == null)
             return RedirectToPage("/Login");
 
         var firma = await _db.Firmalar.FirstOrDefaultAsync(x => x.Id == firmaId.Value);
@@ -224,7 +199,6 @@ public class AyarlarModel : PageModel
         firma.MenuStoklar = MenuStoklar;
         firma.MenuMaliyet = MenuMaliyet;
         firma.MenuCekler = MenuCekler;
-
         await _db.SaveChangesAsync();
 
         HttpContext.Session.SetString("MenuCariKartlar", MenuCariKartlar ? "1" : "0");
@@ -237,20 +211,25 @@ public class AyarlarModel : PageModel
         HttpContext.Session.SetString("MenuCekler", MenuCekler ? "1" : "0");
 
         Mesaj = "Menü ayarları kaydedildi.";
+        await BilgileriYukle(firmaId.Value, kullaniciId.Value);
         return Page();
     }
 
-    private async Task MenuBilgileriniYukle()
+    private async Task BilgileriYukle(int firmaId, int kullaniciId)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
+        var firma = await _db.Firmalar.FirstOrDefaultAsync(x => x.Id == firmaId);
+        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId);
+        if (firma == null || kullanici == null)
             return;
 
-        var firma = await _db.Firmalar.FirstOrDefaultAsync(x => x.Id == firmaId.Value);
-        if (firma == null)
-            return;
-
+        KullaniciAdi = kullanici.KullaniciAdi;
         FirmaAdi = firma.FirmaAdi;
+        Adres = firma.Adres;
+        Telefon = firma.Telefon;
+        Email = firma.Email;
+        VergiDairesi = firma.VergiDairesi;
+        VergiNo = firma.VergiNo;
+        LogoYolu = firma.LogoYolu;
         MenuCariKartlar = firma.MenuCariKartlar;
         MenuKasa = firma.MenuKasa;
         MenuRaporlar = firma.MenuRaporlar;

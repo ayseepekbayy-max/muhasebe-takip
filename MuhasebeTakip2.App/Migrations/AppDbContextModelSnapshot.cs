@@ -267,6 +267,178 @@ namespace MuhasebeTakip2.App.Migrations
                     b.ToTable("Cekler");
                 });
 
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.EkDosya", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("Boyut")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("CariKartId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DosyaAdi")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DosyaYolu")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("FaturaId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FirmaId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("IcerikTipi")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("YuklemeTarihi")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CariKartId");
+
+                    b.HasIndex("FaturaId");
+
+                    b.HasIndex("FirmaId");
+
+                    b.ToTable("EkDosyalar");
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.Fatura", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Aciklama")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("AraToplam")
+                        .HasColumnType("numeric");
+
+                    b.Property<int?>("CariKartId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FaturaNo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("FirmaId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("GenelToplam")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("KdvToplam")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("OdenenToplam")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime>("OlusturmaTarihi")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("Tarih")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Tip")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("VadeTarihi")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CariKartId");
+
+                    b.HasIndex("FirmaId");
+
+                    b.ToTable("Faturalar");
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.FaturaKalem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Aciklama")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("AraToplam")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("BirimFiyat")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("FaturaId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("GenelToplam")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("KdvOrani")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("KdvTutar")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("Miktar")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FaturaId");
+
+                    b.ToTable("FaturaKalemleri");
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.FaturaNumaraAyari", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("FirmaId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Prefix")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("SiraUzunlugu")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SonNumara")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("YilEkle")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FirmaId");
+
+                    b.ToTable("FaturaNumaraAyarlari");
+                });
+
             modelBuilder.Entity("MuhasebeTakip2.App.Models.Firma", b =>
                 {
                     b.Property<int>("Id")
@@ -275,10 +447,22 @@ namespace MuhasebeTakip2.App.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Adres")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<bool>("AktifMi")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("FirmaAdi")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LogoYolu")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -306,6 +490,18 @@ namespace MuhasebeTakip2.App.Migrations
                     b.Property<bool>("MenuStoklar")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Telefon")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("VergiDairesi")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("VergiNo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
                     b.ToTable("Firmalar");
@@ -326,6 +522,9 @@ namespace MuhasebeTakip2.App.Migrations
                     b.Property<int?>("CariKartId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("FaturaId")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("FirmaId")
                         .HasColumnType("integer");
 
@@ -341,6 +540,8 @@ namespace MuhasebeTakip2.App.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CariKartId");
+
+                    b.HasIndex("FaturaId");
 
                     b.HasIndex("FirmaId");
 
@@ -709,7 +910,30 @@ namespace MuhasebeTakip2.App.Migrations
                     b.Navigation("Firma");
                 });
 
-            modelBuilder.Entity("MuhasebeTakip2.App.Models.KasaHareket", b =>
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.EkDosya", b =>
+                {
+                    b.HasOne("MuhasebeTakip2.App.Models.CariKart", "CariKart")
+                        .WithMany()
+                        .HasForeignKey("CariKartId");
+
+                    b.HasOne("MuhasebeTakip2.App.Models.Fatura", "Fatura")
+                        .WithMany()
+                        .HasForeignKey("FaturaId");
+
+                    b.HasOne("MuhasebeTakip2.App.Models.Firma", "Firma")
+                        .WithMany()
+                        .HasForeignKey("FirmaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CariKart");
+
+                    b.Navigation("Fatura");
+
+                    b.Navigation("Firma");
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.Fatura", b =>
                 {
                     b.HasOne("MuhasebeTakip2.App.Models.CariKart", "CariKart")
                         .WithMany()
@@ -720,6 +944,49 @@ namespace MuhasebeTakip2.App.Migrations
                         .HasForeignKey("FirmaId");
 
                     b.Navigation("CariKart");
+
+                    b.Navigation("Firma");
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.FaturaKalem", b =>
+                {
+                    b.HasOne("MuhasebeTakip2.App.Models.Fatura", "Fatura")
+                        .WithMany("Kalemler")
+                        .HasForeignKey("FaturaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Fatura");
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.FaturaNumaraAyari", b =>
+                {
+                    b.HasOne("MuhasebeTakip2.App.Models.Firma", "Firma")
+                        .WithMany()
+                        .HasForeignKey("FirmaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Firma");
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.KasaHareket", b =>
+                {
+                    b.HasOne("MuhasebeTakip2.App.Models.CariKart", "CariKart")
+                        .WithMany()
+                        .HasForeignKey("CariKartId");
+
+                    b.HasOne("MuhasebeTakip2.App.Models.Fatura", "Fatura")
+                        .WithMany()
+                        .HasForeignKey("FaturaId");
+
+                    b.HasOne("MuhasebeTakip2.App.Models.Firma", "Firma")
+                        .WithMany()
+                        .HasForeignKey("FirmaId");
+
+                    b.Navigation("CariKart");
+
+                    b.Navigation("Fatura");
 
                     b.Navigation("Firma");
                 });
@@ -818,6 +1085,11 @@ namespace MuhasebeTakip2.App.Migrations
             modelBuilder.Entity("MuhasebeTakip2.App.Models.Calisan", b =>
                 {
                     b.Navigation("Avanslar");
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.Fatura", b =>
+                {
+                    b.Navigation("Kalemler");
                 });
 
             modelBuilder.Entity("MuhasebeTakip2.App.Models.MusteriIs", b =>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - ANK</title>
+    <title>@ViewData["Title"] - Firmova ERP</title>
     <script type="importmap"></script>
 
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
@@ -21,100 +21,95 @@
         var rol = (Context.Session.GetString("Rol") ?? "").Trim().ToLower();
         var path = Context.Request.Path.Value?.ToLower() ?? "";
         var loginSayfasiMi = path == "/login";
+        var firmaAdi = Context.Session.GetString("FirmaAdi");
+        var kullaniciAdi = Context.Session.GetString("KullaniciAdi");
+        var demoMode = Context.Session.GetString("DemoMode") == "1";
+        var marka = string.IsNullOrWhiteSpace(firmaAdi) ? "Firmova ERP" : firmaAdi;
     }
 
     @if (!loginSayfasiMi)
     {
-        <header>
-           <nav class="navbar navbar-expand-lg navbar-toggleable-lg navbar-dark app-navbar border-bottom box-shadow mb-4">
-                <div class="container-fluid px-3">
+        <header class="app-header">
+            <nav class="navbar navbar-expand-lg app-navbar">
+                <div class="container-fluid app-nav-container">
                     <a class="navbar-brand app-brand" asp-area="" asp-page="/Index">
-                        @(string.IsNullOrWhiteSpace(Context.Session.GetString("FirmaAdi"))
-                            ? "Muhasebe Takip"
-                            : Context.Session.GetString("FirmaAdi"))
+                        <span class="app-brand-mark">F</span>
+                        <span class="app-brand-text">@marka</span>
                     </a>
 
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
-                            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <button class="navbar-toggler app-menu-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar"
+                            aria-controls="mainNavbar" aria-expanded="false" aria-label="Menüyü aç veya kapat">
                         <span class="navbar-toggler-icon"></span>
                     </button>
 
-                        <div class="navbar-collapse collapse d-lg-flex align-items-lg-center">                     
-                            <ul class="navbar-nav app-nav-list d-lg-flex align-items-lg-center gap-2">                            @if (Context.Session.GetString("MenuCariKartlar") != "0")
+                    <div id="mainNavbar" class="navbar-collapse collapse app-nav-collapse">
+                        <ul class="navbar-nav app-nav-list">
+                            @if (Context.Session.GetString("MenuCariKartlar") != "0")
                             {
-                                <li class="nav-item">
-                                    <a class="nav-link" href="/CariKartlar">Cari Kartlar</a>
-                                </li>
+                                <li class="nav-item"><a class="nav-link" href="/CariKartlar">Cari</a></li>
                             }
 
                             @if (Context.Session.GetString("MenuKasa") != "0")
                             {
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-area="" asp-page="/Index">Kasa</a>
-                                </li>
+                                <li class="nav-item"><a class="nav-link" asp-area="" asp-page="/Index">Kasa</a></li>
+                            }
+
+                            <li class="nav-item"><a class="nav-link" href="/Faturalar">Faturalar</a></li>
+
+                            @if (Context.Session.GetString("MenuStoklar") != "0")
+                            {
+                                <li class="nav-item"><a class="nav-link" href="/Stoklar">Stok</a></li>
                             }
 
                             @if (Context.Session.GetString("MenuRaporlar") != "0")
                             {
-                                <li class="nav-item">
-                                    <a class="nav-link" href="/Raporlar">Raporlar</a>
-                                </li>
+                                <li class="nav-item"><a class="nav-link" href="/Raporlar">Raporlar</a></li>
                             }
 
-                            @if (Context.Session.GetString("MenuCalisanlar") != "0")
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link" href="/Calisanlar">Çalışanlar</a>
-                                </li>
-                            }
-
-                            @if (Context.Session.GetString("MenuMusteriler") != "0")
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link" href="/Musteriler">Müşteriler</a>
-                                </li>
-                            }
-
-                            @if (Context.Session.GetString("MenuStoklar") != "0")
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link" href="/Stoklar">Stok</a>
-                                </li>
-                            }
-
-                            @if (Context.Session.GetString("MenuMaliyet") != "0")
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link" href="/Maliyet">Maliyet</a>
-                                </li>
-                            }
-
-                            <li class="nav-item">
-                                <a class="nav-link" href="/AiAsistan">AI Asistan</a>
+                            <li class="nav-item dropdown app-nav-dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">İşletme</a>
+                                <ul class="dropdown-menu app-dropdown-menu">
+                                    @if (Context.Session.GetString("MenuCalisanlar") != "0")
+                                    {
+                                        <li><a class="dropdown-item" href="/Calisanlar">Çalışanlar</a></li>
+                                    }
+                                    @if (Context.Session.GetString("MenuMusteriler") != "0")
+                                    {
+                                        <li><a class="dropdown-item" href="/Musteriler">Müşteriler</a></li>
+                                    }
+                                    @if (Context.Session.GetString("MenuMaliyet") != "0")
+                                    {
+                                        <li><a class="dropdown-item" href="/Maliyet">Maliyet</a></li>
+                                    }
+                                    @if (Context.Session.GetString("MenuCekler") != "0")
+                                    {
+                                        <li><a class="dropdown-item" href="/Cekler">Çekler</a></li>
+                                    }
+                                </ul>
                             </li>
 
-                            @if (Context.Session.GetString("MenuCekler") != "0")
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link" href="/Cekler">Çekler</a>
-                                </li>
-                            }
-
-                            @if (rol == "superadmin")
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link" href="/SuperAdmin/Index">Süper Admin</a>
-                                </li>
-                            }
+                            <li class="nav-item dropdown app-nav-dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Araçlar</a>
+                                <ul class="dropdown-menu app-dropdown-menu">
+                                    <li><a class="dropdown-item" href="/Ara">Genel Arama</a></li>
+                                    <li><a class="dropdown-item" href="/Araclar/ExcelIceAktar">Excel İçe Aktar</a></li>
+                                    <li><a class="dropdown-item" href="/Araclar/Yedekleme">Yedekleme</a></li>
+                                    <li><a class="dropdown-item" href="/AiAsistan">AI Asistan</a></li>
+                                    @if (rol == "superadmin")
+                                    {
+                                        <li><hr class="dropdown-divider" /></li>
+                                        <li><a class="dropdown-item" href="/SuperAdmin/Index">Süper Admin</a></li>
+                                    }
+                                </ul>
+                            </li>
                         </ul>
 
-                       <div class="d-lg-flex align-items-lg-center gap-2 ms-lg-auto app-top-actions">
-                            @if (Context.Session.GetString("FirmaAdi") != null)
-                            {
-                                <span class="app-firma-badge">@Context.Session.GetString("FirmaAdi")</span>
-                            }
+                        <form class="app-global-search" method="get" action="/Ara">
+                            <input name="q" type="search" placeholder="Ara" />
+                        </form>
 
-                            @if (Context.Session.GetString("KullaniciAdi") != null)
+                        <div class="app-top-actions">
+                            @if (!string.IsNullOrWhiteSpace(kullaniciAdi))
                             {
                                 <a class="app-top-btn" href="/Ayarlar">Ayarlar</a>
                                 <a class="app-top-btn app-top-btn-danger" href="/Logout">Çıkış</a>
@@ -129,18 +124,27 @@
                 </div>
             </nav>
         </header>
+        @if (demoMode)
+        {
+            <div class="demo-mode-banner">
+                <span>Demo modundasınız. Veriler her demo girişinde yenilenir.</span>
+                <a href="/Register">Kendi hesabını oluştur</a>
+            </div>
+        }
     }
 
-    <div class="@(loginSayfasiMi ? "" : "container app-main-container")" style="@(loginSayfasiMi ? "width:100%; max-width:none; padding:0; margin:0;" : "")">        <main role="main" class="pb-4">
+    <div class="@(loginSayfasiMi ? "" : "container-fluid app-main-container")" style="@(loginSayfasiMi ? "width:100%; max-width:none; padding:0; margin:0;" : "")">
+        <main role="main" class="pb-4">
             @RenderBody()
         </main>
     </div>
 
     @if (!loginSayfasiMi)
     {
-        <footer class="border-top footer text-muted app-footer">
-            <div class="container">
-                &copy; 2026 - MuhasebeTakip2.App
+        <footer class="app-footer">
+            <div class="container-fluid app-footer-inner">
+                <span>&copy; 2026 Firmova ERP</span>
+                <span>Muhasebe, kasa ve işletme takibi</span>
             </div>
         </footer>
     }

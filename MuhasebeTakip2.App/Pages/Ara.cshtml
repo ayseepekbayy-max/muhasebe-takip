@@ -1,0 +1,58 @@
+@page
+@model MuhasebeTakip2.App.Pages.AraModel
+@{
+    ViewData["Title"] = "Genel Arama";
+}
+
+<div class="app-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Genel Arama</span>
+            <h1>Programda Ara</h1>
+            <p>Cari, fatura, stok, kasa hareketi ve çek kayıtlarını tek ekrandan bulun.</p>
+        </div>
+    </section>
+
+    <section class="app-form-panel">
+        <form method="get" class="app-form-grid global-search-page-form">
+            <div class="form-field form-field-wide">
+                <label for="q">Arama</label>
+                <input id="q" name="q" value="@Model.Q" placeholder="En az 2 karakter yazın" autofocus />
+            </div>
+            <div class="form-actions-row">
+                <button type="submit" class="btn btn-primary">Ara</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="dashboard-panel">
+        <div class="panel-title-row">
+            <div>
+                <h2>Sonuçlar</h2>
+                <p>@Model.Sonuclar.Count kayıt</p>
+            </div>
+        </div>
+
+        @if ((Model.Q ?? "").Trim().Length > 0 && (Model.Q ?? "").Trim().Length < 2)
+        {
+            <div class="empty-state">Arama için en az 2 karakter girin.</div>
+        }
+        else if (Model.Sonuclar.Count == 0)
+        {
+            <div class="empty-state">Sonuç bulunamadı.</div>
+        }
+        else
+        {
+            <div class="search-result-list">
+                @foreach (var sonuc in Model.Sonuclar)
+                {
+                    <a class="search-result-item" href="@sonuc.Url">
+                        <span>@sonuc.Tur</span>
+                        <strong>@sonuc.Baslik</strong>
+                        <small>@sonuc.Aciklama</small>
+                    </a>
+                }
+            </div>
+        }
+    </section>
+</div>

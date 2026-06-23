@@ -34,6 +34,18 @@ build_property.EnableCodeStyleSeverity =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQWlBc2lzdGFuXEluZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/Ara.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXJhLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/Araclar/ExcelIceAktar.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXJhY2xhclxFeGNlbEljZUFrdGFyLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/Araclar/Yedekleme.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXJhY2xhclxZZWRla2xlbWUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/Ayarlar.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQXlhcmxhci5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
@@ -58,6 +70,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ2FyaUthcnRsYXJcRGV0YXlcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/CariKartlar/Ekstre.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ2FyaUthcnRsYXJcRWtzdHJlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/CariKartlar/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcQ2FyaUthcnRsYXJcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
@@ -68,6 +84,18 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/Error.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRXJyb3IuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/Faturalar/Detay.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRmF0dXJhbGFyXERldGF5LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/Faturalar/Duzenle.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRmF0dXJhbGFyXER1emVubGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/Faturalar/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXNcRmF0dXJhbGFyXEluZGV4LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/aysee/Desktop/MuhasebeTakip2/MuhasebeTakip2.App/Pages/Index.cshtml]

@@ -1,118 +1,188 @@
-﻿@page
+@page
 @model MuhasebeTakip2.App.Pages.Stoklar.IndexModel
-
-<h1>Stok</h1>
-
-@if (TempData["Hata"] != null)
-{
-  <div style="color:red; margin:10px 0;">
-    @TempData["Hata"]
-  </div>
+@{
+    ViewData["Title"] = "Stok";
+    var toplamStokDegeri = Model.StokDegerleri.Values.Sum();
+    var kritikStokSayisi = Model.Liste.Count(x => Model.Stoklar[x.Id] <= 0);
 }
 
-@if (TempData["Basari"] != null)
-{
-  <div style="color:green; margin:10px 0;">
-    @TempData["Basari"]
-  </div>
-}
+<div class="app-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Stok Yönetimi</span>
+            <h1>Stok</h1>
+            <p>Ürün kartlarını, mevcut miktarları ve stok değerlerini tek ekranda takip edin.</p>
+        </div>
 
-@if (!string.IsNullOrWhiteSpace(Model.Hata))
-{
-  <div style="color:red; margin:10px 0;">
-    @Model.Hata
-  </div>
-}
-
-<div style="margin:12px 0;">
-  <form method="post" asp-page-handler="DisaAktar" style="display:inline;">
-    <button type="submit" class="btn btn-outline-success btn-sm">Stokları Excel Olarak İndir</button>
-  </form>
-</div>
-
-@if (!ViewData.ModelState.IsValid)
-{
-  <div style="color:red; margin:10px 0;">
-    @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-    {
-      <div>@err.ErrorMessage</div>
-    }
-  </div>
-}
-
-<div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:900px;">
-  <h3>Yeni Ürün Kartı</h3>
-
-  <form method="post" asp-page-handler="Ekle">
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <div style="flex:1; min-width:240px;">
-        <label><b>Ürün Adı</b></label><br />
-        <input asp-for="Yeni.Ad" style="width:100%; padding:8px;" />
-      </div>
-
-      <div style="min-width:200px;">
-        <label><b>Kod (opsiyonel)</b></label><br />
-        <input asp-for="Yeni.Kod" style="width:100%; padding:8px;" />
-      </div>
-
-      <div style="min-width:160px;">
-        <label><b>Birim</b></label><br />
-        <input asp-for="Yeni.Birim" style="width:100%; padding:8px;" />
-      </div>
-    </div>
-
-    <div style="margin-top:10px;">
-      <button type="submit" class="btn btn-dark btn-sm">Ürün Kartı Ekle</button>
-      <a class="btn btn-outline-dark btn-sm" href="/">Kasa</a>
-    </div>
-  </form>
-</div>
-
-<h3>Ürünler</h3>
-
-<table style="width:100%; border-collapse:collapse;">
-  <thead>
-    <tr>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Ürün</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Kod</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Birim</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Stok</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Son Alış</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">KDV</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">KDV Dahil</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Stok Değeri</th>
-      <th style="border-bottom:1px solid #555; padding:8px; width:240px;">İşlem</th>
-    </tr>
-  </thead>
-  <tbody>
-    @if (Model.Liste.Count == 0)
-    {
-      <tr><td colspan="9" style="padding:8px;">Henüz ürün yok.</td></tr>
-    }
-    else
-    {
-      @foreach (var u in Model.Liste)
-      {
-        <tr>
-          <td style="border-bottom:1px solid #333; padding:8px;">@u.Ad</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@u.Kod</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@u.Birim</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@Model.Stoklar[u.Id].ToString("N2")</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@Model.SonBirimFiyatlar[u.Id].ToString("N2")</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">%@Model.SonKdvOranlari[u.Id].ToString("N2")</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@Model.SonKdvDahilBirimFiyatlar[u.Id].ToString("N2")</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@Model.StokDegerleri[u.Id].ToString("N2")</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">
-            <a class="btn btn-outline-primary btn-sm" href="/Stoklar/Detay/@u.Id">Detay</a>
-
-            <form method="post" asp-page-handler="Sil" style="display:inline;"
-                  onsubmit="return confirm('Ürün silinsin mi?');">
-              <input type="hidden" name="id" value="@u.Id" />
-              <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
+        <div class="app-page-actions">
+            <form method="post" asp-page-handler="DisaAktar">
+                <button type="submit" class="btn btn-outline-success">Excel İndir</button>
             </form>
-          </td>
-        </tr>
-      }
+            <a class="btn btn-outline-dark" href="/">Kasa</a>
+        </div>
+    </section>
+
+    @if (TempData["Hata"] != null)
+    {
+        <div class="app-alert app-alert-danger">@TempData["Hata"]</div>
     }
-  </tbody>
-</table>
+
+    @if (TempData["Basari"] != null)
+    {
+        <div class="app-alert app-alert-success">@TempData["Basari"]</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.Hata))
+    {
+        <div class="app-alert app-alert-danger">@Model.Hata</div>
+    }
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="app-alert app-alert-danger">
+            @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@err.ErrorMessage</div>
+            }
+        </div>
+    }
+
+    <section class="metric-grid metric-grid-three">
+        <article class="metric-card">
+            <span>Ürün Sayısı</span>
+            <strong>@Model.Liste.Count</strong>
+        </article>
+        <article class="metric-card metric-card-negative">
+            <span>Kritik / Sıfır Stok</span>
+            <strong>@kritikStokSayisi</strong>
+        </article>
+        <article class="metric-card metric-card-positive">
+            <span>Toplam Stok Değeri</span>
+            <strong>@toplamStokDegeri.ToString("N2")</strong>
+        </article>
+    </section>
+
+    <section class="app-form-panel">
+        <div class="panel-title-row">
+            <div>
+                <h2>Yeni Ürün Kartı</h2>
+                <p>Ürün adı, kod ve birim bilgisiyle stok kartı oluşturun.</p>
+            </div>
+        </div>
+
+        <form method="post" asp-page-handler="Ekle" class="app-form-grid">
+            <div class="form-field form-field-wide">
+                <label asp-for="Yeni.Ad">Ürün Adı</label>
+                <input asp-for="Yeni.Ad" />
+            </div>
+
+            <div class="form-field">
+                <label asp-for="Yeni.Kod">Kod</label>
+                <input asp-for="Yeni.Kod" />
+            </div>
+
+            <div class="form-field">
+                <label asp-for="Yeni.Birim">Birim</label>
+                <input asp-for="Yeni.Birim" />
+            </div>
+
+            <div class="form-actions-row">
+                <button type="submit" class="btn btn-primary">Ürün Kartı Ekle</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="app-filter-bar">
+        <div class="form-field">
+            <label for="stokSearch">Ürün ara</label>
+            <input id="stokSearch" type="search" placeholder="Ürün adı, kod veya birim" />
+        </div>
+        <div class="form-field filter-small">
+            <label for="stockFilter">Stok durumu</label>
+            <select id="stockFilter">
+                <option value="">Tümü</option>
+                <option value="critical">Kritik / sıfır</option>
+                <option value="available">Stokta var</option>
+            </select>
+        </div>
+    </section>
+
+    <section class="dashboard-panel">
+        <div class="panel-title-row">
+            <div>
+                <h2>Ürünler</h2>
+                <p>@Model.Liste.Count kayıt</p>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="modern-table stock-table">
+                <thead>
+                    <tr>
+                        <th>Ürün</th>
+                        <th>Kod</th>
+                        <th>Birim</th>
+                        <th>Stok</th>
+                        <th>Son Alış</th>
+                        <th>KDV</th>
+                        <th>KDV Dahil</th>
+                        <th>Stok Değeri</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Liste.Count == 0)
+                    {
+                        <tr><td colspan="9" class="empty-row">Henüz ürün yok.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var u in Model.Liste)
+                        {
+                            var stokMiktari = Model.Stoklar[u.Id];
+                            <tr class="stok-row" data-stock="@(stokMiktari <= 0 ? "critical" : "available")" data-search="@($"{u.Ad} {u.Kod} {u.Birim}")">
+                                <td><strong>@u.Ad</strong></td>
+                                <td>@(string.IsNullOrWhiteSpace(u.Kod) ? "-" : u.Kod)</td>
+                                <td>@u.Birim</td>
+                                <td><span class="status-pill @(stokMiktari <= 0 ? "status-pill-expense" : "status-pill-income")">@stokMiktari.ToString("N2")</span></td>
+                                <td>@Model.SonBirimFiyatlar[u.Id].ToString("N2")</td>
+                                <td>%@Model.SonKdvOranlari[u.Id].ToString("N2")</td>
+                                <td>@Model.SonKdvDahilBirimFiyatlar[u.Id].ToString("N2")</td>
+                                <td class="amount-cell">@Model.StokDegerleri[u.Id].ToString("N2")</td>
+                                <td class="table-actions-cell">
+                                    <a class="btn btn-outline-primary btn-sm" href="/Stoklar/Detay/@u.Id">Detay</a>
+                                    <form method="post" asp-page-handler="Sil" class="inline-form" onsubmit="return confirm('Ürün silinsin mi?');">
+                                        <input type="hidden" name="id" value="@u.Id" />
+                                        <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        const stokSearch = document.getElementById('stokSearch');
+        const stockFilter = document.getElementById('stockFilter');
+
+        function filterStockRows() {
+            const query = (stokSearch?.value || '').toLocaleLowerCase('tr-TR').trim();
+            const stock = stockFilter?.value || '';
+
+            document.querySelectorAll('.stok-row').forEach(function (row) {
+                const text = (row.dataset.search || row.innerText).toLocaleLowerCase('tr-TR');
+                const stockOk = !stock || row.dataset.stock === stock;
+                const textOk = !query || text.includes(query);
+                row.hidden = !(stockOk && textOk);
+            });
+        }
+
+        stokSearch?.addEventListener('input', filterStockRows);
+        stockFilter?.addEventListener('change', filterStockRows);
+    </script>
+}

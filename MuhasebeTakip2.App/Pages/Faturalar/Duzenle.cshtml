@@ -1,0 +1,116 @@
+@page "{id:int}"
+@using MuhasebeTakip2.App.Models
+@model MuhasebeTakip2.App.Pages.Faturalar.DuzenleModel
+@{
+    ViewData["Title"] = "Fatura Düzenle";
+}
+
+<div class="app-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Fatura Düzenleme</span>
+            <h1>@Model.Fatura.FaturaNo</h1>
+            <p>Fatura bilgilerini ve kalemlerini güncelleyin. Ödenen/tahsil edilen tutar korunur.</p>
+        </div>
+        <div class="app-page-actions">
+            <a class="btn btn-outline-dark" asp-page="/Faturalar/Detay" asp-route-id="@Model.Fatura.Id">Detaya Dön</a>
+            <a class="btn btn-outline-dark" href="/Faturalar">Faturalar</a>
+        </div>
+    </section>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="app-alert app-alert-danger">
+            @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@err.ErrorMessage</div>
+            }
+        </div>
+    }
+
+    <section class="metric-grid">
+        <article class="metric-card"><span>Ödenen / Tahsil Edilen</span><strong>@Model.OdenenToplam.ToString("N2")</strong></article>
+    </section>
+
+    <section class="app-form-panel">
+        <div class="panel-title-row"><div><h2>Fatura Bilgileri</h2><p>Numara, cari, tarih ve kalemleri düzenleyebilirsiniz.</p></div></div>
+        <form method="post" class="app-form-grid invoice-form-grid">
+            <input type="hidden" asp-for="Fatura.Id" />
+            <div class="form-field form-field-wide">
+                <label asp-for="Fatura.CariKartId">Cari</label>
+                <select asp-for="Fatura.CariKartId">
+                    <option value="0">Cari seçin</option>
+                    @foreach (var cari in Model.Cariler)
+                    {
+                        <option value="@cari.Id">@cari.Unvan (@(cari.Tip == CariTip.Alici ? "Alıcı" : "Satıcı"))</option>
+                    }
+                </select>
+            </div>
+            <div class="form-field"><label asp-for="Fatura.Tip">Fatura Tipi</label><select asp-for="Fatura.Tip"><option value="@FaturaTipi.Satis">Satış</option><option value="@FaturaTipi.Alis">Alış</option></select></div>
+            <div class="form-field"><label asp-for="Fatura.FaturaNo">Fatura No</label><input asp-for="Fatura.FaturaNo" /></div>
+            <div class="form-field"><label asp-for="Fatura.Tarih">Tarih</label><input asp-for="Fatura.Tarih" type="date" /></div>
+            <div class="form-field"><label asp-for="Fatura.VadeTarihi">Vade</label><input asp-for="Fatura.VadeTarihi" type="date" /></div>
+
+            <div class="invoice-lines-panel">
+                <div class="invoice-lines-header">
+                    <div><h3>Fatura Kalemleri</h3><p>Boş satırlar kaydedilmez.</p></div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="addInvoiceLine">Kalem Ekle</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="modern-table invoice-lines-table">
+                        <thead><tr><th>Kalem Açıklaması</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV %</th><th>İşlem</th></tr></thead>
+                        <tbody id="invoiceLinesBody">
+                            @for (var i = 0; i < Model.Fatura.Kalemler.Count; i++)
+                            {
+                                <tr class="invoice-line-row">
+                                    <td><input name="Fatura.Kalemler[@i].Aciklama" value="@Model.Fatura.Kalemler[i].Aciklama" placeholder="Ürün/hizmet açıklaması" /></td>
+                                    <td><input name="Fatura.Kalemler[@i].Miktar" value="@Model.Fatura.Kalemler[i].Miktar.ToString("0.##")" type="number" step="0.01" min="0" /></td>
+                                    <td><input name="Fatura.Kalemler[@i].BirimFiyat" value="@Model.Fatura.Kalemler[i].BirimFiyat.ToString("0.##")" type="number" step="0.01" min="0" /></td>
+                                    <td><input name="Fatura.Kalemler[@i].KdvOrani" value="@Model.Fatura.Kalemler[i].KdvOrani.ToString("0.##")" type="number" step="0.01" min="0" /></td>
+                                    <td><button type="button" class="btn btn-outline-danger btn-sm remove-invoice-line">Sil</button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="form-field form-field-wide"><label asp-for="Fatura.Aciklama">Not</label><input asp-for="Fatura.Aciklama" /></div>
+            <div class="form-actions-row"><button type="submit" class="btn btn-primary">Faturayı Güncelle</button></div>
+        </form>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        function reindexInvoiceLines() {
+            document.querySelectorAll('#invoiceLinesBody .invoice-line-row').forEach(function (row, index) {
+                row.querySelectorAll('input').forEach(function (input) {
+                    input.name = input.name.replace(/Fatura\.Kalemler\[\d+\]/, 'Fatura.Kalemler[' + index + ']');
+                });
+            });
+        }
+
+        document.getElementById('addInvoiceLine')?.addEventListener('click', function () {
+            const body = document.getElementById('invoiceLinesBody');
+            const index = body.querySelectorAll('.invoice-line-row').length;
+            const row = document.createElement('tr');
+            row.className = 'invoice-line-row';
+            row.innerHTML = `
+                <td><input name="Fatura.Kalemler[${index}].Aciklama" placeholder="Ürün/hizmet açıklaması" /></td>
+                <td><input name="Fatura.Kalemler[${index}].Miktar" type="number" step="0.01" min="0" value="1" /></td>
+                <td><input name="Fatura.Kalemler[${index}].BirimFiyat" type="number" step="0.01" min="0" /></td>
+                <td><input name="Fatura.Kalemler[${index}].KdvOrani" type="number" step="0.01" min="0" value="20" /></td>
+                <td><button type="button" class="btn btn-outline-danger btn-sm remove-invoice-line">Sil</button></td>`;
+            body.appendChild(row);
+        });
+
+        document.getElementById('invoiceLinesBody')?.addEventListener('click', function (event) {
+            const button = event.target.closest('.remove-invoice-line');
+            if (!button) return;
+            const rows = document.querySelectorAll('#invoiceLinesBody .invoice-line-row');
+            if (rows.length <= 1) return;
+            button.closest('tr').remove();
+            reindexInvoiceLines();
+        });
+    </script>
+}

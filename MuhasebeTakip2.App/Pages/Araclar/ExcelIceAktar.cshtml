@@ -1,0 +1,70 @@
+@page
+@model MuhasebeTakip2.App.Pages.Araclar.ExcelIceAktarModel
+@{
+    ViewData["Title"] = "Excel Aktarım";
+}
+
+<div class="app-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Araçlar</span>
+            <h1>Excel Aktarım</h1>
+            <p>İçe aktar Excel'den programa kayıt ekler. Dışa aktar programdaki kayıtları Excel dosyası olarak indirir.</p>
+        </div>
+        <div class="app-page-actions">
+            <a class="btn btn-outline-dark" href="/Araclar/ExcelIceAktar?handler=Sablon&tur=Cari">Cari Şablonu</a>
+            <a class="btn btn-outline-dark" href="/Araclar/ExcelIceAktar?handler=Sablon&tur=Stok">Stok Şablonu</a>
+        </div>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Hata))
+    {
+        <div class="app-alert app-alert-danger">@Model.Hata</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.Mesaj))
+    {
+        <div class="app-alert app-alert-success">@Model.Mesaj</div>
+    }
+
+    <section class="two-column-grid">
+        <div class="app-form-panel">
+            <div class="panel-title-row">
+                <div>
+                    <h2>Excel İçe Aktar</h2>
+                    <p>Cari veya stok kayıtlarını Excel dosyasından toplu ekleyin.</p>
+                </div>
+            </div>
+            <form method="post" enctype="multipart/form-data" class="app-form-grid">
+                <div class="form-field">
+                    <label asp-for="Tur">Aktarım Türü</label>
+                    <select asp-for="Tur">
+                        <option value="Cari">Cari Kartlar</option>
+                        <option value="Stok">Stok Ürünleri</option>
+                    </select>
+                </div>
+                <div class="form-field form-field-wide">
+                    <label asp-for="Dosya">Excel Dosyası</label>
+                    <input asp-for="Dosya" type="file" accept=".xlsx,.xls" />
+                </div>
+                <div class="form-actions-row">
+                    <button type="submit" class="btn btn-primary">İçe Aktar</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="app-form-panel">
+            <div class="panel-title-row">
+                <div>
+                    <h2>Excel Dışa Aktar</h2>
+                    <p>Programdaki kayıtları Excel dosyası olarak indirin.</p>
+                </div>
+            </div>
+            <div class="export-action-grid">
+                <a class="btn btn-outline-primary" href="/Araclar/ExcelIceAktar?handler=DisaAktar&tur=Cari">Cari Excel İndir</a>
+                <a class="btn btn-outline-primary" href="/Araclar/ExcelIceAktar?handler=DisaAktar&tur=Stok">Stok Excel İndir</a>
+                <a class="btn btn-outline-primary" href="/Araclar/ExcelIceAktar?handler=DisaAktar&tur=Fatura">Fatura Excel İndir</a>
+                <a class="btn btn-outline-primary" href="/Araclar/ExcelIceAktar?handler=DisaAktar&tur=Kasa">Kasa Excel İndir</a>
+            </div>
+        </div>
+    </section>
+</div>

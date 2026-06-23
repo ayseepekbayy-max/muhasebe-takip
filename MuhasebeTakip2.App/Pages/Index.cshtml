@@ -1,314 +1,220 @@
-﻿@page
+@page
 @using MuhasebeTakip2.App.Models
 @model MuhasebeTakip2.App.Pages.IndexModel
+@{
+    ViewData["Title"] = "Kontrol Paneli";
+}
 
-<style>
-    @@media (max-width: 768px) {
+<div class="dashboard-page dashboard-responsive">
+    <section class="dashboard-hero-panel">
+        <div>
+            <span class="dashboard-eyebrow">Firmova ERP</span>
+            <h1>Kontrol Paneli</h1>
+            <p>Finans hareketlerinizi, kasa durumunuzu ve işletme özetinizi tek ekrandan takip edin.</p>
+        </div>
 
-        .dashboard-responsive {
-            width: 100% !important;
-            max-width: 100% !important;
-            min-width: 0 !important;
-        }
+        <div class="dashboard-hero-actions">
+            <a class="dashboard-action dashboard-action-primary" href="/Kasa/HareketEkle">Kasa Hareketi Ekle</a>
+            <a class="dashboard-action" href="/Raporlar">Raporları Aç</a>
+        </div>
+    </section>
 
-        .dashboard-top-grid {
-            grid-template-columns: 1fr !important;
-        }
-
-        .dashboard-main-grid {
-            grid-template-columns: 1fr !important;
-        }
-
-        .dashboard-summary-grid {
-            grid-template-columns: 1fr !important;
-        }
-
-        .dashboard-card-balance {
-            font-size: 26px !important;
-            word-break: break-word;
-        }
-
-        .dashboard-main-grid > div,
-        .dashboard-top-grid > div {
-            min-width: 0 !important;
-            width: 100% !important;
-        }
-
-        table {
-            min-width: 700px !important;
-        }
+    @if (TempData["Hata"] != null)
+    {
+        <div class="app-alert app-alert-danger">@TempData["Hata"]</div>
     }
-</style>
 
-<div class="dashboard-responsive">
+    @if (TempData["Basari"] != null)
+    {
+        <div class="app-alert app-alert-success">@TempData["Basari"]</div>
+    }
 
-<h1 style="color:#0f172a; font-size:2.3rem; margin-bottom:6px;">Dashboard</h1>
+    @if (!string.IsNullOrWhiteSpace(Model.SayfaHata))
+    {
+        <div class="app-alert app-alert-danger">@Model.SayfaHata</div>
+    }
 
-<div style="color:#64748b; font-size:14px; margin-bottom:18px;">
-    Güncel finans ve işlem özetinizi buradan takip edebilirsiniz.
-</div>
+    <section class="metric-grid">
+        <article class="metric-card metric-card-positive">
+            <span>Bugünkü Giriş</span>
+            <strong>@Model.BugunGiris.ToString("N2")</strong>
+        </article>
 
-@if (TempData["Hata"] != null)
-{
-    <div style="color:#b42318; margin:10px 0; padding:12px; border:1px solid #fecaca; background:#fef2f2; border-radius:12px;">
-        @TempData["Hata"]
-    </div>
-}
+        <article class="metric-card metric-card-negative">
+            <span>Bugünkü Çıkış</span>
+            <strong>@Model.BugunCikis.ToString("N2")</strong>
+        </article>
 
-@if (TempData["Basari"] != null)
-{
-    <div style="color:#166534; margin:10px 0; padding:12px; border:1px solid #bbf7d0; background:#f0fdf4; border-radius:12px;">
-        @TempData["Basari"]
-    </div>
-}
+        <article class="metric-card">
+            <span>Bu Ay Giriş</span>
+            <strong>@Model.BuAyGiris.ToString("N2")</strong>
+        </article>
 
-@if (!string.IsNullOrWhiteSpace(Model.SayfaHata))
-{
-    <div style="color:#b42318; margin:10px 0; padding:12px; border:1px solid #fecaca; background:#fef2f2; border-radius:12px;">
-        @Model.SayfaHata
-    </div>
-}
+        <article class="metric-card metric-card-negative">
+            <span>Bu Ay Çıkış</span>
+            <strong>@Model.BuAyCikis.ToString("N2")</strong>
+        </article>
+    </section>
 
-<div class="dashboard-top-grid"
-     style="display:grid; grid-template-columns:repeat(2, 1fr); gap:18px; margin-top:20px;">
-
-    <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
-        <div style="font-size:14px; color:#64748b; margin-bottom:8px;">
-            Bugünkü Giriş
-        </div>
-
-        <div style="font-size:30px; font-weight:800; color:#1e293b;">
-            @Model.BugunGiris
-        </div>
-    </div>
-
-    <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
-        <div style="font-size:14px; color:#64748b; margin-bottom:8px;">
-            Bugünkü Çıkış
-        </div>
-
-        <div style="font-size:30px; font-weight:800; color:#dc2626;">
-            @Model.BugunCikis
-        </div>
-    </div>
-
-    <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
-        <div style="font-size:14px; color:#64748b; margin-bottom:8px;">
-            Bu Ay Giriş
-        </div>
-
-        <div style="font-size:30px; font-weight:800; color:#1e293b;">
-            @Model.BuAyGiris
-        </div>
-    </div>
-
-    <div style="background:white; border:1px solid #e2e8f0; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
-        <div style="font-size:14px; color:#64748b; margin-bottom:8px;">
-            Bu Ay Çıkış
-        </div>
-
-        <div style="font-size:30px; font-weight:800; color:#dc2626;">
-            @Model.BuAyCikis
-        </div>
-    </div>
-
-</div>
-
-<div class="dashboard-main-grid"
-     style="display:grid; grid-template-columns:2fr 1fr; gap:20px; margin-top:24px; align-items:start;">
-
-    <div style="display:grid; gap:20px;">
-
-        <div style="background:white; border:1px solid #e2e8f0; border-radius:20px; padding:22px; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
-
-            <h3 style="margin-top:0; color:#0f172a;">
-                Kasa Özeti
-            </h3>
-
-            <div style="margin-top:18px; padding:22px; border-radius:18px; background:linear-gradient(135deg,#4f46e5,#3730a3); color:white; box-shadow:0 10px 24px rgba(79,70,229,0.22);">
-
-                <div style="font-size:14px; opacity:0.92;">
-                    Güncel Kasa Bakiye
-                </div>
-
-                <div class="dashboard-card-balance"
-                     style="font-size:34px; font-weight:800; margin-top:10px;">
-                    @Model.KasaBakiye
-                </div>
-
-            </div>
-
-            <div class="dashboard-summary-grid"
-                 style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px;">
-
-                <div style="padding:18px; border:1px solid #e2e8f0; border-radius:16px; background:#f8fafc;">
-                    <div style="font-size:14px; color:#64748b; margin-bottom:6px;">
-                        Cari Sayısı
-                    </div>
-
-                    <div style="font-size:26px; font-weight:800; color:#1e293b;">
-                        @Model.CariSayisi
+    <section class="dashboard-content-grid">
+        <div class="dashboard-stack">
+            <section class="dashboard-panel notification-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <h2>Bildirim / Hatırlatma</h2>
+                        <p>Vade, çek ve stok uyarıları</p>
                     </div>
                 </div>
 
-                <div style="padding:18px; border:1px solid #e2e8f0; border-radius:16px; background:#f8fafc;">
-                    <div style="font-size:14px; color:#64748b; margin-bottom:6px;">
-                        Çalışan Sayısı
+                @if (Model.Bildirimler.Count == 0)
+                {
+                    <div class="empty-state">Şu an önemli bir hatırlatma yok.</div>
+                }
+                else
+                {
+                    <div class="notification-list">
+                        @foreach (var bildirim in Model.Bildirimler)
+                        {
+                            <a class="notification-item @(bildirim.Kritik ? "notification-critical" : "")" href="@bildirim.Url">
+                                <span>@bildirim.Tur</span>
+                                <strong>@bildirim.Baslik</strong>
+                                <small>@bildirim.Aciklama</small>
+                            </a>
+                        }
                     </div>
-
-                    <div style="font-size:26px; font-weight:800; color:#1e293b;">
-                        @Model.CalisanSayisi
+                }
+            </section>
+            <section class="dashboard-panel balance-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <h2>Kasa Özeti</h2>
+                        <p>Genel kasa bakiyesi ve işletme sayıları</p>
                     </div>
                 </div>
 
-            </div>
-        </div>
-
-        <div style="background:white; border:1px solid #e2e8f0; border-radius:20px; padding:22px; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
-
-            <h3 style="margin-top:0; color:#0f172a;">
-                Son Kasa Hareketleri
-            </h3>
-
-            @if (Model.SonHareketler.Count == 0)
-            {
-                <div style="margin-top:16px; color:#64748b;">
-                    Henüz hareket yok.
+                <div class="balance-card">
+                    <span>Güncel Kasa Bakiye</span>
+                    <strong class="dashboard-card-balance">@Model.KasaBakiye.ToString("N2")</strong>
                 </div>
-            }
-            else
-            {
-                <div style="overflow-x:auto;">
 
-                    <table style="width:100%; border-collapse:collapse; margin-top:14px; background:white;">
+                <div class="summary-grid">
+                    <article>
+                        <span>Cari Sayısı</span>
+                        <strong>@Model.CariSayisi</strong>
+                    </article>
 
-                        <thead>
-                            <tr>
-                                <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left; color:#334155;">
-                                    Tarih
-                                </th>
+                    <article>
+                        <span>Çalışan Sayısı</span>
+                        <strong>@Model.CalisanSayisi</strong>
+                    </article>
+                </div>
+            </section>
 
-                                <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left; color:#334155;">
-                                    Tip
-                                </th>
+            <section class="dashboard-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <h2>Son Kasa Hareketleri</h2>
+                        <p>En son kaydedilen 10 kasa hareketi</p>
+                    </div>
+                    <a class="panel-link" href="/Kasa/Hareketler">Tümünü Gör</a>
+                </div>
 
-                                <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left; color:#334155;">
-                                    Tutar
-                                </th>
-
-                                <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left; color:#334155;">
-                                    Cari
-                                </th>
-
-                                <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left; color:#334155;">
-                                    Açıklama
-                                </th>
-
-                                <th style="padding:10px; border-bottom:1px solid #e2e8f0; text-align:left; color:#334155; width:90px;">
-                                    İşlem
-                                </th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            @foreach (var h in Model.SonHareketler)
-                            {
+                @if (Model.SonHareketler.Count == 0)
+                {
+                    <div class="empty-state">Henüz kasa hareketi yok.</div>
+                }
+                else
+                {
+                    <div class="table-wrap">
+                        <table class="modern-table">
+                            <thead>
                                 <tr>
-
-                                    <td style="padding:10px; border-bottom:1px solid #eef2f7;">
-                                        @h.Tarih.ToString("dd.MM.yyyy")
-                                    </td>
-
-                                    <td style="padding:10px; border-bottom:1px solid #eef2f7;">
-                                        @(h.Tip == HareketTipi.Giris ? "Giriş" : "Çıkış")
-                                    </td>
-
-                                    <td style="padding:10px; border-bottom:1px solid #eef2f7; font-weight:700; color:@(h.Tip == HareketTipi.Giris ? "#16a34a" : "#dc2626");">
-                                        @h.Tutar
-                                    </td>
-
-                                    <td style="padding:10px; border-bottom:1px solid #eef2f7;">
-                                        @(h.CariKart?.Unvan ?? "-")
-                                    </td>
-
-                                    <td style="padding:10px; border-bottom:1px solid #eef2f7;">
-                                        @h.Aciklama
-                                    </td>
-
-                                    <td style="padding:10px; border-bottom:1px solid #eef2f7;">
-                                        <form method="post" asp-page-handler="Sil" style="display:inline;"
-                                              onsubmit="return confirm('Bu kasa hareketi silinecek. Yine de silmek istiyor musunuz?');">
-                                            <input type="hidden" name="id" value="@h.Id" />
-                                            <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">
-                                                Sil
-                                            </button>
-                                        </form>
-                                    </td>
-
+                                    <th>Tarih</th>
+                                    <th>Tip</th>
+                                    <th>Tutar</th>
+                                    <th>Cari</th>
+                                    <th>Açıklama</th>
+                                    <th>İşlem</th>
                                 </tr>
-                            }
-                        </tbody>
+                            </thead>
+                            <tbody>
+                                @foreach (var h in Model.SonHareketler)
+                                {
+                                    var girisMi = h.Tip == HareketTipi.Giris;
+                                    <tr>
+                                        <td>@h.Tarih.ToString("dd.MM.yyyy")</td>
+                                        <td>
+                                            <span class="status-pill @(girisMi ? "status-pill-income" : "status-pill-expense")">
+                                                @(girisMi ? "Giriş" : "Çıkış")
+                                            </span>
+                                        </td>
+                                        <td class="amount-cell @(girisMi ? "amount-income" : "amount-expense")">@h.Tutar.ToString("N2")</td>
+                                        <td>@(h.CariKart?.Unvan ?? "-")</td>
+                                        <td>@h.Aciklama</td>
+                                        <td>
+                                            <form method="post" asp-page-handler="Sil" class="inline-form"
+                                                  onsubmit="return confirm('Bu kasa hareketi silinecek. Yine de silmek istiyor musunuz?');">
+                                                <input type="hidden" name="id" value="@h.Id" />
+                                                <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+        </div>
 
-                    </table>
-
+        <aside class="dashboard-panel quick-actions-panel">
+            <div class="panel-title-row">
+                <div>
+                    <h2>Hızlı İşlemler</h2>
+                    <p>Sık kullanılan ekranlara geçiş</p>
                 </div>
-            }
+            </div>
 
-        </div>
+            <div class="quick-action-list">
+                <a class="quick-action primary" href="/Kasa/HareketEkle">
+                    <span>+</span>
+                    <strong>Kasa Hareketi Ekle</strong>
+                </a>
 
-    </div>
+                <a class="quick-action" href="/CariKartlar">
+                    <span>C</span>
+                    <strong>Cari Kartlar</strong>
+                </a>
 
-    <div style="background:white; border:1px solid #e2e8f0; border-radius:20px; padding:22px; box-shadow:0 10px 30px rgba(15,23,42,0.05);">
+                <a class="quick-action" href="/Calisanlar">
+                    <span>Ç</span>
+                    <strong>Çalışanlar</strong>
+                </a>
 
-        <h3 style="margin-top:0; color:#0f172a;">
-            Hızlı İşlemler
-        </h3>
+                <a class="quick-action" href="/Musteriler">
+                    <span>M</span>
+                    <strong>Müşteriler</strong>
+                </a>
 
-        <div style="display:grid; gap:12px; margin-top:16px;">
-
-            <a href="/Kasa/HareketEkle"
-               style="display:block; text-decoration:none; background:linear-gradient(135deg,#4f46e5,#3730a3); color:white; padding:15px 16px; border-radius:16px; font-weight:700; box-shadow:0 8px 20px rgba(79,70,229,0.18);">
-                + Kasa Hareketi Ekle
-            </a>
-
-            <a href="/CariKartlar"
-               style="display:block; text-decoration:none; background:#ffffff; color:#1e293b; padding:15px 16px; border-radius:16px; font-weight:700; border:1px solid #e2e8f0;">
-                Cari Kartlara Git
-            </a>
-
-            <a href="/Calisanlar"
-               style="display:block; text-decoration:none; background:#ffffff; color:#1e293b; padding:15px 16px; border-radius:16px; font-weight:700; border:1px solid #e2e8f0;">
-                Çalışanlara Git
-            </a>
-
-            <a href="/Musteriler"
-               style="display:block; text-decoration:none; background:#ffffff; color:#1e293b; padding:15px 16px; border-radius:16px; font-weight:700; border:1px solid #e2e8f0;">
-                Müşterilere Git
-            </a>
-
-            <a href="/Raporlar"
-               style="display:block; text-decoration:none; background:#ffffff; color:#1e293b; padding:15px 16px; border-radius:16px; font-weight:700; border:1px solid #e2e8f0;">
-                Raporları Aç
-            </a>
-
-        </div>
-
-    </div>
-
+                <a class="quick-action" href="/Raporlar">
+                    <span>R</span>
+                    <strong>Raporlar</strong>
+                </a>
+            </div>
+        </aside>
+    </section>
 </div>
 
-</div>
-<!-- FirmovaAI Mini Baloncuk -->
 <div class="firmova-float" id="firmovaFloat">
     <button type="button" class="firmova-float-btn" onclick="firmovaToggle()">
         <span class="firmova-pulse"></span>
-        <strong>AI</strong>
+        <strong>Nova</strong>
     </button>
 
     <div class="firmova-mini-panel" id="firmovaPanel">
         <div class="firmova-mini-header">
             <div>
-                <strong>FirmovaAI</strong>
+                <strong>Nova Asistan</strong>
                 <small id="firmovaMiniDurum">Hazır</small>
             </div>
 
@@ -316,13 +222,11 @@
         </div>
 
         <div class="firmova-mini-chat" id="firmovaMiniChat">
-            <div class="firmova-mini-msg bot">
-                Merhaba, nasıl yardımcı olayım?
-            </div>
+            <div class="firmova-mini-msg bot">Merhaba, nasıl yardımcı olayım?</div>
         </div>
 
         <form class="firmova-mini-form" id="firmovaMiniForm" onsubmit="firmovaMiniSor(event)">
-        @Html.AntiForgeryToken()
+            @Html.AntiForgeryToken()
 
             <input id="firmovaMiniInput"
                    type="text"
@@ -332,266 +236,79 @@
             <button type="submit">Sor</button>
         </form>
 
-        <a class="firmova-full-link" href="/AiAsistan">
-            Tam ekran AI Asistanı aç
-        </a>
+        <a class="firmova-full-link" href="/AiAsistan">Tam ekran AI Asistanı aç</a>
     </div>
 </div>
 
-<style>
-    .firmova-float {
-        position: fixed;
-        right: 22px;
-        bottom: 22px;
-        z-index: 9999;
-        font-family: "Segoe UI", Tahoma, sans-serif;
-    }
+@section Scripts {
+    <script>
+        function firmovaToggle() {
+            const panel = document.getElementById("firmovaPanel");
 
-    .firmova-float-btn {
-        width: 64px;
-        height: 64px;
-        border: none;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #4f46e5, #312e81);
-        color: white;
-        box-shadow: 0 14px 35px rgba(49, 46, 129, 0.35);
-        cursor: pointer;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .firmova-float-btn strong {
-        font-size: 18px;
-        position: relative;
-        z-index: 2;
-    }
-
-    .firmova-pulse {
-        position: absolute;
-        inset: 0;
-        border-radius: 50%;
-        animation: firmovaPulse 1.6s infinite;
-        background: rgba(99, 102, 241, 0.45);
-    }
-
-    .firmova-mini-panel {
-        position: absolute;
-        right: 0;
-        bottom: 78px;
-        width: 330px;
-        max-width: calc(100vw - 28px);
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 18px;
-        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.22);
-        overflow: hidden;
-        display: none;
-    }
-
-    .firmova-mini-panel.open {
-        display: block;
-    }
-
-    .firmova-mini-header {
-        background: linear-gradient(135deg, #312e81, #6366f1);
-        color: white;
-        padding: 14px 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .firmova-mini-header small {
-        display: block;
-        font-size: 12px;
-        opacity: 0.85;
-        margin-top: 2px;
-    }
-
-    .firmova-mini-header button {
-        border: none;
-        background: rgba(255,255,255,0.16);
-        color: white;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        font-size: 20px;
-        cursor: pointer;
-        line-height: 1;
-    }
-
-    .firmova-mini-chat {
-        height: 260px;
-        overflow-y: auto;
-        padding: 14px;
-        background: #f8fafc;
-    }
-
-    .firmova-mini-msg {
-        max-width: 85%;
-        padding: 10px 12px;
-        border-radius: 14px;
-        margin-bottom: 10px;
-        font-size: 14px;
-        line-height: 1.35;
-        white-space: pre-line;
-    }
-
-    .firmova-mini-msg.bot {
-        background: white;
-        border: 1px solid #e2e8f0;
-        color: #0f172a;
-        border-bottom-left-radius: 5px;
-    }
-
-    .firmova-mini-msg.user {
-        margin-left: auto;
-        background: #4f46e5;
-        color: white;
-        border-bottom-right-radius: 5px;
-    }
-
-    .firmova-mini-form {
-        display: flex;
-        gap: 8px;
-        padding: 12px;
-        border-top: 1px solid #e5e7eb;
-        background: white;
-    }
-
-    .firmova-mini-form input {
-        flex: 1;
-        border: 1px solid #cbd5e1;
-        border-radius: 12px;
-        padding: 10px 11px;
-        outline: none;
-        font-size: 14px;
-    }
-
-    .firmova-mini-form button {
-        border: none;
-        border-radius: 12px;
-        padding: 0 14px;
-        background: #4f46e5;
-        color: white;
-        font-weight: 700;
-        cursor: pointer;
-    }
-
-    .firmova-full-link {
-        display: block;
-        padding: 10px 12px 13px;
-        text-align: center;
-        font-size: 13px;
-        color: #4f46e5;
-        text-decoration: none;
-        font-weight: 700;
-    }
-
-    @@keyframes firmovaPulse {
-        0% {
-            transform: scale(1);
-            opacity: 0.55;
+            if (panel) {
+                panel.classList.toggle("open");
+            }
         }
 
-        70% {
-            transform: scale(1.35);
-            opacity: 0;
+        function firmovaMiniMesajEkle(tip, metin) {
+            const chat = document.getElementById("firmovaMiniChat");
+            if (!chat) return;
+
+            const div = document.createElement("div");
+            div.className = "firmova-mini-msg " + tip;
+            div.innerText = metin;
+
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
         }
 
-        100% {
-            transform: scale(1);
-            opacity: 0;
+        async function firmovaMiniSor(e) {
+            e.preventDefault();
+
+            const form = document.getElementById("firmovaMiniForm");
+            const input = document.getElementById("firmovaMiniInput");
+            const durum = document.getElementById("firmovaMiniDurum");
+
+            if (!form || !input || !input.value.trim()) return;
+
+            const soru = input.value.trim();
+            input.value = "";
+
+            firmovaMiniMesajEkle("user", soru);
+
+            if (durum) {
+                durum.innerText = "Düşünüyor...";
+            }
+
+            try {
+                const fd = new FormData(form);
+                fd.set("Soru", soru);
+
+                const response = await fetch("/AiAsistan?handler=Ajax", {
+                    method: "POST",
+                    body: fd
+                });
+
+                if (!response.ok) {
+                    throw new Error("Sunucu cevap vermedi.");
+                }
+
+                const data = await response.json();
+                const cevap = data.cevap || "Cevap alınamadı.";
+
+                firmovaMiniMesajEkle("bot", cevap);
+
+                if (durum) {
+                    durum.innerText = "Hazır";
+                }
+            }
+            catch {
+                firmovaMiniMesajEkle("bot", "Bağlantı hatası oluştu.");
+
+                if (durum) {
+                    durum.innerText = "Hata";
+                }
+            }
         }
-    }
-
-    @@media (max-width: 768px) {
-        .firmova-float {
-            right: 14px;
-            bottom: 14px;
-        }
-
-        .firmova-float-btn {
-            width: 58px;
-            height: 58px;
-        }
-
-        .firmova-mini-panel {
-            width: calc(100vw - 28px);
-            bottom: 72px;
-        }
-    }
-</style>
-
-<script>
-    function firmovaToggle() {
-        const panel = document.getElementById("firmovaPanel");
-
-        if (panel) {
-            panel.classList.toggle("open");
-        }
-    }
-
-    function firmovaMiniMesajEkle(tip, metin) {
-        const chat = document.getElementById("firmovaMiniChat");
-        if (!chat) return;
-
-        const div = document.createElement("div");
-        div.className = "firmova-mini-msg " + tip;
-        div.innerText = metin;
-
-        chat.appendChild(div);
-        chat.scrollTop = chat.scrollHeight;
-    }
-
-    async function firmovaMiniSor(e) {
-    e.preventDefault();
-
-    const form = document.getElementById("firmovaMiniForm");
-    const input = document.getElementById("firmovaMiniInput");
-    const durum = document.getElementById("firmovaMiniDurum");
-
-    if (!form || !input || !input.value.trim()) return;
-
-    const soru = input.value.trim();
-    input.value = "";
-
-    firmovaMiniMesajEkle("user", soru);
-
-    if (durum) {
-        durum.innerText = "Düşünüyor...";
-    }
-
-    try {
-        const fd = new FormData(form);
-        fd.set("Soru", soru);
-
-        const response = await fetch("/AiAsistan?handler=Ajax", {
-            method: "POST",
-            body: fd
-        });
-
-        if (!response.ok) {
-            throw new Error("Sunucu cevap vermedi.");
-        }
-
-        const data = await response.json();
-        const cevap = data.cevap || "Cevap alınamadı.";
-
-        firmovaMiniMesajEkle("bot", cevap);
-
-        if (durum) {
-            durum.innerText = "Hazır";
-        }
-    }
-    catch {
-        firmovaMiniMesajEkle("bot", "Bağlantı hatası oluştu.");
-
-        if (durum) {
-            durum.innerText = "Hata";
-        }
-    }
+    </script>
 }
-</script>
