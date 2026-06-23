@@ -76,10 +76,14 @@
                 </div>
 
 
-                <form method="post" asp-page-handler="Demo" class="auth-demo-form">
-                    <button type="submit" class="btn btn-outline-primary demo-login-button">Demo Olarak Gir</button>
-                    <small>Örnek firma ve verilerle programı hızlıca inceleyin.</small>
-                </form>
+                         <button type="submit"
+                        asp-page-handler="Demo"
+                        formnovalidate
+                        class="btn btn-outline-primary demo-login-button">
+                    Demo Olarak Gir
+                </button>
+
+                <small>Örnek firma ve verilerle programı hızlıca inceleyin.</small>
                 <div class="auth-secondary-action">
                     <a href="/SifremiUnuttum">Şifremi Unuttum</a>
                 </div>
