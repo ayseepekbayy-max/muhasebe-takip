@@ -23,6 +23,7 @@
         var loginSayfasiMi = path == "/login";
         var firmaAdi = Context.Session.GetString("FirmaAdi");
         var kullaniciAdi = Context.Session.GetString("KullaniciAdi");
+        var demoMode = Context.Session.GetString("DemoMode") == "1";
         var marka = string.IsNullOrWhiteSpace(firmaAdi) ? "Firmova ERP" : firmaAdi;
     }
 
@@ -123,6 +124,13 @@
                 </div>
             </nav>
         </header>
+        @if (demoMode)
+        {
+            <div class="demo-mode-banner">
+                <span>Demo modundasınız. Veriler her demo girişinde yenilenir.</span>
+                <a href="/Register">Kendi hesabını oluştur</a>
+            </div>
+        }
     }
 
     <div class="@(loginSayfasiMi ? "" : "container-fluid app-main-container")" style="@(loginSayfasiMi ? "width:100%; max-width:none; padding:0; margin:0;" : "")">

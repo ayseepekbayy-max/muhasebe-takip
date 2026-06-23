@@ -3220,3 +3220,45 @@ a.app-top-btn {
         margin: 5px 0 6px !important;
     }
 }
+/* DEMO MODE */
+.auth-demo-form {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+    text-align: center;
+}
+
+.auth-demo-form small {
+    color: #64748b;
+    font-weight: 700;
+}
+
+.demo-login-button {
+    width: 100%;
+}
+
+.demo-mode-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 10px 16px;
+    background: #fff7ed;
+    border-bottom: 1px solid #fed7aa;
+    color: #9a3412;
+    font-weight: 800;
+}
+
+.demo-mode-banner a {
+    color: #111827;
+    text-decoration: none;
+    border-bottom: 2px solid #f97316;
+}
+
+@media (max-width: 720px) {
+    .demo-mode-banner {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+    }
+}

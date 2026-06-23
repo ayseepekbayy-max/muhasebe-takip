@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Helpers;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages;
 
@@ -75,6 +76,7 @@ public class LoginModel : PageModel
             HttpContext.Session.SetString("KullaniciAdi", kullanici.KullaniciAdi);
             HttpContext.Session.SetString("FirmaAdi", firma.FirmaAdi ?? "Firma");
             HttpContext.Session.SetString("Rol", (kullanici.Rol ?? "").Trim());
+            HttpContext.Session.Remove("DemoMode");
 
             HttpContext.Session.SetString("MenuCariKartlar", firma.MenuCariKartlar ? "1" : "0");
             HttpContext.Session.SetString("MenuKasa", firma.MenuKasa ? "1" : "0");
@@ -85,5 +87,37 @@ public class LoginModel : PageModel
             HttpContext.Session.SetString("MenuMaliyet", firma.MenuMaliyet ? "1" : "0");
             HttpContext.Session.SetString("MenuCekler", firma.MenuCekler ? "1" : "0");
                     return RedirectToPage("/Index");
+    }
+
+    public async Task<IActionResult> OnPostDemoAsync()
+    {
+        var kullanici = await DemoDataSeeder.PrepareDemoAsync(_db);
+        var firma = kullanici.Firma;
+
+        if (firma == null || !firma.AktifMi)
+        {
+            Hata = "Demo hesabı şu anda kullanılamıyor.";
+            return Page();
+        }
+
+        HttpContext.Session.Clear();
+        HttpContext.Session.SetInt32("KullaniciId", kullanici.Id);
+        HttpContext.Session.SetInt32("FirmaId", kullanici.FirmaId);
+        HttpContext.Session.SetString("KullaniciAdi", kullanici.KullaniciAdi);
+        HttpContext.Session.SetString("FirmaAdi", firma.FirmaAdi ?? "Demo Firma");
+        HttpContext.Session.SetString("Rol", "Demo");
+        HttpContext.Session.SetString("DemoMode", "1");
+
+        HttpContext.Session.SetString("MenuCariKartlar", firma.MenuCariKartlar ? "1" : "0");
+        HttpContext.Session.SetString("MenuKasa", firma.MenuKasa ? "1" : "0");
+        HttpContext.Session.SetString("MenuRaporlar", firma.MenuRaporlar ? "1" : "0");
+        HttpContext.Session.SetString("MenuCalisanlar", firma.MenuCalisanlar ? "1" : "0");
+        HttpContext.Session.SetString("MenuMusteriler", firma.MenuMusteriler ? "1" : "0");
+        HttpContext.Session.SetString("MenuStoklar", firma.MenuStoklar ? "1" : "0");
+        HttpContext.Session.SetString("MenuMaliyet", firma.MenuMaliyet ? "1" : "0");
+        HttpContext.Session.SetString("MenuCekler", firma.MenuCekler ? "1" : "0");
+
+        TempData["Mesaj"] = "Demo hesap hazırlandı. Veriler her demo girişinde yenilenir.";
+        return RedirectToPage("/Index");
     }
 }
