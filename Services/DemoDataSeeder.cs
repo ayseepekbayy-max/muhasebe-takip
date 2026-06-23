@@ -21,13 +21,13 @@ public static class DemoDataSeeder
         {
             var firma = new Firma
             {
-                FirmaAdi = "Demo Mobilya Sistemleri",
+                FirmaAdi = "Nova Mobilya ve Tasarım Ltd. Şti.",
                 AktifMi = true,
-                Adres = "Demo Mah. Uretim Cad. No: 10",
-                Telefon = "0212 000 00 00",
+                Adres = "Merkez Mah. Tasarım Cad. No: 18",
+                Telefon = "0212 345 67 89",
                 Email = "demo@firmova.com",
-                VergiDairesi = "Demo Vergi Dairesi",
-                VergiNo = "0000000000"
+                VergiDairesi = "Merkez Vergi Dairesi",
+                VergiNo = "1234567890"
             };
 
             db.Firmalar.Add(firma);
@@ -51,7 +51,12 @@ public static class DemoDataSeeder
             kullanici.Sifre = PasswordHelper.Hash(DemoPassword);
             kullanici.Rol = "Demo";
             kullanici.Firma.AktifMi = true;
-            kullanici.Firma.FirmaAdi = "Demo Mobilya Sistemleri";
+            kullanici.Firma.FirmaAdi = "Nova Mobilya ve Tasarım Ltd. Şti.";
+            kullanici.Firma.Adres = "Merkez Mah. Tasarım Cad. No: 18";
+            kullanici.Firma.Telefon = "0212 345 67 89";
+            kullanici.Firma.Email = "demo@firmova.com";
+            kullanici.Firma.VergiDairesi = "Merkez Vergi Dairesi";
+            kullanici.Firma.VergiNo = "1234567890";
             await db.SaveChangesAsync();
         }
 
@@ -79,142 +84,93 @@ public static class DemoDataSeeder
         await db.SaveChangesAsync();
 
         var today = DateTime.UtcNow.Date;
-        var alici = new CariKart
-        {
-            FirmaId = firmaId,
-            Ad = "ANK Ofis Proje",
-            Unvan = "ANK Ofis Proje Ltd.",
-            Telefon = "0532 000 00 01",
-            VergiNo = "1234567890",
-            Tip = CariTip.Alici,
-            OlusturmaTarihi = DateTime.UtcNow
-        };
-        var satici = new CariKart
-        {
-            FirmaId = firmaId,
-            Ad = "Panel Tedarik",
-            Unvan = "Panel Tedarik A.S.",
-            Telefon = "0532 000 00 02",
-            VergiNo = "9876543210",
-            Tip = CariTip.Satici,
-            OlusturmaTarihi = DateTime.UtcNow
-        };
-        var musteri = new CariKart
-        {
-            FirmaId = firmaId,
-            Ad = "Mavi Dekorasyon",
-            Unvan = "Mavi Dekorasyon",
-            Telefon = "0532 000 00 03",
-            VergiNo = "1122334455",
-            Tip = CariTip.Alici,
-            OlusturmaTarihi = DateTime.UtcNow
-        };
 
-        db.CariKartlar.AddRange(alici, satici, musteri);
+        var atlas = CreateCari(firmaId, "Atlas Mimarlık", "Atlas Mimarlık ve Proje Ltd. Şti.", "0532 100 10 01", "1111111111", CariTip.Alici);
+        var mavi = CreateCari(firmaId, "Mavi Yapı Dekorasyon", "Mavi Yapı Dekorasyon Ltd. Şti.", "0532 100 10 02", "2222222222", CariTip.Alici);
+        var luna = CreateCari(firmaId, "Luna İç Mimarlık", "Luna İç Mimarlık A.Ş.", "0532 100 10 03", "3333333333", CariTip.Alici);
+        var kuzey = CreateCari(firmaId, "Kuzey Ofis Sistemleri", "Kuzey Ofis Sistemleri Ltd.", "0532 100 10 04", "4444444444", CariTip.Alici);
+
+        var panelmax = CreateCari(firmaId, "Panelmax MDF", "Panelmax MDF ve Orman Ürünleri", "0532 200 20 01", "5555555555", CariTip.Satici);
+        var ege = CreateCari(firmaId, "Ege Aksesuar", "Ege Mobilya Aksesuarları Ltd.", "0532 200 20 02", "6666666666", CariTip.Satici);
+        var akdeniz = CreateCari(firmaId, "Akdeniz Orman Ürünleri", "Akdeniz Orman Ürünleri A.Ş.", "0532 200 20 03", "7777777777", CariTip.Satici);
+
+        db.CariKartlar.AddRange(atlas, mavi, luna, kuzey, panelmax, ege, akdeniz);
         await db.SaveChangesAsync();
 
-        var satisFaturasi = new Fatura
-        {
-            FirmaId = firmaId,
-            CariKartId = alici.Id,
-            FaturaNo = "DMO-2026-0001",
-            Tip = FaturaTipi.Satis,
-            Tarih = today.AddDays(-4),
-            VadeTarihi = today.AddDays(10),
-            OdenenToplam = 2500m,
-            Aciklama = "Demo satis faturasi",
-            OlusturmaTarihi = DateTime.UtcNow,
-            Kalemler = new List<FaturaKalem>
-            {
-                CreateKalem("Mutfak dolabi montaji", 1, 12500m, 20m),
-                CreateKalem("Nakliye ve kurulum", 1, 1500m, 20m)
-            }
-        };
-        ApplyTotals(satisFaturasi);
+        var f1 = CreateFatura(firmaId, atlas.Id, "NVM-2026-0001", FaturaTipi.Satis, today.AddDays(-8), today.AddDays(7), 18500m, "Atlas Mimarlık mutfak dolabı projesi",
+            CreateKalem("Lake mutfak alt dolap", 1, 18500m, 20m),
+            CreateKalem("Tezgah ve aksesuar", 1, 8200m, 20m));
 
-        var alisFaturasi = new Fatura
-        {
-            FirmaId = firmaId,
-            CariKartId = satici.Id,
-            FaturaNo = "DMO-2026-0002",
-            Tip = FaturaTipi.Alis,
-            Tarih = today.AddDays(-2),
-            VadeTarihi = today.AddDays(15),
-            OdenenToplam = 0m,
-            Aciklama = "Demo alis faturasi",
-            OlusturmaTarihi = DateTime.UtcNow,
-            Kalemler = new List<FaturaKalem>
-            {
-                CreateKalem("MDF panel", 20, 420m, 20m),
-                CreateKalem("Kenar bandi", 12, 90m, 20m)
-            }
-        };
-        ApplyTotals(alisFaturasi);
+        var f2 = CreateFatura(firmaId, mavi.Id, "NVM-2026-0002", FaturaTipi.Satis, today.AddDays(-6), today.AddDays(14), 0m, "Mavi Yapı vestiyer ve banyo dolabı",
+            CreateKalem("Vestiyer dolabı", 1, 14500m, 20m),
+            CreateKalem("Banyo dolabı", 2, 6200m, 20m));
 
-        db.Faturalar.AddRange(satisFaturasi, alisFaturasi);
+        var f3 = CreateFatura(firmaId, luna.Id, "NVM-2026-0003", FaturaTipi.Satis, today.AddDays(-4), today.AddDays(10), 43200m, "Luna İç Mimarlık ofis mobilyaları",
+            CreateKalem("Ofis masa takımı", 4, 7800m, 20m),
+            CreateKalem("Dosya dolabı", 6, 4200m, 20m));
+
+        var f4 = CreateFatura(firmaId, panelmax.Id, "NVM-2026-0004", FaturaTipi.Alis, today.AddDays(-5), today.AddDays(15), 15000m, "MDF panel alımı",
+            CreateKalem("18mm beyaz MDF", 30, 580m, 20m),
+            CreateKalem("18mm antrasit MDF", 20, 640m, 20m));
+
+        var f5 = CreateFatura(firmaId, ege.Id, "NVM-2026-0005", FaturaTipi.Alis, today.AddDays(-3), today.AddDays(20), 0m, "Aksesuar ve ray alımı",
+            CreateKalem("Çekmece rayı", 25, 180m, 20m),
+            CreateKalem("Dolap kulpu", 80, 55m, 20m),
+            CreateKalem("Menteşe", 120, 32m, 20m));
+
+        var f6 = CreateFatura(firmaId, kuzey.Id, "NVM-2026-0006", FaturaTipi.Satis, today.AddDays(-2), today.AddDays(12), 12000m, "Kuzey Ofis toplantı odası mobilyası",
+            CreateKalem("Toplantı masası", 1, 16500m, 20m),
+            CreateKalem("Duvar raf sistemi", 1, 9500m, 20m));
+
+        db.Faturalar.AddRange(f1, f2, f3, f4, f5, f6);
         await db.SaveChangesAsync();
 
         db.KasaHareketleri.AddRange(
-            new KasaHareket
-            {
-                FirmaId = firmaId,
-                CariKartId = alici.Id,
-                FaturaId = satisFaturasi.Id,
-                Tarih = today.AddDays(-3),
-                Tip = HareketTipi.Giris,
-                Tutar = 2500m,
-                Aciklama = "Demo tahsilat - DMO-2026-0001"
-            },
-            new KasaHareket
-            {
-                FirmaId = firmaId,
-                Tarih = today.AddDays(-1),
-                Tip = HareketTipi.Cikis,
-                Tutar = 850m,
-                Aciklama = "Demo genel gider"
-            });
+            CreateKasa(firmaId, atlas.Id, f1.Id, today.AddDays(-7), HareketTipi.Giris, 18500m, "Atlas Mimarlık tahsilatı"),
+            CreateKasa(firmaId, luna.Id, f3.Id, today.AddDays(-3), HareketTipi.Giris, 43200m, "Luna İç Mimarlık tam tahsilat"),
+            CreateKasa(firmaId, kuzey.Id, f6.Id, today.AddDays(-1), HareketTipi.Giris, 12000m, "Kuzey Ofis kısmi tahsilat"),
+            CreateKasa(firmaId, panelmax.Id, f4.Id, today.AddDays(-4), HareketTipi.Cikis, 15000m, "Panelmax MDF ödemesi"),
+            CreateKasa(firmaId, null, null, today.AddDays(-2), HareketTipi.Cikis, 3800m, "Atölye elektrik faturası"),
+            CreateKasa(firmaId, null, null, today.AddDays(-1), HareketTipi.Cikis, 6500m, "Personel maaş ödemesi"),
+            CreateKasa(firmaId, null, null, today, HareketTipi.Cikis, 1750m, "Araç yakıt gideri")
+        );
 
-        var masa = new StokUrun { FirmaId = firmaId, Ad = "L masa", Kod = "STK-001", Birim = "Adet" };
-        var dolap = new StokUrun { FirmaId = firmaId, Ad = "Dosya dolabi", Kod = "STK-002", Birim = "Adet" };
-        db.StokUrunler.AddRange(masa, dolap);
+        var stoklar = new List<StokUrun>
+        {
+            new() { FirmaId = firmaId, Ad = "18mm Beyaz MDF", Kod = "STK-001", Birim = "Plaka" },
+            new() { FirmaId = firmaId, Ad = "18mm Antrasit MDF", Kod = "STK-002", Birim = "Plaka" },
+            new() { FirmaId = firmaId, Ad = "PVC Kenar Bandı Beyaz", Kod = "STK-003", Birim = "Metre" },
+            new() { FirmaId = firmaId, Ad = "PVC Kenar Bandı Siyah", Kod = "STK-004", Birim = "Metre" },
+            new() { FirmaId = firmaId, Ad = "Çekmece Ray Seti", Kod = "STK-005", Birim = "Takım" },
+            new() { FirmaId = firmaId, Ad = "Dolap Kulpu", Kod = "STK-006", Birim = "Adet" },
+            new() { FirmaId = firmaId, Ad = "Menteşe", Kod = "STK-007", Birim = "Adet" }
+        };
+
+        db.StokUrunler.AddRange(stoklar);
         await db.SaveChangesAsync();
 
         db.StokHareketleri.AddRange(
-            new StokHareket
-            {
-                FirmaId = firmaId,
-                StokUrunId = masa.Id,
-                Ad = masa.Ad,
-                Tarih = today.AddDays(-6),
-                Tip = StokHareketTipi.Giris,
-                Miktar = 8,
-                BirimFiyat = 3500m,
-                KdvOrani = 20m,
-                Aciklama = "Demo stok girisi"
-            },
-            new StokHareket
-            {
-                FirmaId = firmaId,
-                StokUrunId = dolap.Id,
-                Ad = dolap.Ad,
-                Tarih = today.AddDays(-5),
-                Tip = StokHareketTipi.Giris,
-                Miktar = 5,
-                BirimFiyat = 2200m,
-                KdvOrani = 20m,
-                Aciklama = "Demo stok girisi"
-            });
+            CreateStok(firmaId, stoklar[0], today.AddDays(-10), StokHareketTipi.Giris, 50, 580m, "Panelmax MDF stok girişi"),
+            CreateStok(firmaId, stoklar[1], today.AddDays(-9), StokHareketTipi.Giris, 35, 640m, "Panelmax MDF stok girişi"),
+            CreateStok(firmaId, stoklar[2], today.AddDays(-8), StokHareketTipi.Giris, 300, 18m, "Kenar bandı alımı"),
+            CreateStok(firmaId, stoklar[4], today.AddDays(-7), StokHareketTipi.Giris, 40, 180m, "Ray seti alımı"),
+            CreateStok(firmaId, stoklar[5], today.AddDays(-7), StokHareketTipi.Giris, 120, 55m, "Kulp alımı"),
+            CreateStok(firmaId, stoklar[0], today.AddDays(-3), StokHareketTipi.Cikis, 8, 580m, "Atlas Mimarlık üretim çıkışı"),
+            CreateStok(firmaId, stoklar[4], today.AddDays(-3), StokHareketTipi.Cikis, 6, 180m, "Luna proje üretim çıkışı")
+        );
 
-        db.Cekler.Add(new Cek
-        {
-            FirmaId = firmaId,
-            No = "DMO-CEK-001",
-            Tarih = today.AddDays(20),
-            Tutar = 7500m,
-            Tip = CekTipi.Alinacak,
-            Aciklama = "Demo alinacak cek",
-            OlusturmaTarihi = DateTime.UtcNow
-        });
+        db.Cekler.AddRange(
+            new Cek
+            {
+                FirmaId = firmaId,
+                No = "NVM-CEK-001",
+                Tarih = today.AddDays(25),
+                Tutar = 22500m,
+                Tip = CekTipi.Alinacak,
+                Aciklama = "Mavi Yapı alınacak çek",
+                OlusturmaTarihi = DateTime.UtcNow
+            }
+        );
 
         var ayar = await db.FaturaNumaraAyarlari.FirstOrDefaultAsync(x => x.FirmaId == firmaId);
         if (ayar == null)
@@ -222,16 +178,16 @@ public static class DemoDataSeeder
             db.FaturaNumaraAyarlari.Add(new FaturaNumaraAyari
             {
                 FirmaId = firmaId,
-                Prefix = "DMO",
-                SonNumara = 2,
+                Prefix = "NVM",
+                SonNumara = 6,
                 SiraUzunlugu = 4,
                 YilEkle = true
             });
         }
         else
         {
-            ayar.Prefix = "DMO";
-            ayar.SonNumara = 2;
+            ayar.Prefix = "NVM";
+            ayar.SonNumara = 6;
             ayar.SiraUzunlugu = 4;
             ayar.YilEkle = true;
         }
@@ -239,10 +195,75 @@ public static class DemoDataSeeder
         await db.SaveChangesAsync();
     }
 
+    private static CariKart CreateCari(int firmaId, string ad, string unvan, string telefon, string vergiNo, CariTip tip)
+    {
+        return new CariKart
+        {
+            FirmaId = firmaId,
+            Ad = ad,
+            Unvan = unvan,
+            Telefon = telefon,
+            VergiNo = vergiNo,
+            Tip = tip,
+            OlusturmaTarihi = DateTime.UtcNow
+        };
+    }
+
+    private static Fatura CreateFatura(int firmaId, int cariId, string no, FaturaTipi tip, DateTime tarih, DateTime vade, decimal odenen, string aciklama, params FaturaKalem[] kalemler)
+    {
+        var fatura = new Fatura
+        {
+            FirmaId = firmaId,
+            CariKartId = cariId,
+            FaturaNo = no,
+            Tip = tip,
+            Tarih = tarih,
+            VadeTarihi = vade,
+            OdenenToplam = odenen,
+            Aciklama = aciklama,
+            OlusturmaTarihi = DateTime.UtcNow,
+            Kalemler = kalemler.ToList()
+        };
+
+        ApplyTotals(fatura);
+        return fatura;
+    }
+
+    private static KasaHareket CreateKasa(int firmaId, int? cariId, int? faturaId, DateTime tarih, HareketTipi tip, decimal tutar, string aciklama)
+    {
+        return new KasaHareket
+        {
+            FirmaId = firmaId,
+            CariKartId = cariId,
+            FaturaId = faturaId,
+            Tarih = tarih,
+            Tip = tip,
+            Tutar = tutar,
+            Aciklama = aciklama
+        };
+    }
+
+    private static StokHareket CreateStok(int firmaId, StokUrun urun, DateTime tarih, StokHareketTipi tip, decimal miktar, decimal fiyat, string aciklama)
+    {
+        return new StokHareket
+        {
+            FirmaId = firmaId,
+            StokUrunId = urun.Id,
+            Ad = urun.Ad,
+            Tarih = tarih,
+            Tip = tip,
+            Miktar = miktar,
+            BirimFiyat = fiyat,
+            KdvOrani = 20m,
+            Aciklama = aciklama
+        };
+    }
+
     private static FaturaKalem CreateKalem(string aciklama, decimal miktar, decimal birimFiyat, decimal kdvOrani)
     {
         var araToplam = miktar * birimFiyat;
         var kdvTutar = araToplam * kdvOrani / 100m;
+
         return new FaturaKalem
         {
             Aciklama = aciklama,
