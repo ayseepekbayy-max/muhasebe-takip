@@ -5,6 +5,7 @@
     ViewData["Title"] = "Kasa Hareketleri";
     var toplamGiris = Model.Hareketler.Where(x => x.Tip == HareketTipi.Giris).Sum(x => x.Tutar);
     var toplamCikis = Model.Hareketler.Where(x => x.Tip == HareketTipi.Cikis).Sum(x => x.Tutar);
+    var netHareket = toplamGiris - toplamCikis;
 }
 
 <div class="app-page">
@@ -39,13 +40,15 @@
             <span>Toplam Giriş</span>
             <strong>@toplamGiris.ToString("N2")</strong>
         </article>
+
         <article class="metric-card metric-card-negative">
             <span>Toplam Çıkış</span>
             <strong>@toplamCikis.ToString("N2")</strong>
         </article>
+
         <article class="metric-card">
             <span>Net Hareket</span>
-            <strong>@(toplamGiris - toplamCikis).ToString("N2")</strong>
+            <strong>@netHareket.ToString("N2")</strong>
         </article>
     </section>
 
@@ -54,6 +57,7 @@
             <label for="kasaSearch">Hareket ara</label>
             <input id="kasaSearch" type="search" placeholder="Cari, açıklama veya tutar" />
         </div>
+
         <div class="form-field filter-small">
             <label for="tipFilter">Tip</label>
             <select id="tipFilter">
@@ -84,25 +88,46 @@
                         <th>İşlem</th>
                     </tr>
                 </thead>
+
                 <tbody>
                     @if (Model.Hareketler.Count == 0)
                     {
-                        <tr><td colspan="6" class="empty-row">Henüz hareket yok.</td></tr>
+                        <tr>
+                            <td colspan="6" class="empty-row">Henüz hareket yok.</td>
+                        </tr>
                     }
                     else
                     {
                         @foreach (var h in Model.Hareketler)
                         {
                             var girisMi = h.Tip == HareketTipi.Giris;
-                            <tr class="kasa-row" data-type="@(girisMi ? "giris" : "cikis")" data-search="@($"{h.Tarih:dd.MM.yyyy} {h.Tip} {h.Tutar} {h.CariKart?.Unvan} {h.Aciklama}")">
+
+                            <tr class="kasa-row"
+                                data-type="@(girisMi ? "giris" : "cikis")"
+                                data-search="@($"{h.Tarih:dd.MM.yyyy} {h.Tip} {h.Tutar} {h.CariKart?.Unvan} {h.Aciklama}")">
                                 <td>@h.Tarih.ToString("dd.MM.yyyy")</td>
-                                <td><span class="status-pill @(girisMi ? "status-pill-income" : "status-pill-expense")">@(girisMi ? "Giriş" : "Çıkış")</span></td>
-                                <td class="amount-cell @(girisMi ? "amount-income" : "amount-expense")">@h.Tutar.ToString("N2")</td>
+
+                                <td>
+                                    <span class="status-pill @(girisMi ? "status-pill-income" : "status-pill-expense")">
+                                        @(girisMi ? "Giriş" : "Çıkış")
+                                    </span>
+                                </td>
+
+                                <td class="amount-cell @(girisMi ? "amount-income" : "amount-expense")">
+                                    @h.Tutar.ToString("N2")
+                                </td>
+
                                 <td>@(h.CariKart?.Unvan ?? "-")</td>
+
                                 <td>@(string.IsNullOrWhiteSpace(h.Aciklama) ? "-" : h.Aciklama)</td>
+
                                 <td class="table-actions-cell">
                                     <a class="btn btn-outline-primary btn-sm" href="/Kasa/HareketDuzenle/@h.Id">Düzenle</a>
-                                    <form method="post" asp-page-handler="Sil" class="inline-form" onsubmit="return confirm('Silinsin mi?');">
+
+                                    <form method="post"
+                                          asp-page-handler="Sil"
+                                          class="inline-form"
+                                          onsubmit="return confirm('Silinsin mi?');">
                                         <input type="hidden" name="id" value="@h.Id" />
                                         <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
                                     </form>
@@ -129,6 +154,7 @@
                 const text = (row.dataset.search || row.innerText).toLocaleLowerCase('tr-TR');
                 const typeOk = !type || row.dataset.type === type;
                 const textOk = !query || text.includes(query);
+
                 row.hidden = !(typeOk && textOk);
             });
         }
