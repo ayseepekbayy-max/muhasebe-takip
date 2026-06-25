@@ -3,13 +3,20 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Stoklar.Detay;
 
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
-    public IndexModel(AppDbContext db) => _db = db;
+    private readonly IIslemGecmisiService _islemGecmisi;
+
+    public IndexModel(AppDbContext db, IIslemGecmisiService islemGecmisi)
+    {
+        _db = db;
+        _islemGecmisi = islemGecmisi;
+    }
 
     public StokUrun? Urun { get; set; }
     public List<StokHareket> Hareketler { get; set; } = new();
@@ -89,7 +96,7 @@ public class IndexModel : PageModel
         {
             var kayitTarihi = DateTime.SpecifyKind(Tarih.Date, DateTimeKind.Utc);
 
-            _db.StokHareketleri.Add(new StokHareket
+            var hareket = new StokHareket
             {
                 FirmaId = firmaId.Value,
                 StokUrunId = id,
@@ -101,8 +108,14 @@ public class IndexModel : PageModel
                 KoliAdedi = KoliAdedi,
                 KoliFiyat = KoliFiyat,
                 Aciklama = (Aciklama ?? "").Trim()
-            });
+            };
 
+            _db.StokHareketleri.Add(hareket);
+            await _islemGecmisi.KaydetAsync(
+                "Stok",
+                "Stok Girişi",
+                $"{Urun.Ad} ürünü için {Miktar:N2} {Urun.Birim} stok girişi yapıldı.",
+                yeniDeger: IslemGecmisiSnapshots.StokHareket(hareket));
             await _db.SaveChangesAsync();
             return RedirectToPage(new { id });
         }
@@ -141,7 +154,7 @@ public class IndexModel : PageModel
         {
             var kayitTarihi = DateTime.SpecifyKind(Tarih.Date, DateTimeKind.Utc);
 
-            _db.StokHareketleri.Add(new StokHareket
+            var hareket = new StokHareket
             {
                 FirmaId = firmaId.Value,
                 StokUrunId = id,
@@ -153,8 +166,14 @@ public class IndexModel : PageModel
                 KoliAdedi = 0,
                 KoliFiyat = 0,
                 Aciklama = (Aciklama ?? "").Trim()
-            });
+            };
 
+            _db.StokHareketleri.Add(hareket);
+            await _islemGecmisi.KaydetAsync(
+                "Stok",
+                "Stok Çıkışı",
+                $"{Urun.Ad} ürünü için {Miktar:N2} {Urun.Birim} stok çıkışı yapıldı.",
+                yeniDeger: IslemGecmisiSnapshots.StokHareket(hareket));
             await _db.SaveChangesAsync();
             return RedirectToPage(new { id });
         }
@@ -184,6 +203,11 @@ public class IndexModel : PageModel
 
             if (h != null)
             {
+                await _islemGecmisi.KaydetAsync(
+                    "Stok",
+                    "Silme",
+                    $"{Urun.Ad} ürününe ait stok hareketi silindi (ID: {h.Id}).",
+                    eskiDeger: IslemGecmisiSnapshots.StokHareket(h));
                 _db.StokHareketleri.Remove(h);
                 await _db.SaveChangesAsync();
             }

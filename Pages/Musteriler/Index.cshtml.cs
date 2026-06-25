@@ -6,16 +6,19 @@ using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using ClosedXML.Excel;
 using System.IO;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Musteriler;
 
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IIslemGecmisiService _islemGecmisi;
 
-    public IndexModel(AppDbContext db)
+    public IndexModel(AppDbContext db, IIslemGecmisiService islemGecmisi)
     {
         _db = db;
+        _islemGecmisi = islemGecmisi;
     }
 
     public List<Musteri> Liste { get; set; } = new();
@@ -66,7 +69,13 @@ public class IndexModel : PageModel
         Yeni.FirmaId = firmaId.Value;
 
         _db.Musteriler.Add(Yeni);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Müşteriler",
+                "Ekleme",
+                $"{Yeni.AdSoyad} müşterisi eklendi (ID: {Yeni.Id}).",
+                yeniDeger: IslemGecmisiSnapshots.Musteri(Yeni)),
+            anaKaydiOnceKaydet: true);
 
         return RedirectToPage();
     }
@@ -107,9 +116,16 @@ public class IndexModel : PageModel
         }
 
         // 🔥 4. Müşteriyi sil
+        var eskiDeger = IslemGecmisiSnapshots.Musteri(musteri);
         _db.Musteriler.Remove(musteri);
 
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Müşteriler",
+                "Silme",
+                $"{musteri.AdSoyad} müşterisi silindi (ID: {musteri.Id}).",
+                eskiDeger: eskiDeger),
+            anaKaydiOnceKaydet: false);
 
         return RedirectToPage();
     }

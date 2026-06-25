@@ -6,14 +6,20 @@ using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using ClosedXML.Excel;
 using System.IO;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Stoklar;
 
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IIslemGecmisiService _islemGecmisi;
 
-    public IndexModel(AppDbContext db) => _db = db;
+    public IndexModel(AppDbContext db, IIslemGecmisiService islemGecmisi)
+    {
+        _db = db;
+        _islemGecmisi = islemGecmisi;
+    }
 
     public List<StokUrun> Liste { get; set; } = new();
     public Dictionary<int, decimal> Stoklar { get; set; } = new();
@@ -62,11 +68,17 @@ public class IndexModel : PageModel
         Yeni.FirmaId = firmaId.Value;
 
         _db.StokUrunler.Add(Yeni);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Stok",
+                "Ekleme",
+                $"{Yeni.Ad} stok ürünü eklendi (ID: {Yeni.Id}).",
+                yeniDeger: IslemGecmisiSnapshots.StokUrun(Yeni)),
+            anaKaydiOnceKaydet: true);
 
         TempData["Basari"] = "Ürün kartı eklendi. Stok girişi için Detay sayfasını kullanabilirsiniz.";
         return RedirectToPage();
-    }
+            }
 
     public async Task<IActionResult> OnPostSilAsync(int id)
     {
@@ -94,8 +106,15 @@ public class IndexModel : PageModel
         if (hareketler.Any())
             _db.StokHareketleri.RemoveRange(hareketler);
 
+        var eskiDeger = IslemGecmisiSnapshots.StokUrun(urun);
         _db.StokUrunler.Remove(urun);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Stok",
+                "Silme",
+                $"{urun.Ad} stok ürünü silindi (ID: {urun.Id}).",
+                eskiDeger: eskiDeger),
+            anaKaydiOnceKaydet: false);
 
         TempData["Basari"] = "Ürün ve varsa ona ait stok hareketleri silindi.";
         return RedirectToPage();

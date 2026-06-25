@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Helpers;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 using UglyToad.PdfPig;
 
 namespace MuhasebeTakip2.App.Pages.Maliyet;
@@ -16,10 +17,12 @@ namespace MuhasebeTakip2.App.Pages.Maliyet;
 public class BelgeOkuModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IIslemGecmisiService _islemGecmisi;
 
-    public BelgeOkuModel(AppDbContext db)
+    public BelgeOkuModel(AppDbContext db, IIslemGecmisiService islemGecmisi)
     {
         _db = db;
+        _islemGecmisi = islemGecmisi;
     }
 
     [BindProperty]
@@ -154,7 +157,7 @@ public class BelgeOkuModel : PageModel
             return Page();
         }
 
-        _db.MaliyetKayitlari.Add(new MaliyetKaydi
+        var kayit = new MaliyetKaydi
         {
             FirmaId = firmaId.Value,
             UretimAdi = UretimAdi,
@@ -178,9 +181,16 @@ public class BelgeOkuModel : PageModel
             }),
             OkunanMetin = OkunanMetin ?? "",
             HesapTarihi = DateTime.UtcNow
-        });
+        };
 
-        await _db.SaveChangesAsync();
+        _db.MaliyetKayitlari.Add(kayit);
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Maliyet",
+                "Ekleme",
+                $"{kayit.UretimAdi} belge kaynaklı maliyet kaydı eklendi (ID: {kayit.Id}).",
+                yeniDeger: IslemGecmisiSnapshots.Maliyet(kayit)),
+            anaKaydiOnceKaydet: true);
 
         TempData["Mesaj"] = "Belgeden okunan maliyet arşive kaydedildi.";
         return RedirectToPage("/Maliyet/Index");

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 using System.Globalization;
 
 namespace MuhasebeTakip2.App.Pages.Maliyet;
@@ -10,10 +11,12 @@ namespace MuhasebeTakip2.App.Pages.Maliyet;
 public class MalzemelerModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IIslemGecmisiService _islemGecmisi;
 
-    public MalzemelerModel(AppDbContext db)
+    public MalzemelerModel(AppDbContext db, IIslemGecmisiService islemGecmisi)
     {
         _db = db;
+        _islemGecmisi = islemGecmisi;
     }
 
     [BindProperty]
@@ -173,6 +176,11 @@ public class MalzemelerModel : PageModel
         };
 
         _db.StokHareketleri.Add(hareket);
+        await _islemGecmisi.KaydetAsync(
+            "Stok",
+            "Stok Çıkışı",
+            $"{urun.Ad} ürününden maliyet hesabı için {hareket.Miktar:N2} {urun.Birim} düşüldü.",
+            yeniDeger: IslemGecmisiSnapshots.StokHareket(hareket));
         await _db.SaveChangesAsync();
 
         HttpContext.Session.SetInt32($"Maliyet_{firmaId.Value}_Adet", Adet);

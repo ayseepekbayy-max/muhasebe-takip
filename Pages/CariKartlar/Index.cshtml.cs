@@ -6,14 +6,20 @@ using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using ClosedXML.Excel;
 using System.IO;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.CariKartlar;
 
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IIslemGecmisiService _islemGecmisi;
 
-    public IndexModel(AppDbContext db) => _db = db;
+    public IndexModel(AppDbContext db, IIslemGecmisiService islemGecmisi)
+    {
+        _db = db;
+        _islemGecmisi = islemGecmisi;
+    }
 
     public List<CariKart> Alicilar { get; set; } = new();
     public List<CariKart> Saticilar { get; set; } = new();
@@ -71,7 +77,13 @@ public class IndexModel : PageModel
             YeniCari.OlusturmaTarihi = DateTime.UtcNow;
 
             _db.CariKartlar.Add(YeniCari);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesWithAuditAsync(
+                () => _islemGecmisi.KaydetAsync(
+                    "Cari Kartlar",
+                    "Ekleme",
+                    $"{YeniCari.Unvan} unvanlı cari kart eklendi (ID: {YeniCari.Id}).",
+                    yeniDeger: IslemGecmisiSnapshots.Cari(YeniCari)),
+                anaKaydiOnceKaydet: true);
 
             TempData["Basari"] = "Cari kart eklendi.";
             return RedirectToPage();
@@ -119,8 +131,15 @@ public class IndexModel : PageModel
         foreach (var hareket in kasaHareketleri)
             hareket.CariKartId = null;
 
+        var eskiDeger = IslemGecmisiSnapshots.Cari(cari);
         _db.CariKartlar.Remove(cari);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Cari Kartlar",
+                "Silme",
+                $"{cari.Unvan} unvanlı cari kart silindi (ID: {cari.Id}).",
+                eskiDeger: eskiDeger),
+            anaKaydiOnceKaydet: false);
 
         TempData["Basari"] = "Cari kart silindi. Varsa bağlı kasa hareketleri korunup cari bağlantısı kaldırıldı.";
         return RedirectToPage();

@@ -5,13 +5,20 @@ using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using ClosedXML.Excel;
 using System.IO;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Calisanlar;
 
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
-    public IndexModel(AppDbContext db) => _db = db;
+    private readonly IIslemGecmisiService _islemGecmisi;
+
+    public IndexModel(AppDbContext db, IIslemGecmisiService islemGecmisi)
+    {
+        _db = db;
+        _islemGecmisi = islemGecmisi;
+    }
 
     public List<Calisan> Liste { get; set; } = new();
 
@@ -80,7 +87,13 @@ public class IndexModel : PageModel
         }
 
         _db.Calisanlar.Add(YeniCalisan);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Çalışanlar",
+                "Ekleme",
+                $"{YeniCalisan.AdSoyad} çalışanı eklendi (ID: {YeniCalisan.Id}).",
+                yeniDeger: IslemGecmisiSnapshots.Calisan(YeniCalisan)),
+            anaKaydiOnceKaydet: true);
 
         return RedirectToPage();
     }
@@ -97,10 +110,18 @@ public class IndexModel : PageModel
         if (calisan == null)
             return RedirectToPage();
 
+        var eskiDeger = IslemGecmisiSnapshots.Calisan(calisan);
+
         calisan.AktifMi = false;
         calisan.AyrilisTarihi = DateTime.UtcNow;
         calisan.AyrilisNotu = "Çalışan aktif listeden arşive taşındı.";
 
+        await _islemGecmisi.KaydetAsync(
+            "Çalışanlar",
+            "Düzenleme",
+            $"{calisan.AdSoyad} çalışanı arşive taşındı.",
+            eskiDeger,
+            IslemGecmisiSnapshots.Calisan(calisan));
         await _db.SaveChangesAsync();
 
         return RedirectToPage();
@@ -139,9 +160,16 @@ public class IndexModel : PageModel
         if (maasArsivleri.Any())
             _db.CalisanMaasArsivleri.RemoveRange(maasArsivleri);
 
+        var eskiDeger = IslemGecmisiSnapshots.Calisan(calisan);
         _db.Calisanlar.Remove(calisan);
 
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Çalışanlar",
+                "Silme",
+                $"{calisan.AdSoyad} çalışanı silindi (ID: {calisan.Id}).",
+                eskiDeger: eskiDeger),
+            anaKaydiOnceKaydet: false);
 
         return RedirectToPage();
     }

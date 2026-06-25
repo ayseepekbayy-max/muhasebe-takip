@@ -3,16 +3,19 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Maliyet;
 
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IIslemGecmisiService _islemGecmisi;
 
-    public IndexModel(AppDbContext db)
+    public IndexModel(AppDbContext db, IIslemGecmisiService islemGecmisi)
     {
         _db = db;
+        _islemGecmisi = islemGecmisi;
     }
 
     public List<MaliyetKaydi> MaliyetKayitlari { get; set; } = new();
@@ -58,8 +61,15 @@ public class IndexModel : PageModel
             return Page();
         }
 
+        var eskiDeger = IslemGecmisiSnapshots.Maliyet(kayit);
         _db.MaliyetKayitlari.Remove(kayit);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Maliyet",
+                "Silme",
+                $"{kayit.UretimAdi} maliyet kaydı silindi (ID: {kayit.Id}).",
+                eskiDeger: eskiDeger),
+            anaKaydiOnceKaydet: false);
 
         Mesaj = "Maliyet kaydı silindi.";
 

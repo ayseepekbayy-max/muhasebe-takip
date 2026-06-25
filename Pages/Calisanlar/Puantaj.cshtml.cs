@@ -4,16 +4,19 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Calisanlar;
 
 public class PuantajModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IIslemGecmisiService _islemGecmisi;
 
-    public PuantajModel(AppDbContext db)
+    public PuantajModel(AppDbContext db, IIslemGecmisiService islemGecmisi)
     {
         _db = db;
+        _islemGecmisi = islemGecmisi;
     }
 
     public Calisan? Calisan { get; set; }
@@ -95,25 +98,71 @@ public class PuantajModel : PageModel
 
         if (mevcut != null)
         {
+            var eskiDeger = IslemGecmisiSnapshots.Puantaj(mevcut);
             mevcut.Durum = Durum;
             mevcut.Not = Not;
             mevcut.Tarih = utcTarih;
+
+            await _db.SaveChangesWithAuditAsync(
+                () => _islemGecmisi.KaydetAsync(
+                    "Puantaj",
+                    "Düzenleme",
+                    $"{calisan.AdSoyad} çalışanının {utcTarih:dd.MM.yyyy} puantaj kaydı güncellendi.",
+                    eskiDeger,
+                    IslemGecmisiSnapshots.Puantaj(mevcut)),
+                anaKaydiOnceKaydet: false);
         }
         else
         {
-            _db.CalisanPuantajlari.Add(new CalisanPuantaj
+            var yeniKayit = new CalisanPuantaj
             {
                 FirmaId = firmaId.Value,
                 CalisanId = CalisanId,
                 Tarih = utcTarih,
                 Durum = Durum,
                 Not = Not
-            });
+            };
+
+            _db.CalisanPuantajlari.Add(yeniKayit);
+            await _db.SaveChangesWithAuditAsync(
+                () => _islemGecmisi.KaydetAsync(
+                    "Puantaj",
+                    "Ekleme",
+                    $"{calisan.AdSoyad} çalışanına {utcTarih:dd.MM.yyyy} puantaj kaydı eklendi (ID: {yeniKayit.Id}).",
+                    yeniDeger: IslemGecmisiSnapshots.Puantaj(yeniKayit)),
+                anaKaydiOnceKaydet: true);
         }
 
-        await _db.SaveChangesAsync();
-
         return RedirectToPage(new { id = CalisanId, yil = SeciliYil, ay = SeciliAy });
+    }
+
+    public async Task<IActionResult> OnPostSilAsync(int id, int kayitId, int yil, int ay)
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var kayit = await _db.CalisanPuantajlari
+            .Include(x => x.Calisan)
+            .FirstOrDefaultAsync(x =>
+                x.Id == kayitId &&
+                x.CalisanId == id &&
+                x.FirmaId == firmaId.Value);
+
+        if (kayit != null)
+        {
+            var eskiDeger = IslemGecmisiSnapshots.Puantaj(kayit);
+            _db.CalisanPuantajlari.Remove(kayit);
+            await _db.SaveChangesWithAuditAsync(
+                () => _islemGecmisi.KaydetAsync(
+                    "Puantaj",
+                    "Silme",
+                    $"{kayit.Calisan?.AdSoyad ?? "Çalışan"} için {kayit.Tarih:dd.MM.yyyy} puantaj kaydı silindi.",
+                    eskiDeger: eskiDeger),
+                anaKaydiOnceKaydet: false);
+        }
+
+        return RedirectToPage(new { id, yil, ay });
     }
 
     public async Task<IActionResult> OnPostDisaAktarAsync()
@@ -252,6 +301,7 @@ public class PuantajModel : PageModel
 
             AylikGunler.Add(new PuantajGunViewModel
             {
+                KayitId = kayit?.Id,
                 Tarih = gun,
                 Durum = kayit != null ? kayit.Durum : (gelecekTarihMi ? null : PuantajDurum.Gelmedi),
                 Not = kayit?.Not,
@@ -271,6 +321,7 @@ public class PuantajModel : PageModel
 
     public class PuantajGunViewModel
     {
+        public int? KayitId { get; set; }
         public DateTime Tarih { get; set; }
         public PuantajDurum? Durum { get; set; }
         public string? Not { get; set; }

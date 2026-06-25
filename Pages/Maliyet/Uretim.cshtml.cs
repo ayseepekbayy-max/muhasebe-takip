@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Helpers;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 using System.Text.Json;
 
 namespace MuhasebeTakip2.App.Pages.Maliyet;
@@ -11,10 +12,12 @@ namespace MuhasebeTakip2.App.Pages.Maliyet;
 public class UretimModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IIslemGecmisiService _islemGecmisi;
 
-    public UretimModel(AppDbContext db)
+    public UretimModel(AppDbContext db, IIslemGecmisiService islemGecmisi)
     {
         _db = db;
+        _islemGecmisi = islemGecmisi;
     }
 
     [BindProperty]
@@ -126,7 +129,7 @@ public class UretimModel : PageModel
                 return Page();
             }
 
-            _db.StokHareketleri.Add(new StokHareket
+            var hareket = new StokHareket
             {
                 FirmaId = firmaId.Value,
                 StokUrunId = urun.Id,
@@ -134,7 +137,14 @@ public class UretimModel : PageModel
                 Tip = StokHareketTipi.Cikis,
                 Miktar = satir.ToplamKullanimMiktari,
                 Aciklama = $"Üretim maliyeti kullanımı - {UretimAdi}"
-            });
+            };
+
+            _db.StokHareketleri.Add(hareket);
+            await _islemGecmisi.KaydetAsync(
+                "Stok",
+                "Stok Çıkışı",
+                $"{urun.Ad} ürününden üretim için {hareket.Miktar:N2} {urun.Birim} düşüldü.",
+                yeniDeger: IslemGecmisiSnapshots.StokHareket(hareket));
         }
 
         await MaliyetKaydiOlusturAsync(firmaId.Value);
@@ -197,7 +207,13 @@ public class UretimModel : PageModel
 
         _db.MaliyetKayitlari.Add(kayit);
 
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Maliyet",
+                "Ekleme",
+                $"{kayit.UretimAdi} üretim maliyet kaydı eklendi (ID: {kayit.Id}).",
+                yeniDeger: IslemGecmisiSnapshots.Maliyet(kayit)),
+            anaKaydiOnceKaydet: true);
     }
 
     private MaliyetKaydiDetay MaliyetDetayiOlustur()

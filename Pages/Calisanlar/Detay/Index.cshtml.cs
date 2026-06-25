@@ -4,16 +4,19 @@ using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using MuhasebeTakip2.App.Helpers;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Calisanlar.Detay;
 
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IIslemGecmisiService _islemGecmisi;
 
-    public IndexModel(AppDbContext db)
+    public IndexModel(AppDbContext db, IIslemGecmisiService islemGecmisi)
     {
         _db = db;
+        _islemGecmisi = islemGecmisi;
     }
 
     public Calisan? Calisan { get; set; }
@@ -119,6 +122,13 @@ public class IndexModel : PageModel
         };
 
         _db.CalisanAvanslari.Add(kayit);
+        var modul = tip == CalisanHareketTipi.Avans ? "Avans" : "Maaş";
+        var islemAdi = tip == CalisanHareketTipi.Avans ? "avans" : "maaş hareketi";
+        await _islemGecmisi.KaydetAsync(
+            modul,
+            "Ekleme",
+            $"{Calisan.AdSoyad} çalışanına {Tutar:N2} TL {islemAdi} eklendi.",
+            yeniDeger: IslemGecmisiSnapshots.CalisanHareket(kayit));
         await _db.SaveChangesAsync();
 
         return RedirectToPage(new { id });
@@ -185,6 +195,12 @@ public class IndexModel : PageModel
             kayit.ArsivlendiMi = true;
         }
 
+        await _islemGecmisi.KaydetAsync(
+            "Maaş",
+            "Ödeme",
+            $"{calisan.AdSoyad} çalışanının {kalan:N2} TL kalan maaş ödemesi tamamlandı.",
+            eskiDeger: aktifKayitlar.Select(IslemGecmisiSnapshots.CalisanHareket).ToList(),
+            yeniDeger: IslemGecmisiSnapshots.MaasArsiv(arsiv));
         await _db.SaveChangesAsync();
 
         return RedirectToPage(new { id });
@@ -205,6 +221,13 @@ public class IndexModel : PageModel
 
         if (kayit != null)
         {
+            var modul = kayit.Tip == CalisanHareketTipi.Avans ? "Avans" : "Maaş";
+            var islemAdi = kayit.Tip == CalisanHareketTipi.Avans ? "avans" : "maaş hareketi";
+            await _islemGecmisi.KaydetAsync(
+                modul,
+                "Silme",
+                $"{islemAdi} silindi (ID: {kayit.Id}).",
+                eskiDeger: IslemGecmisiSnapshots.CalisanHareket(kayit));
             _db.CalisanAvanslari.Remove(kayit);
             await _db.SaveChangesAsync();
         }
@@ -241,6 +264,12 @@ public class IndexModel : PageModel
             kayit.ArsivlendiMi = false;
         }
 
+        await _islemGecmisi.KaydetAsync(
+            "Maaş",
+            "Silme",
+            $"Maaş ödeme kaydı geri açılarak silindi (ID: {arsiv.Id}).",
+            eskiDeger: IslemGecmisiSnapshots.MaasArsiv(arsiv),
+            yeniDeger: kayitlar.Select(IslemGecmisiSnapshots.CalisanHareket).ToList());
         _db.CalisanMaasArsivleri.Remove(arsiv);
 
         await _db.SaveChangesAsync();
