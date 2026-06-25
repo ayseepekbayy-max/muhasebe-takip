@@ -68,6 +68,12 @@ public class DetayModel : PageModel
             return RedirectToPage(new { id });
         }
 
+        if (DurumForm.Durum == fatura.Durum)
+        {
+            TempData["Basari"] = "Fatura durumu zaten seçilen değerde.";
+            return RedirectToPage(new { id });
+        }
+
         if (DurumForm.Durum == FaturaDurumu.Bekliyor && fatura.OdenenToplam > 0)
         {
             TempData["Hata"] = "Ödeme bulunan fatura Bekliyor durumuna alınamaz.";

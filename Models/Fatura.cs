@@ -65,6 +65,15 @@ public static class FaturaDurumuExtensions
         _ => "Bekliyor"
     };
 
+    public static string CssSinifi(this FaturaDurumu durum) => durum switch
+    {
+        FaturaDurumu.Bekliyor => "status-pill-pending",
+        FaturaDurumu.Odendi => "status-pill-income",
+        FaturaDurumu.KismenOdendi => "status-pill-partial",
+        FaturaDurumu.Iptal => "status-pill-expense",
+        _ => "status-pill-pending"
+    };
+
     public static FaturaDurumu OdemeDurumu(decimal genelToplam, decimal odenenToplam)
     {
         if (odenenToplam <= 0)

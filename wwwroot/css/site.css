@@ -1418,6 +1418,16 @@ a.app-top-btn {
     color: #991b1b;
 }
 
+.status-pill-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-pill-partial {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
 .amount-cell {
     font-weight: 900;
 }

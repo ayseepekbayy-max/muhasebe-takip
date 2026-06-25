@@ -28,7 +28,10 @@ public class IndexModel : PageModel
     public decimal BekleyenOdeme { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public DateTime? FiltreTarih { get; set; }
+    public DateTime? FiltreBaslangicTarihi { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public DateTime? FiltreBitisTarihi { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public int? FiltreCariId { get; set; }
@@ -134,6 +137,7 @@ public class IndexModel : PageModel
 
         var fatura = await _db.Faturalar
             .Include(x => x.CariKart)
+            .Include(x => x.Kalemler)
             .FirstOrDefaultAsync(x => x.Id == Odeme.FaturaId && x.FirmaId == firmaId.Value);
 
         if (fatura == null)
@@ -226,13 +230,28 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
+        var kasaHareketleri = await _db.KasaHareketleri
+            .Where(x => x.FirmaId == firmaId.Value && x.FaturaId == fatura.Id)
+            .ToListAsync();
+
+        foreach (var hareket in kasaHareketleri)
+            hareket.FaturaId = null;
+
+        var dosyalar = await _db.EkDosyalar
+            .Where(x => x.FirmaId == firmaId.Value && x.FaturaId == fatura.Id)
+            .ToListAsync();
+
+        foreach (var dosya in dosyalar)
+            dosya.FaturaId = null;
+
         var eskiDeger = IslemGecmisiSnapshots.Fatura(fatura);
         _db.Faturalar.Remove(fatura);
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
                 "Faturalar",
                 "Silme",
-                $"Fatura silindi: {fatura.FaturaNo} (ID: {fatura.Id}).",
+                $"Fatura silindi: {fatura.FaturaNo} (ID: {fatura.Id}). " +
+                $"{kasaHareketleri.Count} kasa hareketi ve {dosyalar.Count} dosya korunarak fatura bağlantıları kaldırıldı.",
                 eskiDeger: eskiDeger),
             anaKaydiOnceKaydet: false);
 
@@ -358,11 +377,16 @@ public class IndexModel : PageModel
             .AsNoTracking()
             .Where(x => x.FirmaId == firmaId);
 
-        if (FiltreTarih.HasValue)
+        if (FiltreBaslangicTarihi.HasValue)
         {
-            var baslangic = ToUtcDate(FiltreTarih.Value);
-            var bitis = baslangic.AddDays(1);
-            sorgu = sorgu.Where(x => x.Tarih >= baslangic && x.Tarih < bitis);
+            var baslangic = ToUtcDate(FiltreBaslangicTarihi.Value);
+            sorgu = sorgu.Where(x => x.Tarih >= baslangic);
+        }
+
+        if (FiltreBitisTarihi.HasValue)
+        {
+            var bitis = ToUtcDate(FiltreBitisTarihi.Value).AddDays(1);
+            sorgu = sorgu.Where(x => x.Tarih < bitis);
         }
 
         if (FiltreCariId.HasValue && FiltreCariId.Value > 0)

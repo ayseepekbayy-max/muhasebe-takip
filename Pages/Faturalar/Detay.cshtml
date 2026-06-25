@@ -96,7 +96,7 @@
         <div class="invoice-info-grid">
             <article><span>Cari</span><strong>@(fatura.CariKart?.Unvan ?? "-")</strong></article>
             <article><span>Vade</span><strong>@(fatura.VadeTarihi?.ToString("dd.MM.yyyy") ?? "-")</strong></article>
-            <article><span>Durum</span><strong>@fatura.Durum.Metin()</strong></article>
+            <article><span>Durum</span><strong class="status-pill @fatura.Durum.CssSinifi()">@fatura.Durum.Metin()</strong></article>
             <article><span>Kalan</span><strong>@Math.Max(0, fatura.KalanTutar).ToString("N2")</strong></article>
         </div>
 

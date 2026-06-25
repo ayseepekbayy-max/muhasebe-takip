@@ -15,7 +15,8 @@
         <div class="app-page-actions">
             <a class="btn btn-outline-success"
                asp-page-handler="DisaAktar"
-               asp-route-FiltreTarih="@Model.FiltreTarih?.ToString("yyyy-MM-dd")"
+               asp-route-FiltreBaslangicTarihi="@Model.FiltreBaslangicTarihi?.ToString("yyyy-MM-dd")"
+               asp-route-FiltreBitisTarihi="@Model.FiltreBitisTarihi?.ToString("yyyy-MM-dd")"
                asp-route-FiltreCariId="@Model.FiltreCariId"
                asp-route-FiltreDurum="@Model.FiltreDurum"
                asp-route-FiltreFaturaNo="@Model.FiltreFaturaNo">Excel İndir</a>
@@ -112,8 +113,12 @@
     <section class="app-filter-bar">
         <form method="get" class="app-form-grid">
             <div class="form-field">
-                <label asp-for="FiltreTarih">Tarih</label>
-                <input asp-for="FiltreTarih" type="date" />
+                <label asp-for="FiltreBaslangicTarihi">Başlangıç Tarihi</label>
+                <input asp-for="FiltreBaslangicTarihi" type="date" />
+            </div>
+            <div class="form-field">
+                <label asp-for="FiltreBitisTarihi">Bitiş Tarihi</label>
+                <input asp-for="FiltreBitisTarihi" type="date" />
             </div>
             <div class="form-field">
                 <label asp-for="FiltreCariId">Cari / Müşteri</label>
@@ -162,11 +167,6 @@
                         {
                             var satisMi = fatura.Tip == FaturaTipi.Satis;
                             var tamamlandiMi = fatura.Durum is FaturaDurumu.Odendi or FaturaDurumu.Iptal;
-                            var durumClass = fatura.Durum == FaturaDurumu.Odendi
-                                ? "status-pill-income"
-                                : fatura.Durum == FaturaDurumu.Iptal
-                                    ? "status-pill-expense"
-                                    : "";
                             <tr class="invoice-row">
                                 <td>@fatura.Tarih.ToString("dd.MM.yyyy")</td>
                                 <td><strong>@fatura.FaturaNo</strong></td>
@@ -176,7 +176,7 @@
                                 <td class="amount-cell">@fatura.GenelToplam.ToString("N2")</td>
                                 <td>@fatura.OdenenToplam.ToString("N2")</td>
                                 <td class="amount-cell @(fatura.Durum == FaturaDurumu.Odendi ? "amount-income" : "amount-expense")">@Math.Max(0, fatura.KalanTutar).ToString("N2")</td>
-                                <td><span class="status-pill @durumClass">@fatura.Durum.Metin()</span></td>
+                                <td><span class="status-pill @fatura.Durum.CssSinifi()">@fatura.Durum.Metin()</span></td>
                                 <td>
                                     @if (tamamlandiMi)
                                     {
