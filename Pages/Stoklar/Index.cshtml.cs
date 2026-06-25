@@ -1,11 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using ClosedXML.Excel;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
-using ClosedXML.Excel;
-using System.IO;
 using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Stoklar;
@@ -21,19 +20,29 @@ public class IndexModel : PageModel
         _islemGecmisi = islemGecmisi;
     }
 
-    public List<StokUrun> Liste { get; set; } = new();
-    public Dictionary<int, decimal> Stoklar { get; set; } = new();
-    public Dictionary<int, decimal> SonBirimFiyatlar { get; set; } = new();
-    public Dictionary<int, decimal> SonKdvOranlari { get; set; } = new();
-    public Dictionary<int, decimal> SonKdvDahilBirimFiyatlar { get; set; } = new();
-    public Dictionary<int, decimal> StokDegerleri { get; set; } = new();
+    public List<StokOzet> Liste { get; set; } = new();
+    public List<string> BirimSecenekleri { get; set; } = new();
+    public int ToplamUrunSayisi { get; set; }
+    public int KritikStokSayisi { get; set; }
+    public decimal ToplamStokDegeri { get; set; }
+    public decimal BugunkuGirisMiktari { get; set; }
+    public decimal BugunkuCikisMiktari { get; set; }
+    public bool YeniUrunModalAcik { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? UrunAra { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public bool KritikFiltre { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? BirimFiltre { get; set; }
 
     [BindProperty]
     [ValidateNever]
     public StokUrun Yeni { get; set; } = new() { Birim = "Adet" };
 
     public string Hata { get; set; } = "";
-    public string Mesaj { get; set; } = "";
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -58,12 +67,21 @@ public class IndexModel : PageModel
         if (string.IsNullOrWhiteSpace(Yeni.Ad))
         {
             Hata = "Ürün adı boş olamaz.";
+            YeniUrunModalAcik = true;
             await ListeyiYukleAsync(firmaId.Value);
             return Page();
         }
 
         if (string.IsNullOrWhiteSpace(Yeni.Birim))
             Yeni.Birim = "Adet";
+
+        if (Yeni.MinStokSeviyesi < 0)
+        {
+            Hata = "Minimum stok seviyesi 0'dan küçük olamaz.";
+            YeniUrunModalAcik = true;
+            await ListeyiYukleAsync(firmaId.Value);
+            return Page();
+        }
 
         Yeni.FirmaId = firmaId.Value;
 
@@ -78,7 +96,7 @@ public class IndexModel : PageModel
 
         TempData["Basari"] = "Ürün kartı eklendi. Stok girişi için Detay sayfasını kullanabilirsiniz.";
         return RedirectToPage();
-            }
+    }
 
     public async Task<IActionResult> OnPostSilAsync(int id)
     {
@@ -87,9 +105,7 @@ public class IndexModel : PageModel
             return RedirectToPage("/Login");
 
         var urun = await _db.StokUrunler
-            .FirstOrDefaultAsync(x =>
-                x.Id == id &&
-                x.FirmaId == firmaId.Value);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
 
         if (urun == null)
         {
@@ -98,21 +114,20 @@ public class IndexModel : PageModel
         }
 
         var hareketler = await _db.StokHareketleri
-            .Where(x =>
-                x.StokUrunId == id &&
-                x.FirmaId == firmaId.Value)
+            .Where(x => x.StokUrunId == id && x.FirmaId == firmaId.Value)
             .ToListAsync();
 
-        if (hareketler.Any())
+        if (hareketler.Count > 0)
             _db.StokHareketleri.RemoveRange(hareketler);
 
         var eskiDeger = IslemGecmisiSnapshots.StokUrun(urun);
         _db.StokUrunler.Remove(urun);
+
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
                 "Stok",
                 "Silme",
-                $"{urun.Ad} stok ürünü silindi (ID: {urun.Id}).",
+                $"{urun.Ad} stok ürünü ve {hareketler.Count} stok hareketi silindi (ID: {urun.Id}).",
                 eskiDeger: eskiDeger),
             anaKaydiOnceKaydet: false);
 
@@ -120,7 +135,7 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostDisaAktarAsync()
+    public async Task<IActionResult> OnGetDisaAktarAsync()
     {
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
         if (firmaId == null)
@@ -130,108 +145,158 @@ public class IndexModel : PageModel
 
         using var workbook = new XLWorkbook();
         var ws = workbook.Worksheets.Add("Stoklar");
+        var basliklar = new[]
+        {
+            "Ürün Adı", "Kod", "Birim", "Minimum Stok", "Mevcut Stok",
+            "Kritik Durum", "Son Birim Fiyat", "Son KDV Oranı",
+            "KDV Dahil Birim Fiyat", "Stok Değeri"
+        };
 
-        ws.Cell(1, 1).Value = "Ürün Adı";
-        ws.Cell(1, 2).Value = "Kod";
-        ws.Cell(1, 3).Value = "Birim";
-        ws.Cell(1, 4).Value = "Mevcut Stok";
-        ws.Cell(1, 5).Value = "Son Birim Fiyat";
-        ws.Cell(1, 6).Value = "Son KDV Oranı";
-        ws.Cell(1, 7).Value = "KDV Dahil Birim Fiyat";
-        ws.Cell(1, 8).Value = "Stok Değeri";
+        for (var i = 0; i < basliklar.Length; i++)
+            ws.Cell(1, i + 1).Value = basliklar[i];
 
-        var header = ws.Range(1, 1, 1, 8);
+        var header = ws.Range(1, 1, 1, basliklar.Length);
         header.Style.Font.Bold = true;
         header.Style.Fill.BackgroundColor = XLColor.LightGray;
         header.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
         header.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
         header.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 
-        int row = 2;
-
-        foreach (var s in Liste)
+        var row = 2;
+        foreach (var stok in Liste)
         {
-            ws.Cell(row, 1).Value = s.Ad ?? "";
-            ws.Cell(row, 2).Value = s.Kod ?? "";
-            ws.Cell(row, 3).Value = s.Birim ?? "";
-            ws.Cell(row, 4).Value = Stoklar.ContainsKey(s.Id) ? Stoklar[s.Id] : 0;
-            ws.Cell(row, 5).Value = SonBirimFiyatlar.ContainsKey(s.Id) ? SonBirimFiyatlar[s.Id] : 0;
-            ws.Cell(row, 6).Value = SonKdvOranlari.ContainsKey(s.Id) ? SonKdvOranlari[s.Id] : 0;
-            ws.Cell(row, 7).Value = SonKdvDahilBirimFiyatlar.ContainsKey(s.Id) ? SonKdvDahilBirimFiyatlar[s.Id] : 0;
-            ws.Cell(row, 8).Value = StokDegerleri.ContainsKey(s.Id) ? StokDegerleri[s.Id] : 0;
-            ws.Range(row, 4, row, 8).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(row, 1).Value = stok.Ad;
+            ws.Cell(row, 2).Value = stok.Kod;
+            ws.Cell(row, 3).Value = stok.Birim;
+            ws.Cell(row, 4).Value = stok.MinStokSeviyesi;
+            ws.Cell(row, 5).Value = stok.MevcutStok;
+            ws.Cell(row, 6).Value = stok.KritikMi ? "Kritik" : "Normal";
+            ws.Cell(row, 7).Value = stok.SonBirimFiyat;
+            ws.Cell(row, 8).Value = stok.SonKdvOrani;
+            ws.Cell(row, 9).Value = stok.SonKdvDahilBirimFiyat;
+            ws.Cell(row, 10).Value = stok.StokDegeri;
             row++;
         }
 
+        ws.Columns(4, 10).Style.NumberFormat.Format = "#,##0.00";
+        ws.SheetView.FreezeRows(1);
         ws.Columns().AdjustToContents();
 
         if (row > 2)
         {
-            var range = ws.Range(1, 1, row - 1, 8);
+            var range = ws.Range(1, 1, row - 1, basliklar.Length);
             range.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             range.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
         }
 
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);
-        stream.Position = 0;
-
-        var dosyaAdi = $"stoklar_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
 
         return File(
             stream.ToArray(),
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            dosyaAdi
-        );
+            $"stoklar_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
     }
 
     private async Task ListeyiYukleAsync(int firmaId)
     {
-        Liste = await _db.StokUrunler
+        var urunler = await _db.StokUrunler
+            .AsNoTracking()
             .Where(x => x.FirmaId == firmaId)
             .OrderBy(x => x.Ad)
             .ToListAsync();
 
-        var urunIdleri = Liste.Select(x => x.Id).ToList();
+        BirimSecenekleri = urunler
+            .Select(x => x.Birim)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(x => x)
+            .ToList();
 
-        var hareketler = await _db.StokHareketleri
-            .Where(x =>
-                x.FirmaId == firmaId &&
-                urunIdleri.Contains(x.StokUrunId))
-            .GroupBy(x => x.StokUrunId)
-            .Select(g => new
-            {
-                UrunId = g.Key,
-                Giris = g.Where(x => x.Tip == StokHareketTipi.Giris).Sum(x => (decimal?)x.Miktar) ?? 0,
-                Cikis = g.Where(x => x.Tip == StokHareketTipi.Cikis).Sum(x => (decimal?)x.Miktar) ?? 0
-            })
-            .ToListAsync();
+        var urunIdleri = urunler.Select(x => x.Id).ToList();
+        var hareketler = urunIdleri.Count == 0
+            ? new List<StokHareket>()
+            : await _db.StokHareketleri
+                .AsNoTracking()
+                .Where(x => x.FirmaId == firmaId && urunIdleri.Contains(x.StokUrunId))
+                .OrderByDescending(x => x.Tarih)
+                .ThenByDescending(x => x.Id)
+                .ToListAsync();
 
-        Stoklar = Liste.ToDictionary(x => x.Id, _ => 0m);
-        SonBirimFiyatlar = Liste.ToDictionary(x => x.Id, _ => 0m);
-        SonKdvOranlari = Liste.ToDictionary(x => x.Id, _ => 0m);
-        SonKdvDahilBirimFiyatlar = Liste.ToDictionary(x => x.Id, _ => 0m);
-        StokDegerleri = Liste.ToDictionary(x => x.Id, _ => 0m);
-
-        foreach (var h in hareketler)
-            Stoklar[h.UrunId] = h.Giris - h.Cikis;
-
-        var sonGirisler = await _db.StokHareketleri
-            .Where(x =>
-                x.FirmaId == firmaId &&
-                urunIdleri.Contains(x.StokUrunId) &&
-                x.Tip == StokHareketTipi.Giris)
-            .OrderByDescending(x => x.Tarih)
-            .ThenByDescending(x => x.Id)
-            .ToListAsync();
-
-        foreach (var grup in sonGirisler.GroupBy(x => x.StokUrunId))
+        var ozetler = urunler.Select(urun =>
         {
-            var son = grup.First();
-            SonBirimFiyatlar[son.StokUrunId] = son.BirimFiyat;
-            SonKdvOranlari[son.StokUrunId] = son.KdvOrani;
-            SonKdvDahilBirimFiyatlar[son.StokUrunId] = son.KdvDahilBirimFiyat;
-            StokDegerleri[son.StokUrunId] = Stoklar[son.StokUrunId] * son.KdvDahilBirimFiyat;
+            var urunHareketleri = hareketler.Where(x => x.StokUrunId == urun.Id).ToList();
+            var toplamGiris = urunHareketleri
+                .Where(x => x.Tip == StokHareketTipi.Giris)
+                .Sum(x => x.Miktar);
+            var toplamCikis = urunHareketleri
+                .Where(x => x.Tip == StokHareketTipi.Cikis)
+                .Sum(x => x.Miktar);
+            var mevcutStok = toplamGiris - toplamCikis;
+            var sonGiris = urunHareketleri.FirstOrDefault(x => x.Tip == StokHareketTipi.Giris);
+            var kdvDahilFiyat = sonGiris?.KdvDahilBirimFiyat ?? 0;
+
+            return new StokOzet
+            {
+                Id = urun.Id,
+                Ad = urun.Ad,
+                Kod = urun.Kod,
+                Birim = urun.Birim,
+                MinStokSeviyesi = urun.MinStokSeviyesi,
+                MevcutStok = mevcutStok,
+                SonBirimFiyat = sonGiris?.BirimFiyat ?? 0,
+                SonKdvOrani = sonGiris?.KdvOrani ?? 0,
+                SonKdvDahilBirimFiyat = kdvDahilFiyat,
+                StokDegeri = mevcutStok * kdvDahilFiyat,
+                KritikMi = mevcutStok < urun.MinStokSeviyesi
+            };
+        }).ToList();
+
+        ToplamUrunSayisi = ozetler.Count;
+        KritikStokSayisi = ozetler.Count(x => x.KritikMi);
+        ToplamStokDegeri = ozetler.Sum(x => x.StokDegeri);
+
+        var bugun = DateTime.UtcNow.Date;
+        var yarin = bugun.AddDays(1);
+        BugunkuGirisMiktari = hareketler
+            .Where(x => x.Tarih >= bugun && x.Tarih < yarin && x.Tip == StokHareketTipi.Giris)
+            .Sum(x => x.Miktar);
+        BugunkuCikisMiktari = hareketler
+            .Where(x => x.Tarih >= bugun && x.Tarih < yarin && x.Tip == StokHareketTipi.Cikis)
+            .Sum(x => x.Miktar);
+
+        IEnumerable<StokOzet> filtreli = ozetler;
+
+        if (!string.IsNullOrWhiteSpace(UrunAra))
+        {
+            var arama = UrunAra.Trim();
+            filtreli = filtreli.Where(x =>
+                x.Ad.Contains(arama, StringComparison.CurrentCultureIgnoreCase) ||
+                x.Kod.Contains(arama, StringComparison.CurrentCultureIgnoreCase));
         }
+
+        if (KritikFiltre)
+            filtreli = filtreli.Where(x => x.KritikMi);
+
+        if (!string.IsNullOrWhiteSpace(BirimFiltre))
+            filtreli = filtreli.Where(x =>
+                string.Equals(x.Birim, BirimFiltre.Trim(), StringComparison.CurrentCultureIgnoreCase));
+
+        Liste = filtreli.OrderBy(x => x.Ad).ToList();
+    }
+
+    public class StokOzet
+    {
+        public int Id { get; set; }
+        public string Ad { get; set; } = "";
+        public string Kod { get; set; } = "";
+        public string Birim { get; set; } = "";
+        public decimal MinStokSeviyesi { get; set; }
+        public decimal MevcutStok { get; set; }
+        public decimal SonBirimFiyat { get; set; }
+        public decimal SonKdvOrani { get; set; }
+        public decimal SonKdvDahilBirimFiyat { get; set; }
+        public decimal StokDegeri { get; set; }
+        public bool KritikMi { get; set; }
     }
 }

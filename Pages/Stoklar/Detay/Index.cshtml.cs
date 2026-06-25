@@ -25,6 +25,7 @@ public class IndexModel : PageModel
     public decimal ToplamCikis { get; set; }
     public decimal Stok => ToplamGiris - ToplamCikis;
     public decimal StokDegeri { get; set; }
+    public decimal SonGirisFiyati { get; set; }
 
     public string Hata { get; set; } = "";
 
@@ -49,6 +50,9 @@ public class IndexModel : PageModel
     [BindProperty]
     public string? Aciklama { get; set; }
 
+    [BindProperty]
+    public decimal MinStokSeviyesi { get; set; }
+
     public async Task<IActionResult> OnGetAsync(int id)
     {
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
@@ -66,8 +70,44 @@ public class IndexModel : PageModel
         KoliAdedi = 0;
         KoliFiyat = 0;
         Aciklama = "";
+        MinStokSeviyesi = Urun.MinStokSeviyesi;
 
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostMinStokGuncelleAsync(int id)
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        if (MinStokSeviyesi < 0)
+        {
+            ModelState.AddModelError("", "Minimum stok seviyesi 0'dan küçük olamaz.");
+            await YukleAsync(id, firmaId.Value);
+            return Page();
+        }
+
+        var urun = await _db.StokUrunler
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+
+        if (urun == null)
+            return NotFound();
+
+        var eskiDeger = IslemGecmisiSnapshots.StokUrun(urun);
+        urun.MinStokSeviyesi = MinStokSeviyesi;
+
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Stok",
+                "Düzenleme",
+                $"{urun.Ad} ürününün minimum stok seviyesi {MinStokSeviyesi:N2} olarak güncellendi.",
+                eskiDeger,
+                IslemGecmisiSnapshots.StokUrun(urun)),
+            anaKaydiOnceKaydet: false);
+
+        TempData["Basari"] = "Minimum stok seviyesi güncellendi.";
+        return RedirectToPage(new { id });
     }
 
     public async Task<IActionResult> OnPostGirisAsync(int id)
@@ -111,12 +151,14 @@ public class IndexModel : PageModel
             };
 
             _db.StokHareketleri.Add(hareket);
-            await _islemGecmisi.KaydetAsync(
-                "Stok",
-                "Stok Girişi",
-                $"{Urun.Ad} ürünü için {Miktar:N2} {Urun.Birim} stok girişi yapıldı.",
-                yeniDeger: IslemGecmisiSnapshots.StokHareket(hareket));
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesWithAuditAsync(
+                () => _islemGecmisi.KaydetAsync(
+                    "Stok",
+                    "Stok Girişi",
+                    $"{Urun.Ad} ürünü için {Miktar:N2} {Urun.Birim} stok girişi yapıldı (ID: {hareket.Id}).",
+                    yeniDeger: IslemGecmisiSnapshots.StokHareket(hareket)),
+                anaKaydiOnceKaydet: true);
+
             return RedirectToPage(new { id });
         }
         catch (Exception ex)
@@ -169,12 +211,14 @@ public class IndexModel : PageModel
             };
 
             _db.StokHareketleri.Add(hareket);
-            await _islemGecmisi.KaydetAsync(
-                "Stok",
-                "Stok Çıkışı",
-                $"{Urun.Ad} ürünü için {Miktar:N2} {Urun.Birim} stok çıkışı yapıldı.",
-                yeniDeger: IslemGecmisiSnapshots.StokHareket(hareket));
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesWithAuditAsync(
+                () => _islemGecmisi.KaydetAsync(
+                    "Stok",
+                    "Stok Çıkışı",
+                    $"{Urun.Ad} ürünü için {Miktar:N2} {Urun.Birim} stok çıkışı yapıldı (ID: {hareket.Id}).",
+                    yeniDeger: IslemGecmisiSnapshots.StokHareket(hareket)),
+                anaKaydiOnceKaydet: true);
+
             return RedirectToPage(new { id });
         }
         catch (Exception ex)
@@ -203,13 +247,15 @@ public class IndexModel : PageModel
 
             if (h != null)
             {
-                await _islemGecmisi.KaydetAsync(
-                    "Stok",
-                    "Silme",
-                    $"{Urun.Ad} ürününe ait stok hareketi silindi (ID: {h.Id}).",
-                    eskiDeger: IslemGecmisiSnapshots.StokHareket(h));
+                var eskiDeger = IslemGecmisiSnapshots.StokHareket(h);
                 _db.StokHareketleri.Remove(h);
-                await _db.SaveChangesAsync();
+                await _db.SaveChangesWithAuditAsync(
+                    () => _islemGecmisi.KaydetAsync(
+                        "Stok",
+                        "Silme",
+                        $"{Urun.Ad} ürününe ait stok hareketi silindi (ID: {h.Id}).",
+                        eskiDeger: eskiDeger),
+                    anaKaydiOnceKaydet: false);
             }
 
             return RedirectToPage(new { id });
@@ -226,12 +272,14 @@ public class IndexModel : PageModel
     private async Task YukleAsync(int id, int firmaId)
     {
         Urun = await _db.StokUrunler
+            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
 
         if (Urun == null)
             return;
 
         Hareketler = await _db.StokHareketleri
+            .AsNoTracking()
             .Where(x => x.StokUrunId == id && x.FirmaId == firmaId)
             .OrderByDescending(x => x.Tarih)
             .ThenByDescending(x => x.Id)
@@ -239,10 +287,12 @@ public class IndexModel : PageModel
             .ToListAsync();
 
         ToplamGiris = await _db.StokHareketleri
+            .AsNoTracking()
             .Where(x => x.StokUrunId == id && x.FirmaId == firmaId && x.Tip == StokHareketTipi.Giris)
             .SumAsync(x => (decimal?)x.Miktar) ?? 0;
 
         ToplamCikis = await _db.StokHareketleri
+            .AsNoTracking()
             .Where(x => x.StokUrunId == id && x.FirmaId == firmaId && x.Tip == StokHareketTipi.Cikis)
             .SumAsync(x => (decimal?)x.Miktar) ?? 0;
 
@@ -252,6 +302,7 @@ public class IndexModel : PageModel
             .ThenByDescending(x => x.Id)
             .FirstOrDefault();
 
-        StokDegeri = sonGiris == null ? 0 : Stok * sonGiris.KdvDahilBirimFiyat;
+        SonGirisFiyati = sonGiris?.KdvDahilBirimFiyat ?? 0;
+        StokDegeri = Stok * SonGirisFiyati;
     }
 }

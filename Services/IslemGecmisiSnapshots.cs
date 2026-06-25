@@ -22,7 +22,8 @@ public static class IslemGecmisiSnapshots
         x.FirmaId,
         x.Ad,
         x.Kod,
-        x.Birim
+        x.Birim,
+        x.MinStokSeviyesi
     };
 
     public static object StokHareket(StokHareket x) => new

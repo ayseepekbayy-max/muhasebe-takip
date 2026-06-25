@@ -18,4 +18,7 @@ public class StokUrun
 
     [MaxLength(30)]
     public string Birim { get; set; } = "Adet"; // Adet, m2, mt vb.
+
+    [Range(0, 999999999)]
+    public decimal MinStokSeviyesi { get; set; }
 }

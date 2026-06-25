@@ -1,176 +1,211 @@
-﻿@page "{id:int}"
+@page "{id:int}"
 @using MuhasebeTakip2.App.Models
 @model MuhasebeTakip2.App.Pages.Stoklar.Detay.IndexModel
-
-@if (Model.Urun == null)
-{
-  <h2>Ürün bulunamadı</h2>
-  return;
+@{
+    ViewData["Title"] = "Stok Detay";
+    var kritikMi = Model.Urun != null && Model.Stok < Model.Urun.MinStokSeviyesi;
 }
 
-<h1>Stok Detay</h1>
-
-<p>
-  <a class="btn btn-outline-dark btn-sm" href="/Stoklar">← Stok</a>
-</p>
-
-<div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:1100px;">
-  <h3 style="margin-bottom:6px;">@Model.Urun.Ad</h3>
-  <div><b>Kod:</b> @(string.IsNullOrWhiteSpace(Model.Urun.Kod) ? "-" : Model.Urun.Kod)</div>
-  <div><b>Birim:</b> @Model.Urun.Birim</div>
-
-  <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:12px;">
-    <div style="padding:10px; border:1px solid #444; border-radius:8px; min-width:200px;">
-      <b>Toplam Giriş</b><div style="font-size:18px;">@Model.ToplamGiris.ToString("N2")</div>
-    </div>
-    <div style="padding:10px; border:1px solid #444; border-radius:8px; min-width:200px;">
-      <b>Toplam Çıkış</b><div style="font-size:18px;">@Model.ToplamCikis.ToString("N2")</div>
-    </div>
-    <div style="padding:10px; border:1px solid #444; border-radius:8px; min-width:200px;">
-      <b>Kalan Stok</b><div style="font-size:18px;">@Model.Stok.ToString("N2")</div>
-    </div>
-    <div style="padding:10px; border:1px solid #444; border-radius:8px; min-width:200px;">
-      <b>Stok Değeri</b><div style="font-size:18px;">@Model.StokDegeri.ToString("N2")</div>
-    </div>
-  </div>
-</div>
-
-@if (!string.IsNullOrWhiteSpace(Model.Hata))
-{
-  <div style="color:red; margin:10px 0;">
-    @Model.Hata
-  </div>
-}
-
-@if (!ViewData.ModelState.IsValid)
-{
-  <div style="color:red; margin:10px 0;">
-    @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-    { <div>@err.ErrorMessage</div> }
-  </div>
-}
-
-<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:14px; max-width:1100px;">
-  <div style="border:1px solid #444; border-radius:10px; padding:12px;">
-    <h3>Stok Girişi</h3>
-
-    <form method="post" asp-page-handler="Giris">
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px;">
+<div class="app-page">
+    <section class="app-page-header">
         <div>
-          <label><b>Tarih</b></label><br />
-          <input asp-for="Tarih" type="date" style="padding:8px; width:100%;" />
+            <span class="app-page-eyebrow">Stok Detayı</span>
+            <h1>@Model.Urun?.Ad</h1>
+            <p>
+                Kod: @(string.IsNullOrWhiteSpace(Model.Urun?.Kod) ? "-" : Model.Urun.Kod)
+                · Birim: @Model.Urun?.Birim
+            </p>
         </div>
-
-        <div>
-          <label><b>Miktar</b></label><br />
-          <input asp-for="Miktar" type="number" step="0.01" style="padding:8px; width:100%;" />
+        <div class="app-page-actions">
+            @if (kritikMi)
+            {
+                <span class="status-pill status-pill-expense">Kritik Stok</span>
+            }
+            <a class="btn btn-outline-dark" asp-page="/Stoklar/Index">Stok Listesi</a>
         </div>
+    </section>
 
-        <div>
-          <label><b>Birim Fiyat</b></label><br />
-          <input asp-for="BirimFiyat" type="number" step="0.01" style="padding:8px; width:100%;" />
-        </div>
-
-        <div>
-          <label><b>KDV Oranı (%)</b></label><br />
-          <input asp-for="KdvOrani" type="number" step="0.01" style="padding:8px; width:100%;" />
-        </div>
-
-        <div>
-          <label><b>Koli Adedi</b></label><br />
-          <input asp-for="KoliAdedi" type="number" step="0.01" style="padding:8px; width:100%;" />
-        </div>
-
-        <div>
-          <label><b>Koli Fiyatı</b></label><br />
-          <input asp-for="KoliFiyat" type="number" step="0.01" style="padding:8px; width:100%;" />
-        </div>
-      </div>
-
-      <div style="margin-top:10px;">
-        <label><b>Açıklama</b></label><br />
-        <input asp-for="Aciklama" style="padding:8px; width:100%;" />
-      </div>
-
-      <div style="margin-top:10px;">
-        <button type="submit" class="btn btn-outline-dark btn-sm">Stok Girişi Kaydet</button>
-      </div>
-    </form>
-  </div>
-
-  <div style="border:1px solid #444; border-radius:10px; padding:12px;">
-    <h3>Stok Çıkışı</h3>
-
-    <form method="post" asp-page-handler="Cikis">
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px;">
-        <div>
-          <label><b>Tarih</b></label><br />
-          <input asp-for="Tarih" type="date" style="padding:8px; width:100%;" />
-        </div>
-
-        <div>
-          <label><b>Miktar</b></label><br />
-          <input asp-for="Miktar" type="number" step="0.01" style="padding:8px; width:100%;" />
-        </div>
-      </div>
-
-      <div style="margin-top:10px;">
-        <label><b>Açıklama</b></label><br />
-        <input asp-for="Aciklama" style="padding:8px; width:100%;" />
-      </div>
-
-      <div style="margin-top:10px;">
-        <button type="submit" class="btn btn-dark btn-sm">Stok Çıkışı Kaydet</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<h3 style="margin-top:18px;">Hareketler</h3>
-
-<table style="width:100%; border-collapse:collapse;">
-  <thead>
-    <tr>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Tarih</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Tip</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Miktar</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Birim Fiyat</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">KDV</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">KDV Tutarı</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Toplam</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Koli</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Açıklama</th>
-      <th style="border-bottom:1px solid #555; padding:8px; width:120px;">İşlem</th>
-    </tr>
-  </thead>
-  <tbody>
-    @if (Model.Hareketler.Count == 0)
+    @if (TempData["Basari"] != null)
     {
-      <tr><td colspan="10" style="padding:8px;">Henüz hareket yok.</td></tr>
+        <div class="app-alert app-alert-success">@TempData["Basari"]</div>
     }
-    else
+    @if (!string.IsNullOrWhiteSpace(Model.Hata))
     {
-      @foreach (var h in Model.Hareketler)
-      {
-        <tr>
-          <td style="border-bottom:1px solid #333; padding:8px;">@h.Tarih.ToShortDateString()</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@(h.Tip == StokHareketTipi.Giris ? "Giriş" : "Çıkış")</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@h.Miktar.ToString("N2")</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@h.BirimFiyat.ToString("N2")</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">%@h.KdvOrani.ToString("N2")</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@h.KdvTutari.ToString("N2")</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@h.ToplamTutar.ToString("N2")</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@h.KoliAdedi.ToString("N2") / @h.KoliFiyat.ToString("N2")</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@h.Aciklama</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">
-            <form method="post" asp-page-handler="Sil" style="display:inline;"
-                  onsubmit="return confirm('Hareket silinsin mi?');">
-              <input type="hidden" name="id2" value="@h.Id" />
-              <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
+        <div class="app-alert app-alert-danger">@Model.Hata</div>
+    }
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="app-alert app-alert-danger">
+            @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@err.ErrorMessage</div>
+            }
+        </div>
+    }
+
+    <section class="stok-detail-metrics">
+        <article class="metric-card @(kritikMi ? "metric-card-negative" : "metric-card-positive")">
+            <span>Mevcut Stok</span>
+            <strong>@Model.Stok.ToString("N2") @Model.Urun?.Birim</strong>
+        </article>
+        <article class="metric-card metric-card-positive">
+            <span>Toplam Giriş</span>
+            <strong>@Model.ToplamGiris.ToString("N2")</strong>
+        </article>
+        <article class="metric-card metric-card-warning">
+            <span>Toplam Çıkış</span>
+            <strong>@Model.ToplamCikis.ToString("N2")</strong>
+        </article>
+        <article class="metric-card">
+            <span>Son Giriş Fiyatı</span>
+            <strong>@Model.SonGirisFiyati.ToString("N2") ₺</strong>
+        </article>
+        <article class="metric-card">
+            <span>Stok Değeri</span>
+            <strong>@Model.StokDegeri.ToString("N2") ₺</strong>
+        </article>
+    </section>
+
+    <section class="dashboard-panel">
+        <div class="panel-title-row">
+            <div>
+                <h2>Kritik Stok Ayarı</h2>
+                <p>Mevcut stok bu seviyenin altına düştüğünde ürün kritik görünür.</p>
+            </div>
+        </div>
+        <form method="post" asp-page-handler="MinStokGuncelle" class="stok-threshold-form">
+            <div class="form-field">
+                <label asp-for="MinStokSeviyesi">Minimum Stok Seviyesi</label>
+                <input asp-for="MinStokSeviyesi" type="number" min="0" step="0.01" />
+            </div>
+            <button type="submit" class="btn btn-outline-primary">Eşiği Güncelle</button>
+        </form>
+    </section>
+
+    <section class="two-column-grid">
+        <div class="app-form-panel">
+            <div class="panel-title-row">
+                <div><h2>Stok Girişi</h2><p>Alış fiyatı ve KDV bilgisiyle giriş kaydedin.</p></div>
+            </div>
+            <form method="post" asp-page-handler="Giris" class="stok-movement-form">
+                <div class="app-form-grid">
+                    <div class="form-field">
+                        <label asp-for="Tarih">Tarih</label>
+                        <input asp-for="Tarih" type="date" />
+                    </div>
+                    <div class="form-field">
+                        <label asp-for="Miktar">Miktar</label>
+                        <input asp-for="Miktar" type="number" min="0.01" step="0.01" />
+                    </div>
+                    <div class="form-field">
+                        <label asp-for="BirimFiyat">Birim Fiyat</label>
+                        <input asp-for="BirimFiyat" type="number" min="0" step="0.01" />
+                    </div>
+                    <div class="form-field">
+                        <label asp-for="KdvOrani">KDV Oranı (%)</label>
+                        <input asp-for="KdvOrani" type="number" min="0" max="100" step="0.01" />
+                    </div>
+                    <div class="form-field">
+                        <label asp-for="KoliAdedi">Koli Adedi</label>
+                        <input asp-for="KoliAdedi" type="number" min="0" step="0.01" />
+                    </div>
+                    <div class="form-field">
+                        <label asp-for="KoliFiyat">Koli Fiyatı</label>
+                        <input asp-for="KoliFiyat" type="number" min="0" step="0.01" />
+                    </div>
+                    <div class="form-field form-field-wide">
+                        <label asp-for="Aciklama">Açıklama</label>
+                        <input asp-for="Aciklama" />
+                    </div>
+                </div>
+                <div class="form-actions-row">
+                    <button type="submit" class="btn btn-primary">Stok Girişi Kaydet</button>
+                </div>
             </form>
-          </td>
-        </tr>
-      }
-    }
-  </tbody>
-</table>
+        </div>
+
+        <div class="app-form-panel">
+            <div class="panel-title-row">
+                <div><h2>Stok Çıkışı</h2><p>Mevcut stok miktarını aşmadan çıkış kaydedin.</p></div>
+            </div>
+            <form method="post" asp-page-handler="Cikis" class="stok-movement-form">
+                <div class="app-form-grid">
+                    <div class="form-field">
+                        <label asp-for="Tarih">Tarih</label>
+                        <input asp-for="Tarih" type="date" />
+                    </div>
+                    <div class="form-field">
+                        <label asp-for="Miktar">Miktar</label>
+                        <input asp-for="Miktar" type="number" min="0.01" step="0.01" />
+                    </div>
+                    <div class="form-field form-field-wide">
+                        <label asp-for="Aciklama">Açıklama</label>
+                        <input asp-for="Aciklama" />
+                    </div>
+                </div>
+                <div class="form-actions-row">
+                    <button type="submit" class="btn btn-outline-danger">Stok Çıkışı Kaydet</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="dashboard-panel">
+        <div class="panel-title-row">
+            <div>
+                <h2>Stok Hareketleri</h2>
+                <p>Son @Model.Hareketler.Count giriş ve çıkış kaydı</p>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table class="modern-table stock-movement-table">
+                <thead>
+                    <tr>
+                        <th>Tarih</th>
+                        <th>Tür</th>
+                        <th>Miktar</th>
+                        <th>Birim Fiyat</th>
+                        <th>KDV</th>
+                        <th>KDV Dahil Toplam</th>
+                        <th>Koli</th>
+                        <th>Açıklama</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Hareketler.Count == 0)
+                    {
+                        <tr><td colspan="9" class="empty-row">Henüz stok hareketi yok.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var hareket in Model.Hareketler)
+                        {
+                            <tr>
+                                <td>@hareket.Tarih.ToString("dd.MM.yyyy")</td>
+                                <td>
+                                    <span class="status-pill @(hareket.Tip == StokHareketTipi.Giris ? "status-pill-income" : "status-pill-expense")">
+                                        @(hareket.Tip == StokHareketTipi.Giris ? "Giriş" : "Çıkış")
+                                    </span>
+                                </td>
+                                <td><strong>@hareket.Miktar.ToString("N2")</strong></td>
+                                <td>@hareket.BirimFiyat.ToString("N2") ₺</td>
+                                <td>%@hareket.KdvOrani.ToString("N2")</td>
+                                <td class="amount-cell">@hareket.ToplamTutar.ToString("N2") ₺</td>
+                                <td>@hareket.KoliAdedi.ToString("N2") / @hareket.KoliFiyat.ToString("N2") ₺</td>
+                                <td>@(string.IsNullOrWhiteSpace(hareket.Aciklama) ? "-" : hareket.Aciklama)</td>
+                                <td>
+                                    <form method="post" asp-page-handler="Sil" class="inline-form"
+                                          onsubmit="return confirm('Stok hareketi silinsin mi?');">
+                                        <input type="hidden" name="id2" value="@hareket.Id" />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
