@@ -131,17 +131,28 @@ public class IndexModel : PageModel
         foreach (var hareket in kasaHareketleri)
             hareket.CariKartId = null;
 
+        var faturalar = await _db.Faturalar
+            .Where(x =>
+                x.CariKartId == id &&
+                x.FirmaId == firmaId.Value)
+            .ToListAsync();
+
+        foreach (var fatura in faturalar)
+            fatura.CariKartId = null;
+
         var eskiDeger = IslemGecmisiSnapshots.Cari(cari);
         _db.CariKartlar.Remove(cari);
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
                 "Cari Kartlar",
                 "Silme",
-                $"{cari.Unvan} unvanlı cari kart silindi (ID: {cari.Id}).",
+                $"{cari.Unvan} unvanlı cari kart silindi (ID: {cari.Id}). " +
+                $"{kasaHareketleri.Count} kasa hareketi ve {faturalar.Count} fatura korunarak cari bağlantıları kaldırıldı.",
                 eskiDeger: eskiDeger),
             anaKaydiOnceKaydet: false);
 
-        TempData["Basari"] = "Cari kart silindi. Varsa bağlı kasa hareketleri korunup cari bağlantısı kaldırıldı.";
+        TempData["Basari"] =
+            "Cari kart silindi. Bağlı kasa hareketleri ve faturalar korunarak cari bağlantıları kaldırıldı.";
         return RedirectToPage();
     }
 
