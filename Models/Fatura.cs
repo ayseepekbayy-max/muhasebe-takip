@@ -10,9 +10,10 @@ public enum FaturaTipi
 
 public enum FaturaDurumu
 {
-    Acik = 1,
-    KismiOdendi = 2,
-    Kapandi = 3
+    Bekliyor = 1,
+    Odendi = 2,
+    KismenOdendi = 3,
+    Iptal = 4
 }
 
 public class Fatura
@@ -41,6 +42,8 @@ public class Fatura
 
     public decimal OdenenToplam { get; set; }
 
+    public FaturaDurumu Durum { get; set; } = FaturaDurumu.Bekliyor;
+
     public string Aciklama { get; set; } = "";
 
     public DateTime OlusturmaTarihi { get; set; } = DateTime.UtcNow;
@@ -49,11 +52,26 @@ public class Fatura
 
     [NotMapped]
     public decimal KalanTutar => GenelToplam - OdenenToplam;
+}
 
-    [NotMapped]
-    public FaturaDurumu Durum => OdenenToplam <= 0
-        ? FaturaDurumu.Acik
-        : OdenenToplam >= GenelToplam
-            ? FaturaDurumu.Kapandi
-            : FaturaDurumu.KismiOdendi;
+public static class FaturaDurumuExtensions
+{
+    public static string Metin(this FaturaDurumu durum) => durum switch
+    {
+        FaturaDurumu.Bekliyor => "Bekliyor",
+        FaturaDurumu.Odendi => "Ödendi",
+        FaturaDurumu.KismenOdendi => "Kısmen Ödendi",
+        FaturaDurumu.Iptal => "İptal",
+        _ => "Bekliyor"
+    };
+
+    public static FaturaDurumu OdemeDurumu(decimal genelToplam, decimal odenenToplam)
+    {
+        if (odenenToplam <= 0)
+            return FaturaDurumu.Bekliyor;
+
+        return odenenToplam >= genelToplam
+            ? FaturaDurumu.Odendi
+            : FaturaDurumu.KismenOdendi;
+    }
 }

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using Microsoft.AspNetCore.Hosting;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Faturalar;
 
@@ -11,11 +12,16 @@ public class DetayModel : PageModel
 {
     private readonly AppDbContext _db;
     private readonly IWebHostEnvironment _env;
+    private readonly IIslemGecmisiService _islemGecmisi;
 
-    public DetayModel(AppDbContext db, IWebHostEnvironment env)
+    public DetayModel(
+        AppDbContext db,
+        IWebHostEnvironment env,
+        IIslemGecmisiService islemGecmisi)
     {
         _db = db;
         _env = env;
+        _islemGecmisi = islemGecmisi;
     }
 
     public Fatura? Fatura { get; set; }
@@ -25,6 +31,9 @@ public class DetayModel : PageModel
 
     [BindProperty]
     public IFormFile? EkDosya { get; set; }
+
+    [BindProperty]
+    public DurumGuncelleForm DurumForm { get; set; } = new();
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
@@ -37,6 +46,111 @@ public class DetayModel : PageModel
             return NotFound();
 
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostDurumGuncelleAsync(int id)
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var fatura = await _db.Faturalar
+            .Include(x => x.CariKart)
+            .Include(x => x.Kalemler)
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+
+        if (fatura == null)
+            return NotFound();
+
+        if (!Enum.IsDefined(DurumForm.Durum))
+        {
+            TempData["Hata"] = "Geçersiz fatura durumu.";
+            return RedirectToPage(new { id });
+        }
+
+        if (DurumForm.Durum == FaturaDurumu.Bekliyor && fatura.OdenenToplam > 0)
+        {
+            TempData["Hata"] = "Ödeme bulunan fatura Bekliyor durumuna alınamaz.";
+            return RedirectToPage(new { id });
+        }
+
+        if (DurumForm.Durum == FaturaDurumu.KismenOdendi &&
+            (fatura.OdenenToplam <= 0 || fatura.OdenenToplam >= fatura.GenelToplam))
+        {
+            TempData["Hata"] = "Kısmen Ödendi durumu için fatura üzerinde kısmi ödeme bulunmalıdır.";
+            return RedirectToPage(new { id });
+        }
+
+        var eskiDeger = IslemGecmisiSnapshots.Fatura(fatura);
+        var eskiDurum = fatura.Durum;
+        var kalan = Math.Max(0, fatura.GenelToplam - fatura.OdenenToplam);
+        KasaHareket? kasaHareketi = null;
+
+        if (DurumForm.Durum == FaturaDurumu.Odendi)
+        {
+            if (DurumForm.KasaHareketiOlustur && kalan > 0)
+            {
+                var islemAdi = fatura.Tip == FaturaTipi.Satis ? "Tahsilat" : "Ödeme";
+                kasaHareketi = new KasaHareket
+                {
+                    FirmaId = firmaId.Value,
+                    CariKartId = fatura.CariKartId,
+                    FaturaId = fatura.Id,
+                    Tarih = IndexModel.ToUtcDate(DurumForm.Tarih),
+                    Tip = fatura.Tip == FaturaTipi.Satis ? HareketTipi.Giris : HareketTipi.Cikis,
+                    Tutar = kalan,
+                    Aciklama = $"{islemAdi} - {fatura.FaturaNo} - {fatura.CariKart?.Unvan}"
+                };
+                _db.KasaHareketleri.Add(kasaHareketi);
+            }
+
+            fatura.OdenenToplam = fatura.GenelToplam;
+        }
+
+        fatura.Durum = DurumForm.Durum;
+
+        await _db.SaveChangesWithAuditAsync(
+            async () =>
+            {
+                await _islemGecmisi.KaydetAsync(
+                    "Faturalar",
+                    "Durum Değişikliği",
+                    $"Fatura durumu değiştirildi: {eskiDurum.Metin()} → {fatura.Durum.Metin()}.",
+                    eskiDeger,
+                    IslemGecmisiSnapshots.Fatura(fatura));
+
+                if (fatura.Durum == FaturaDurumu.Odendi)
+                {
+                    await _islemGecmisi.KaydetAsync(
+                        "Faturalar",
+                        "Ödeme",
+                        $"Fatura ödendi: {fatura.FaturaNo}.",
+                        eskiDeger,
+                        IslemGecmisiSnapshots.Fatura(fatura));
+                }
+                else if (fatura.Durum == FaturaDurumu.Iptal)
+                {
+                    await _islemGecmisi.KaydetAsync(
+                        "Faturalar",
+                        "İptal",
+                        $"Fatura iptal edildi: {fatura.FaturaNo}.",
+                        eskiDeger,
+                        IslemGecmisiSnapshots.Fatura(fatura));
+                }
+
+                if (kasaHareketi != null)
+                {
+                    await _islemGecmisi.KaydetAsync(
+                        "Kasa",
+                        "Ekleme",
+                        $"{fatura.FaturaNo} faturası ödendi işaretlenirken kasa hareketi oluşturuldu.",
+                        yeniDeger: IslemGecmisiSnapshots.KasaHareket(kasaHareketi));
+                }
+            },
+            anaKaydiOnceKaydet: false);
+
+        TempData["Basari"] = "Fatura durumu güncellendi.";
+        return RedirectToPage(new { id });
     }
 
     public async Task<IActionResult> OnPostDosyaEkleAsync(int id)
@@ -97,6 +211,12 @@ public class DetayModel : PageModel
         if (Fatura == null)
             return;
 
+        DurumForm = new DurumGuncelleForm
+        {
+            Durum = Fatura.Durum,
+            Tarih = DateTime.UtcNow.Date
+        };
+
         Hareketler = await _db.KasaHareketleri
             .Where(x => x.FirmaId == firmaId && (x.FaturaId == id || x.Aciklama.Contains(Fatura.FaturaNo)))
             .OrderByDescending(x => x.Tarih)
@@ -107,5 +227,12 @@ public class DetayModel : PageModel
             .Where(x => x.FirmaId == firmaId && x.FaturaId == id)
             .OrderByDescending(x => x.YuklemeTarihi)
             .ToListAsync();
+    }
+
+    public class DurumGuncelleForm
+    {
+        public FaturaDurumu Durum { get; set; } = FaturaDurumu.Bekliyor;
+        public bool KasaHareketiOlustur { get; set; }
+        public DateTime Tarih { get; set; } = DateTime.UtcNow.Date;
     }
 }

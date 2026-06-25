@@ -13,6 +13,12 @@
             <p>Satış ve alış faturalarını kaydedin; tahsilat ve ödemeleri otomatik kasaya işleyin.</p>
         </div>
         <div class="app-page-actions">
+            <a class="btn btn-outline-success"
+               asp-page-handler="DisaAktar"
+               asp-route-FiltreTarih="@Model.FiltreTarih?.ToString("yyyy-MM-dd")"
+               asp-route-FiltreCariId="@Model.FiltreCariId"
+               asp-route-FiltreDurum="@Model.FiltreDurum"
+               asp-route-FiltreFaturaNo="@Model.FiltreFaturaNo">Excel İndir</a>
             <a class="btn btn-outline-dark" href="/Kasa/Hareketler">Kasa Hareketleri</a>
             <a class="btn btn-outline-dark" href="/CariKartlar">Cari Kartlar</a>
         </div>
@@ -104,8 +110,40 @@
     </section>
 
     <section class="app-filter-bar">
-        <div class="form-field"><label for="invoiceSearch">Fatura ara</label><input id="invoiceSearch" type="search" placeholder="Fatura no, cari veya açıklama" /></div>
-        <div class="form-field filter-small"><label for="invoiceTypeFilter">Tip</label><select id="invoiceTypeFilter"><option value="">Tümü</option><option value="satis">Satış</option><option value="alis">Alış</option></select></div>
+        <form method="get" class="app-form-grid">
+            <div class="form-field">
+                <label asp-for="FiltreTarih">Tarih</label>
+                <input asp-for="FiltreTarih" type="date" />
+            </div>
+            <div class="form-field">
+                <label asp-for="FiltreCariId">Cari / Müşteri</label>
+                <select asp-for="FiltreCariId">
+                    <option value="">Tümü</option>
+                    @foreach (var cari in Model.Cariler)
+                    {
+                        <option value="@cari.Id">@cari.Unvan</option>
+                    }
+                </select>
+            </div>
+            <div class="form-field">
+                <label asp-for="FiltreDurum">Durum</label>
+                <select asp-for="FiltreDurum">
+                    <option value="">Tümü</option>
+                    @foreach (var durum in Enum.GetValues<FaturaDurumu>())
+                    {
+                        <option value="@durum">@durum.Metin()</option>
+                    }
+                </select>
+            </div>
+            <div class="form-field">
+                <label asp-for="FiltreFaturaNo">Fatura No</label>
+                <input asp-for="FiltreFaturaNo" placeholder="Fatura numarası" />
+            </div>
+            <div class="form-actions-row">
+                <button type="submit" class="btn btn-primary">Filtrele</button>
+                <a class="btn btn-outline-dark" href="/Faturalar">Temizle</a>
+            </div>
+        </form>
     </section>
 
     <section class="dashboard-panel">
@@ -123,8 +161,13 @@
                         @foreach (var fatura in Model.Faturalar)
                         {
                             var satisMi = fatura.Tip == FaturaTipi.Satis;
-                            var kapaliMi = fatura.KalanTutar <= 0;
-                            <tr class="invoice-row" data-type="@(satisMi ? "satis" : "alis")" data-search="@($"{fatura.FaturaNo} {fatura.CariKart?.Unvan} {fatura.Aciklama} {fatura.Tip}")">
+                            var tamamlandiMi = fatura.Durum is FaturaDurumu.Odendi or FaturaDurumu.Iptal;
+                            var durumClass = fatura.Durum == FaturaDurumu.Odendi
+                                ? "status-pill-income"
+                                : fatura.Durum == FaturaDurumu.Iptal
+                                    ? "status-pill-expense"
+                                    : "";
+                            <tr class="invoice-row">
                                 <td>@fatura.Tarih.ToString("dd.MM.yyyy")</td>
                                 <td><strong>@fatura.FaturaNo</strong></td>
                                 <td><span class="status-pill @(satisMi ? "status-pill-income" : "status-pill-expense")">@(satisMi ? "Satış" : "Alış")</span></td>
@@ -132,12 +175,12 @@
                                 <td>@fatura.Kalemler.Count</td>
                                 <td class="amount-cell">@fatura.GenelToplam.ToString("N2")</td>
                                 <td>@fatura.OdenenToplam.ToString("N2")</td>
-                                <td class="amount-cell @(kapaliMi ? "amount-income" : "amount-expense")">@Math.Max(0, fatura.KalanTutar).ToString("N2")</td>
-                                <td><span class="status-pill @(kapaliMi ? "status-pill-income" : "status-pill-expense")">@(kapaliMi ? "Kapandı" : fatura.OdenenToplam > 0 ? "Kısmi" : "Açık")</span></td>
+                                <td class="amount-cell @(fatura.Durum == FaturaDurumu.Odendi ? "amount-income" : "amount-expense")">@Math.Max(0, fatura.KalanTutar).ToString("N2")</td>
+                                <td><span class="status-pill @durumClass">@fatura.Durum.Metin()</span></td>
                                 <td>
-                                    @if (kapaliMi)
+                                    @if (tamamlandiMi)
                                     {
-                                        <span class="text-muted">Tamamlandı</span>
+                                        <span class="text-muted">@(fatura.Durum == FaturaDurumu.Iptal ? "İptal edildi" : "Tamamlandı")</span>
                                     }
                                     else
                                     {
@@ -170,20 +213,6 @@
 
 @section Scripts {
     <script>
-        const invoiceSearch = document.getElementById('invoiceSearch');
-        const invoiceTypeFilter = document.getElementById('invoiceTypeFilter');
-
-        function filterInvoiceRows() {
-            const query = (invoiceSearch?.value || '').toLocaleLowerCase('tr-TR').trim();
-            const type = invoiceTypeFilter?.value || '';
-            document.querySelectorAll('.invoice-row').forEach(function (row) {
-                const text = (row.dataset.search || row.innerText).toLocaleLowerCase('tr-TR');
-                const typeOk = !type || row.dataset.type === type;
-                const textOk = !query || text.includes(query);
-                row.hidden = !(typeOk && textOk);
-            });
-        }
-
         function reindexInvoiceLines() {
             document.querySelectorAll('#invoiceLinesBody .invoice-line-row').forEach(function (row, index) {
                 row.querySelectorAll('input').forEach(function (input) {
@@ -214,8 +243,5 @@
             button.closest('tr').remove();
             reindexInvoiceLines();
         });
-
-        invoiceSearch?.addEventListener('input', filterInvoiceRows);
-        invoiceTypeFilter?.addEventListener('change', filterInvoiceRows);
     </script>
 }

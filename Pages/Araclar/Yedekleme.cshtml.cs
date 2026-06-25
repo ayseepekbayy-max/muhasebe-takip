@@ -64,7 +64,8 @@ public class YedeklemeModel : PageModel
                 x.GenelToplam,
                 x.OdenenToplam,
                 x.Aciklama,
-                x.Kalemler.Select(k => new FaturaKalemYedek(k.Aciklama, k.Miktar, k.BirimFiyat, k.KdvOrani, k.AraToplam, k.KdvTutar, k.GenelToplam)).ToList()))
+                x.Kalemler.Select(k => new FaturaKalemYedek(k.Aciklama, k.Miktar, k.BirimFiyat, k.KdvOrani, k.AraToplam, k.KdvTutar, k.GenelToplam)).ToList(),
+                x.Durum))
             .ToListAsync();
 
         var kasa = await _db.KasaHareketleri
@@ -187,6 +188,7 @@ public class YedeklemeModel : PageModel
                     KdvToplam = fatura.KdvToplam,
                     GenelToplam = fatura.GenelToplam,
                     OdenenToplam = fatura.OdenenToplam,
+                    Durum = fatura.Durum ?? FaturaDurumuExtensions.OdemeDurumu(fatura.GenelToplam, fatura.OdenenToplam),
                     Aciklama = fatura.Aciklama ?? "",
                     OlusturmaTarihi = DateTime.UtcNow,
                     Kalemler = fatura.Kalemler.Select(k => new FaturaKalem
@@ -245,7 +247,7 @@ public class YedeklemeModel : PageModel
 
     public record CariYedek(string Unvan, string Ad, string? Telefon, string? VergiNo, CariTip Tip, DateTime OlusturmaTarihi);
     public record StokYedek(string Ad, string? Kod, string? Birim);
-    public record FaturaYedek(string FaturaNo, string? CariUnvan, FaturaTipi Tip, DateTime Tarih, DateTime? VadeTarihi, decimal AraToplam, decimal KdvToplam, decimal GenelToplam, decimal OdenenToplam, string? Aciklama, List<FaturaKalemYedek> Kalemler);
+    public record FaturaYedek(string FaturaNo, string? CariUnvan, FaturaTipi Tip, DateTime Tarih, DateTime? VadeTarihi, decimal AraToplam, decimal KdvToplam, decimal GenelToplam, decimal OdenenToplam, string? Aciklama, List<FaturaKalemYedek> Kalemler, FaturaDurumu? Durum = null);
     public record FaturaKalemYedek(string? Aciklama, decimal Miktar, decimal BirimFiyat, decimal KdvOrani, decimal AraToplam, decimal KdvTutar, decimal GenelToplam);
     public record KasaYedek(DateTime Tarih, HareketTipi Tip, decimal Tutar, string? Aciklama, string? CariUnvan);
     public record CekYedek(string? No, DateTime Tarih, decimal Tutar, string? Aciklama, CekTipi Tip);

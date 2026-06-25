@@ -89,7 +89,7 @@ public class IndexModel : PageModel
 
         var gecikenFaturalar = await _db.Faturalar
             .Include(x => x.CariKart)
-            .Where(x => x.FirmaId == firmaId && x.VadeTarihi != null && x.VadeTarihi < bugun && x.GenelToplam > x.OdenenToplam)
+            .Where(x => x.FirmaId == firmaId && x.Durum != FaturaDurumu.Iptal && x.VadeTarihi != null && x.VadeTarihi < bugun && x.GenelToplam > x.OdenenToplam)
             .OrderBy(x => x.VadeTarihi)
             .Take(5)
             .ToListAsync();
@@ -108,7 +108,7 @@ public class IndexModel : PageModel
 
         var yaklasanFaturalar = await _db.Faturalar
             .Include(x => x.CariKart)
-            .Where(x => x.FirmaId == firmaId && x.VadeTarihi != null && x.VadeTarihi >= bugun && x.VadeTarihi <= yediGunSonra && x.GenelToplam > x.OdenenToplam)
+            .Where(x => x.FirmaId == firmaId && x.Durum != FaturaDurumu.Iptal && x.VadeTarihi != null && x.VadeTarihi >= bugun && x.VadeTarihi <= yediGunSonra && x.GenelToplam > x.OdenenToplam)
             .OrderBy(x => x.VadeTarihi)
             .Take(5)
             .ToListAsync();

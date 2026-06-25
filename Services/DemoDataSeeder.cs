@@ -304,5 +304,6 @@ public static class DemoDataSeeder
         fatura.AraToplam = fatura.Kalemler.Sum(x => x.AraToplam);
         fatura.KdvToplam = fatura.Kalemler.Sum(x => x.KdvTutar);
         fatura.GenelToplam = fatura.Kalemler.Sum(x => x.GenelToplam);
+        fatura.Durum = FaturaDurumuExtensions.OdemeDurumu(fatura.GenelToplam, fatura.OdenenToplam);
     }
 }

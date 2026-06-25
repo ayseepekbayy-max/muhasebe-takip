@@ -3,20 +3,24 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Faturalar;
 
 public class DuzenleModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IIslemGecmisiService _islemGecmisi;
 
-    public DuzenleModel(AppDbContext db)
+    public DuzenleModel(AppDbContext db, IIslemGecmisiService islemGecmisi)
     {
         _db = db;
+        _islemGecmisi = islemGecmisi;
     }
 
     public List<CariKart> Cariler { get; set; } = new();
     public decimal OdenenToplam { get; set; }
+    public FaturaDurumu MevcutDurum { get; set; }
 
     [BindProperty]
     public FaturaDuzenleForm Fatura { get; set; } = new();
@@ -53,6 +57,7 @@ public class DuzenleModel : PageModel
             }).ToList()
         };
         OdenenToplam = fatura.OdenenToplam;
+        MevcutDurum = fatura.Durum;
 
         if (!Fatura.Kalemler.Any())
             Fatura.Kalemler.Add(new FaturaKalemForm());
@@ -75,6 +80,7 @@ public class DuzenleModel : PageModel
 
         await CarileriYukleAsync(firmaId.Value);
         OdenenToplam = fatura.OdenenToplam;
+        MevcutDurum = fatura.Durum;
 
         if (Fatura.CariKartId <= 0)
             ModelState.AddModelError("", "Cari seçimi zorunludur.");
@@ -99,6 +105,8 @@ public class DuzenleModel : PageModel
             return Page();
         }
 
+        var eskiDeger = IslemGecmisiSnapshots.Fatura(fatura);
+
         fatura.CariKartId = Fatura.CariKartId;
         fatura.FaturaNo = string.IsNullOrWhiteSpace(Fatura.FaturaNo) ? fatura.FaturaNo : Fatura.FaturaNo.Trim();
         fatura.Tip = Fatura.Tip;
@@ -108,11 +116,20 @@ public class DuzenleModel : PageModel
         fatura.AraToplam = yeniKalemler.Sum(x => x.AraToplam);
         fatura.KdvToplam = yeniKalemler.Sum(x => x.KdvTutar);
         fatura.GenelToplam = yeniGenelToplam;
+        if (fatura.Durum != FaturaDurumu.Iptal)
+            fatura.Durum = FaturaDurumuExtensions.OdemeDurumu(fatura.GenelToplam, fatura.OdenenToplam);
 
         _db.FaturaKalemleri.RemoveRange(fatura.Kalemler);
         fatura.Kalemler = yeniKalemler;
 
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Faturalar",
+                "Düzenleme",
+                $"Fatura düzenlendi: {fatura.FaturaNo} (ID: {fatura.Id}).",
+                eskiDeger,
+                IslemGecmisiSnapshots.Fatura(fatura)),
+            anaKaydiOnceKaydet: false);
         TempData["Basari"] = "Fatura güncellendi.";
         return RedirectToPage("/Faturalar/Detay", new { id = fatura.Id });
     }

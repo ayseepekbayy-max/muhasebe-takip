@@ -6,7 +6,6 @@
     var fatura = Model.Fatura!;
     var firma = Model.Firma;
     var satisMi = fatura.Tip == FaturaTipi.Satis;
-    var kapaliMi = fatura.KalanTutar <= 0;
 }
 
 <div class="app-page invoice-detail-page">
@@ -31,6 +30,39 @@
     {
         <div class="app-alert app-alert-success no-print">@TempData["Basari"]</div>
     }
+
+    <section class="app-form-panel no-print">
+        <div class="panel-title-row">
+            <div>
+                <h2>Fatura Durumu</h2>
+                <p>Durumu güncelleyin; Ödendi seçiminde kalan tutarı isterseniz kasaya işleyin.</p>
+            </div>
+        </div>
+        <form method="post" asp-page-handler="DurumGuncelle" class="app-form-grid">
+            <div class="form-field">
+                <label asp-for="DurumForm.Durum">Durum</label>
+                <select asp-for="DurumForm.Durum">
+                    @foreach (var durum in Enum.GetValues<FaturaDurumu>())
+                    {
+                        <option value="@durum">@durum.Metin()</option>
+                    }
+                </select>
+            </div>
+            <div class="form-field">
+                <label asp-for="DurumForm.Tarih">Kasa Tarihi</label>
+                <input asp-for="DurumForm.Tarih" type="date" />
+            </div>
+            <div class="form-field">
+                <label class="form-check-label">
+                    <input asp-for="DurumForm.KasaHareketiOlustur" type="checkbox" />
+                    Ödendi yapılınca kalan tutarı kasaya işle
+                </label>
+            </div>
+            <div class="form-actions-row">
+                <button type="submit" class="btn btn-primary">Durumu Güncelle</button>
+            </div>
+        </form>
+    </section>
 
     <section class="invoice-print-sheet">
         <div class="invoice-print-header">
@@ -64,7 +96,7 @@
         <div class="invoice-info-grid">
             <article><span>Cari</span><strong>@(fatura.CariKart?.Unvan ?? "-")</strong></article>
             <article><span>Vade</span><strong>@(fatura.VadeTarihi?.ToString("dd.MM.yyyy") ?? "-")</strong></article>
-            <article><span>Durum</span><strong>@(kapaliMi ? "Kapandı" : fatura.OdenenToplam > 0 ? "Kısmi ödendi" : "Açık")</strong></article>
+            <article><span>Durum</span><strong>@fatura.Durum.Metin()</strong></article>
             <article><span>Kalan</span><strong>@Math.Max(0, fatura.KalanTutar).ToString("N2")</strong></article>
         </div>
 

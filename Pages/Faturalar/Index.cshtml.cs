@@ -3,16 +3,20 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
+using ClosedXML.Excel;
 
 namespace MuhasebeTakip2.App.Pages.Faturalar;
 
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IIslemGecmisiService _islemGecmisi;
 
-    public IndexModel(AppDbContext db)
+    public IndexModel(AppDbContext db, IIslemGecmisiService islemGecmisi)
     {
         _db = db;
+        _islemGecmisi = islemGecmisi;
     }
 
     public List<Fatura> Faturalar { get; set; } = new();
@@ -22,6 +26,18 @@ public class IndexModel : PageModel
     public decimal ToplamAlis { get; set; }
     public decimal BekleyenTahsilat { get; set; }
     public decimal BekleyenOdeme { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public DateTime? FiltreTarih { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int? FiltreCariId { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public FaturaDurumu? FiltreDurum { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? FiltreFaturaNo { get; set; }
 
     [BindProperty]
     public FaturaForm Yeni { get; set; } = new();
@@ -85,13 +101,20 @@ public class IndexModel : PageModel
             KdvToplam = faturaKalemleri.Sum(x => x.KdvTutar),
             GenelToplam = faturaKalemleri.Sum(x => x.GenelToplam),
             OdenenToplam = 0,
+            Durum = FaturaDurumu.Bekliyor,
             Aciklama = Yeni.Aciklama,
             OlusturmaTarihi = DateTime.UtcNow,
             Kalemler = faturaKalemleri
         };
 
         _db.Faturalar.Add(fatura);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Faturalar",
+                "Ekleme",
+                $"Fatura oluşturuldu: {fatura.FaturaNo} (ID: {fatura.Id}).",
+                yeniDeger: IslemGecmisiSnapshots.Fatura(fatura)),
+            anaKaydiOnceKaydet: true);
 
         TempData["Basari"] = "Fatura oluşturuldu.";
         return RedirectToPage();
@@ -119,6 +142,14 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
+        if (fatura.Durum == FaturaDurumu.Iptal)
+        {
+            TempData["Hata"] = "İptal edilmiş faturaya ödeme veya tahsilat eklenemez.";
+            return RedirectToPage();
+        }
+
+        var eskiDeger = IslemGecmisiSnapshots.Fatura(fatura);
+        var eskiDurum = fatura.Durum;
         var kalan = fatura.GenelToplam - fatura.OdenenToplam;
         if (kalan <= 0)
         {
@@ -128,11 +159,12 @@ public class IndexModel : PageModel
 
         var islenecekTutar = Math.Min(Odeme.Tutar, kalan);
         fatura.OdenenToplam += islenecekTutar;
+        fatura.Durum = FaturaDurumuExtensions.OdemeDurumu(fatura.GenelToplam, fatura.OdenenToplam);
 
         var kasaTipi = fatura.Tip == FaturaTipi.Satis ? HareketTipi.Giris : HareketTipi.Cikis;
         var islemAdi = fatura.Tip == FaturaTipi.Satis ? "Tahsilat" : "Ödeme";
 
-        _db.KasaHareketleri.Add(new KasaHareket
+        var kasaHareketi = new KasaHareket
         {
             FirmaId = firmaId.Value,
             CariKartId = fatura.CariKartId,
@@ -141,9 +173,38 @@ public class IndexModel : PageModel
             Tip = kasaTipi,
             Tutar = islenecekTutar,
             Aciklama = $"{islemAdi} - {fatura.FaturaNo} - {fatura.CariKart?.Unvan}"
-        });
+        };
 
-        await _db.SaveChangesAsync();
+        _db.KasaHareketleri.Add(kasaHareketi);
+        await _db.SaveChangesWithAuditAsync(
+            async () =>
+            {
+                await _islemGecmisi.KaydetAsync(
+                    "Faturalar",
+                    "Ödeme",
+                    fatura.Durum == FaturaDurumu.Odendi
+                        ? $"Fatura ödendi: {fatura.FaturaNo}."
+                        : $"Faturaya kısmi {islemAdi.ToLowerInvariant()} işlendi: {fatura.FaturaNo}.",
+                    eskiDeger,
+                    IslemGecmisiSnapshots.Fatura(fatura));
+
+                if (eskiDurum != fatura.Durum)
+                {
+                    await _islemGecmisi.KaydetAsync(
+                        "Faturalar",
+                        "Durum Değişikliği",
+                        $"Fatura durumu değiştirildi: {eskiDurum.Metin()} → {fatura.Durum.Metin()}.",
+                        eskiDeger,
+                        IslemGecmisiSnapshots.Fatura(fatura));
+                }
+
+                await _islemGecmisi.KaydetAsync(
+                    "Kasa",
+                    "Ekleme",
+                    $"{fatura.FaturaNo} faturası için {islemAdi.ToLowerInvariant()} kasa hareketi oluşturuldu.",
+                    yeniDeger: IslemGecmisiSnapshots.KasaHareket(kasaHareketi));
+            },
+            anaKaydiOnceKaydet: false);
 
         TempData["Basari"] = $"{islemAdi} kaydedildi ve kasaya işlendi.";
         return RedirectToPage();
@@ -165,8 +226,15 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
+        var eskiDeger = IslemGecmisiSnapshots.Fatura(fatura);
         _db.Faturalar.Remove(fatura);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Faturalar",
+                "Silme",
+                $"Fatura silindi: {fatura.FaturaNo} (ID: {fatura.Id}).",
+                eskiDeger: eskiDeger),
+            anaKaydiOnceKaydet: false);
 
         TempData["Basari"] = "Fatura silindi.";
         return RedirectToPage();
@@ -179,18 +247,18 @@ public class IndexModel : PageModel
             .OrderBy(x => x.Unvan)
             .ToListAsync();
 
-        Faturalar = await _db.Faturalar
+        Faturalar = await FiltreliFaturaSorgusu(firmaId)
             .Include(x => x.CariKart)
             .Include(x => x.Kalemler)
-            .Where(x => x.FirmaId == firmaId)
             .OrderByDescending(x => x.Tarih)
             .ThenByDescending(x => x.Id)
             .ToListAsync();
 
-        ToplamSatis = Faturalar.Where(x => x.Tip == FaturaTipi.Satis).Sum(x => x.GenelToplam);
-        ToplamAlis = Faturalar.Where(x => x.Tip == FaturaTipi.Alis).Sum(x => x.GenelToplam);
-        BekleyenTahsilat = Faturalar.Where(x => x.Tip == FaturaTipi.Satis).Sum(x => Math.Max(0, x.KalanTutar));
-        BekleyenOdeme = Faturalar.Where(x => x.Tip == FaturaTipi.Alis).Sum(x => Math.Max(0, x.KalanTutar));
+        var aktifFaturalar = Faturalar.Where(x => x.Durum != FaturaDurumu.Iptal).ToList();
+        ToplamSatis = aktifFaturalar.Where(x => x.Tip == FaturaTipi.Satis).Sum(x => x.GenelToplam);
+        ToplamAlis = aktifFaturalar.Where(x => x.Tip == FaturaTipi.Alis).Sum(x => x.GenelToplam);
+        BekleyenTahsilat = aktifFaturalar.Where(x => x.Tip == FaturaTipi.Satis).Sum(x => Math.Max(0, x.KalanTutar));
+        BekleyenOdeme = aktifFaturalar.Where(x => x.Tip == FaturaTipi.Alis).Sum(x => Math.Max(0, x.KalanTutar));
 
         var ayar = await GetOrCreateNumaraAyariAsync(firmaId);
         NumaraAyari = new NumaraAyariForm
@@ -220,6 +288,96 @@ public class IndexModel : PageModel
 
         if (Odeme.Tarih == default)
             Odeme.Tarih = DateTime.UtcNow.Date;
+    }
+
+    public async Task<IActionResult> OnGetDisaAktarAsync()
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var faturalar = await FiltreliFaturaSorgusu(firmaId.Value)
+            .Include(x => x.CariKart)
+            .OrderByDescending(x => x.Tarih)
+            .ThenByDescending(x => x.Id)
+            .ToListAsync();
+
+        using var workbook = new XLWorkbook();
+        var ws = workbook.Worksheets.Add("Faturalar");
+
+        var basliklar = new[]
+        {
+            "Tarih", "Fatura No", "Tip", "Cari", "Durum",
+            "Ara Toplam", "KDV", "Genel Toplam", "Ödenen", "Kalan", "Vade", "Açıklama"
+        };
+
+        for (var i = 0; i < basliklar.Length; i++)
+            ws.Cell(1, i + 1).Value = basliklar[i];
+
+        var header = ws.Range(1, 1, 1, basliklar.Length);
+        header.Style.Font.Bold = true;
+        header.Style.Fill.BackgroundColor = XLColor.LightGray;
+
+        var row = 2;
+        foreach (var fatura in faturalar)
+        {
+            ws.Cell(row, 1).Value = fatura.Tarih;
+            ws.Cell(row, 1).Style.DateFormat.Format = "dd.MM.yyyy";
+            ws.Cell(row, 2).Value = fatura.FaturaNo;
+            ws.Cell(row, 3).Value = fatura.Tip == FaturaTipi.Satis ? "Satış" : "Alış";
+            ws.Cell(row, 4).Value = fatura.CariKart?.Unvan ?? "";
+            ws.Cell(row, 5).Value = fatura.Durum.Metin();
+            ws.Cell(row, 6).Value = fatura.AraToplam;
+            ws.Cell(row, 7).Value = fatura.KdvToplam;
+            ws.Cell(row, 8).Value = fatura.GenelToplam;
+            ws.Cell(row, 9).Value = fatura.OdenenToplam;
+            ws.Cell(row, 10).Value = Math.Max(0, fatura.KalanTutar);
+            if (fatura.VadeTarihi.HasValue)
+            {
+                ws.Cell(row, 11).Value = fatura.VadeTarihi.Value;
+                ws.Cell(row, 11).Style.DateFormat.Format = "dd.MM.yyyy";
+            }
+            ws.Cell(row, 12).Value = fatura.Aciklama;
+            ws.Range(row, 6, row, 10).Style.NumberFormat.Format = "#,##0.00";
+            row++;
+        }
+
+        ws.Columns().AdjustToContents();
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+
+        return File(
+            stream.ToArray(),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"faturalar_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+    }
+
+    private IQueryable<Fatura> FiltreliFaturaSorgusu(int firmaId)
+    {
+        var sorgu = _db.Faturalar
+            .AsNoTracking()
+            .Where(x => x.FirmaId == firmaId);
+
+        if (FiltreTarih.HasValue)
+        {
+            var baslangic = ToUtcDate(FiltreTarih.Value);
+            var bitis = baslangic.AddDays(1);
+            sorgu = sorgu.Where(x => x.Tarih >= baslangic && x.Tarih < bitis);
+        }
+
+        if (FiltreCariId.HasValue && FiltreCariId.Value > 0)
+            sorgu = sorgu.Where(x => x.CariKartId == FiltreCariId.Value);
+
+        if (FiltreDurum.HasValue)
+            sorgu = sorgu.Where(x => x.Durum == FiltreDurum.Value);
+
+        if (!string.IsNullOrWhiteSpace(FiltreFaturaNo))
+        {
+            var faturaNo = FiltreFaturaNo.Trim().ToLower();
+            sorgu = sorgu.Where(x => x.FaturaNo.ToLower().Contains(faturaNo));
+        }
+
+        return sorgu;
     }
 
     private async Task<string> SiradakiFaturaNoAsync(int firmaId)

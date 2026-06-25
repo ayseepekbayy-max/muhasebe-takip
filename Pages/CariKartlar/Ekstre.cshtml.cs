@@ -93,7 +93,10 @@ public class EkstreModel : PageModel
         if (Cari == null)
             return;
 
-        var faturalar = await _db.Faturalar.Where(x => x.FirmaId == firmaId && x.CariKartId == id).OrderBy(x => x.Tarih).ToListAsync();
+        var faturalar = await _db.Faturalar
+            .Where(x => x.FirmaId == firmaId && x.CariKartId == id && x.Durum != FaturaDurumu.Iptal)
+            .OrderBy(x => x.Tarih)
+            .ToListAsync();
         var hareketler = await _db.KasaHareketleri.Where(x => x.FirmaId == firmaId && x.CariKartId == id).OrderBy(x => x.Tarih).ToListAsync();
 
         foreach (var fatura in faturalar)

@@ -147,7 +147,7 @@ public class ExcelIceAktarModel : PageModel
             .ToListAsync();
 
         var faturaOzetleri = await _db.Faturalar
-            .Where(x => x.FirmaId == firmaId && x.CariKartId != null)
+            .Where(x => x.FirmaId == firmaId && x.CariKartId != null && x.Durum != FaturaDurumu.Iptal)
             .GroupBy(x => x.CariKartId!.Value)
             .Select(g => new
             {

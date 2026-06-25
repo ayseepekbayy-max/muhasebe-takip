@@ -40,6 +40,18 @@ public static class IslemGecmisiSnapshots
         x.Aciklama
     };
 
+    public static object KasaHareket(KasaHareket x) => new
+    {
+        x.Id,
+        x.FirmaId,
+        x.Tarih,
+        Tip = x.Tip.ToString(),
+        x.Tutar,
+        x.Aciklama,
+        x.CariKartId,
+        x.FaturaId
+    };
+
     public static object Musteri(Musteri x) => new
     {
         x.Id,
@@ -115,5 +127,34 @@ public static class IslemGecmisiSnapshots
         x.BirimMaliyet,
         x.Kaynak,
         x.HesapTarihi
+    };
+
+    public static object Fatura(Fatura x) => new
+    {
+        x.Id,
+        x.FirmaId,
+        x.CariKartId,
+        x.FaturaNo,
+        Tip = x.Tip.ToString(),
+        x.Tarih,
+        x.VadeTarihi,
+        x.AraToplam,
+        x.KdvToplam,
+        x.GenelToplam,
+        x.OdenenToplam,
+        Durum = x.Durum.Metin(),
+        x.Aciklama,
+        x.OlusturmaTarihi,
+        Kalemler = x.Kalemler.Select(kalem => new
+        {
+            kalem.Id,
+            kalem.Aciklama,
+            kalem.Miktar,
+            kalem.BirimFiyat,
+            kalem.KdvOrani,
+            kalem.AraToplam,
+            kalem.KdvTutar,
+            kalem.GenelToplam
+        }).ToList()
     };
 }
