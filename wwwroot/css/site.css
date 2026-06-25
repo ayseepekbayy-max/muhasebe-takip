@@ -1956,6 +1956,239 @@ a.app-top-btn {
     font-weight: 900;
 }
 
+.cari-filter-panel {
+    padding: 20px;
+    border: 1px solid #c7d2fe;
+    border-left: 4px solid #4f46e5;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 12px 28px rgba(79, 70, 229, 0.08);
+}
+
+.cari-filter-panel .panel-title-row {
+    align-items: center;
+}
+
+.cari-filter-grid {
+    grid-template-columns: minmax(220px, 1.4fr) minmax(150px, 0.7fr) minmax(220px, 1fr) auto;
+}
+
+.cari-list-section {
+    min-width: 0;
+}
+
+.cari-card-list {
+    display: grid;
+    gap: 12px;
+}
+
+.cari-list-card {
+    display: grid;
+    grid-template-columns: minmax(230px, 1.1fr) minmax(560px, 2.7fr) auto;
+    gap: 20px;
+    align-items: center;
+    padding: 18px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.cari-list-card:hover {
+    border-color: #a5b4fc;
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+}
+
+.cari-card-identity {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    min-width: 0;
+}
+
+.cari-card-identity h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 17px;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+}
+
+.cari-card-identity p {
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.cari-card-data {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(105px, 1fr));
+    gap: 14px;
+    min-width: 0;
+}
+
+.cari-card-data div {
+    min-width: 0;
+}
+
+.cari-card-data span {
+    display: block;
+    margin-bottom: 5px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.cari-card-data strong {
+    display: block;
+    color: #1f2937;
+    font-size: 13px;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+}
+
+.cari-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 7px;
+}
+
+.cari-card-actions form {
+    margin: 0;
+}
+
+.cari-modal-content {
+    border: 0;
+    border-radius: 8px;
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.22);
+}
+
+.cari-modal-content .modal-header,
+.cari-modal-content .modal-footer {
+    padding: 18px 20px;
+}
+
+.cari-modal-content .modal-body {
+    padding: 20px;
+}
+
+.cari-modal-content .modal-title {
+    color: #0f172a;
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.cari-modal-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.cari-info-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.cari-info-strip > div {
+    min-width: 0;
+    padding: 16px 18px;
+    border-right: 1px solid #eef2f7;
+}
+
+.cari-info-strip > div:last-child {
+    border-right: 0;
+}
+
+.cari-info-strip span {
+    display: block;
+    margin-bottom: 5px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.cari-info-strip strong {
+    display: block;
+    color: #0f172a;
+    font-size: 15px;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 1280px) {
+    .cari-list-card {
+        grid-template-columns: minmax(220px, 0.8fr) minmax(0, 2fr);
+    }
+
+    .cari-card-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+        padding-top: 12px;
+        border-top: 1px solid #eef2f7;
+    }
+}
+
+@media (max-width: 900px) {
+    .cari-filter-grid,
+    .cari-list-card {
+        grid-template-columns: 1fr;
+    }
+
+    .cari-card-data {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cari-card-actions {
+        grid-column: auto;
+    }
+
+    .cari-info-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cari-info-strip > div:nth-child(2) {
+        border-right: 0;
+    }
+
+    .cari-info-strip > div:nth-child(-n+2) {
+        border-bottom: 1px solid #eef2f7;
+    }
+}
+
+@media (max-width: 560px) {
+    .cari-card-data,
+    .cari-modal-form,
+    .cari-info-strip {
+        grid-template-columns: 1fr;
+    }
+
+    .cari-info-strip > div,
+    .cari-info-strip > div:nth-child(2) {
+        border-right: 0;
+        border-bottom: 1px solid #eef2f7;
+    }
+
+    .cari-info-strip > div:last-child {
+        border-bottom: 0;
+    }
+
+    .cari-card-actions .btn,
+    .cari-card-actions form,
+    .cari-card-actions button {
+        width: 100%;
+    }
+}
+
 .two-column-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

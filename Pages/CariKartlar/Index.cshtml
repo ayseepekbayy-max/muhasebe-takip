@@ -5,21 +5,23 @@
     ViewData["Title"] = "Cari Kartlar";
 }
 
-<div class="app-page">
+<div class="app-page cari-page">
     <section class="app-page-header">
         <div>
             <span class="app-page-eyebrow">Cari Yönetimi</span>
             <h1>Cari Kartlar</h1>
-            <p>Alıcı ve satıcılarınızı kasa ve fatura özetleriyle tek ekrandan yönetin.</p>
+            <p>Alıcı ve satıcılarınızı finansal özetleriyle tek ekrandan yönetin.</p>
         </div>
 
         <div class="app-page-actions">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#yeniCariModal">
+                Yeni Cari
+            </button>
             <a class="btn btn-outline-success"
                asp-page-handler="DisaAktar"
                asp-route-UnvanAra="@Model.UnvanAra"
                asp-route-TipFiltre="@Model.TipFiltre"
                asp-route-IletisimAra="@Model.IletisimAra">Excel İndir</a>
-            <a class="btn btn-outline-dark" href="/">Kasa</a>
         </div>
     </section>
 
@@ -43,13 +45,68 @@
         </div>
     }
 
+    <section class="metric-grid cari-summary-grid">
+        <article class="metric-card">
+            <span>Toplam Cari</span>
+            <strong>@Model.ToplamCari</strong>
+        </article>
+        <article class="metric-card metric-card-positive">
+            <span>Alıcı Sayısı</span>
+            <strong>@Model.AliciSayisi</strong>
+        </article>
+        <article class="metric-card metric-card-warning">
+            <span>Satıcı Sayısı</span>
+            <strong>@Model.SaticiSayisi</strong>
+        </article>
+        <article class="metric-card @(Model.ToplamBakiye < 0 ? "metric-card-negative" : "metric-card-positive")">
+            <span>Toplam Bakiye</span>
+            <strong>@Model.ToplamBakiye.ToString("N2") ₺</strong>
+        </article>
+    </section>
+
+    <section class="cari-filter-panel">
+        <div class="panel-title-row">
+            <div>
+                <h2>Cari Ara ve Filtrele</h2>
+                <p>Ünvan, tip, telefon veya vergi numarasına göre listeyi daraltın.</p>
+            </div>
+            <div class="filter-summary">
+                <strong>@Model.Cariler.Count</strong>
+                <span>sonuç</span>
+            </div>
+        </div>
+
+        <form method="get" class="app-form-grid cari-filter-grid">
+            <div class="form-field">
+                <label asp-for="UnvanAra">Ünvan</label>
+                <input asp-for="UnvanAra" type="search" placeholder="Cari ünvanı" />
+            </div>
+            <div class="form-field">
+                <label asp-for="TipFiltre">Tip</label>
+                <select asp-for="TipFiltre">
+                    <option value="">Tümü</option>
+                    <option value="@((int)CariTip.Alici)">Alıcı</option>
+                    <option value="@((int)CariTip.Satici)">Satıcı</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label asp-for="IletisimAra">Telefon / Vergi No</label>
+                <input asp-for="IletisimAra" type="search" placeholder="Telefon veya vergi no" />
+            </div>
+            <div class="form-actions-row">
+                <button type="submit" class="btn btn-primary">Filtrele</button>
+                <a class="btn btn-outline-dark" asp-page="/CariKartlar/Index">Temizle</a>
+            </div>
+        </form>
+    </section>
+
     @if (Model.DuzenlemeAcik)
     {
         <section class="app-form-panel" id="cariDuzenle">
             <div class="panel-title-row">
                 <div>
                     <h2>Cari Kartı Düzenle</h2>
-                    <p>Mevcut cari bilgilerini güncelleyin.</p>
+                    <p>Seçilen cari kartın iletişim ve tip bilgilerini güncelleyin.</p>
                 </div>
                 <a class="btn btn-outline-dark btn-sm" asp-page="/CariKartlar/Index">Vazgeç</a>
             </div>
@@ -76,140 +133,136 @@
                     <input asp-for="DuzenlenenCari.VergiNo" />
                 </div>
                 <div class="form-actions-row">
-                    <button type="submit" class="btn btn-primary">Değişiklikleri Kaydet</button>
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
                 </div>
             </form>
         </section>
     }
 
-    <section class="app-form-panel">
+    <section class="cari-list-section">
         <div class="panel-title-row">
             <div>
-                <h2>Yeni Cari Ekle</h2>
-                <p>Ünvan, tip ve iletişim bilgileriyle yeni cari kart oluşturun.</p>
+                <h2>Cari Listesi</h2>
+                <p>Tahsilat, ödeme ve fatura durumunu hızlıca karşılaştırın.</p>
             </div>
         </div>
 
-        <form method="post" asp-page-handler="Ekle" class="app-form-grid">
-            <div class="form-field form-field-wide">
-                <label asp-for="YeniCari.Unvan">Ünvan</label>
-                <input asp-for="YeniCari.Unvan" />
-            </div>
-            <div class="form-field">
-                <label asp-for="YeniCari.Tip">Tip</label>
-                <select asp-for="YeniCari.Tip">
-                    <option value="@((int)CariTip.Alici)">Alıcı</option>
-                    <option value="@((int)CariTip.Satici)">Satıcı</option>
-                </select>
-            </div>
-            <div class="form-field">
-                <label asp-for="YeniCari.Telefon">Telefon</label>
-                <input asp-for="YeniCari.Telefon" />
-            </div>
-            <div class="form-field">
-                <label asp-for="YeniCari.VergiNo">Vergi No</label>
-                <input asp-for="YeniCari.VergiNo" />
-            </div>
-            <div class="form-actions-row">
-                <button type="submit" class="btn btn-primary">Cari Ekle</button>
-            </div>
-        </form>
-    </section>
+        @if (Model.Cariler.Count == 0)
+        {
+            <div class="empty-state">Filtreye uygun cari kart bulunamadı.</div>
+        }
+        else
+        {
+            <div class="cari-card-list">
+                @foreach (var cari in Model.Cariler)
+                {
+                    var cariBakiye = cari.ToplamTahsilat - cari.ToplamOdeme;
+                    <article class="cari-list-card">
+                        <div class="cari-card-identity">
+                            <span class="status-pill @(cari.Tip == CariTip.Alici ? "status-pill-income" : "status-pill-pending")">
+                                @(cari.Tip == CariTip.Alici ? "Alıcı" : "Satıcı")
+                            </span>
+                            <div>
+                                <h3>@cari.Unvan</h3>
+                                <p>@(string.IsNullOrWhiteSpace(cari.Telefon) ? "Telefon belirtilmemiş" : cari.Telefon)</p>
+                            </div>
+                        </div>
 
-    <section class="app-filter-bar">
-        <form method="get" class="app-form-grid">
-            <div class="form-field">
-                <label asp-for="UnvanAra">Ünvan</label>
-                <input asp-for="UnvanAra" type="search" placeholder="Cari ünvanı" />
-            </div>
-            <div class="form-field">
-                <label asp-for="TipFiltre">Tip</label>
-                <select asp-for="TipFiltre">
-                    <option value="">Tümü</option>
-                    <option value="@((int)CariTip.Alici)">Alıcı</option>
-                    <option value="@((int)CariTip.Satici)">Satıcı</option>
-                </select>
-            </div>
-            <div class="form-field">
-                <label asp-for="IletisimAra">Telefon / Vergi No</label>
-                <input asp-for="IletisimAra" type="search" placeholder="Telefon veya vergi no" />
-            </div>
-            <div class="form-actions-row">
-                <button type="submit" class="btn btn-primary">Filtrele</button>
-                <a class="btn btn-outline-dark" asp-page="/CariKartlar/Index">Temizle</a>
-            </div>
-        </form>
-        <div class="filter-summary">
-            <strong>@Model.Cariler.Count</strong>
-            <span>cari bulundu</span>
-        </div>
-    </section>
+                        <div class="cari-card-data">
+                            <div>
+                                <span>Vergi No</span>
+                                <strong>@(string.IsNullOrWhiteSpace(cari.VergiNo) ? "-" : cari.VergiNo)</strong>
+                            </div>
+                            <div>
+                                <span>Tahsilat</span>
+                                <strong class="amount-income">@cari.ToplamTahsilat.ToString("N2") ₺</strong>
+                            </div>
+                            <div>
+                                <span>Ödeme</span>
+                                <strong class="amount-expense">@cari.ToplamOdeme.ToString("N2") ₺</strong>
+                            </div>
+                            <div>
+                                <span>Net Bakiye</span>
+                                <strong class="@(cariBakiye < 0 ? "amount-expense" : "amount-income")">@cariBakiye.ToString("N2") ₺</strong>
+                            </div>
+                            <div>
+                                <span>Faturalar</span>
+                                <strong>@cari.FaturaSayisi adet · @cari.ToplamFaturaTutari.ToString("N2") ₺</strong>
+                            </div>
+                        </div>
 
-    <section class="dashboard-panel">
-        <div class="panel-title-row">
-            <div>
-                <h2>Cari Özeti</h2>
-                <p>Tahsilat, ödeme ve bağlı fatura bilgileri</p>
+                        <div class="cari-card-actions">
+                            <a class="btn btn-primary btn-sm" asp-page="/CariKartlar/Ekstre" asp-route-id="@cari.Id">Ekstre</a>
+                            <a class="btn btn-outline-dark btn-sm"
+                               asp-page="/CariKartlar/Index"
+                               asp-route-DuzenleId="@cari.Id"
+                               asp-route-UnvanAra="@Model.UnvanAra"
+                               asp-route-TipFiltre="@Model.TipFiltre"
+                               asp-route-IletisimAra="@Model.IletisimAra"
+                               asp-fragment="cariDuzenle">Düzenle</a>
+                            <form method="post" asp-page-handler="Sil" class="inline-form"
+                                  onsubmit="return confirm('Cari kart silinsin mi? Bağlı kayıtlar korunacak ve cari bağlantıları kaldırılacaktır.');">
+                                <input type="hidden" name="id" value="@cari.Id" />
+                                <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
+                            </form>
+                        </div>
+                    </article>
+                }
             </div>
-        </div>
-
-        <div class="table-wrap">
-            <table class="modern-table compact-table">
-                <thead>
-                    <tr>
-                        <th>Ünvan</th>
-                        <th>Tip</th>
-                        <th>Telefon</th>
-                        <th>Vergi No</th>
-                        <th>Tahsilat</th>
-                        <th>Ödeme</th>
-                        <th>Fatura</th>
-                        <th>Fatura Tutarı</th>
-                        <th>İşlem</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Cariler.Count == 0)
-                    {
-                        <tr><td colspan="9" class="empty-row">Filtreye uygun cari kart bulunamadı.</td></tr>
-                    }
-                    else
-                    {
-                        @foreach (var cari in Model.Cariler)
-                        {
-                            <tr>
-                                <td><strong>@cari.Unvan</strong></td>
-                                <td>
-                                    <span class="status-pill @(cari.Tip == CariTip.Alici ? "status-pill-income" : "status-pill-pending")">
-                                        @(cari.Tip == CariTip.Alici ? "Alıcı" : "Satıcı")
-                                    </span>
-                                </td>
-                                <td>@(string.IsNullOrWhiteSpace(cari.Telefon) ? "-" : cari.Telefon)</td>
-                                <td>@(string.IsNullOrWhiteSpace(cari.VergiNo) ? "-" : cari.VergiNo)</td>
-                                <td class="amount-cell amount-income">@cari.ToplamTahsilat.ToString("N2") ₺</td>
-                                <td class="amount-cell amount-expense">@cari.ToplamOdeme.ToString("N2") ₺</td>
-                                <td>@cari.FaturaSayisi</td>
-                                <td class="amount-cell">@cari.ToplamFaturaTutari.ToString("N2") ₺</td>
-                                <td class="table-actions-cell">
-                                    <a class="btn btn-outline-primary btn-sm" asp-page="/CariKartlar/Ekstre" asp-route-id="@cari.Id">Ekstre</a>
-                                    <a class="btn btn-outline-dark btn-sm"
-                                       asp-page="/CariKartlar/Index"
-                                       asp-route-DuzenleId="@cari.Id"
-                                       asp-route-UnvanAra="@Model.UnvanAra"
-                                       asp-route-TipFiltre="@Model.TipFiltre"
-                                       asp-route-IletisimAra="@Model.IletisimAra"
-                                       asp-fragment="cariDuzenle">Düzenle</a>
-                                    <form method="post" asp-page-handler="Sil" class="inline-form"
-                                          onsubmit="return confirm('Cari kart silinsin mi? Bağlı kayıtlar korunacak ve cari bağlantıları kaldırılacaktır.');">
-                                        <input type="hidden" name="id" value="@cari.Id" />
-                                        <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
-        </div>
+        }
     </section>
 </div>
+
+<div class="modal fade" id="yeniCariModal" tabindex="-1" aria-labelledby="yeniCariModalBaslik" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content cari-modal-content">
+            <div class="modal-header">
+                <div>
+                    <span class="app-page-eyebrow">Yeni Kayıt</span>
+                    <h2 class="modal-title" id="yeniCariModalBaslik">Yeni Cari Ekle</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <form method="post" asp-page-handler="Ekle">
+                <div class="modal-body">
+                    <div class="cari-modal-form">
+                        <div class="form-field">
+                            <label asp-for="YeniCari.Unvan">Ünvan</label>
+                            <input asp-for="YeniCari.Unvan" autofocus />
+                        </div>
+                        <div class="form-field">
+                            <label asp-for="YeniCari.Tip">Tip</label>
+                            <select asp-for="YeniCari.Tip">
+                                <option value="@((int)CariTip.Alici)">Alıcı</option>
+                                <option value="@((int)CariTip.Satici)">Satıcı</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label asp-for="YeniCari.Telefon">Telefon</label>
+                            <input asp-for="YeniCari.Telefon" />
+                        </div>
+                        <div class="form-field">
+                            <label asp-for="YeniCari.VergiNo">Vergi No</label>
+                            <input asp-for="YeniCari.VergiNo" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-primary">Cari Ekle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @if (Model.YeniCariModalAcik)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('yeniCariModal')).show();
+            });
+        </script>
+    }
+}

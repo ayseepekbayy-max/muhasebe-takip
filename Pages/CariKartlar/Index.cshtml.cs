@@ -21,6 +21,10 @@ public class IndexModel : PageModel
     }
 
     public List<CariOzet> Cariler { get; set; } = new();
+    public int ToplamCari { get; set; }
+    public int AliciSayisi { get; set; }
+    public int SaticiSayisi { get; set; }
+    public decimal ToplamBakiye { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public string? UnvanAra { get; set; }
@@ -43,6 +47,7 @@ public class IndexModel : PageModel
     public CariDuzenleForm DuzenlenenCari { get; set; } = new();
 
     public bool DuzenlemeAcik { get; set; }
+    public bool YeniCariModalAcik { get; set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -91,6 +96,7 @@ public class IndexModel : PageModel
         if (string.IsNullOrWhiteSpace(YeniCari.Unvan))
         {
             ModelState.AddModelError("", "Ünvan zorunludur.");
+            YeniCariModalAcik = true;
             await ListeleriYukleAsync(firmaId.Value);
             return Page();
         }
@@ -119,6 +125,7 @@ public class IndexModel : PageModel
         catch (DbUpdateException ex)
         {
             ModelState.AddModelError("", $"Veritabanı hatası: {ex.InnerException?.Message ?? ex.Message}");
+            YeniCariModalAcik = true;
             await ListeleriYukleAsync(firmaId.Value);
             return Page();
         }
@@ -292,6 +299,35 @@ public class IndexModel : PageModel
 
     private async Task ListeleriYukleAsync(int firmaId)
     {
+        var cariSayilari = await _db.CariKartlar
+            .AsNoTracking()
+            .Where(x => x.FirmaId == firmaId)
+            .GroupBy(_ => 1)
+            .Select(grup => new
+            {
+                Toplam = grup.Count(),
+                Alici = grup.Count(x => x.Tip == CariTip.Alici),
+                Satici = grup.Count(x => x.Tip == CariTip.Satici)
+            })
+            .FirstOrDefaultAsync();
+
+        ToplamCari = cariSayilari?.Toplam ?? 0;
+        AliciSayisi = cariSayilari?.Alici ?? 0;
+        SaticiSayisi = cariSayilari?.Satici ?? 0;
+
+        var kasaOzeti = await _db.KasaHareketleri
+            .AsNoTracking()
+            .Where(x => x.FirmaId == firmaId && x.CariKartId != null)
+            .GroupBy(_ => 1)
+            .Select(grup => new
+            {
+                Tahsilat = grup.Where(x => x.Tip == HareketTipi.Giris).Sum(x => (decimal?)x.Tutar) ?? 0,
+                Odeme = grup.Where(x => x.Tip == HareketTipi.Cikis).Sum(x => (decimal?)x.Tutar) ?? 0
+            })
+            .FirstOrDefaultAsync();
+
+        ToplamBakiye = (kasaOzeti?.Tahsilat ?? 0) - (kasaOzeti?.Odeme ?? 0);
+
         Cariler = await CariOzetSorgusu(firmaId)
             .OrderByDescending(x => x.Id)
             .ToListAsync();
