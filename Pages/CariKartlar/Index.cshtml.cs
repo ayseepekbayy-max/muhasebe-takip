@@ -1,11 +1,10 @@
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
-using ClosedXML.Excel;
-using System.IO;
 using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.CariKartlar;
@@ -21,12 +20,29 @@ public class IndexModel : PageModel
         _islemGecmisi = islemGecmisi;
     }
 
-    public List<CariKart> Alicilar { get; set; } = new();
-    public List<CariKart> Saticilar { get; set; } = new();
+    public List<CariOzet> Cariler { get; set; } = new();
+
+    [BindProperty(SupportsGet = true)]
+    public string? UnvanAra { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public CariTip? TipFiltre { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? IletisimAra { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int? DuzenleId { get; set; }
 
     [BindProperty]
     [ValidateNever]
     public CariKart YeniCari { get; set; } = new();
+
+    [BindProperty]
+    [ValidateNever]
+    public CariDuzenleForm DuzenlenenCari { get; set; } = new();
+
+    public bool DuzenlemeAcik { get; set; }
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -35,6 +51,26 @@ public class IndexModel : PageModel
             return RedirectToPage("/Login");
 
         await ListeleriYukleAsync(firmaId.Value);
+
+        if (DuzenleId.HasValue)
+        {
+            var cari = await _db.CariKartlar
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == DuzenleId.Value && x.FirmaId == firmaId.Value);
+
+            if (cari != null)
+            {
+                DuzenlemeAcik = true;
+                DuzenlenenCari = new CariDuzenleForm
+                {
+                    Id = cari.Id,
+                    Unvan = cari.Unvan,
+                    Tip = cari.Tip,
+                    Telefon = cari.Telefon,
+                    VergiNo = cari.VergiNo
+                };
+            }
+        }
 
         if ((int)YeniCari.Tip == 0)
             YeniCari.Tip = CariTip.Alici;
@@ -48,40 +84,32 @@ public class IndexModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
+        YeniCari.Unvan = (YeniCari.Unvan ?? "").Trim();
+        YeniCari.Telefon = Temizle(YeniCari.Telefon);
+        YeniCari.VergiNo = Temizle(YeniCari.VergiNo);
+
+        if (string.IsNullOrWhiteSpace(YeniCari.Unvan))
+        {
+            ModelState.AddModelError("", "Ünvan zorunludur.");
+            await ListeleriYukleAsync(firmaId.Value);
+            return Page();
+        }
+
+        if (!Enum.IsDefined(YeniCari.Tip))
+            YeniCari.Tip = CariTip.Alici;
+
+        YeniCari.Ad = YeniCari.Unvan;
+        YeniCari.FirmaId = firmaId.Value;
+        YeniCari.OlusturmaTarihi = DateTime.UtcNow;
+
         try
         {
-            await ListeleriYukleAsync(firmaId.Value);
-
-            YeniCari.Unvan = (YeniCari.Unvan ?? "").Trim();
-            YeniCari.Telefon = string.IsNullOrWhiteSpace(YeniCari.Telefon)
-                ? null
-                : YeniCari.Telefon.Trim();
-            YeniCari.VergiNo = string.IsNullOrWhiteSpace(YeniCari.VergiNo)
-                ? null
-                : YeniCari.VergiNo.Trim();
-
-            if (string.IsNullOrWhiteSpace(YeniCari.Unvan))
-            {
-                ModelState.AddModelError("", "Ünvan zorunludur.");
-                return Page();
-            }
-
-            if ((int)YeniCari.Tip == 0)
-                YeniCari.Tip = CariTip.Alici;
-
-            YeniCari.Ad = string.IsNullOrWhiteSpace(YeniCari.Ad)
-                ? YeniCari.Unvan
-                : YeniCari.Ad.Trim();
-
-            YeniCari.FirmaId = firmaId.Value;
-            YeniCari.OlusturmaTarihi = DateTime.UtcNow;
-
             _db.CariKartlar.Add(YeniCari);
             await _db.SaveChangesWithAuditAsync(
                 () => _islemGecmisi.KaydetAsync(
                     "Cari Kartlar",
                     "Ekleme",
-                    $"{YeniCari.Unvan} unvanlı cari kart eklendi (ID: {YeniCari.Id}).",
+                    $"{YeniCari.Unvan} ünvanlı cari kart eklendi (ID: {YeniCari.Id}).",
                     yeniDeger: IslemGecmisiSnapshots.Cari(YeniCari)),
                 anaKaydiOnceKaydet: true);
 
@@ -90,19 +118,61 @@ public class IndexModel : PageModel
         }
         catch (DbUpdateException ex)
         {
-            var detay = ex.InnerException?.Message ?? ex.Message;
-            ModelState.AddModelError("", $"Veritabanı hatası: {detay}");
-
+            ModelState.AddModelError("", $"Veritabanı hatası: {ex.InnerException?.Message ?? ex.Message}");
             await ListeleriYukleAsync(firmaId.Value);
             return Page();
         }
-        catch (Exception ex)
+    }
+
+    public async Task<IActionResult> OnPostDuzenleAsync()
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var cari = await _db.CariKartlar
+            .FirstOrDefaultAsync(x => x.Id == DuzenlenenCari.Id && x.FirmaId == firmaId.Value);
+
+        if (cari == null)
         {
-            ModelState.AddModelError("", $"Genel hata: {ex.Message}");
+            TempData["Hata"] = "Cari kart bulunamadı.";
+            return RedirectToPage();
+        }
 
+        DuzenlenenCari.Unvan = (DuzenlenenCari.Unvan ?? "").Trim();
+        DuzenlenenCari.Telefon = Temizle(DuzenlenenCari.Telefon);
+        DuzenlenenCari.VergiNo = Temizle(DuzenlenenCari.VergiNo);
+
+        if (string.IsNullOrWhiteSpace(DuzenlenenCari.Unvan))
+        {
+            ModelState.AddModelError("", "Ünvan zorunludur.");
+            DuzenlemeAcik = true;
             await ListeleriYukleAsync(firmaId.Value);
             return Page();
         }
+
+        if (!Enum.IsDefined(DuzenlenenCari.Tip))
+            DuzenlenenCari.Tip = CariTip.Alici;
+
+        var eskiDeger = IslemGecmisiSnapshots.Cari(cari);
+
+        cari.Ad = DuzenlenenCari.Unvan;
+        cari.Unvan = DuzenlenenCari.Unvan;
+        cari.Tip = DuzenlenenCari.Tip;
+        cari.Telefon = DuzenlenenCari.Telefon;
+        cari.VergiNo = DuzenlenenCari.VergiNo;
+
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Cari Kartlar",
+                "Düzenleme",
+                $"{cari.Unvan} ünvanlı cari kart düzenlendi (ID: {cari.Id}).",
+                eskiDeger,
+                IslemGecmisiSnapshots.Cari(cari)),
+            anaKaydiOnceKaydet: false);
+
+        TempData["Basari"] = "Cari kart güncellendi.";
+        return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostSilAsync(int id)
@@ -112,9 +182,7 @@ public class IndexModel : PageModel
             return RedirectToPage("/Login");
 
         var cari = await _db.CariKartlar
-            .FirstOrDefaultAsync(x =>
-                x.Id == id &&
-                x.FirmaId == firmaId.Value);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
 
         if (cari == null)
         {
@@ -123,108 +191,178 @@ public class IndexModel : PageModel
         }
 
         var kasaHareketleri = await _db.KasaHareketleri
-            .Where(x =>
-                x.CariKartId == id &&
-                x.FirmaId == firmaId.Value)
+            .Where(x => x.CariKartId == id && x.FirmaId == firmaId.Value)
+            .ToListAsync();
+
+        var faturalar = await _db.Faturalar
+            .Where(x => x.CariKartId == id && x.FirmaId == firmaId.Value)
+            .ToListAsync();
+
+        var ekDosyalar = await _db.EkDosyalar
+            .Where(x => x.CariKartId == id && x.FirmaId == firmaId.Value)
             .ToListAsync();
 
         foreach (var hareket in kasaHareketleri)
             hareket.CariKartId = null;
 
-        var faturalar = await _db.Faturalar
-            .Where(x =>
-                x.CariKartId == id &&
-                x.FirmaId == firmaId.Value)
-            .ToListAsync();
-
         foreach (var fatura in faturalar)
             fatura.CariKartId = null;
 
+        foreach (var dosya in ekDosyalar)
+            dosya.CariKartId = null;
+
         var eskiDeger = IslemGecmisiSnapshots.Cari(cari);
         _db.CariKartlar.Remove(cari);
+
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
                 "Cari Kartlar",
                 "Silme",
-                $"{cari.Unvan} unvanlı cari kart silindi (ID: {cari.Id}). " +
-                $"{kasaHareketleri.Count} kasa hareketi ve {faturalar.Count} fatura korunarak cari bağlantıları kaldırıldı.",
+                $"{cari.Unvan} ünvanlı cari kart silindi (ID: {cari.Id}). " +
+                $"{kasaHareketleri.Count} kasa hareketi, {faturalar.Count} fatura ve {ekDosyalar.Count} dosya korunarak cari bağlantıları kaldırıldı.",
                 eskiDeger: eskiDeger),
             anaKaydiOnceKaydet: false);
 
-        TempData["Basari"] =
-            "Cari kart silindi. Bağlı kasa hareketleri ve faturalar korunarak cari bağlantıları kaldırıldı.";
+        TempData["Basari"] = "Cari kart silindi. Bağlı kayıtlar korunarak cari bağlantıları kaldırıldı.";
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostDisaAktarAsync()
+    public async Task<IActionResult> OnGetDisaAktarAsync()
     {
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        var cariler = await _db.CariKartlar
-            .Where(x => x.FirmaId == firmaId.Value)
+        var cariler = await CariOzetSorgusu(firmaId.Value)
             .OrderBy(x => x.Unvan)
             .ToListAsync();
 
         using var workbook = new XLWorkbook();
         var ws = workbook.Worksheets.Add("Cari Kartlar");
+        var basliklar = new[]
+        {
+            "Ünvan", "Tip", "Telefon", "Vergi No", "Toplam Tahsilat",
+            "Toplam Ödeme", "Fatura Sayısı", "Toplam Fatura Tutarı"
+        };
 
-        ws.Cell(1, 1).Value = "Ünvan";
-        ws.Cell(1, 2).Value = "Telefon";
-        ws.Cell(1, 3).Value = "Vergi No";
-        ws.Cell(1, 4).Value = "Tip";
+        for (var i = 0; i < basliklar.Length; i++)
+            ws.Cell(1, i + 1).Value = basliklar[i];
 
-        var header = ws.Range(1, 1, 1, 4);
+        var header = ws.Range(1, 1, 1, basliklar.Length);
         header.Style.Font.Bold = true;
         header.Style.Fill.BackgroundColor = XLColor.LightGray;
         header.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
         header.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
         header.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 
-        int row = 2;
-
-        foreach (var c in cariler)
+        var row = 2;
+        foreach (var cari in cariler)
         {
-            ws.Cell(row, 1).Value = c.Unvan ?? "";
-            ws.Cell(row, 2).Value = c.Telefon ?? "";
-            ws.Cell(row, 3).Value = c.VergiNo ?? "";
-            ws.Cell(row, 4).Value = c.Tip.ToString();
+            ws.Cell(row, 1).Value = cari.Unvan;
+            ws.Cell(row, 2).Value = cari.Tip == CariTip.Alici ? "Alıcı" : "Satıcı";
+            ws.Cell(row, 3).Value = cari.Telefon ?? "";
+            ws.Cell(row, 4).Value = cari.VergiNo ?? "";
+            ws.Cell(row, 5).Value = cari.ToplamTahsilat;
+            ws.Cell(row, 6).Value = cari.ToplamOdeme;
+            ws.Cell(row, 7).Value = cari.FaturaSayisi;
+            ws.Cell(row, 8).Value = cari.ToplamFaturaTutari;
             row++;
         }
 
+        ws.Columns(5, 6).Style.NumberFormat.Format = "#,##0.00 ₺";
+        ws.Column(8).Style.NumberFormat.Format = "#,##0.00 ₺";
+        ws.SheetView.FreezeRows(1);
         ws.Columns().AdjustToContents();
 
         if (row > 2)
         {
-            var range = ws.Range(1, 1, row - 1, 4);
+            var range = ws.Range(1, 1, row - 1, basliklar.Length);
             range.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             range.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
         }
 
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);
-        stream.Position = 0;
-
-        var dosyaAdi = $"cari_kartlar_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
 
         return File(
             stream.ToArray(),
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            dosyaAdi
-        );
+            $"cari_kartlar_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
     }
 
     private async Task ListeleriYukleAsync(int firmaId)
     {
-        Alicilar = await _db.CariKartlar
-            .Where(x => x.FirmaId == firmaId && x.Tip == CariTip.Alici)
+        Cariler = await CariOzetSorgusu(firmaId)
             .OrderByDescending(x => x.Id)
             .ToListAsync();
+    }
 
-        Saticilar = await _db.CariKartlar
-            .Where(x => x.FirmaId == firmaId && x.Tip == CariTip.Satici)
-            .OrderByDescending(x => x.Id)
-            .ToListAsync();
+    private IQueryable<CariOzet> CariOzetSorgusu(int firmaId)
+    {
+        var sorgu = _db.CariKartlar
+            .AsNoTracking()
+            .Where(x => x.FirmaId == firmaId);
+
+        if (!string.IsNullOrWhiteSpace(UnvanAra))
+        {
+            var unvan = UnvanAra.Trim();
+            sorgu = sorgu.Where(x => x.Unvan.Contains(unvan));
+        }
+
+        if (TipFiltre.HasValue)
+            sorgu = sorgu.Where(x => x.Tip == TipFiltre.Value);
+
+        if (!string.IsNullOrWhiteSpace(IletisimAra))
+        {
+            var iletisim = IletisimAra.Trim();
+            sorgu = sorgu.Where(x =>
+                (x.Telefon != null && x.Telefon.Contains(iletisim)) ||
+                (x.VergiNo != null && x.VergiNo.Contains(iletisim)));
+        }
+
+        return sorgu.Select(cari => new CariOzet
+        {
+            Id = cari.Id,
+            Unvan = cari.Unvan,
+            Tip = cari.Tip,
+            Telefon = cari.Telefon,
+            VergiNo = cari.VergiNo,
+            ToplamTahsilat = _db.KasaHareketleri
+                .Where(x => x.FirmaId == firmaId && x.CariKartId == cari.Id && x.Tip == HareketTipi.Giris)
+                .Sum(x => (decimal?)x.Tutar) ?? 0,
+            ToplamOdeme = _db.KasaHareketleri
+                .Where(x => x.FirmaId == firmaId && x.CariKartId == cari.Id && x.Tip == HareketTipi.Cikis)
+                .Sum(x => (decimal?)x.Tutar) ?? 0,
+            FaturaSayisi = _db.Faturalar
+                .Count(x => x.FirmaId == firmaId && x.CariKartId == cari.Id),
+            ToplamFaturaTutari = _db.Faturalar
+                .Where(x => x.FirmaId == firmaId && x.CariKartId == cari.Id && x.Durum != FaturaDurumu.Iptal)
+                .Sum(x => (decimal?)x.GenelToplam) ?? 0
+        });
+    }
+
+    private static string? Temizle(string? deger) =>
+        string.IsNullOrWhiteSpace(deger) ? null : deger.Trim();
+
+    public class CariOzet
+    {
+        public int Id { get; set; }
+        public string Unvan { get; set; } = "";
+        public CariTip Tip { get; set; }
+        public string? Telefon { get; set; }
+        public string? VergiNo { get; set; }
+        public decimal ToplamTahsilat { get; set; }
+        public decimal ToplamOdeme { get; set; }
+        public int FaturaSayisi { get; set; }
+        public decimal ToplamFaturaTutari { get; set; }
+    }
+
+    public class CariDuzenleForm
+    {
+        public int Id { get; set; }
+        public string Unvan { get; set; } = "";
+        public CariTip Tip { get; set; }
+        public string? Telefon { get; set; }
+        public string? VergiNo { get; set; }
     }
 }

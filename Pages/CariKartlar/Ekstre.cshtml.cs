@@ -18,6 +18,9 @@ public class EkstreModel : PageModel
     }
 
     public CariKart? Cari { get; set; }
+    public List<Fatura> Faturalar { get; set; } = new();
+    public List<KasaHareket> KasaHareketleri { get; set; } = new();
+    public List<Models.IslemGecmisi> SonIslemler { get; set; } = new();
     public List<EkstreSatiri> Satirlar { get; set; } = new();
     public List<EkDosya> Dosyalar { get; set; } = new();
     public decimal ToplamBorc { get; set; }
@@ -46,7 +49,10 @@ public class EkstreModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        var cariVarMi = await _db.CariKartlar.AnyAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+        var cariVarMi = await _db.CariKartlar
+            .AsNoTracking()
+            .AnyAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+
         if (!cariVarMi)
             return NotFound();
 
@@ -68,8 +74,9 @@ public class EkstreModel : PageModel
         Directory.CreateDirectory(klasor);
         var dosyaAdi = $"cari-{id}-{Guid.NewGuid():N}{uzanti}";
         var fizikselYol = Path.Combine(klasor, dosyaAdi);
-        await using var fs = System.IO.File.Create(fizikselYol);
-        await EkDosya.CopyToAsync(fs);
+
+        await using (var fs = System.IO.File.Create(fizikselYol))
+            await EkDosya.CopyToAsync(fs);
 
         _db.EkDosyalar.Add(new EkDosya
         {
@@ -89,17 +96,26 @@ public class EkstreModel : PageModel
 
     private async Task YukleAsync(int id, int firmaId)
     {
-        Cari = await _db.CariKartlar.FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
+        Cari = await _db.CariKartlar
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
+
         if (Cari == null)
             return;
 
-        var faturalar = await _db.Faturalar
-            .Where(x => x.FirmaId == firmaId && x.CariKartId == id && x.Durum != FaturaDurumu.Iptal)
-            .OrderBy(x => x.Tarih)
+        Faturalar = await _db.Faturalar
+            .AsNoTracking()
+            .Where(x => x.FirmaId == firmaId && x.CariKartId == id)
+            .OrderByDescending(x => x.Tarih)
             .ToListAsync();
-        var hareketler = await _db.KasaHareketleri.Where(x => x.FirmaId == firmaId && x.CariKartId == id).OrderBy(x => x.Tarih).ToListAsync();
 
-        foreach (var fatura in faturalar)
+        KasaHareketleri = await _db.KasaHareketleri
+            .AsNoTracking()
+            .Where(x => x.FirmaId == firmaId && x.CariKartId == id)
+            .OrderByDescending(x => x.Tarih)
+            .ToListAsync();
+
+        foreach (var fatura in Faturalar.Where(x => x.Durum != FaturaDurumu.Iptal))
         {
             Satirlar.Add(new EkstreSatiri
             {
@@ -112,7 +128,7 @@ public class EkstreModel : PageModel
             });
         }
 
-        foreach (var hareket in hareketler)
+        foreach (var hareket in KasaHareketleri)
         {
             Satirlar.Add(new EkstreSatiri
             {
@@ -125,7 +141,11 @@ public class EkstreModel : PageModel
             });
         }
 
-        Satirlar = Satirlar.OrderBy(x => x.Tarih).ThenBy(x => x.Tur).ToList();
+        Satirlar = Satirlar
+            .OrderBy(x => x.Tarih)
+            .ThenBy(x => x.Tur)
+            .ToList();
+
         decimal bakiye = 0;
         foreach (var satir in Satirlar)
         {
@@ -136,7 +156,27 @@ public class EkstreModel : PageModel
         ToplamBorc = Satirlar.Sum(x => x.Borc);
         ToplamAlacak = Satirlar.Sum(x => x.Alacak);
 
-        Dosyalar = await _db.EkDosyalar.Where(x => x.FirmaId == firmaId && x.CariKartId == id).OrderByDescending(x => x.YuklemeTarihi).ToListAsync();
+        Dosyalar = await _db.EkDosyalar
+            .AsNoTracking()
+            .Where(x => x.FirmaId == firmaId && x.CariKartId == id)
+            .OrderByDescending(x => x.YuklemeTarihi)
+            .ToListAsync();
+
+        var cariIdDeseni = $"\"id\":{id}";
+        var bagliCariDeseni = $"\"cariKartId\":{id}";
+
+        SonIslemler = await _db.IslemGecmisleri
+            .AsNoTracking()
+            .Where(x => x.FirmaId == firmaId &&
+                ((x.Modul == "Cari Kartlar" &&
+                  ((x.EskiDeger != null && x.EskiDeger.Contains(cariIdDeseni)) ||
+                   (x.YeniDeger != null && x.YeniDeger.Contains(cariIdDeseni)))) ||
+                 ((x.Modul == "Faturalar" || x.Modul == "Kasa") &&
+                  ((x.EskiDeger != null && x.EskiDeger.Contains(bagliCariDeseni)) ||
+                   (x.YeniDeger != null && x.YeniDeger.Contains(bagliCariDeseni))))))
+            .OrderByDescending(x => x.Tarih)
+            .Take(10)
+            .ToListAsync();
     }
 
     public class EkstreSatiri
