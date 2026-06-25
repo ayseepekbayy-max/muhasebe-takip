@@ -133,7 +133,7 @@ else
         {
             @foreach (var isKaydi in Model.Isler)
             {
-                var isToplamMasraf = isKaydi.Masraflar.Sum(x => x.Tutar);
+                var isToplamMasraf = isKaydi.Masraflar?.Sum(x => x.Tutar) ?? 0;
                 var isNet = isKaydi.Gelir - isToplamMasraf;
 
                 <div style="border:1px solid #444; border-radius:12px; padding:18px; margin-bottom:16px;">

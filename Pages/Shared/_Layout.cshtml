@@ -94,6 +94,7 @@
                                     <li><a class="dropdown-item" href="/Ara">Genel Arama</a></li>
                                     <li><a class="dropdown-item" href="/Araclar/ExcelIceAktar">Excel İçe Aktar</a></li>
                                     <li><a class="dropdown-item" href="/Araclar/Yedekleme">Yedekleme</a></li>
+                                    <li><a class="dropdown-item" href="/IslemGecmisi">İşlem Geçmişi</a></li>
                                     <li><a class="dropdown-item" href="/AiAsistan">AI Asistan</a></li>
                                     @if (rol == "superadmin")
                                     {
@@ -127,8 +128,14 @@
         @if (demoMode)
         {
             <div class="demo-mode-banner">
-                <span>Demo modundasınız. Veriler her demo girişinde yenilenir.</span>
+                <span>Demo modundasınız. Veriler örnektir ve değiştirilemez.</span>
                 <a href="/Register">Kendi hesabını oluştur</a>
+            </div>
+        }
+        @if (demoMode && Context.Request.Query["demoReadonly"] == "1")
+        {
+            <div class="demo-readonly-alert">
+                Demo modunda veri ekleme, düzenleme ve silme işlemleri kapalıdır.
             </div>
         }
     }

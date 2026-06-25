@@ -117,7 +117,7 @@ public class LoginModel : PageModel
         HttpContext.Session.SetString("MenuMaliyet", firma.MenuMaliyet ? "1" : "0");
         HttpContext.Session.SetString("MenuCekler", firma.MenuCekler ? "1" : "0");
 
-        TempData["Mesaj"] = "Demo hesap hazırlandı. Veriler her demo girişinde yenilenir.";
+        TempData["Mesaj"] = "Demo hesap hazırlandı. Örnek verileri güvenle inceleyebilirsiniz.";
         return RedirectToPage("/Index");
     }
 }

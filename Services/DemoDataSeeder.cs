@@ -10,61 +10,83 @@ public static class DemoDataSeeder
     public const string DemoUserName = "demo";
     public const string DemoEmail = "demo@firmova.local";
     private const string DemoPassword = "demo123";
+    private const string DemoSeedInvoiceNo = "NVM-2026-0001";
+    private static readonly SemaphoreSlim SeedLock = new(1, 1);
 
     public static async Task<Kullanici> PrepareDemoAsync(AppDbContext db)
     {
-        var kullanici = await db.Kullanicilar
-            .Include(x => x.Firma)
-            .FirstOrDefaultAsync(x => x.KullaniciAdi == DemoUserName || x.Email == DemoEmail);
-
-        if (kullanici?.Firma == null)
+        await SeedLock.WaitAsync();
+        try
         {
-            var firma = new Firma
+            var kullanici = await db.Kullanicilar
+                .Include(x => x.Firma)
+                .FirstOrDefaultAsync(x => x.KullaniciAdi == DemoUserName || x.Email == DemoEmail);
+
+            if (kullanici?.Firma == null)
             {
-                FirmaAdi = "Nova Mobilya ve Tasarım Ltd. Şti.",
-                AktifMi = true,
-                Adres = "Merkez Mah. Tasarım Cad. No: 18",
-                Telefon = "0212 345 67 89",
-                Email = "demo@firmova.com",
-                VergiDairesi = "Merkez Vergi Dairesi",
-                VergiNo = "1234567890"
-            };
+                var firma = new Firma
+                {
+                    FirmaAdi = "Nova Mobilya ve Tasarım Ltd. Şti.",
+                    AktifMi = true,
+                    Adres = "Merkez Mah. Tasarım Cad. No: 18",
+                    Telefon = "0212 345 67 89",
+                    Email = "demo@firmova.com",
+                    VergiDairesi = "Merkez Vergi Dairesi",
+                    VergiNo = "1234567890"
+                };
 
-            db.Firmalar.Add(firma);
-            await db.SaveChangesAsync();
+                db.Firmalar.Add(firma);
+                await db.SaveChangesAsync();
 
-            kullanici = new Kullanici
+                kullanici = new Kullanici
+                {
+                    KullaniciAdi = DemoUserName,
+                    Email = DemoEmail,
+                    Sifre = PasswordHelper.Hash(DemoPassword),
+                    FirmaId = firma.Id,
+                    Firma = firma,
+                    Rol = "Demo"
+                };
+
+                db.Kullanicilar.Add(kullanici);
+                await db.SaveChangesAsync();
+            }
+            else
             {
-                KullaniciAdi = DemoUserName,
-                Email = DemoEmail,
-                Sifre = PasswordHelper.Hash(DemoPassword),
-                FirmaId = firma.Id,
-                Firma = firma,
-                Rol = "Demo"
-            };
+                kullanici.Sifre = PasswordHelper.Hash(DemoPassword);
+                kullanici.Rol = "Demo";
+                kullanici.Firma.AktifMi = true;
+                kullanici.Firma.FirmaAdi = "Nova Mobilya ve Tasarım Ltd. Şti.";
+                kullanici.Firma.Adres = "Merkez Mah. Tasarım Cad. No: 18";
+                kullanici.Firma.Telefon = "0212 345 67 89";
+                kullanici.Firma.Email = "demo@firmova.com";
+                kullanici.Firma.VergiDairesi = "Merkez Vergi Dairesi";
+                kullanici.Firma.VergiNo = "1234567890";
+                await db.SaveChangesAsync();
+            }
 
-            db.Kullanicilar.Add(kullanici);
-            await db.SaveChangesAsync();
+            if (await DemoDataNeedsSeedAsync(db, kullanici.FirmaId))
+                await ResetDemoDataAsync(db, kullanici.FirmaId);
+
+            return await db.Kullanicilar
+                .Include(x => x.Firma)
+                .FirstAsync(x => x.Id == kullanici.Id);
         }
-        else
+        finally
         {
-            kullanici.Sifre = PasswordHelper.Hash(DemoPassword);
-            kullanici.Rol = "Demo";
-            kullanici.Firma.AktifMi = true;
-            kullanici.Firma.FirmaAdi = "Nova Mobilya ve Tasarım Ltd. Şti.";
-            kullanici.Firma.Adres = "Merkez Mah. Tasarım Cad. No: 18";
-            kullanici.Firma.Telefon = "0212 345 67 89";
-            kullanici.Firma.Email = "demo@firmova.com";
-            kullanici.Firma.VergiDairesi = "Merkez Vergi Dairesi";
-            kullanici.Firma.VergiNo = "1234567890";
-            await db.SaveChangesAsync();
+            SeedLock.Release();
         }
+    }
 
-        await ResetDemoDataAsync(db, kullanici.FirmaId);
+    private static async Task<bool> DemoDataNeedsSeedAsync(AppDbContext db, int firmaId)
+    {
+        var hasSeedInvoice = await db.Faturalar
+            .AnyAsync(x => x.FirmaId == firmaId && x.FaturaNo == DemoSeedInvoiceNo);
+        var hasCari = await db.CariKartlar.AnyAsync(x => x.FirmaId == firmaId);
+        var hasStock = await db.StokUrunler.AnyAsync(x => x.FirmaId == firmaId);
+        var hasCashMovement = await db.KasaHareketleri.AnyAsync(x => x.FirmaId == firmaId);
 
-        return await db.Kullanicilar
-            .Include(x => x.Firma)
-            .FirstAsync(x => x.Id == kullanici.Id);
+        return !hasSeedInvoice || !hasCari || !hasStock || !hasCashMovement;
     }
 
     private static async Task ResetDemoDataAsync(AppDbContext db, int firmaId)
@@ -74,6 +96,7 @@ public static class DemoDataSeeder
             .Select(x => x.Id)
             .ToListAsync();
 
+        db.EkDosyalar.RemoveRange(db.EkDosyalar.Where(x => x.FirmaId == firmaId));
         db.KasaHareketleri.RemoveRange(db.KasaHareketleri.Where(x => x.FirmaId == firmaId));
         db.FaturaKalemleri.RemoveRange(db.FaturaKalemleri.Where(x => faturaIds.Contains(x.FaturaId)));
         db.Faturalar.RemoveRange(db.Faturalar.Where(x => x.FirmaId == firmaId));

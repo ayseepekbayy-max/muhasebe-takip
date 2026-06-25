@@ -4,13 +4,22 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Kasa;
 
 public class HareketDuzenleModel : PageModel
 {
     private readonly AppDbContext _db;
-    public HareketDuzenleModel(AppDbContext db) => _db = db;
+    private readonly IIslemGecmisiService _islemGecmisi;
+
+    public HareketDuzenleModel(
+        AppDbContext db,
+        IIslemGecmisiService islemGecmisi)
+    {
+        _db = db;
+        _islemGecmisi = islemGecmisi;
+    }
 
     public List<SelectListItem> CariSecenekleri { get; set; } = new();
 
@@ -82,17 +91,38 @@ public class HareketDuzenleModel : PageModel
         if (dbHareket == null)
             return NotFound();
 
-        dbHareket.Tarih = Hareket.Tarih;
+        var eskiDeger = KasaDegeri(dbHareket);
+
+        var secilenTarih = Hareket.Tarih.Date;
+        dbHareket.Tarih = DateTime.SpecifyKind(secilenTarih, DateTimeKind.Utc);
+
         dbHareket.Tip = Hareket.Tip;
         dbHareket.Tutar = Hareket.Tutar;
         dbHareket.Aciklama = Hareket.Aciklama;
         dbHareket.CariKartId = Hareket.CariKartId;
 
+        await _islemGecmisi.KaydetAsync(
+            "Kasa",
+            "Düzenleme",
+            $"Kasa hareketi güncellendi (ID: {dbHareket.Id}).",
+            eskiDeger,
+            KasaDegeri(dbHareket));
         await _db.SaveChangesAsync();
         Mesaj = "Kasa hareketi güncellendi.";
 
         return RedirectToPage("/Kasa/Hareketler");
     }
+
+    private static object KasaDegeri(KasaHareket hareket) => new
+    {
+        hareket.Id,
+        hareket.Tarih,
+        Tip = hareket.Tip.ToString(),
+        hareket.Tutar,
+        hareket.Aciklama,
+        hareket.CariKartId,
+        hareket.FaturaId
+    };
 
     private async Task YukleCariSecenekleriAsync(int firmaId)
     {

@@ -28,4 +28,21 @@ public class AppDbContext : DbContext
     public DbSet<CalisanMaasArsiv> CalisanMaasArsivleri { get; set; } = default!;
     public DbSet<MaliyetKaydi> MaliyetKayitlari { get; set; } = default!;
     public DbSet<EkDosya> EkDosyalar { get; set; } = default!;
+    public DbSet<IslemGecmisi> IslemGecmisleri { get; set; } = default!;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<IslemGecmisi>(entity =>
+        {
+            entity.HasIndex(x => new { x.FirmaId, x.Tarih });
+            entity.HasIndex(x => new { x.FirmaId, x.Modul });
+
+            entity.HasOne(x => x.Firma)
+                .WithMany()
+                .HasForeignKey(x => x.FirmaId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
 }

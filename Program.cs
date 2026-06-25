@@ -24,6 +24,7 @@ builder.Services.AddSession(options =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ConversationMemoryService>();
+builder.Services.AddScoped<IIslemGecmisiService, IslemGecmisiService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -100,8 +101,7 @@ using (var scope = app.Services.CreateScope())
             db.MusteriIsler.Any(x => x.FirmaId == null) ||
             db.MusteriMasraflar.Any(x => x.FirmaId == null) ||
             db.StokHareketleri.Any(x => x.FirmaId == null) ||
-            db.StokUrunler.Any(x => x.FirmaId == null) ||
-            db.Cekler.Any(x => x.FirmaId == null);
+            db.StokUrunler.Any(x => x.FirmaId == null);
 
         if (baglanacakVeriVarMi)
         {
@@ -130,9 +130,6 @@ using (var scope = app.Services.CreateScope())
                 x.FirmaId = firma.Id;
 
             foreach (var x in db.StokUrunler.Where(x => x.FirmaId == null))
-                x.FirmaId = firma.Id;
-
-            foreach (var x in db.Cekler.Where(x => x.FirmaId == null))
                 x.FirmaId = firma.Id;
 
             db.SaveChanges();
@@ -184,6 +181,43 @@ app.UseSession();
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value?.ToLower() ?? "";
+    var demoMode = context.Session.GetString("DemoMode") == "1";
+    var readOnlyMethod =
+        HttpMethods.IsGet(context.Request.Method) ||
+        HttpMethods.IsHead(context.Request.Method) ||
+        HttpMethods.IsOptions(context.Request.Method);
+    var demoQueryRequest =
+        path.StartsWith("/api/ai") ||
+        path.StartsWith("/aiasistan");
+    var demoAllowedMutation =
+        path.StartsWith("/login") ||
+        path.StartsWith("/register") ||
+        path.StartsWith("/sifremiunuttum") ||
+        path.StartsWith("/sifresifirla");
+
+    if (demoMode && !readOnlyMethod && !demoQueryRequest && !demoAllowedMutation)
+    {
+        if (path.StartsWith("/api"))
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                success = false,
+                message = "Demo modu salt okunurdur. Veri ekleme, düzenleme ve silme işlemleri kapalıdır."
+            });
+            return;
+        }
+
+        var returnUrl = context.Request.Headers.Referer.FirstOrDefault();
+        var redirectUrl = Uri.TryCreate(returnUrl, UriKind.Absolute, out var referer)
+            && referer.Host.Equals(context.Request.Host.Host, StringComparison.OrdinalIgnoreCase)
+                ? referer.PathAndQuery
+                : "/Index";
+
+        var separator = redirectUrl.Contains('?') ? "&" : "?";
+        context.Response.Redirect($"{redirectUrl}{separator}demoReadonly=1");
+        return;
+    }
 
     // API istekleri için özel hata yakalama
     if (path.StartsWith("/api"))

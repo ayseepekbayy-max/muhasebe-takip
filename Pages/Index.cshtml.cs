@@ -3,16 +3,21 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages;
 
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IIslemGecmisiService _islemGecmisi;
 
-    public IndexModel(AppDbContext db)
+    public IndexModel(
+        AppDbContext db,
+        IIslemGecmisiService islemGecmisi)
     {
         _db = db;
+        _islemGecmisi = islemGecmisi;
     }
 
     public decimal BugunGiris { get; set; }
@@ -56,6 +61,20 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
+        await _islemGecmisi.KaydetAsync(
+            "Kasa",
+            "Silme",
+            $"Kasa hareketi ana sayfadan silindi (ID: {hareket.Id}).",
+            eskiDeger: new
+            {
+                hareket.Id,
+                hareket.Tarih,
+                Tip = hareket.Tip.ToString(),
+                hareket.Tutar,
+                hareket.Aciklama,
+                hareket.CariKartId,
+                hareket.FaturaId
+            });
         _db.KasaHareketleri.Remove(hareket);
         await _db.SaveChangesAsync();
 

@@ -183,7 +183,7 @@ public class IndexModel : PageModel
 
         if (bulunanCalisan != null)
         {
-            _memory.SonCalisaniKaydet(bulunanCalisan.AdSoyad);
+            _memory.SonCalisaniKaydet(bulunanCalisan.AdSoyad ?? "");
         }
 
         // MALİYET ANALİZİ
@@ -929,7 +929,7 @@ if (
 
             var toplam = hareketler.Sum(x => x.Tutar);
 
-            SonAvansDetayiniKaydet(bulunanCalisan.AdSoyad, ayBaslangic);
+            SonAvansDetayiniKaydet(bulunanCalisan.AdSoyad ?? "", ayBaslangic);
 
             if (toplam <= 0)
             {
@@ -1027,7 +1027,7 @@ if (
 
             var toplam = hareketler.Sum(x => x.Tutar);
 
-            SonMaasDetayiniKaydet(bulunanCalisan.AdSoyad, ayBaslangic);
+            SonMaasDetayiniKaydet(bulunanCalisan.AdSoyad ?? "", ayBaslangic);
 
             if (toplam <= 0)
             {
@@ -1243,7 +1243,7 @@ var kayitliGun = puantajlar
     .Count();
 
 var eksikGun = beklenenGun - kayitliGun;
-SonPuantajDetayiniKaydet(bulunanCalisan.AdSoyad, ayBaslangic);
+SonPuantajDetayiniKaydet(bulunanCalisan.AdSoyad ?? "", ayBaslangic);
 
 if (eksikGun < 0)
     eksikGun = 0;

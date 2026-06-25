@@ -5,13 +5,22 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Kasa;
 
 public class HareketlerModel : PageModel
 {
     private readonly AppDbContext _db;
-    public HareketlerModel(AppDbContext db) => _db = db;
+    private readonly IIslemGecmisiService _islemGecmisi;
+
+    public HareketlerModel(
+        AppDbContext db,
+        IIslemGecmisiService islemGecmisi)
+    {
+        _db = db;
+        _islemGecmisi = islemGecmisi;
+    }
 
     public List<KasaHareket> Hareketler { get; set; } = new();
 
@@ -57,12 +66,28 @@ public class HareketlerModel : PageModel
             return Page();
         }
 
+        await _islemGecmisi.KaydetAsync(
+            "Kasa",
+            "Silme",
+            $"Kasa hareketi silindi (ID: {h.Id}).",
+            eskiDeger: KasaDegeri(h));
         _db.KasaHareketleri.Remove(h);
         await _db.SaveChangesAsync();
 
         Mesaj = "Kasa hareketi silindi.";
         return RedirectToPage();
     }
+
+    private static object KasaDegeri(KasaHareket hareket) => new
+    {
+        hareket.Id,
+        hareket.Tarih,
+        Tip = hareket.Tip.ToString(),
+        hareket.Tutar,
+        hareket.Aciklama,
+        hareket.CariKartId,
+        hareket.FaturaId
+    };
 
     public async Task<IActionResult> OnPostDisaAktarAsync()
     {

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 using System.Globalization;
 
 namespace MuhasebeTakip2.App.Pages.Kasa;
@@ -11,7 +12,15 @@ namespace MuhasebeTakip2.App.Pages.Kasa;
 public class HareketEkleModel : PageModel
 {
     private readonly AppDbContext _db;
-    public HareketEkleModel(AppDbContext db) => _db = db;
+    private readonly IIslemGecmisiService _islemGecmisi;
+
+    public HareketEkleModel(
+        AppDbContext db,
+        IIslemGecmisiService islemGecmisi)
+    {
+        _db = db;
+        _islemGecmisi = islemGecmisi;
+    }
 
     public List<SelectListItem> CariSecenekleri { get; set; } = new();
 
@@ -115,8 +124,18 @@ public class HareketEkleModel : PageModel
             var secilenTarih = Hareket.Tarih.Date;
             Hareket.Tarih = DateTime.SpecifyKind(secilenTarih, DateTimeKind.Utc);
 
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+
             _db.KasaHareketleri.Add(Hareket);
             await _db.SaveChangesAsync();
+
+            await _islemGecmisi.KaydetAsync(
+                "Kasa",
+                "Ekleme",
+                $"{Hareket.Tip} kasa hareketi eklendi (ID: {Hareket.Id}).",
+                yeniDeger: KasaDegeri(Hareket));
+            await _db.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             return RedirectToPage("/Kasa/Hareketler");
         }
@@ -132,6 +151,17 @@ public class HareketEkleModel : PageModel
             return Page();
         }
     }
+
+    private static object KasaDegeri(KasaHareket hareket) => new
+    {
+        hareket.Id,
+        hareket.Tarih,
+        Tip = hareket.Tip.ToString(),
+        hareket.Tutar,
+        hareket.Aciklama,
+        hareket.CariKartId,
+        hareket.FaturaId
+    };
 
     private async Task YukleCariSecenekleriAsync(int firmaId)
     {

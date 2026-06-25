@@ -127,7 +127,7 @@ public class QueryExecutor
 
             case "CalisanMaasToplam":
                 return (await _apiClient.GetCalisanMaasToplamAsync(
-                    intent.CalisanAdi,
+                    intent.CalisanAdi ?? "",
                     intent.Year,
                     intent.Month)).Message;
 
@@ -142,7 +142,7 @@ public class QueryExecutor
 
             case "CalisanKalanMaas":
                 return (await _apiClient.GetCalisanKalanMaasAsync(
-                    intent.CalisanAdi,
+                    intent.CalisanAdi ?? "",
                     intent.Year,
                     intent.Month)).Message;
 
@@ -154,7 +154,7 @@ public class QueryExecutor
 
             case "CalisanMaasOzet":
                 return (await _apiClient.GetCalisanMaasOzetAsync(
-                    intent.CalisanAdi,
+                    intent.CalisanAdi ?? "",
                     intent.Year,
                     intent.Month)).Message;
 
@@ -172,7 +172,7 @@ public class QueryExecutor
 
             case "CalisanDevamsizlik":
                 return (await _apiClient.GetCalisanDevamsizlikAsync(
-                    intent.CalisanAdi,
+                    intent.CalisanAdi ?? "",
                     intent.Year,
                     intent.Month)).Message;
 

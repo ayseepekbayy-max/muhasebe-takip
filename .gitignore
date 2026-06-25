@@ -1,0 +1,13 @@
+bin/
+obj/
+
+# Local development databases and backups
+*.db
+*.db-shm
+*.db-wal
+*.db.backup_*
+
+# User-specific IDE files
+.vs/
+*.user
+*.suo
