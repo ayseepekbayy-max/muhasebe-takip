@@ -34,25 +34,50 @@
         <div class="app-alert app-alert-danger">@Model.SayfaHata</div>
     }
 
-    <section class="metric-grid">
+    <section class="dashboard-metric-grid">
         <article class="metric-card metric-card-positive">
-            <span>Bugünkü Giriş</span>
-            <strong>@Model.BugunGiris.ToString("N2")</strong>
+            <span>Bugünkü Kasa Girişi</span>
+            <strong>@Model.BugunGiris.ToString("N2") TL</strong>
         </article>
 
         <article class="metric-card metric-card-negative">
-            <span>Bugünkü Çıkış</span>
-            <strong>@Model.BugunCikis.ToString("N2")</strong>
+            <span>Bugünkü Kasa Çıkışı</span>
+            <strong>@Model.BugunCikis.ToString("N2") TL</strong>
+        </article>
+
+        <article class="metric-card metric-card-positive">
+            <span>Bu Ay Gelir</span>
+            <strong>@Model.BuAyGiris.ToString("N2") TL</strong>
+        </article>
+
+        <article class="metric-card metric-card-negative">
+            <span>Bu Ay Gider</span>
+            <strong>@Model.BuAyCikis.ToString("N2") TL</strong>
+        </article>
+
+        <article class="metric-card metric-card-warning">
+            <span>Bekleyen Faturalar</span>
+            <strong>@Model.BekleyenFaturaToplami.ToString("N2") TL</strong>
+        </article>
+
+        <article class="metric-card metric-card-positive">
+            <span>Ödenmiş Faturalar</span>
+            <strong>@Model.OdenmisFaturaToplami.ToString("N2") TL</strong>
+        </article>
+
+        <article class="metric-card metric-card-negative">
+            <span>Kritik Stok</span>
+            <strong>@Model.KritikStokSayisi</strong>
         </article>
 
         <article class="metric-card">
-            <span>Bu Ay Giriş</span>
-            <strong>@Model.BuAyGiris.ToString("N2")</strong>
+            <span>Aktif Müşteri</span>
+            <strong>@Model.MusteriSayisi</strong>
         </article>
 
-        <article class="metric-card metric-card-negative">
-            <span>Bu Ay Çıkış</span>
-            <strong>@Model.BuAyCikis.ToString("N2")</strong>
+        <article class="metric-card">
+            <span>Aktif Çalışan</span>
+            <strong>@Model.CalisanSayisi</strong>
         </article>
     </section>
 
@@ -94,7 +119,7 @@
 
                 <div class="balance-card">
                     <span>Güncel Kasa Bakiye</span>
-                    <strong class="dashboard-card-balance">@Model.KasaBakiye.ToString("N2")</strong>
+                    <strong class="dashboard-card-balance">@Model.KasaBakiye.ToString("N2") TL</strong>
                 </div>
 
                 <div class="summary-grid">
@@ -108,6 +133,49 @@
                         <strong>@Model.CalisanSayisi</strong>
                     </article>
                 </div>
+            </section>
+
+            <section class="dashboard-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <h2>Son İşlem Geçmişi</h2>
+                        <p>Firmada yapılan son 10 işlem</p>
+                    </div>
+                    <a class="panel-link" href="/IslemGecmisi">Tümünü Gör</a>
+                </div>
+
+                @if (Model.SonIslemler.Count == 0)
+                {
+                    <div class="empty-state">Henüz işlem geçmişi yok.</div>
+                }
+                else
+                {
+                    <div class="table-wrap">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Tarih</th>
+                                    <th>Kullanıcı</th>
+                                    <th>Modül</th>
+                                    <th>İşlem</th>
+                                    <th>Açıklama</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var islem in Model.SonIslemler)
+                                {
+                                    <tr>
+                                        <td class="text-nowrap">@islem.Tarih.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td>@islem.KullaniciAdi</td>
+                                        <td><span class="status-pill status-pill-neutral">@islem.Modul</span></td>
+                                        <td>@islem.IslemTuru</td>
+                                        <td>@islem.Aciklama</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
             </section>
 
             <section class="dashboard-panel">
