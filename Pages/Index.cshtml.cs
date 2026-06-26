@@ -156,10 +156,11 @@ public class IndexModel : PageModel
             {
                 x.Id,
                 x.Ad,
+                x.MinStokSeviyesi,
                 Giris = _db.StokHareketleri.Where(h => h.FirmaId == firmaId && h.StokUrunId == x.Id && h.Tip == StokHareketTipi.Giris).Sum(h => (decimal?)h.Miktar) ?? 0,
                 Cikis = _db.StokHareketleri.Where(h => h.FirmaId == firmaId && h.StokUrunId == x.Id && h.Tip == StokHareketTipi.Cikis).Sum(h => (decimal?)h.Miktar) ?? 0
             })
-            .Where(x => x.Giris - x.Cikis < 0)
+            .Where(x => x.Giris - x.Cikis < x.MinStokSeviyesi)
             .Take(5)
             .ToListAsync();
 
@@ -246,7 +247,7 @@ public class IndexModel : PageModel
                         .Sum(h => (decimal?)h.Miktar) ?? 0) -
                     (_db.StokHareketleri
                         .Where(h => h.FirmaId == firmaId && h.StokUrunId == urun.Id && h.Tip == StokHareketTipi.Cikis)
-                        .Sum(h => (decimal?)h.Miktar) ?? 0) <= 0);
+                        .Sum(h => (decimal?)h.Miktar) ?? 0) < urun.MinStokSeviyesi);
 
             await BildirimleriYukleAsync(firmaId, bugun);
 

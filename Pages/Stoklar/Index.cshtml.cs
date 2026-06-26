@@ -118,7 +118,10 @@ public class IndexModel : PageModel
             .ToListAsync();
 
         if (hareketler.Count > 0)
-            _db.StokHareketleri.RemoveRange(hareketler);
+        {
+            TempData["Hata"] = "Bu urune ait stok hareketleri var. Gecmis kayitlarin korunmasi icin urun silinmedi.";
+            return RedirectToPage();
+        }
 
         var eskiDeger = IslemGecmisiSnapshots.StokUrun(urun);
         _db.StokUrunler.Remove(urun);

@@ -81,11 +81,11 @@ public static class AiApiHelpers
         };
     }
 
-    public static async Task<CalisanAvansToplamResponse> GetSonAvansVerilenKisiAsync(AppDbContext db)
+    public static async Task<CalisanAvansToplamResponse> GetSonAvansVerilenKisiAsync(AppDbContext db, int? firmaId = null)
     {
         var kayit = await db.CalisanAvanslari
             .Include(x => x.Calisan)
-            .Where(x => x.Tip == CalisanHareketTipi.Avans && !x.ArsivlendiMi)
+            .Where(x => x.Tip == CalisanHareketTipi.Avans && !x.ArsivlendiMi && x.FirmaId == firmaId)
             .OrderByDescending(x => x.Tarih)
             .ThenByDescending(x => x.Id)
             .FirstOrDefaultAsync();
@@ -110,17 +110,17 @@ public static class AiApiHelpers
         };
     }
 
-    public static async Task<CalisanAvansToplamResponse> GetBugunKasaDurumuAsync(AppDbContext db, string? kasaIntent)
+    public static async Task<CalisanAvansToplamResponse> GetBugunKasaDurumuAsync(AppDbContext db, string? kasaIntent, int? firmaId = null)
     {
         var bugun = DateTime.UtcNow.Date;
         var yarin = bugun.AddDays(1);
 
         var giris = await db.KasaHareketleri
-            .Where(x => x.Tarih >= bugun && x.Tarih < yarin && x.Tip == HareketTipi.Giris)
+            .Where(x => x.FirmaId == firmaId && x.Tarih >= bugun && x.Tarih < yarin && x.Tip == HareketTipi.Giris)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         var cikis = await db.KasaHareketleri
-            .Where(x => x.Tarih >= bugun && x.Tarih < yarin && x.Tip == HareketTipi.Cikis)
+            .Where(x => x.FirmaId == firmaId && x.Tarih >= bugun && x.Tarih < yarin && x.Tip == HareketTipi.Cikis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         return kasaIntent switch
@@ -131,11 +131,11 @@ public static class AiApiHelpers
         };
     }
 
-    public static async Task<CalisanAvansToplamResponse> GetEnBorcluMusteriAsync(AppDbContext db)
+    public static async Task<CalisanAvansToplamResponse> GetEnBorcluMusteriAsync(AppDbContext db, int? firmaId = null)
     {
         var sonuc = await db.KasaHareketleri
             .Include(x => x.CariKart)
-            .Where(x => x.CariKartId != null && x.CariKart != null && x.CariKart.Tip == CariTip.Alici)
+            .Where(x => x.FirmaId == firmaId && x.CariKartId != null && x.CariKart != null && x.CariKart.Tip == CariTip.Alici)
             .GroupBy(x => new { x.CariKartId, x.CariKart!.Unvan, x.CariKart.Ad })
             .Select(g => new
             {
@@ -157,11 +157,11 @@ public static class AiApiHelpers
         };
     }
 
-    public static async Task<CalisanAvansToplamResponse> GetEnAlacakliSaticiAsync(AppDbContext db)
+    public static async Task<CalisanAvansToplamResponse> GetEnAlacakliSaticiAsync(AppDbContext db, int? firmaId = null)
     {
         var sonuc = await db.KasaHareketleri
             .Include(x => x.CariKart)
-            .Where(x => x.CariKartId != null && x.CariKart != null && x.CariKart.Tip == CariTip.Satici)
+            .Where(x => x.FirmaId == firmaId && x.CariKartId != null && x.CariKart != null && x.CariKart.Tip == CariTip.Satici)
             .GroupBy(x => new { x.CariKartId, x.CariKart!.Unvan, x.CariKart.Ad })
             .Select(g => new
             {
@@ -183,11 +183,12 @@ public static class AiApiHelpers
         };
     }
 
-    public static async Task<CalisanAvansToplamResponse> GetToplamMusteriTahsilatiAsync(AppDbContext db, string? dateRange)
+    public static async Task<CalisanAvansToplamResponse> GetToplamMusteriTahsilatiAsync(AppDbContext db, string? dateRange, int? firmaId = null)
     {
         var query = db.KasaHareketleri
             .Include(x => x.CariKart)
-            .Where(x => x.CariKartId != null && x.CariKart != null &&
+            .Where(x => x.FirmaId == firmaId &&
+                        x.CariKartId != null && x.CariKart != null &&
                         x.CariKart.Tip == CariTip.Alici &&
                         x.Tip == HareketTipi.Giris)
             .AsQueryable();
@@ -204,11 +205,12 @@ public static class AiApiHelpers
         };
     }
 
-    public static async Task<CalisanAvansToplamResponse> GetToplamSaticiOdemesiAsync(AppDbContext db, string? dateRange)
+    public static async Task<CalisanAvansToplamResponse> GetToplamSaticiOdemesiAsync(AppDbContext db, string? dateRange, int? firmaId = null)
     {
         var query = db.KasaHareketleri
             .Include(x => x.CariKart)
-            .Where(x => x.CariKartId != null && x.CariKart != null &&
+            .Where(x => x.FirmaId == firmaId &&
+                        x.CariKartId != null && x.CariKart != null &&
                         x.CariKart.Tip == CariTip.Satici &&
                         x.Tip == HareketTipi.Cikis)
             .AsQueryable();
@@ -412,6 +414,7 @@ public class CalisanAvansToplamRequest
 {
     public string CalisanAdi { get; set; } = "";
     public string DateRange { get; set; } = "ThisMonth";
+    public int? FirmaId { get; set; }
 }
 
 public class CalisanAvansToplamResponse

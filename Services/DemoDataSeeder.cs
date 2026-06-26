@@ -86,7 +86,7 @@ public static class DemoDataSeeder
         var hasStock = await db.StokUrunler.AnyAsync(x => x.FirmaId == firmaId);
         var hasCashMovement = await db.KasaHareketleri.AnyAsync(x => x.FirmaId == firmaId);
 
-        return !hasSeedInvoice || !hasCari || !hasStock || !hasCashMovement;
+        return !hasSeedInvoice && !hasCari && !hasStock && !hasCashMovement;
     }
 
     private static async Task ResetDemoDataAsync(AppDbContext db, int firmaId)

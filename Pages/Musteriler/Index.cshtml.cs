@@ -108,18 +108,10 @@ public class IndexModel : PageModel
             .Where(x => x.MusteriId == id && x.FirmaId == firmaId)
             .ToListAsync();
 
-        var isIdleri = isler.Select(x => x.Id).ToList();
-
-        if (isIdleri.Count > 0)
+        if (isler.Count > 0)
         {
-            var masraflar = await _db.MusteriMasraflar
-                .Where(x => isIdleri.Contains(x.MusteriIsId) && x.FirmaId == firmaId)
-                .ToListAsync();
-
-            if (masraflar.Count > 0)
-                _db.MusteriMasraflar.RemoveRange(masraflar);
-
-            _db.MusteriIsler.RemoveRange(isler);
+            TempData["Hata"] = "Bu musteriye bagli is veya masraf kayitlari var. Gecmis kayitlarin korunmasi icin musteri silinmedi.";
+            return RedirectToPage();
         }
 
         var eskiDeger = IslemGecmisiSnapshots.Musteri(musteri);

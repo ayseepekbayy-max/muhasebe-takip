@@ -51,8 +51,9 @@ builder.Services.AddScoped<EmailService>();
 var app = builder.Build();
 
 // Veritabanını migration ile güncelle
-using (var scope = app.Services.CreateScope())
+if (app.Environment.IsDevelopment())
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     db.Database.Migrate();
@@ -85,8 +86,9 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Eski verileri sadece ilk kurulumda mevcut firmaya bağla
-using (var scope = app.Services.CreateScope())
+if (builder.Configuration.GetValue<bool>("Maintenance:AttachLegacyDataToFirstFirm"))
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var firma = db.Firmalar.FirstOrDefault();
 
@@ -138,8 +140,9 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Admin kullanıcısını düzelt
-using (var scope = app.Services.CreateScope())
+if (builder.Configuration.GetValue<bool>("Maintenance:FixDefaultAdminOnStartup"))
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     var admin = db.Kullanicilar
@@ -332,7 +335,7 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest reques
                 x.Tip == CalisanHareketTipi.Avans &&
                 x.Tarih >= start &&
                 x.Tarih < end &&
-                (firmaId == null || x.FirmaId == firmaId) &&
+                x.FirmaId == firmaId &&
                 (
                     (x.CalisanId == calisan.Id && x.CalisanId > 0) ||
                     (
@@ -358,7 +361,7 @@ app.MapPost("/api/ai/calisan-avans-toplam", async (CalisanAvansApiRequest reques
         var maasArsivleri = await db.CalisanMaasArsivleri
             .Where(x =>
                 x.CalisanId == calisan.Id &&
-                (firmaId == null || x.FirmaId == firmaId))
+                x.FirmaId == firmaId)
             .Select(x => new
             {
                 x.CalisanId,
@@ -424,9 +427,11 @@ app.MapPost("/api/ai/toplam-gelir", async (CalisanAvansApiRequest request, AppDb
     try
     {
         var (baslangic, bitis, ayAdi) = GetDateRange(request);
+        var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
         var toplam = await db.KasaHareketleri
-            .Where(x => x.Tip == HareketTipi.Giris &&
+            .Where(x => x.FirmaId == firmaId &&
+                        x.Tip == HareketTipi.Giris &&
                         x.Tarih >= baslangic &&
                         x.Tarih < bitis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
@@ -444,11 +449,12 @@ app.MapPost("/api/ai/toplam-gelir", async (CalisanAvansApiRequest request, AppDb
     }
 });
 
-app.MapPost("/api/ai/son-avans-verilen-kisi", async (AppDbContext db) =>
+app.MapPost("/api/ai/son-avans-verilen-kisi", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
     try
     {
-        var result = await AiApiHelpers.GetSonAvansVerilenKisiAsync(db);
+        var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
+        var result = await AiApiHelpers.GetSonAvansVerilenKisiAsync(db, firmaId);
         return Results.Json(result);
     }
     catch (Exception ex)
@@ -467,7 +473,8 @@ app.MapPost("/api/ai/bugun-kasa-durumu", async (CalisanAvansToplamRequest reques
 {
     try
     {
-        var result = await AiApiHelpers.GetBugunKasaDurumuAsync(db, request.CalisanAdi);
+        var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
+        var result = await AiApiHelpers.GetBugunKasaDurumuAsync(db, request.CalisanAdi, firmaId);
         return Results.Json(result);
     }
     catch (Exception ex)
@@ -482,11 +489,12 @@ app.MapPost("/api/ai/bugun-kasa-durumu", async (CalisanAvansToplamRequest reques
     }
 });
 
-app.MapPost("/api/ai/en-borclu-musteri", async (AppDbContext db) =>
+app.MapPost("/api/ai/en-borclu-musteri", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
     try
     {
-        var result = await AiApiHelpers.GetEnBorcluMusteriAsync(db);
+        var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
+        var result = await AiApiHelpers.GetEnBorcluMusteriAsync(db, firmaId);
         return Results.Json(result);
     }
     catch (Exception ex)
@@ -501,11 +509,12 @@ app.MapPost("/api/ai/en-borclu-musteri", async (AppDbContext db) =>
     }
 });
 
-app.MapPost("/api/ai/en-alacakli-satici", async (AppDbContext db) =>
+app.MapPost("/api/ai/en-alacakli-satici", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
     try
     {
-        var result = await AiApiHelpers.GetEnAlacakliSaticiAsync(db);
+        var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
+        var result = await AiApiHelpers.GetEnAlacakliSaticiAsync(db, firmaId);
         return Results.Json(result);
     }
     catch (Exception ex)
@@ -524,7 +533,8 @@ app.MapPost("/api/ai/toplam-musteri-tahsilati", async (CalisanAvansToplamRequest
 {
     try
     {
-        var result = await AiApiHelpers.GetToplamMusteriTahsilatiAsync(db, request.DateRange);
+        var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
+        var result = await AiApiHelpers.GetToplamMusteriTahsilatiAsync(db, request.DateRange, firmaId);
         return Results.Json(result);
     }
     catch (Exception ex)
@@ -543,7 +553,8 @@ app.MapPost("/api/ai/toplam-satici-odemesi", async (CalisanAvansToplamRequest re
 {
     try
     {
-        var result = await AiApiHelpers.GetToplamSaticiOdemesiAsync(db, request.DateRange);
+        var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
+        var result = await AiApiHelpers.GetToplamSaticiOdemesiAsync(db, request.DateRange, firmaId);
         return Results.Json(result);
     }
     catch (Exception ex)
@@ -563,9 +574,11 @@ app.MapPost("/api/ai/toplam-gider", async (CalisanAvansApiRequest request, AppDb
     try
     {
         var (baslangic, bitis, ayAdi) = GetDateRange(request);
+        var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
         var toplam = await db.KasaHareketleri
-            .Where(x => x.Tip == HareketTipi.Cikis &&
+            .Where(x => x.FirmaId == firmaId &&
+                        x.Tip == HareketTipi.Cikis &&
                         x.Tarih >= baslangic &&
                         x.Tarih < bitis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
@@ -588,15 +601,18 @@ app.MapPost("/api/ai/kasa-bakiye", async (CalisanAvansApiRequest request, AppDbC
     try
     {
         var (baslangic, bitis, ayAdi) = GetDateRange(request);
+        var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
         var giris = await db.KasaHareketleri
-            .Where(x => x.Tip == HareketTipi.Giris &&
+            .Where(x => x.FirmaId == firmaId &&
+                        x.Tip == HareketTipi.Giris &&
                         x.Tarih >= baslangic &&
                         x.Tarih < bitis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
         var cikis = await db.KasaHareketleri
-            .Where(x => x.Tip == HareketTipi.Cikis &&
+            .Where(x => x.FirmaId == firmaId &&
+                        x.Tip == HareketTipi.Cikis &&
                         x.Tarih >= baslangic &&
                         x.Tarih < bitis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
@@ -623,7 +639,7 @@ app.MapPost("/api/ai/son-kasa-hareketleri", async (AppDbContext db, CalisanAvans
     try
     {
         var liste = await db.KasaHareketleri
-            .Where(x => firmaId == null || x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId)
             .OrderByDescending(x => x.Tarih)
             .ThenByDescending(x => x.Id)
             .Take(10)
@@ -686,7 +702,7 @@ app.MapPost("/api/ai/musteri-sayisi", async (AppDbContext db, CalisanAvansApiReq
     var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
     try
     {
-        var count = await db.Musteriler.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
+        var count = await db.Musteriler.CountAsync(x => x.FirmaId == firmaId);
 
         return Results.Json(new
         {
@@ -710,7 +726,7 @@ app.MapPost("/api/ai/calisan-sayisi", async (AppDbContext db, CalisanAvansApiReq
 {
 
     var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
-    var count = await db.Calisanlar.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
+    var count = await db.Calisanlar.CountAsync(x => x.FirmaId == firmaId);
     return Results.Json(new { success = true, message = $"Toplam çalışan sayısı: {count}" });
 });
 
@@ -758,7 +774,7 @@ app.MapPost("/api/ai/cari-sayisi", async (AppDbContext db, CalisanAvansApiReques
 {
 
     var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
-    var count = await db.CariKartlar.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
+    var count = await db.CariKartlar.CountAsync(x => x.FirmaId == firmaId);
     return Results.Json(new { success = true, message = $"Toplam cari sayısı: {count}" });
 });
 
@@ -766,7 +782,7 @@ app.MapPost("/api/ai/alici-sayisi", async (AppDbContext db, CalisanAvansApiReque
 {
 
     var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
-    var count = await db.CariKartlar.Where(x => x.Tip == CariTip.Alici && (firmaId == null || x.FirmaId == firmaId)).CountAsync();
+    var count = await db.CariKartlar.Where(x => x.Tip == CariTip.Alici && x.FirmaId == firmaId).CountAsync();
     return Results.Json(new { success = true, message = $"Toplam alıcı sayısı: {count}" });
 });
 
@@ -774,7 +790,7 @@ app.MapPost("/api/ai/satici-sayisi", async (AppDbContext db, CalisanAvansApiRequ
 {
 
     var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
-    var count = await db.CariKartlar.Where(x => x.Tip == CariTip.Satici && (firmaId == null || x.FirmaId == firmaId)).CountAsync();
+    var count = await db.CariKartlar.Where(x => x.Tip == CariTip.Satici && x.FirmaId == firmaId).CountAsync();
     return Results.Json(new { success = true, message = $"Toplam satıcı sayısı: {count}" });
 });
 
@@ -782,7 +798,7 @@ app.MapPost("/api/ai/stok-sayisi", async (AppDbContext db, CalisanAvansApiReques
 {
 
     var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
-    var count = await db.StokUrunler.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
+    var count = await db.StokUrunler.CountAsync(x => x.FirmaId == firmaId);
     return Results.Json(new { success = true, message = $"Toplam stok ürün sayısı: {count}" });
 });
 
@@ -794,7 +810,7 @@ app.MapPost("/api/ai/bugun-kasa-islem-sayisi", async (AppDbContext db, CalisanAv
     var yarin = bugun.AddDays(1);
 
     var toplam = await db.KasaHareketleri
-        .CountAsync(x => x.Tarih >= bugun && x.Tarih < yarin && (firmaId == null || x.FirmaId == firmaId));
+        .CountAsync(x => x.Tarih >= bugun && x.Tarih < yarin && x.FirmaId == firmaId);
 
     return Results.Json(new CalisanAvansToplamResponse
     {
@@ -811,12 +827,12 @@ app.MapPost("/api/ai/biten-stoklar", async (AppDbContext db, CalisanAvansApiRequ
     try
     {
         var stoklar = await db.StokUrunler
-            .Where(u => firmaId == null || u.FirmaId == firmaId)
+            .Where(u => u.FirmaId == firmaId)
             .Select(u => new
             {
                 Urun = u.Ad,
                 Miktar = db.StokHareketleri
-                    .Where(h => h.StokUrunId == u.Id && (firmaId == null || h.FirmaId == firmaId))
+                    .Where(h => h.StokUrunId == u.Id && h.FirmaId == firmaId)
                     .Sum(h => h.Tip == StokHareketTipi.Giris ? h.Miktar : -h.Miktar)
             })
             .Where(x => x.Miktar <= 0)
@@ -862,11 +878,12 @@ app.MapPost("/api/ai/en-cok-stokta-olan-urun", async (AppDbContext db, CalisanAv
     try
     {
         var urun = await db.StokUrunler
+            .Where(u => u.FirmaId == firmaId)
             .Select(u => new
             {
                 Urun = u.Ad,
                 Miktar = db.StokHareketleri
-                    .Where(h => h.StokUrunId == u.Id && (firmaId == null || h.FirmaId == firmaId))
+                    .Where(h => h.StokUrunId == u.Id && h.FirmaId == firmaId)
                     .Sum(h => h.Tip == StokHareketTipi.Giris ? h.Miktar : -h.Miktar)
             })
             .OrderByDescending(x => x.Miktar)
@@ -904,17 +921,17 @@ app.MapPost("/api/ai/genel-ozet", async (AppDbContext db, CalisanAvansApiRequest
 {
 
     var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
-    var musteriSayisi = await db.Musteriler.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
-    var calisanSayisi = await db.Calisanlar.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
-    var cariSayisi = await db.CariKartlar.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
-    var stokUrunSayisi = await db.StokUrunler.CountAsync(x => firmaId == null || x.FirmaId == firmaId);
+    var musteriSayisi = await db.Musteriler.CountAsync(x => x.FirmaId == firmaId);
+    var calisanSayisi = await db.Calisanlar.CountAsync(x => x.FirmaId == firmaId);
+    var cariSayisi = await db.CariKartlar.CountAsync(x => x.FirmaId == firmaId);
+    var stokUrunSayisi = await db.StokUrunler.CountAsync(x => x.FirmaId == firmaId);
 
     var giris = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Giris && (firmaId == null || x.FirmaId == firmaId))
+        .Where(x => x.Tip == HareketTipi.Giris && x.FirmaId == firmaId)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var cikis = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Cikis && (firmaId == null || x.FirmaId == firmaId))
+        .Where(x => x.Tip == HareketTipi.Cikis && x.FirmaId == firmaId)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var bakiye = giris - cikis;
@@ -947,13 +964,14 @@ app.MapPost("/api/ai/calisan-devamsizlik", async (AppDbContext db, CalisanAvansA
 app.MapPost("/api/ai/kar-durumu", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
     var (baslangic, bitis, ayAdi) = GetDateRange(request);
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var gelir = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Giris && x.Tarih >= baslangic && x.Tarih < bitis)
+        .Where(x => x.FirmaId == firmaId && x.Tip == HareketTipi.Giris && x.Tarih >= baslangic && x.Tarih < bitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var gider = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
+        .Where(x => x.FirmaId == firmaId && x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var kar = gelir - gider;
@@ -985,8 +1003,9 @@ app.MapPost("/api/ai/kar-durumu", async (AppDbContext db, CalisanAvansApiRequest
     });
 });
 
-app.MapPost("/api/ai/aylik-karsilastirma", async (AppDbContext db) =>
+app.MapPost("/api/ai/aylik-karsilastirma", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
     var now = DateTime.UtcNow;
     var buAyBaslangic = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);    var buAyBitis = buAyBaslangic.AddMonths(1);
 
@@ -994,19 +1013,19 @@ app.MapPost("/api/ai/aylik-karsilastirma", async (AppDbContext db) =>
     var gecenAyBitis = buAyBaslangic;
 
     var buAyGelir = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Giris && x.Tarih >= buAyBaslangic && x.Tarih < buAyBitis)
+        .Where(x => x.FirmaId == firmaId && x.Tip == HareketTipi.Giris && x.Tarih >= buAyBaslangic && x.Tarih < buAyBitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var buAyGider = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= buAyBaslangic && x.Tarih < buAyBitis)
+        .Where(x => x.FirmaId == firmaId && x.Tip == HareketTipi.Cikis && x.Tarih >= buAyBaslangic && x.Tarih < buAyBitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var gecenAyGelir = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Giris && x.Tarih >= gecenAyBaslangic && x.Tarih < gecenAyBitis)
+        .Where(x => x.FirmaId == firmaId && x.Tip == HareketTipi.Giris && x.Tarih >= gecenAyBaslangic && x.Tarih < gecenAyBitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var gecenAyGider = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= gecenAyBaslangic && x.Tarih < gecenAyBitis)
+        .Where(x => x.FirmaId == firmaId && x.Tip == HareketTipi.Cikis && x.Tarih >= gecenAyBaslangic && x.Tarih < gecenAyBitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var buAyKar = buAyGelir - buAyGider;
@@ -1030,9 +1049,10 @@ app.MapPost("/api/ai/aylik-karsilastirma", async (AppDbContext db) =>
 app.MapPost("/api/ai/en-cok-gider", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
     var (baslangic, bitis, ayAdi) = GetDateRange(request);
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var gider = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
+        .Where(x => x.FirmaId == firmaId && x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
         .GroupBy(x => string.IsNullOrWhiteSpace(x.Aciklama) ? "Açıklamasız gider" : x.Aciklama)
         .Select(g => new
         {
@@ -1059,10 +1079,12 @@ app.MapPost("/api/ai/en-cok-gider", async (AppDbContext db, CalisanAvansApiReque
     });
 });
 
-app.MapPost("/api/ai/en-cok-kazandiran-musteri", async (AppDbContext db) =>
+app.MapPost("/api/ai/en-cok-kazandiran-musteri", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
     var musteri = await db.MusteriIsler
         .Include(x => x.Musteri)
+        .Where(x => x.FirmaId == firmaId)
         .GroupBy(x => new
         {
             x.MusteriId,
@@ -1093,15 +1115,17 @@ app.MapPost("/api/ai/en-cok-kazandiran-musteri", async (AppDbContext db) =>
     });
 });
 
-app.MapPost("/api/ai/stok-durumu", async (AppDbContext db) =>
+app.MapPost("/api/ai/stok-durumu", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
-    var urunSayisi = await db.StokUrunler.CountAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
+    var urunSayisi = await db.StokUrunler.CountAsync(x => x.FirmaId == firmaId);
 
     var bitenStokSayisi = await db.StokUrunler
+        .Where(u => u.FirmaId == firmaId)
         .Select(u => new
         {
             Miktar = db.StokHareketleri
-                .Where(h => h.StokUrunId == u.Id)
+                .Where(h => h.StokUrunId == u.Id && h.FirmaId == firmaId)
                 .Sum(h => h.Tip == StokHareketTipi.Giris ? h.Miktar : -h.Miktar)
         })
         .CountAsync(x => x.Miktar <= 0);
@@ -1125,11 +1149,7 @@ app.MapPost("/api/ai/maas-odeme-kontrol", async (AppDbContext db, CalisanAvansAp
     var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var aktifQuery = db.CalisanAvanslari
         .Include(x => x.Calisan)
@@ -1212,11 +1232,7 @@ app.MapPost("/api/ai/maas-odeme-dagilim", async (AppDbContext db, CalisanAvansAp
     var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var aktifQuery = db.CalisanAvanslari
         .Include(x => x.Calisan)
@@ -1400,11 +1416,7 @@ app.MapPost("/api/ai/toplam-avans", async (AppDbContext db, CalisanAvansApiReque
     var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, req.FirmaId);
 
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
@@ -1485,11 +1497,7 @@ app.MapPost("/api/ai/avans-dagilim", async (AppDbContext db, CalisanAvansApiRequ
     var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, req.FirmaId);
 
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
@@ -1596,11 +1604,7 @@ app.MapPost("/api/ai/en-cok-avans-alan", async (AppDbContext db, CalisanAvansApi
     var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, req.FirmaId);
 
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
@@ -1691,11 +1695,12 @@ app.MapPost("/api/ai/en-cok-avans-alan", async (AppDbContext db, CalisanAvansApi
     });
 });
 
-app.MapPost("/api/ai/son-avans", async (AppDbContext db) =>
+app.MapPost("/api/ai/son-avans", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
     var son = await db.CalisanAvanslari
         .Include(x => x.Calisan)
-        .Where(x => x.Tip == CalisanHareketTipi.Avans)
+        .Where(x => x.FirmaId == firmaId && x.Tip == CalisanHareketTipi.Avans)
         .OrderByDescending(x => x.Tarih)
         .ThenByDescending(x => x.Id)
         .FirstOrDefaultAsync();
@@ -1726,11 +1731,7 @@ app.MapPost("/api/ai/personel-gideri", async (AppDbContext db, CalisanAvansApiRe
     var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
@@ -1821,11 +1822,7 @@ app.MapPost("/api/ai/en-yuksek-maas", async (AppDbContext db, CalisanAvansApiReq
     var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
@@ -1916,11 +1913,7 @@ app.MapPost("/api/ai/ortalama-maas", async (AppDbContext db, CalisanAvansApiRequ
     var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
@@ -1975,13 +1968,9 @@ app.MapPost("/api/ai/ortalama-maas", async (AppDbContext db, CalisanAvansApiRequ
     });
 });
 
-app.MapPost("/api/ai/son-maas-odemesi", async (AppDbContext db) =>
+app.MapPost("/api/ai/son-maas-odemesi", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var query = db.CalisanMaasArsivleri.AsQueryable();
 
@@ -2046,11 +2035,7 @@ app.MapPost("/api/ai/calisan-kalan-maas", async (CalisanAvansApiRequest request,
     var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
@@ -2120,11 +2105,7 @@ app.MapPost("/api/ai/maas-avans-orani", async (AppDbContext db, CalisanAvansApiR
     var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
@@ -2192,11 +2173,7 @@ app.MapPost("/api/ai/maasi-kapanmayan-calisanlar", async (AppDbContext db, Calis
     var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
@@ -2268,11 +2245,7 @@ app.MapPost("/api/ai/calisan-maas-ozet", async (CalisanAvansApiRequest request, 
     var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
-    var firmaId = await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var ayAdlari = new[] { "", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık" };
     var ayAdi = ayAdlari[month];
@@ -2348,7 +2321,7 @@ app.MapPost("/api/ai/calisan-maas-toplam", async (CalisanAvansApiRequest request
     var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
     var end = start.AddMonths(1);
 
-    var firmaId = await db.Firmalar.Where(x => x.AktifMi).OrderBy(x => x.Id).Select(x => (int?)x.Id).FirstOrDefaultAsync();
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
     var ad = request.CalisanAdi.ToLower();
 
     var calisanQuery = db.Calisanlar.AsQueryable();
@@ -2411,13 +2384,14 @@ app.MapPost("/api/ai/calisan-maas-toplam", async (CalisanAvansApiRequest request
 app.MapPost("/api/ai/kasa-artis-azalis", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
     var (baslangic, bitis, ayAdi) = GetDateRange(request);
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var giris = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Giris && x.Tarih >= baslangic && x.Tarih < bitis)
+        .Where(x => x.FirmaId == firmaId && x.Tip == HareketTipi.Giris && x.Tarih >= baslangic && x.Tarih < bitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var cikis = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
+        .Where(x => x.FirmaId == firmaId && x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var sonuc = giris - cikis;
@@ -2436,20 +2410,21 @@ app.MapPost("/api/ai/kasa-artis-azalis", async (AppDbContext db, CalisanAvansApi
     });
 });
 
-app.MapPost("/api/ai/son-7-gun-kasa-ozeti", async (AppDbContext db) =>
+app.MapPost("/api/ai/son-7-gun-kasa-ozeti", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
     var bitis = DateTime.UtcNow.Date.AddDays(1);
     var baslangic = bitis.AddDays(-7);
 
     var giris = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Giris && x.Tarih >= baslangic && x.Tarih < bitis)
+        .Where(x => x.FirmaId == firmaId && x.Tip == HareketTipi.Giris && x.Tarih >= baslangic && x.Tarih < bitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var cikis = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
+        .Where(x => x.FirmaId == firmaId && x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
-    var islemSayisi = await db.KasaHareketleri.CountAsync(x => x.Tarih >= baslangic && x.Tarih < bitis);
+    var islemSayisi = await db.KasaHareketleri.CountAsync(x => x.FirmaId == firmaId && x.Tarih >= baslangic && x.Tarih < bitis);
     var sonuc = giris - cikis;
 
     return Results.Json(new CalisanAvansToplamResponse
@@ -2468,9 +2443,10 @@ app.MapPost("/api/ai/son-7-gun-kasa-ozeti", async (AppDbContext db) =>
 app.MapPost("/api/ai/gunluk-ortalama-gider", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
     var (baslangic, bitis, ayAdi) = GetDateRange(request);
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var toplamGider = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
+        .Where(x => x.FirmaId == firmaId && x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var gunSayisi = Math.Max(1, (bitis.Date - baslangic.Date).Days);
@@ -2491,10 +2467,11 @@ app.MapPost("/api/ai/gunluk-ortalama-gider", async (AppDbContext db, CalisanAvan
 app.MapPost("/api/ai/en-cok-devamsizlik-yapan", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
     var (baslangic, bitis, ayAdi) = GetDateRange(request);
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var sonuc = await db.Set<CalisanPuantaj>()
         .Include(x => x.Calisan)
-        .Where(x => x.Tarih >= baslangic && x.Tarih < bitis && x.Durum == PuantajDurum.Gelmedi)
+        .Where(x => x.FirmaId == firmaId && x.Tarih >= baslangic && x.Tarih < bitis && x.Durum == PuantajDurum.Gelmedi)
         .GroupBy(x => x.Calisan != null ? x.Calisan.AdSoyad : "Bilinmeyen çalışan")
         .Select(g => new { Calisan = g.Key, Gun = g.Count() })
         .OrderByDescending(x => x.Gun)
@@ -2521,19 +2498,20 @@ app.MapPost("/api/ai/en-cok-devamsizlik-yapan", async (AppDbContext db, CalisanA
 app.MapPost("/api/ai/akilli-isletme-yorumu", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
     var (baslangic, bitis, ayAdi) = GetDateRange(request);
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
 
     var gelir = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Giris && x.Tarih >= baslangic && x.Tarih < bitis)
+        .Where(x => x.FirmaId == firmaId && x.Tip == HareketTipi.Giris && x.Tarih >= baslangic && x.Tarih < bitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var gider = await db.KasaHareketleri
-        .Where(x => x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
+        .Where(x => x.FirmaId == firmaId && x.Tip == HareketTipi.Cikis && x.Tarih >= baslangic && x.Tarih < bitis)
         .SumAsync(x => (decimal?)x.Tutar) ?? 0;
 
     var sonuc = gelir - gider;
 
     var personelGideri = await db.CalisanMaasArsivleri
-        .Where(x => x.OdemeTarihi >= baslangic && x.OdemeTarihi < bitis)
+        .Where(x => x.FirmaId == firmaId && x.OdemeTarihi >= baslangic && x.OdemeTarihi < bitis)
         .SumAsync(x => (decimal?)x.ToplamMaas) ?? 0;
 
     var yorum = "";
@@ -2721,11 +2699,7 @@ static async Task<int?> GetAiFirmaIdAsync(AppDbContext db, int? requestFirmaId)
             return requestFirmaId.Value;
     }
 
-    return await db.Firmalar
-        .Where(x => x.AktifMi)
-        .OrderBy(x => x.Id)
-        .Select(x => (int?)x.Id)
-        .FirstOrDefaultAsync();
+    return -1;
 }
 
 public class CalisanAvansApiRequest

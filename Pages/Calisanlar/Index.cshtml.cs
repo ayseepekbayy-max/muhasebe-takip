@@ -230,36 +230,20 @@ public class IndexModel : PageModel
         if (calisan == null)
             return RedirectToPage();
 
-        var avanslar = await _db.CalisanAvanslari
-            .Where(x => x.CalisanId == id && x.FirmaId == firmaId)
-            .ToListAsync();
-
-        var puantajlar = await _db.CalisanPuantajlari
-            .Where(x => x.CalisanId == id && x.FirmaId == firmaId)
-            .ToListAsync();
-
-        var maasArsivleri = await _db.CalisanMaasArsivleri
-            .Where(x => x.CalisanId == id && x.FirmaId == firmaId)
-            .ToListAsync();
-
-        if (avanslar.Count > 0)
-            _db.CalisanAvanslari.RemoveRange(avanslar);
-
-        if (puantajlar.Count > 0)
-            _db.CalisanPuantajlari.RemoveRange(puantajlar);
-
-        if (maasArsivleri.Count > 0)
-            _db.CalisanMaasArsivleri.RemoveRange(maasArsivleri);
-
         var eskiDeger = IslemGecmisiSnapshots.Calisan(calisan);
-        _db.Calisanlar.Remove(calisan);
+        calisan.AktifMi = false;
+        calisan.AyrilisTarihi ??= DateTime.UtcNow;
+        calisan.AyrilisNotu = string.IsNullOrWhiteSpace(calisan.AyrilisNotu)
+            ? "Silme yerine veri korunarak arşive taşındı."
+            : calisan.AyrilisNotu;
 
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
                 "Çalışanlar",
-                "Silme",
+                "Arsivleme",
                 $"{calisan.AdSoyad} çalışanı silindi (ID: {calisan.Id}).",
-                eskiDeger: eskiDeger),
+                eskiDeger,
+                IslemGecmisiSnapshots.Calisan(calisan)),
             anaKaydiOnceKaydet: false);
 
         TempData["Basari"] = "Çalışan silindi.";
