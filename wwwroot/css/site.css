@@ -2324,6 +2324,140 @@ a.app-top-btn {
     margin: 0;
 }
 
+.calisan-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.calisan-filter-panel {
+    padding: 20px;
+    border: 1px solid #fed7aa;
+    border-left: 4px solid #f97316;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 12px 28px rgba(249, 115, 22, 0.07);
+}
+
+.calisan-filter-panel .panel-title-row {
+    align-items: center;
+}
+
+.calisan-filter-grid {
+    grid-template-columns: minmax(210px, 1.2fr) minmax(170px, 0.8fr) minmax(150px, 0.7fr) minmax(160px, 0.8fr) minmax(160px, 0.8fr) auto;
+}
+
+.calisan-card-list {
+    display: grid;
+    gap: 12px;
+}
+
+.calisan-list-card {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) minmax(560px, 2.2fr) auto;
+    gap: 20px;
+    align-items: center;
+    padding: 18px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.calisan-list-card:hover {
+    border-color: #fdba74;
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+}
+
+.calisan-list-card-passive {
+    border-color: #fecaca;
+    background: linear-gradient(90deg, #fff7f7 0%, #ffffff 58%);
+}
+
+.calisan-card-identity {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 13px;
+    align-items: center;
+    min-width: 0;
+}
+
+.calisan-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.calisan-card-identity h3 {
+    margin: 8px 0 0;
+    color: #0f172a;
+    font-size: 17px;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+}
+
+.calisan-card-identity p {
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.calisan-card-data {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(105px, 1fr));
+    gap: 14px;
+    min-width: 0;
+}
+
+.calisan-card-data div {
+    min-width: 0;
+}
+
+.calisan-card-data span {
+    display: block;
+    margin-bottom: 5px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.calisan-card-data strong {
+    display: block;
+    color: #1f2937;
+    font-size: 13px;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+}
+
+.calisan-card-data small {
+    display: block;
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.calisan-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 7px;
+}
+
+.calisan-card-actions form {
+    margin: 0;
+}
+
 @media (max-width: 1280px) {
     .cari-list-card {
         grid-template-columns: minmax(220px, 0.8fr) minmax(0, 2fr);
@@ -2338,15 +2472,18 @@ a.app-top-btn {
 
     .stok-metric-grid,
     .stok-detail-metrics,
-    .musteri-metric-grid {
+    .musteri-metric-grid,
+    .calisan-metric-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .musteri-list-card {
+    .musteri-list-card,
+    .calisan-list-card {
         grid-template-columns: minmax(240px, 0.9fr) minmax(0, 2fr);
     }
 
-    .musteri-card-actions {
+    .musteri-card-actions,
+    .calisan-card-actions {
         grid-column: 1 / -1;
         justify-content: flex-start;
         padding-top: 12px;
@@ -2359,17 +2496,21 @@ a.app-top-btn {
     .cari-list-card,
     .stok-filter-grid,
     .musteri-filter-grid,
-    .musteri-list-card {
+    .calisan-filter-grid,
+    .musteri-list-card,
+    .calisan-list-card {
         grid-template-columns: 1fr;
     }
 
     .cari-card-data,
-    .musteri-card-data {
+    .musteri-card-data,
+    .calisan-card-data {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .cari-card-actions,
-    .musteri-card-actions {
+    .musteri-card-actions,
+    .calisan-card-actions {
         grid-column: auto;
     }
 
@@ -2387,7 +2528,8 @@ a.app-top-btn {
 
     .stok-metric-grid,
     .stok-detail-metrics,
-    .musteri-metric-grid {
+    .musteri-metric-grid,
+    .calisan-metric-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
@@ -2395,6 +2537,7 @@ a.app-top-btn {
 @media (max-width: 560px) {
     .cari-card-data,
     .musteri-card-data,
+    .calisan-card-data,
     .cari-modal-form,
     .cari-info-strip {
         grid-template-columns: 1fr;
@@ -2413,6 +2556,7 @@ a.app-top-btn {
     .stok-metric-grid,
     .stok-detail-metrics,
     .musteri-metric-grid,
+    .calisan-metric-grid,
     .stok-movement-form .app-form-grid {
         grid-template-columns: 1fr;
     }
@@ -2432,7 +2576,10 @@ a.app-top-btn {
     .cari-card-actions button,
     .musteri-card-actions .btn,
     .musteri-card-actions form,
-    .musteri-card-actions button {
+    .musteri-card-actions button,
+    .calisan-card-actions .btn,
+    .calisan-card-actions form,
+    .calisan-card-actions button {
         width: 100%;
     }
 }

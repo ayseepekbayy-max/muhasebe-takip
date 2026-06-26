@@ -1,90 +1,318 @@
 @page "/Calisanlar"
 @model MuhasebeTakip2.App.Pages.Calisanlar.IndexModel
-
-<h1>Çalışanlar</h1>
-
-<div style="margin:12px 0; display:flex; gap:8px; flex-wrap:wrap;">
-  <form method="post" asp-page-handler="DisaAktar" style="display:inline;">
-    <button type="submit" class="btn btn-outline-success btn-sm">Çalışanları Excel Olarak İndir</button>
-  </form>
-
-  <a class="btn btn-outline-dark btn-sm" href="/Calisanlar/Arsiv">Çalışan Arşivi</a>
-</div>
-
-@if (!ViewData.ModelState.IsValid)
-{
-  <div style="color:red; margin:10px 0;">
-    @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-    {
-      <div>@err.ErrorMessage</div>
-    }
-  </div>
+@{
+    ViewData["Title"] = "Çalışanlar";
 }
 
-<div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:520px;">
-  <h3>Yeni Çalışan Ekle</h3>
+<div class="app-page calisan-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Personel Yönetimi</span>
+            <h1>Çalışanlar</h1>
+            <p>Çalışan kartlarını, maaş-avans durumunu ve bu ayki puantaj özetini tek ekrandan yönetin.</p>
+        </div>
 
-  <form method="post" asp-page-handler="Ekle">
-    <div style="margin-bottom:10px;">
-      <label><b>Ad Soyad</b></label><br />
-      <input asp-for="YeniCalisan.AdSoyad" style="width:100%; padding:8px;" />
-    </div>
+        <div class="app-page-actions">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#yeniCalisanModal">
+                Yeni Çalışan
+            </button>
+            <a class="btn btn-outline-success"
+               asp-page-handler="DisaAktar"
+               asp-route-AdSoyadAra="@Model.AdSoyadAra"
+               asp-route-TelefonAra="@Model.TelefonAra"
+               asp-route-DurumFiltre="@Model.DurumFiltre"
+               asp-route-TarihBaslangic="@Model.TarihBaslangic"
+               asp-route-TarihBitis="@Model.TarihBitis">Excel İndir</a>
+            <a class="btn btn-outline-dark" href="/Calisanlar/Arsiv">Çalışan Arşivi</a>
+        </div>
+    </section>
 
-    <div style="margin-bottom:10px;">
-      <label><b>Telefon</b></label><br />
-      <input asp-for="YeniCalisan.Telefon" style="width:100%; padding:8px;" />
-    </div>
+    @if (TempData["Hata"] != null)
+    {
+        <div class="app-alert app-alert-danger">@TempData["Hata"]</div>
+    }
+    @if (TempData["Basari"] != null)
+    {
+        <div class="app-alert app-alert-success">@TempData["Basari"]</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.Hata))
+    {
+        <div class="app-alert app-alert-danger">@Model.Hata</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.Mesaj))
+    {
+        <div class="app-alert app-alert-success">@Model.Mesaj</div>
+    }
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="app-alert app-alert-danger">
+            @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@err.ErrorMessage</div>
+            }
+        </div>
+    }
 
-    <button type="submit" class="btn btn-dark btn-sm">Ekle</button>
-    <a class="btn btn-outline-dark btn-sm" href="/">Kasa</a>
-  </form>
+    <section class="calisan-metric-grid">
+        <article class="metric-card">
+            <span>Toplam Çalışan</span>
+            <strong>@Model.ToplamCalisan</strong>
+        </article>
+        <article class="metric-card metric-card-positive">
+            <span>Aktif Çalışan</span>
+            <strong>@Model.AktifCalisan</strong>
+        </article>
+        <article class="metric-card metric-card-positive">
+            <span>Bu Ay Maaş</span>
+            <strong>@Model.BuAyMaas.ToString("N2") ₺</strong>
+        </article>
+        <article class="metric-card metric-card-warning">
+            <span>Bu Ay Avans</span>
+            <strong>@Model.BuAyAvans.ToString("N2") ₺</strong>
+        </article>
+        <article class="metric-card metric-card-negative">
+            <span>Bekleyen Maaş</span>
+            <strong>@Model.BekleyenMaas.ToString("N2") ₺</strong>
+        </article>
+        <article class="metric-card metric-card-negative">
+            <span>Bu Ay Devamsızlık</span>
+            <strong>@Model.BuAyDevamsizlik</strong>
+        </article>
+    </section>
+
+    <section class="calisan-filter-panel">
+        <div class="panel-title-row">
+            <div>
+                <h2>Çalışan Ara ve Filtrele</h2>
+                <p>Ad soyad, telefon, durum ve işe giriş tarihine göre listeyi daraltın.</p>
+            </div>
+            <div class="filter-summary">
+                <strong>@Model.Liste.Count</strong>
+                <span>çalışan</span>
+            </div>
+        </div>
+
+        <form method="get" class="app-form-grid calisan-filter-grid">
+            <div class="form-field">
+                <label asp-for="AdSoyadAra">Ad Soyad</label>
+                <input asp-for="AdSoyadAra" type="search" placeholder="Çalışan adı" />
+            </div>
+            <div class="form-field">
+                <label asp-for="TelefonAra">Telefon</label>
+                <input asp-for="TelefonAra" type="search" placeholder="Telefon ara" />
+            </div>
+            <div class="form-field">
+                <label asp-for="DurumFiltre">Durum</label>
+                <select asp-for="DurumFiltre">
+                    <option value="">Tümü</option>
+                    <option value="Aktif">Aktif</option>
+                    <option value="Ayrildi">Ayrıldı</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label asp-for="TarihBaslangic">Tarih Başlangıç</label>
+                <input asp-for="TarihBaslangic" type="date" />
+            </div>
+            <div class="form-field">
+                <label asp-for="TarihBitis">Tarih Bitiş</label>
+                <input asp-for="TarihBitis" type="date" />
+            </div>
+            <div class="form-actions-row">
+                <button type="submit" class="btn btn-primary">Filtrele</button>
+                <a class="btn btn-outline-dark" href="/Calisanlar">Temizle</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="dashboard-panel calisan-list-section">
+        <div class="panel-title-row">
+            <div>
+                <h2>Çalışan Listesi</h2>
+                <p>Maaş, son avans, son maaş ve durum bilgilerini hızlıca karşılaştırın.</p>
+            </div>
+        </div>
+
+        @if (Model.Liste.Count == 0)
+        {
+            <div class="empty-state">Filtreye uygun çalışan bulunamadı.</div>
+        }
+        else
+        {
+            <div class="calisan-card-list">
+                @foreach (var c in Model.Liste)
+                {
+                    <article class="calisan-list-card @(c.AktifMi ? "" : "calisan-list-card-passive")">
+                        <div class="calisan-card-identity">
+                            <div class="calisan-avatar" aria-hidden="true">@c.BasHarf</div>
+                            <div>
+                                <span class="status-pill @(c.AktifMi ? "status-pill-income" : "status-pill-expense")">
+                                    @(c.AktifMi ? "Aktif" : "Ayrıldı")
+                                </span>
+                                <h3>@c.AdSoyad</h3>
+                                <p>@(string.IsNullOrWhiteSpace(c.Telefon) ? "Telefon belirtilmemiş" : c.Telefon)</p>
+                            </div>
+                        </div>
+
+                        <div class="calisan-card-data">
+                            <div>
+                                <span>Maaş</span>
+                                <strong>@c.Maas.ToString("N2") ₺</strong>
+                            </div>
+                            <div>
+                                <span>Son Avans</span>
+                                <strong class="amount-expense">@c.SonAvans.ToString("N2") ₺</strong>
+                                <small>@(c.SonAvansTarihi.HasValue ? c.SonAvansTarihi.Value.ToString("dd.MM.yyyy") : "-")</small>
+                            </div>
+                            <div>
+                                <span>Son Maaş</span>
+                                <strong class="amount-income">@c.SonMaas.ToString("N2") ₺</strong>
+                                <small>@(c.SonMaasTarihi.HasValue ? c.SonMaasTarihi.Value.ToString("dd.MM.yyyy") : "-")</small>
+                            </div>
+                            <div>
+                                <span>Bu Ay</span>
+                                <strong>@c.BuAyMaas.ToString("N2") ₺</strong>
+                                <small>Avans: @c.BuAyAvans.ToString("N2") ₺</small>
+                            </div>
+                            <div>
+                                <span>İşe Giriş</span>
+                                <strong>@c.IseGirisTarihi.ToString("dd.MM.yyyy")</strong>
+                                @if (!c.AktifMi && c.AyrilisTarihi.HasValue)
+                                {
+                                    <small>Ayrılış: @c.AyrilisTarihi.Value.ToString("dd.MM.yyyy")</small>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="calisan-card-actions">
+                            <a class="btn btn-primary btn-sm" href="/Calisanlar/Detay/@c.Id">Detay</a>
+                            <a class="btn btn-outline-success btn-sm" href="/Calisanlar/Puantaj/@c.Id">Puantaj</a>
+                            <a class="btn btn-outline-primary btn-sm"
+                               asp-page="/Calisanlar/Index"
+                               asp-route-DuzenleId="@c.Id"
+                               asp-route-AdSoyadAra="@Model.AdSoyadAra"
+                               asp-route-TelefonAra="@Model.TelefonAra"
+                               asp-route-DurumFiltre="@Model.DurumFiltre"
+                               asp-route-TarihBaslangic="@Model.TarihBaslangic"
+                               asp-route-TarihBitis="@Model.TarihBitis">Düzenle</a>
+
+                            @if (c.AktifMi)
+                            {
+                                <form method="post" asp-page-handler="Arsivle" class="inline-form"
+                                      onsubmit="return confirm('Bu çalışan ayrıldı olarak işaretlenecek. Devam edilsin mi?');">
+                                    <input type="hidden" name="id" value="@c.Id" />
+                                    <button type="submit" formnovalidate class="btn btn-outline-secondary btn-sm">Ayrıldı Yap</button>
+                                </form>
+                            }
+
+                            <form method="post" asp-page-handler="Sil" class="inline-form"
+                                  onsubmit="return confirm('Bu çalışan kalıcı olarak silinecek. Bağlı maaş, avans ve puantaj kayıtları da silinir. Devam edilsin mi?');">
+                                <input type="hidden" name="id" value="@c.Id" />
+                                <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
+                            </form>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </section>
 </div>
 
-<h3>Çalışan Listesi</h3>
-
-<table style="width:100%; border-collapse:collapse;">
-  <thead>
-    <tr>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Ad Soyad</th>
-      <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Telefon</th>
-      <th style="border-bottom:1px solid #555; padding:8px; width:360px;">İşlem</th>
-    </tr>
-  </thead>
-
-  <tbody>
-    @if (Model.Liste.Count == 0)
-    {
-      <tr>
-        <td colspan="3" style="padding:8px;">Henüz çalışan yok.</td>
-      </tr>
-    }
-    else
-    {
-      @foreach (var c in Model.Liste)
-      {
-        <tr>
-          <td style="border-bottom:1px solid #333; padding:8px;">@c.AdSoyad</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">@c.Telefon</td>
-          <td style="border-bottom:1px solid #333; padding:8px;">
-            <form method="post" asp-page-handler="Sil"
-                  onsubmit="return confirm('Bu çalışan kalıcı olarak silinecek. Devam edilsin mi?');"
-                  style="display:inline;">
-              <input type="hidden" name="id" value="@c.Id" />
-              <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
+<div class="modal fade" id="yeniCalisanModal" tabindex="-1" aria-labelledby="yeniCalisanModalBaslik" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content cari-modal-content">
+            <div class="modal-header">
+                <div>
+                    <span class="app-page-eyebrow">Yeni Kayıt</span>
+                    <h2 class="modal-title" id="yeniCalisanModalBaslik">Yeni Çalışan</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <form method="post" asp-page-handler="Ekle">
+                <div class="modal-body">
+                    <div class="cari-modal-form">
+                        <div class="form-field">
+                            <label asp-for="YeniCalisan.AdSoyad">Ad Soyad</label>
+                            <input asp-for="YeniCalisan.AdSoyad" autofocus />
+                        </div>
+                        <div class="form-field">
+                            <label asp-for="YeniCalisan.Telefon">Telefon</label>
+                            <input asp-for="YeniCalisan.Telefon" />
+                        </div>
+                        <div class="form-field">
+                            <label asp-for="YeniCalisan.Maas">Maaş</label>
+                            <input asp-for="YeniCalisan.Maas" type="number" min="0" step="0.01" />
+                        </div>
+                        <div class="form-field">
+                            <label asp-for="YeniCalisan.IseGirisTarihi">İşe Giriş Tarihi</label>
+                            <input asp-for="YeniCalisan.IseGirisTarihi" type="date" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-primary">Çalışan Ekle</button>
+                </div>
             </form>
+        </div>
+    </div>
+</div>
 
-            <form method="post" asp-page-handler="Arsivle"
-                  onsubmit="return confirm('Bu çalışan arşive taşınacak. Devam edilsin mi?');"
-                  style="display:inline;">
-              <input type="hidden" name="id" value="@c.Id" />
-              <button type="submit" class="btn btn-outline-secondary btn-sm">Arşivle</button>
+<div class="modal fade" id="duzenleCalisanModal" tabindex="-1" aria-labelledby="duzenleCalisanModalBaslik" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content cari-modal-content">
+            <div class="modal-header">
+                <div>
+                    <span class="app-page-eyebrow">Kayıt Güncelle</span>
+                    <h2 class="modal-title" id="duzenleCalisanModalBaslik">Çalışan Düzenle</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <form method="post" asp-page-handler="Duzenle">
+                <input type="hidden" asp-for="DuzenlenenCalisan.Id" />
+                <div class="modal-body">
+                    <div class="cari-modal-form">
+                        <div class="form-field">
+                            <label asp-for="DuzenlenenCalisan.AdSoyad">Ad Soyad</label>
+                            <input asp-for="DuzenlenenCalisan.AdSoyad" />
+                        </div>
+                        <div class="form-field">
+                            <label asp-for="DuzenlenenCalisan.Telefon">Telefon</label>
+                            <input asp-for="DuzenlenenCalisan.Telefon" />
+                        </div>
+                        <div class="form-field">
+                            <label asp-for="DuzenlenenCalisan.Maas">Maaş</label>
+                            <input asp-for="DuzenlenenCalisan.Maas" type="number" min="0" step="0.01" />
+                        </div>
+                        <div class="form-field">
+                            <label asp-for="DuzenlenenCalisan.IseGirisTarihi">İşe Giriş Tarihi</label>
+                            <input asp-for="DuzenlenenCalisan.IseGirisTarihi" type="date" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a class="btn btn-outline-dark" href="/Calisanlar">Vazgeç</a>
+                    <button type="submit" class="btn btn-primary">Güncelle</button>
+                </div>
             </form>
+        </div>
+    </div>
+</div>
 
-            <a class="btn btn-outline-primary btn-sm" href="/Calisanlar/Detay/@c.Id">Detay</a>
-            <a class="btn btn-outline-success btn-sm" href="/Calisanlar/Puantaj/@c.Id">Puantaj</a>
-          </td>
-        </tr>
-      }
+@section Scripts {
+    @if (Model.YeniCalisanModalAcik)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('yeniCalisanModal')).show();
+            });
+        </script>
     }
-  </tbody>
-</table>
+    @if (Model.DuzenlemeModalAcik)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('duzenleCalisanModal')).show();
+            });
+        </script>
+    }
+}
