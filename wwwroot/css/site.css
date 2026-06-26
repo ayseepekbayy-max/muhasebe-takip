@@ -2215,6 +2215,115 @@ a.app-top-btn {
     min-width: 1100px;
 }
 
+.musteri-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.musteri-filter-panel {
+    padding: 20px;
+    border: 1px solid #bbf7d0;
+    border-left: 4px solid #16a34a;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 12px 28px rgba(22, 163, 74, 0.07);
+}
+
+.musteri-filter-panel .panel-title-row {
+    align-items: center;
+}
+
+.musteri-filter-grid {
+    grid-template-columns: minmax(240px, 1.4fr) minmax(180px, 0.8fr) minmax(220px, 0.9fr) auto;
+}
+
+.musteri-card-list {
+    display: grid;
+    gap: 12px;
+}
+
+.musteri-list-card {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) minmax(620px, 2.4fr) auto;
+    gap: 20px;
+    align-items: center;
+    padding: 18px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.musteri-list-card:hover {
+    border-color: #86efac;
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+}
+
+.musteri-card-identity {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    min-width: 0;
+}
+
+.musteri-card-identity h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 17px;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+}
+
+.musteri-card-identity p,
+.musteri-card-identity small {
+    display: block;
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.musteri-card-data {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(95px, 1fr));
+    gap: 14px;
+    min-width: 0;
+}
+
+.musteri-card-data div {
+    min-width: 0;
+}
+
+.musteri-card-data span {
+    display: block;
+    margin-bottom: 5px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.musteri-card-data strong {
+    display: block;
+    color: #1f2937;
+    font-size: 13px;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+}
+
+.musteri-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 7px;
+}
+
+.musteri-card-actions form {
+    margin: 0;
+}
+
 @media (max-width: 1280px) {
     .cari-list-card {
         grid-template-columns: minmax(220px, 0.8fr) minmax(0, 2fr);
@@ -2228,23 +2337,39 @@ a.app-top-btn {
     }
 
     .stok-metric-grid,
-    .stok-detail-metrics {
+    .stok-detail-metrics,
+    .musteri-metric-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .musteri-list-card {
+        grid-template-columns: minmax(240px, 0.9fr) minmax(0, 2fr);
+    }
+
+    .musteri-card-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+        padding-top: 12px;
+        border-top: 1px solid #eef2f7;
     }
 }
 
 @media (max-width: 900px) {
     .cari-filter-grid,
     .cari-list-card,
-    .stok-filter-grid {
+    .stok-filter-grid,
+    .musteri-filter-grid,
+    .musteri-list-card {
         grid-template-columns: 1fr;
     }
 
-    .cari-card-data {
+    .cari-card-data,
+    .musteri-card-data {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .cari-card-actions {
+    .cari-card-actions,
+    .musteri-card-actions {
         grid-column: auto;
     }
 
@@ -2261,13 +2386,15 @@ a.app-top-btn {
     }
 
     .stok-metric-grid,
-    .stok-detail-metrics {
+    .stok-detail-metrics,
+    .musteri-metric-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 560px) {
     .cari-card-data,
+    .musteri-card-data,
     .cari-modal-form,
     .cari-info-strip {
         grid-template-columns: 1fr;
@@ -2285,6 +2412,7 @@ a.app-top-btn {
 
     .stok-metric-grid,
     .stok-detail-metrics,
+    .musteri-metric-grid,
     .stok-movement-form .app-form-grid {
         grid-template-columns: 1fr;
     }
@@ -2301,7 +2429,10 @@ a.app-top-btn {
 
     .cari-card-actions .btn,
     .cari-card-actions form,
-    .cari-card-actions button {
+    .cari-card-actions button,
+    .musteri-card-actions .btn,
+    .musteri-card-actions form,
+    .musteri-card-actions button {
         width: 100%;
     }
 }

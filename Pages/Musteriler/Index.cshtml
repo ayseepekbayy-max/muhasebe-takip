@@ -1,113 +1,238 @@
 @page
 @model MuhasebeTakip2.App.Pages.Musteriler.IndexModel
-
-<h1>Müşteriler</h1>
-
-@if (!string.IsNullOrWhiteSpace(Model.Hata))
-{
-    <div style="color:red; margin:10px 0;">
-        @Model.Hata
-    </div>
+@{
+    ViewData["Title"] = "Müşteriler";
 }
 
-@if (!string.IsNullOrWhiteSpace(Model.Mesaj))
-{
-    <div style="color:green; margin:10px 0;">
-        @Model.Mesaj
-    </div>
-}
+<div class="app-page musteriler-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Müşteri Yönetimi</span>
+            <h1>Müşteriler</h1>
+            <p>Müşteri kayıtlarını, iş durumlarını, ciro ve masraf özetlerini tek ekrandan takip edin.</p>
+        </div>
 
-@if (!ViewData.ModelState.IsValid)
-{
-    <div style="color:red; margin:10px 0;">
-        @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-        {
-            <div>@err.ErrorMessage</div>
-        }
-    </div>
-}
+        <div class="app-page-actions">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#yeniMusteriModal">
+                Yeni Müşteri
+            </button>
+            <a class="btn btn-outline-success"
+               asp-page-handler="DisaAktar"
+               asp-route-MusteriAra="@Model.MusteriAra"
+               asp-route-TelefonAra="@Model.TelefonAra"
+               asp-route-IsDurumuFiltre="@Model.IsDurumuFiltre">Excel İndir</a>
+        </div>
+    </section>
 
-<div style="margin:12px 0;">
-    <form method="post" asp-page-handler="DisaAktar" style="display:inline;">
-        <button type="submit" class="btn btn-outline-success btn-sm">
-            Müşterileri Excel Olarak İndir
-        </button>
-    </form>
-</div>
+    @if (TempData["Hata"] != null)
+    {
+        <div class="app-alert app-alert-danger">@TempData["Hata"]</div>
+    }
+    @if (TempData["Basari"] != null)
+    {
+        <div class="app-alert app-alert-success">@TempData["Basari"]</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.Hata))
+    {
+        <div class="app-alert app-alert-danger">@Model.Hata</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.Mesaj))
+    {
+        <div class="app-alert app-alert-success">@Model.Mesaj</div>
+    }
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="app-alert app-alert-danger">
+            @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@err.ErrorMessage</div>
+            }
+        </div>
+    }
 
-<div style="border:1px solid #444; border-radius:10px; padding:12px; margin:12px 0; max-width:720px;">
-    <h3>Yeni Müşteri Ekle</h3>
+    <section class="musteri-metric-grid">
+        <article class="metric-card">
+            <span>Toplam Müşteri</span>
+            <strong>@Model.ToplamMusteri</strong>
+        </article>
+        <article class="metric-card metric-card-warning">
+            <span>Aktif İş</span>
+            <strong>@Model.AktifIsSayisi</strong>
+        </article>
+        <article class="metric-card metric-card-positive">
+            <span>Tamamlanan İş</span>
+            <strong>@Model.TamamlananIsSayisi</strong>
+        </article>
+        <article class="metric-card metric-card-positive">
+            <span>Toplam Ciro</span>
+            <strong>@Model.ToplamCiro.ToString("N2") ₺</strong>
+        </article>
+        <article class="metric-card metric-card-negative">
+            <span>Toplam Masraf</span>
+            <strong>@Model.ToplamMasraf.ToString("N2") ₺</strong>
+        </article>
+        <article class="metric-card @(Model.ToplamKar < 0 ? "metric-card-negative" : "metric-card-positive")">
+            <span>Toplam Kar</span>
+            <strong>@Model.ToplamKar.ToString("N2") ₺</strong>
+        </article>
+    </section>
 
-    <form method="post" asp-page-handler="Ekle">
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <div style="flex:1; min-width:240px;">
-                <label><b>Ad Soyad</b></label><br />
-                <input asp-for="Yeni.AdSoyad" style="width:100%; padding:8px;" />
+    <section class="musteri-filter-panel">
+        <div class="panel-title-row">
+            <div>
+                <h2>Müşteri Ara ve Filtrele</h2>
+                <p>Ad soyad, adres, telefon veya iş durumuna göre listeyi daraltın.</p>
             </div>
-
-            <div style="min-width:220px;">
-                <label><b>Telefon</b></label><br />
-                <input asp-for="Yeni.Telefon" style="width:100%; padding:8px;" />
+            <div class="filter-summary">
+                <strong>@Model.Liste.Count</strong>
+                <span>müşteri</span>
             </div>
         </div>
 
-        <div style="margin-top:10px;">
-            <label><b>Adres (opsiyonel)</b></label><br />
-            <input asp-for="Yeni.Adres" style="width:100%; padding:8px;" />
+        <form method="get" class="app-form-grid musteri-filter-grid">
+            <div class="form-field">
+                <label asp-for="MusteriAra">Müşteri / Adres</label>
+                <input asp-for="MusteriAra" type="search" placeholder="Ad soyad veya adres" />
+            </div>
+            <div class="form-field">
+                <label asp-for="TelefonAra">Telefon</label>
+                <input asp-for="TelefonAra" type="search" placeholder="Telefon ara" />
+            </div>
+            <div class="form-field">
+                <label asp-for="IsDurumuFiltre">İş Durumu</label>
+                <select asp-for="IsDurumuFiltre">
+                    <option value="">Tümü</option>
+                    <option value="Aktif">Aktif işi olanlar</option>
+                    <option value="Tamamlanan">Tamamlanan işi olanlar</option>
+                    <option value="IsYok">İş kaydı olmayanlar</option>
+                    <option value="Karli">Karlı müşteriler</option>
+                    <option value="Zarar">Zararda olanlar</option>
+                </select>
+            </div>
+            <div class="form-actions-row">
+                <button type="submit" class="btn btn-primary">Filtrele</button>
+                <a class="btn btn-outline-dark" asp-page="/Musteriler/Index">Temizle</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="dashboard-panel musteri-list-section">
+        <div class="panel-title-row">
+            <div>
+                <h2>Müşteri Listesi</h2>
+                <p>İş sayısı, ciro, masraf ve net karlılığı hızlıca karşılaştırın.</p>
+            </div>
         </div>
 
-        <div style="margin-top:10px;">
-            <button type="submit" class="btn btn-dark btn-sm">Ekle</button>
-            <a class="btn btn-outline-dark btn-sm" href="/">Kasa</a>
-        </div>
-    </form>
-</div>
-
-<h3>Müşteri Listesi</h3>
-
-<table style="width:100%; border-collapse:collapse;">
-    <thead>
-        <tr>
-            <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Ad Soyad</th>
-            <th style="border-bottom:1px solid #555; text-align:left; padding:8px;">Telefon</th>
-            <th style="border-bottom:1px solid #555; padding:8px; width:220px;">İşlem</th>
-        </tr>
-    </thead>
-    <tbody>
         @if (Model.Liste.Count == 0)
         {
-            <tr>
-                <td colspan="3" style="padding:8px;">Henüz müşteri yok.</td>
-            </tr>
+            <div class="empty-state">Filtreye uygun müşteri bulunamadı.</div>
         }
         else
         {
-            @foreach (var m in Model.Liste)
-            {
-                <tr>
-                    <td style="border-bottom:1px solid #333; padding:8px;">@m.AdSoyad</td>
-                    <td style="border-bottom:1px solid #333; padding:8px;">@m.Telefon</td>
-                    <td style="border-bottom:1px solid #333; padding:8px;">
+            <div class="musteri-card-list">
+                @foreach (var m in Model.Liste)
+                {
+                    var karPozitif = m.ToplamKar >= 0;
+                    <article class="musteri-list-card">
+                        <div class="musteri-card-identity">
+                            <span class="status-pill @(m.AktifIsSayisi > 0 ? "status-pill-pending" : "status-pill-income")">
+                                @(m.AktifIsSayisi > 0 ? "Aktif İş" : "Düzenli")
+                            </span>
+                            <div>
+                                <h3>@m.AdSoyad</h3>
+                                <p>@(string.IsNullOrWhiteSpace(m.Telefon) ? "Telefon belirtilmemiş" : m.Telefon)</p>
+                                <small>@(string.IsNullOrWhiteSpace(m.Adres) ? "Adres belirtilmemiş" : m.Adres)</small>
+                            </div>
+                        </div>
 
-                        <a class="btn btn-outline-primary btn-sm"
-                           href="/Musteriler/Detay/@m.Id">
-                            Detay
-                        </a>
+                        <div class="musteri-card-data">
+                            <div>
+                                <span>İş Sayısı</span>
+                                <strong>@m.IsSayisi</strong>
+                            </div>
+                            <div>
+                                <span>Aktif / Tamamlanan</span>
+                                <strong>@m.AktifIsSayisi / @m.TamamlananIsSayisi</strong>
+                            </div>
+                            <div>
+                                <span>Ciro</span>
+                                <strong class="amount-income">@m.ToplamCiro.ToString("N2") ₺</strong>
+                            </div>
+                            <div>
+                                <span>Masraf</span>
+                                <strong class="amount-expense">@m.ToplamMasraf.ToString("N2") ₺</strong>
+                            </div>
+                            <div>
+                                <span>Kar</span>
+                                <strong class="@(karPozitif ? "amount-income" : "amount-expense")">@m.ToplamKar.ToString("N2") ₺</strong>
+                            </div>
+                            <div>
+                                <span>Son İş</span>
+                                <strong>@(m.SonIsTarihi.HasValue ? m.SonIsTarihi.Value.ToString("dd.MM.yyyy") : "-")</strong>
+                            </div>
+                        </div>
 
-                          <form method="post"
-                          asp-page-handler="Sil"
-                          style="display:inline;"
-                          onsubmit="return confirm('Bu müşteri silinirse bağlı işler ve masraflar da silinecek. Devam edilsin mi?');">
-
-                            <input type="hidden" name="id" value="@m.Id" />
-                            <button type="submit" class="btn btn-outline-danger btn-sm">
-                                Sil
-                            </button>
-                        </form>
-
-                    </td>
-                </tr>
-            }
+                        <div class="musteri-card-actions">
+                            <a class="btn btn-primary btn-sm" asp-page="/Musteriler/Detay/Index" asp-route-id="@m.Id">Detay</a>
+                            <form method="post"
+                                  asp-page-handler="Sil"
+                                  class="inline-form"
+                                  onsubmit="return confirm('Bu müşteri silinirse bağlı işler ve masraflar da silinecek. Devam edilsin mi?');">
+                                <input type="hidden" name="id" value="@m.Id" />
+                                <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
+                            </form>
+                        </div>
+                    </article>
+                }
+            </div>
         }
-    </tbody>
-</table>
+    </section>
+</div>
+
+<div class="modal fade" id="yeniMusteriModal" tabindex="-1" aria-labelledby="yeniMusteriModalBaslik" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content cari-modal-content">
+            <div class="modal-header">
+                <div>
+                    <span class="app-page-eyebrow">Yeni Kayıt</span>
+                    <h2 class="modal-title" id="yeniMusteriModalBaslik">Yeni Müşteri</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <form method="post" asp-page-handler="Ekle">
+                <div class="modal-body">
+                    <div class="cari-modal-form">
+                        <div class="form-field">
+                            <label asp-for="Yeni.AdSoyad">Ad Soyad</label>
+                            <input asp-for="Yeni.AdSoyad" autofocus />
+                        </div>
+                        <div class="form-field">
+                            <label asp-for="Yeni.Telefon">Telefon</label>
+                            <input asp-for="Yeni.Telefon" />
+                        </div>
+                        <div class="form-field form-field-wide">
+                            <label asp-for="Yeni.Adres">Adres</label>
+                            <textarea asp-for="Yeni.Adres" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Vazgeç</button>
+                    <button type="submit" class="btn btn-primary">Müşteri Ekle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @if (Model.YeniMusteriModalAcik)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('yeniMusteriModal')).show();
+            });
+        </script>
+    }
+}
