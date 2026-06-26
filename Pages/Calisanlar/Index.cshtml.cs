@@ -378,7 +378,7 @@ public class IndexModel : PageModel
 
         var sorgu = _db.Calisanlar
             .AsNoTracking()
-            .Where(x => x.FirmaId == firmaId);
+            .Where(x => x.FirmaId == firmaId && x.AktifMi && x.AyrilisTarihi == null);
 
         if (!string.IsNullOrWhiteSpace(AdSoyadAra))
         {

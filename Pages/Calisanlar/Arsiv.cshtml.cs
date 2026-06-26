@@ -40,7 +40,10 @@ public class ArsivModel : PageModel
             return RedirectToPage("/Login");
 
         var calisan = await _db.Calisanlar
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value && !x.AktifMi);
+            .FirstOrDefaultAsync(x =>
+                x.Id == id &&
+                x.FirmaId == firmaId.Value &&
+                (!x.AktifMi || x.AyrilisTarihi != null));
 
         if (calisan == null)
         {
@@ -71,7 +74,7 @@ public class ArsivModel : PageModel
     private async Task YukleAsync(int firmaId)
     {
         Liste = await _db.Calisanlar
-            .Where(x => x.FirmaId == firmaId && !x.AktifMi)
+            .Where(x => x.FirmaId == firmaId && (!x.AktifMi || x.AyrilisTarihi != null))
             .OrderByDescending(x => x.AyrilisTarihi)
             .ThenByDescending(x => x.Id)
             .ToListAsync();
