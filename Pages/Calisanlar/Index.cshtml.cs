@@ -36,7 +36,7 @@ public class IndexModel : PageModel
     public string? TelefonAra { get; set; }
 
     [BindProperty(SupportsGet = true)]
-    public string DurumFiltre { get; set; } = "Aktif";
+    public string? DurumFiltre { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public DateTime? TarihBaslangic { get; set; }
