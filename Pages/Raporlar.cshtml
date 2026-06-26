@@ -2,44 +2,85 @@
 @model MuhasebeTakip2.App.Pages.RaporlarModel
 @{
     ViewData["Title"] = "Raporlar";
-    var bugunNet = Model.BugunGiris - Model.BugunCikis;
-    var ayNet = Model.AyGiris - Model.AyCikis;
-    var maxAkis = new[] { Model.BugunGiris, Model.BugunCikis, Model.AyGiris, Model.AyCikis, 1m }.Max();
+    var maxAkis = new[] { Model.SeciliGelir, Model.SeciliGider, Model.BuAyGelir, Model.BuAyGider, 1m }.Max();
     decimal Width(decimal value) => Math.Max(4, Math.Round((value / maxAkis) * 100, 0));
 }
 
-<div class="app-page">
+<div class="app-page reports-page">
     <section class="app-page-header">
         <div>
             <span class="app-page-eyebrow">Finans Raporları</span>
             <h1>Raporlar</h1>
-            <p>Günlük ve aylık kasa akışını, cari dağılımı ve çalışan sayısını özetleyin.</p>
+            <p>Gelir-gider, fatura, stok, cari ve personel özetlerini seçilen dönem için tek ekranda inceleyin.</p>
         </div>
 
         <div class="app-page-actions">
-            <form method="post" asp-page-handler="DisaAktar">
-                <button type="submit" class="btn btn-outline-success">Excel İndir</button>
-            </form>
-            <a class="btn btn-outline-dark" href="/">Kasa</a>
+            <a class="btn btn-outline-success"
+               asp-page-handler="DisaAktar"
+               asp-route-BaslangicTarihi="@Model.SeciliBaslangic.ToString("yyyy-MM-dd")"
+               asp-route-BitisTarihi="@Model.SeciliBitis.ToString("yyyy-MM-dd")">Excel İndir</a>
+            <a class="btn btn-outline-dark" href="/">Kontrol Paneli</a>
         </div>
     </section>
 
-    <section class="metric-grid">
+    <section class="rapor-filter-panel">
+        <div class="panel-title-row">
+            <div>
+                <h2>Tarih Aralığı</h2>
+                <p>@Model.SeciliBaslangic.ToString("dd.MM.yyyy") - @Model.SeciliBitis.ToString("dd.MM.yyyy") dönemi</p>
+            </div>
+        </div>
+
+        <form method="get" class="app-form-grid rapor-filter-grid">
+            <div class="form-field">
+                <label asp-for="BaslangicTarihi">Başlangıç Tarihi</label>
+                <input asp-for="BaslangicTarihi" type="date" />
+            </div>
+            <div class="form-field">
+                <label asp-for="BitisTarihi">Bitiş Tarihi</label>
+                <input asp-for="BitisTarihi" type="date" />
+            </div>
+            <div class="form-actions-row">
+                <button type="submit" class="btn btn-primary">Filtrele</button>
+                <a class="btn btn-outline-dark" asp-page="/Raporlar" asp-route-Hizli="bugun">Bugün</a>
+                <a class="btn btn-outline-dark" asp-page="/Raporlar" asp-route-Hizli="bu-ay">Bu Ay</a>
+                <a class="btn btn-outline-dark" asp-page="/Raporlar" asp-route-Hizli="gecen-ay">Geçen Ay</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="rapor-metric-grid">
         <article class="metric-card metric-card-positive">
-            <span>Bugün Giriş</span>
-            <strong>@Model.BugunGiris.ToString("N2")</strong>
+            <span>Bugünkü Gelir</span>
+            <strong>@Model.BugunkuGelir.ToString("N2") ₺</strong>
         </article>
         <article class="metric-card metric-card-negative">
-            <span>Bugün Çıkış</span>
-            <strong>@Model.BugunCikis.ToString("N2")</strong>
+            <span>Bugünkü Gider</span>
+            <strong>@Model.BugunkuGider.ToString("N2") ₺</strong>
+        </article>
+        <article class="metric-card metric-card-positive">
+            <span>Bu Ay Gelir</span>
+            <strong>@Model.BuAyGelir.ToString("N2") ₺</strong>
+        </article>
+        <article class="metric-card metric-card-negative">
+            <span>Bu Ay Gider</span>
+            <strong>@Model.BuAyGider.ToString("N2") ₺</strong>
+        </article>
+        <article class="metric-card @(Model.BuAyKarZarar < 0 ? "metric-card-negative" : "metric-card-positive")">
+            <span>Bu Ay Kâr/Zarar</span>
+            <strong>@Model.BuAyKarZarar.ToString("N2") ₺</strong>
         </article>
         <article class="metric-card">
-            <span>Bu Ay Giriş</span>
-            <strong>@Model.AyGiris.ToString("N2")</strong>
+            <span>Toplam Stok Değeri</span>
+            <strong>@Model.ToplamStokDegeri.ToString("N2") ₺</strong>
+        </article>
+        <article class="metric-card metric-card-warning">
+            <span>Bekleyen Fatura</span>
+            <strong>@Model.BekleyenFaturaTutari.ToString("N2") ₺</strong>
         </article>
         <article class="metric-card metric-card-negative">
-            <span>Bu Ay Çıkış</span>
-            <strong>@Model.AyCikis.ToString("N2")</strong>
+            <span>Personel Gideri</span>
+            <strong>@Model.PersonelGideri.ToString("N2") ₺</strong>
         </article>
     </section>
 
@@ -48,91 +89,196 @@
             <section class="dashboard-panel">
                 <div class="panel-title-row">
                     <div>
-                        <h2>Kasa Akışı</h2>
-                        <p>Bugün ve bu ay için giriş/çıkış karşılaştırması</p>
+                        <h2>Gelir-Gider Karşılaştırması</h2>
+                        <p>Seçilen tarih aralığına göre kasa giriş ve çıkış özeti</p>
                     </div>
                 </div>
 
                 <div class="report-bars">
                     <div class="report-bar-row">
-                        <span>Bugün Giriş</span>
-                        <div><i style="width:@Width(Model.BugunGiris)%"></i></div>
-                        <strong>@Model.BugunGiris.ToString("N2")</strong>
+                        <span>Gelir</span>
+                        <div><i style="width:@Width(Model.SeciliGelir)%"></i></div>
+                        <strong>@Model.SeciliGelir.ToString("N2") ₺</strong>
                     </div>
                     <div class="report-bar-row danger">
-                        <span>Bugün Çıkış</span>
-                        <div><i style="width:@Width(Model.BugunCikis)%"></i></div>
-                        <strong>@Model.BugunCikis.ToString("N2")</strong>
+                        <span>Gider</span>
+                        <div><i style="width:@Width(Model.SeciliGider)%"></i></div>
+                        <strong>@Model.SeciliGider.ToString("N2") ₺</strong>
                     </div>
-                    <div class="report-bar-row">
-                        <span>Bu Ay Giriş</span>
-                        <div><i style="width:@Width(Model.AyGiris)%"></i></div>
-                        <strong>@Model.AyGiris.ToString("N2")</strong>
+                    <div class="report-bar-row @(Model.SeciliNet < 0 ? "danger" : "")">
+                        <span>Net Sonuç</span>
+                        <div><i style="width:@Width(Math.Abs(Model.SeciliNet))%"></i></div>
+                        <strong>@Model.SeciliNet.ToString("N2") ₺</strong>
                     </div>
-                    <div class="report-bar-row danger">
-                        <span>Bu Ay Çıkış</span>
-                        <div><i style="width:@Width(Model.AyCikis)%"></i></div>
-                        <strong>@Model.AyCikis.ToString("N2")</strong>
+                </div>
+
+                <div class="summary-grid report-summary-grid">
+                    <article>
+                        <span>Seçilen Gelir</span>
+                        <strong>@Model.SeciliGelir.ToString("N2") ₺</strong>
+                    </article>
+                    <article>
+                        <span>Seçilen Gider</span>
+                        <strong>@Model.SeciliGider.ToString("N2") ₺</strong>
+                    </article>
+                    <article>
+                        <span>Net Sonuç</span>
+                        <strong class="@(Model.SeciliNet < 0 ? "amount-expense" : "amount-income")">@Model.SeciliNet.ToString("N2") ₺</strong>
+                    </article>
+                    <article>
+                        <span>Dönem</span>
+                        <strong>@((Model.SeciliBitis - Model.SeciliBaslangic).Days + 1) gün</strong>
+                    </article>
+                </div>
+            </section>
+
+            <section class="reports-panel-grid">
+                <article class="dashboard-panel">
+                    <div class="panel-title-row">
+                        <div>
+                            <h2>En Çok Tahsilat Yapılan 5 Cari</h2>
+                            <p>Seçilen dönemde kasa girişi en yüksek kayıtlar</p>
+                        </div>
                     </div>
+                    <div class="report-list">
+                        @if (Model.EnCokTahsilatYapilanlar.Count == 0)
+                        {
+                            <div class="empty-state">Bu dönemde tahsilat kaydı yok.</div>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model.EnCokTahsilatYapilanlar)
+                            {
+                                <div class="report-list-row">
+                                    <div><strong>@item.Ad</strong><span>@item.Adet işlem</span></div>
+                                    <b class="amount-income">@item.Tutar.ToString("N2") ₺</b>
+                                </div>
+                            }
+                        }
+                    </div>
+                </article>
+
+                <article class="dashboard-panel">
+                    <div class="panel-title-row">
+                        <div>
+                            <h2>En Çok Ödeme Yapılan 5 Satıcı</h2>
+                            <p>Seçilen dönemde kasa çıkışı en yüksek kayıtlar</p>
+                        </div>
+                    </div>
+                    <div class="report-list">
+                        @if (Model.EnCokOdemeYapilanlar.Count == 0)
+                        {
+                            <div class="empty-state">Bu dönemde ödeme kaydı yok.</div>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model.EnCokOdemeYapilanlar)
+                            {
+                                <div class="report-list-row">
+                                    <div><strong>@item.Ad</strong><span>@item.Adet işlem</span></div>
+                                    <b class="amount-expense">@item.Tutar.ToString("N2") ₺</b>
+                                </div>
+                            }
+                        }
+                    </div>
+                </article>
+            </section>
+
+            <section class="dashboard-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <h2>En Çok Hareket Gören 5 Stok Ürünü</h2>
+                        <p>Seçilen dönemde giriş/çıkış sayısına göre sıralama</p>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table class="modern-table report-table">
+                        <thead>
+                            <tr>
+                                <th>Ürün</th>
+                                <th>Kod</th>
+                                <th>Giriş</th>
+                                <th>Çıkış</th>
+                                <th>Hareket</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.EnCokHareketGorenStoklar.Count == 0)
+                            {
+                                <tr><td colspan="5" class="empty-row">Bu dönemde stok hareketi yok.</td></tr>
+                            }
+                            else
+                            {
+                                @foreach (var stok in Model.EnCokHareketGorenStoklar)
+                                {
+                                    <tr>
+                                        <td><strong>@stok.Ad</strong></td>
+                                        <td>@(string.IsNullOrWhiteSpace(stok.Kod) ? "-" : stok.Kod)</td>
+                                        <td>@stok.Giris.ToString("N2")</td>
+                                        <td>@stok.Cikis.ToString("N2")</td>
+                                        <td><span class="status-pill status-pill-partial">@stok.HareketSayisi</span></td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <aside class="dashboard-stack">
+            <section class="dashboard-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <h2>Personel Özeti</h2>
+                        <p>Seçilen dönemde maaş ve avans hareketleri</p>
+                    </div>
+                </div>
+
+                <div class="report-total-card">
+                    <span>Net Personel Gideri</span>
+                    <strong>@Model.NetPersonelGideri.ToString("N2") ₺</strong>
+                </div>
+
+                <div class="summary-grid report-summary-grid">
+                    <article>
+                        <span>Toplam Maaş</span>
+                        <strong>@Model.ToplamMaasOdemesi.ToString("N2") ₺</strong>
+                    </article>
+                    <article>
+                        <span>Toplam Avans</span>
+                        <strong>@Model.ToplamAvans.ToString("N2") ₺</strong>
+                    </article>
                 </div>
             </section>
 
             <section class="dashboard-panel">
                 <div class="panel-title-row">
                     <div>
-                        <h2>Net Durum</h2>
-                        <p>Kasa ve dönem netleri</p>
+                        <h2>Fatura Özeti</h2>
+                        <p>Seçilen dönemde fatura durum dağılımı</p>
                     </div>
                 </div>
 
-                <div class="summary-grid report-summary-grid">
-                    <article>
-                        <span>Bugün Net</span>
-                        <strong>@bugunNet.ToString("N2")</strong>
-                    </article>
-                    <article>
-                        <span>Bu Ay Net</span>
-                        <strong>@ayNet.ToString("N2")</strong>
-                    </article>
-                    <article>
-                        <span>Kasa Bakiye</span>
-                        <strong>@Model.KasaBakiye.ToString("N2")</strong>
-                    </article>
-                    <article>
-                        <span>Çalışan Sayısı</span>
-                        <strong>@Model.CalisanSayisi</strong>
-                    </article>
+                <div class="report-list">
+                    <div class="report-list-row">
+                        <div><strong>Bekleyen Faturalar</strong><span>@Model.BekleyenFaturaSayisi adet</span></div>
+                        <b class="amount-expense">@Model.BekleyenFaturaTutari.ToString("N2") ₺</b>
+                    </div>
+                    <div class="report-list-row">
+                        <div><strong>Ödenmiş Faturalar</strong><span>@Model.OdenmisFaturaSayisi adet</span></div>
+                        <b class="amount-income">@Model.OdenmisFaturaTutari.ToString("N2") ₺</b>
+                    </div>
+                    <div class="report-list-row">
+                        <div><strong>İptal Faturalar</strong><span>@Model.IptalFaturaSayisi adet</span></div>
+                        <b>@Model.IptalFaturaTutari.ToString("N2") ₺</b>
+                    </div>
+                    <div class="report-list-row report-list-row-total">
+                        <div><strong>Toplam Fatura Tutarı</strong><span>Genel toplam</span></div>
+                        <b>@Model.ToplamFaturaTutari.ToString("N2") ₺</b>
+                    </div>
                 </div>
             </section>
-        </div>
-
-        <aside class="dashboard-panel quick-actions-panel">
-            <div class="panel-title-row">
-                <div>
-                    <h2>Cari Dağılım</h2>
-                    <p>Alıcı ve satıcı kart sayıları</p>
-                </div>
-            </div>
-
-            <div class="report-total-card">
-                <span>Toplam Cari</span>
-                <strong>@Model.CariSayisi</strong>
-            </div>
-
-            <div class="quick-action-list">
-                <a class="quick-action" href="/CariKartlar">
-                    <span>A</span>
-                    <strong>Alıcı: @Model.AliciSayisi</strong>
-                </a>
-                <a class="quick-action" href="/CariKartlar">
-                    <span>S</span>
-                    <strong>Satıcı: @Model.SaticiSayisi</strong>
-                </a>
-                <a class="quick-action primary" href="/Kasa/Hareketler">
-                    <span>K</span>
-                    <strong>Kasa Hareketleri</strong>
-                </a>
-            </div>
         </aside>
     </section>
 </div>

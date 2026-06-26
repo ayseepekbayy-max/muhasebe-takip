@@ -2683,6 +2683,83 @@ a.app-top-btn {
     line-height: 1;
 }
 
+.rapor-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.rapor-filter-panel {
+    padding: 20px;
+    border: 1px solid #c7d2fe;
+    border-left: 4px solid #4f46e5;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 12px 28px rgba(79, 70, 229, 0.08);
+}
+
+.rapor-filter-panel .panel-title-row {
+    align-items: center;
+}
+
+.rapor-filter-grid {
+    grid-template-columns: minmax(180px, 0.6fr) minmax(180px, 0.6fr) minmax(460px, 1.6fr);
+}
+
+.reports-panel-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.report-list {
+    display: grid;
+    gap: 10px;
+}
+
+.report-list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 13px 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.report-list-row strong {
+    display: block;
+    color: #111827;
+    font-size: 14px;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+}
+
+.report-list-row span {
+    display: block;
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.report-list-row b {
+    color: #111827;
+    font-size: 14px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.report-list-row-total {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.report-table {
+    min-width: 760px;
+}
+
 .auth-page {
     min-height: 100vh;
     display: flex;
@@ -2922,7 +2999,10 @@ a.app-top-btn {
 
     .app-form-grid,
     .metric-grid-three,
-    .reports-grid {
+    .reports-grid,
+    .rapor-filter-grid,
+    .reports-panel-grid,
+    .rapor-metric-grid {
         grid-template-columns: 1fr 1fr;
     }
 
@@ -2974,7 +3054,10 @@ a.app-top-btn {
     .app-form-grid,
     .metric-grid-three,
     .reports-grid,
-    .report-summary-grid {
+    .report-summary-grid,
+    .rapor-filter-grid,
+    .reports-panel-grid,
+    .rapor-metric-grid {
         grid-template-columns: 1fr;
     }
 
