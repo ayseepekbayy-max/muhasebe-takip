@@ -37,13 +37,13 @@ public class YedeklemeModel : PageModel
             return RedirectToPage("/Login");
 
         var cariler = await _db.CariKartlar
-            .Where(x => x.FirmaId == firmaId.Value)
+            .Where(x => x.FirmaId == firmaId.Value && x.AktifMi)
             .OrderBy(x => x.Unvan)
             .Select(x => new CariYedek(x.Unvan, x.Ad, x.Telefon, x.VergiNo, x.Tip, x.OlusturmaTarihi))
             .ToListAsync();
 
         var stoklar = await _db.StokUrunler
-            .Where(x => x.FirmaId == firmaId.Value)
+            .Where(x => x.FirmaId == firmaId.Value && x.AktifMi)
             .OrderBy(x => x.Ad)
             .Select(x => new StokYedek(x.Ad, x.Kod, x.Birim))
             .ToListAsync();
@@ -51,7 +51,7 @@ public class YedeklemeModel : PageModel
         var faturalar = await _db.Faturalar
             .Include(x => x.CariKart)
             .Include(x => x.Kalemler)
-            .Where(x => x.FirmaId == firmaId.Value)
+            .Where(x => x.FirmaId == firmaId.Value && x.AktifMi)
             .OrderBy(x => x.Tarih)
             .Select(x => new FaturaYedek(
                 x.FaturaNo,
@@ -137,6 +137,7 @@ public class YedeklemeModel : PageModel
                     Telefon = cari.Telefon,
                     VergiNo = cari.VergiNo,
                     Tip = cari.Tip,
+                    AktifMi = true,
                     OlusturmaTarihi = cari.OlusturmaTarihi == default ? DateTime.UtcNow : cari.OlusturmaTarihi
                 });
                 eklenen++;
@@ -156,7 +157,8 @@ public class YedeklemeModel : PageModel
                     FirmaId = firmaId.Value,
                     Ad = stok.Ad,
                     Kod = stok.Kod ?? "",
-                    Birim = string.IsNullOrWhiteSpace(stok.Birim) ? "Adet" : stok.Birim
+                    Birim = string.IsNullOrWhiteSpace(stok.Birim) ? "Adet" : stok.Birim,
+                    AktifMi = true
                 });
                 eklenen++;
             }
@@ -190,6 +192,7 @@ public class YedeklemeModel : PageModel
                     OdenenToplam = fatura.OdenenToplam,
                     Durum = fatura.Durum ?? FaturaDurumuExtensions.OdemeDurumu(fatura.GenelToplam, fatura.OdenenToplam),
                     Aciklama = fatura.Aciklama ?? "",
+                    AktifMi = true,
                     OlusturmaTarihi = DateTime.UtcNow,
                     Kalemler = fatura.Kalemler.Select(k => new FaturaKalem
                     {

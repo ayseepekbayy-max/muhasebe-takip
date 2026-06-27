@@ -51,7 +51,7 @@ public class EkstreModel : PageModel
 
         var cariVarMi = await _db.CariKartlar
             .AsNoTracking()
-            .AnyAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+            .AnyAsync(x => x.Id == id && x.FirmaId == firmaId.Value && x.AktifMi);
 
         if (!cariVarMi)
             return NotFound();
@@ -98,14 +98,14 @@ public class EkstreModel : PageModel
     {
         Cari = await _db.CariKartlar
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi);
 
         if (Cari == null)
             return;
 
         Faturalar = await _db.Faturalar
             .AsNoTracking()
-            .Where(x => x.FirmaId == firmaId && x.CariKartId == id)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi && x.CariKartId == id)
             .OrderByDescending(x => x.Tarih)
             .ToListAsync();
 

@@ -33,7 +33,7 @@ public class DuzenleModel : PageModel
 
         var fatura = await _db.Faturalar
             .Include(x => x.Kalemler)
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value && x.AktifMi);
 
         if (fatura == null)
             return NotFound();
@@ -73,7 +73,7 @@ public class DuzenleModel : PageModel
 
         var fatura = await _db.Faturalar
             .Include(x => x.Kalemler)
-            .FirstOrDefaultAsync(x => x.Id == Fatura.Id && x.FirmaId == firmaId.Value);
+            .FirstOrDefaultAsync(x => x.Id == Fatura.Id && x.FirmaId == firmaId.Value && x.AktifMi);
 
         if (fatura == null)
             return NotFound();
@@ -85,7 +85,7 @@ public class DuzenleModel : PageModel
         if (Fatura.CariKartId <= 0)
             ModelState.AddModelError("", "Cari seçimi zorunludur.");
 
-        var cariVarMi = await _db.CariKartlar.AnyAsync(x => x.Id == Fatura.CariKartId && x.FirmaId == firmaId.Value);
+        var cariVarMi = await _db.CariKartlar.AnyAsync(x => x.Id == Fatura.CariKartId && x.FirmaId == firmaId.Value && x.AktifMi);
         if (!cariVarMi)
             ModelState.AddModelError("", "Seçilen cari bulunamadı.");
 
@@ -93,6 +93,14 @@ public class DuzenleModel : PageModel
         KalemleriDogrula(doluKalemler);
         var yeniKalemler = FaturaKalemleriOlustur(doluKalemler);
         var yeniGenelToplam = yeniKalemler.Sum(x => x.GenelToplam);
+        var yeniFaturaNo = string.IsNullOrWhiteSpace(Fatura.FaturaNo)
+            ? fatura.FaturaNo
+            : Fatura.FaturaNo.Trim();
+
+        var faturaNoVarMi = await _db.Faturalar
+            .AnyAsync(x => x.FirmaId == firmaId.Value && x.Id != fatura.Id && x.FaturaNo == yeniFaturaNo);
+        if (faturaNoVarMi)
+            ModelState.AddModelError("", "Bu fatura numarasi bu firmada zaten kullaniliyor.");
 
         if (fatura.OdenenToplam > yeniGenelToplam)
             ModelState.AddModelError("", "Fatura toplamı, daha önce ödenen/tahsil edilen tutardan düşük olamaz.");
@@ -108,7 +116,7 @@ public class DuzenleModel : PageModel
         var eskiDeger = IslemGecmisiSnapshots.Fatura(fatura);
 
         fatura.CariKartId = Fatura.CariKartId;
-        fatura.FaturaNo = string.IsNullOrWhiteSpace(Fatura.FaturaNo) ? fatura.FaturaNo : Fatura.FaturaNo.Trim();
+        fatura.FaturaNo = yeniFaturaNo;
         fatura.Tip = Fatura.Tip;
         fatura.Tarih = ToUtcDate(Fatura.Tarih);
         fatura.VadeTarihi = Fatura.VadeTarihi.HasValue ? ToUtcDate(Fatura.VadeTarihi.Value) : null;
@@ -137,7 +145,7 @@ public class DuzenleModel : PageModel
     private async Task CarileriYukleAsync(int firmaId)
     {
         Cariler = await _db.CariKartlar
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .OrderBy(x => x.Unvan)
             .ToListAsync();
     }

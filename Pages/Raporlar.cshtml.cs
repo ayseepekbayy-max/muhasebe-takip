@@ -251,7 +251,7 @@ public class RaporlarModel : PageModel
     {
         var ozet = await _db.Faturalar
             .AsNoTracking()
-            .Where(x => x.FirmaId == firmaId && x.Tarih >= SeciliBaslangic && x.Tarih < SeciliBitisHaric)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi && x.Tarih >= SeciliBaslangic && x.Tarih < SeciliBitisHaric)
             .GroupBy(_ => 1)
             .Select(g => new
             {
@@ -281,7 +281,7 @@ public class RaporlarModel : PageModel
     {
         var stokDegerleri = await _db.StokUrunler
             .AsNoTracking()
-            .Where(urun => urun.FirmaId == firmaId)
+            .Where(urun => urun.FirmaId == firmaId && urun.AktifMi)
             .Select(urun => new
             {
                 MevcutStok = (_db.StokHareketleri
@@ -314,6 +314,7 @@ public class RaporlarModel : PageModel
                 x.Tarih >= SeciliBaslangic &&
                 x.Tarih < SeciliBitisHaric &&
                 x.Tip == tip)
+            .Where(x => x.CariKart == null || x.CariKart.AktifMi)
             .GroupBy(x => new { x.CariKartId, x.CariKart!.Unvan })
             .Select(g => new RaporSatiri
             {
@@ -332,6 +333,7 @@ public class RaporlarModel : PageModel
         return await _db.StokHareketleri
             .AsNoTracking()
             .Where(x => x.FirmaId == firmaId && x.Tarih >= SeciliBaslangic && x.Tarih < SeciliBitisHaric)
+            .Where(x => x.StokUrun == null || x.StokUrun.AktifMi)
             .GroupBy(x => new { x.StokUrunId, x.StokUrun!.Ad, x.StokUrun.Kod })
             .Select(g => new StokHareketRaporSatiri
             {

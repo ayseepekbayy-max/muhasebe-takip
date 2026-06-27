@@ -96,7 +96,7 @@
                                     <li><a class="dropdown-item" href="/Araclar/Yedekleme">Yedekleme</a></li>
                                     <li><a class="dropdown-item" href="/IslemGecmisi">İşlem Geçmişi</a></li>
                                     <li><a class="dropdown-item" href="/AiAsistan">AI Asistan</a></li>
-                                    @if (rol == "superadmin")
+                                    @if (rol == "superadmin" || rol == "admin")
                                     {
                                         <li><hr class="dropdown-divider" /></li>
                                         <li><a class="dropdown-item" href="/SuperAdmin/Index">Süper Admin</a></li>

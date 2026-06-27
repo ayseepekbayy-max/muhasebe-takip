@@ -20,4 +20,10 @@ public class Musteri
 
     [MaxLength(250)]
     public string Adres { get; set; } = "";
+
+    public bool AktifMi { get; set; } = true;
+
+    public DateTime? ArsivTarihi { get; set; }
+
+    public string? ArsivNotu { get; set; }
 }

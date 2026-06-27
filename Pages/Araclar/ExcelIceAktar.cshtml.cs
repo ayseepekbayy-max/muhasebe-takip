@@ -142,12 +142,12 @@ public class ExcelIceAktarModel : PageModel
         ws.Cell(1, 12).Value = "Durum";
 
         var liste = await _db.CariKartlar
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .OrderBy(x => x.Unvan)
             .ToListAsync();
 
         var faturaOzetleri = await _db.Faturalar
-            .Where(x => x.FirmaId == firmaId && x.CariKartId != null && x.Durum != FaturaDurumu.Iptal)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi && x.CariKartId != null && x.Durum != FaturaDurumu.Iptal)
             .GroupBy(x => x.CariKartId!.Value)
             .Select(g => new
             {
@@ -214,7 +214,7 @@ public class ExcelIceAktarModel : PageModel
         ws.Cell(1, 3).Value = "Birim";
         ws.Cell(1, 4).Value = "Mevcut Stok";
 
-        var liste = await _db.StokUrunler.Where(x => x.FirmaId == firmaId).OrderBy(x => x.Ad).ToListAsync();
+        var liste = await _db.StokUrunler.Where(x => x.FirmaId == firmaId && x.AktifMi).OrderBy(x => x.Ad).ToListAsync();
         var hareketler = await _db.StokHareketleri.Where(x => x.FirmaId == firmaId).GroupBy(x => x.StokUrunId).Select(g => new
         {
             UrunId = g.Key,
@@ -246,7 +246,7 @@ public class ExcelIceAktarModel : PageModel
         ws.Cell(1, 6).Value = "Ödenen";
         ws.Cell(1, 7).Value = "Kalan";
 
-        var liste = await _db.Faturalar.Include(x => x.CariKart).Where(x => x.FirmaId == firmaId).OrderByDescending(x => x.Tarih).ToListAsync();
+        var liste = await _db.Faturalar.Include(x => x.CariKart).Where(x => x.FirmaId == firmaId && x.AktifMi).OrderByDescending(x => x.Tarih).ToListAsync();
         var row = 2;
         foreach (var item in liste)
         {
@@ -311,6 +311,7 @@ public class ExcelIceAktarModel : PageModel
                 Tip = tip,
                 Telefon = BosMu(ws.Cell(row, 3).GetString()),
                 VergiNo = BosMu(ws.Cell(row, 4).GetString()),
+                AktifMi = true,
                 OlusturmaTarihi = DateTime.UtcNow
             });
             eklenen++;
@@ -342,7 +343,8 @@ public class ExcelIceAktarModel : PageModel
                     FirmaId = firmaId,
                     Ad = ad,
                     Kod = kod,
-                    Birim = string.IsNullOrWhiteSpace(ws.Cell(row, 3).GetString()) ? "Adet" : ws.Cell(row, 3).GetString().Trim()
+                    Birim = string.IsNullOrWhiteSpace(ws.Cell(row, 3).GetString()) ? "Adet" : ws.Cell(row, 3).GetString().Trim(),
+                    AktifMi = true
                 };
                 _db.StokUrunler.Add(urun);
                 eklenen++;

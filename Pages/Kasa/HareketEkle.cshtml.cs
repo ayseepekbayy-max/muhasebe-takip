@@ -47,7 +47,7 @@ public class HareketEkleModel : PageModel
         if (cariId.HasValue)
         {
             var cariVarMi = await _db.CariKartlar
-                .AnyAsync(x => x.Id == cariId.Value && x.FirmaId == firmaId);
+                .AnyAsync(x => x.Id == cariId.Value && x.FirmaId == firmaId && x.AktifMi);
 
             if (cariVarMi)
                 Hareket.CariKartId = cariId.Value;
@@ -109,7 +109,7 @@ public class HareketEkleModel : PageModel
             if (Hareket.CariKartId.HasValue)
             {
                 var secilenCari = await _db.CariKartlar
-                    .AnyAsync(x => x.Id == Hareket.CariKartId.Value && x.FirmaId == firmaId);
+                    .AnyAsync(x => x.Id == Hareket.CariKartId.Value && x.FirmaId == firmaId && x.AktifMi);
 
                 if (!secilenCari)
                 {
@@ -166,7 +166,7 @@ public class HareketEkleModel : PageModel
     private async Task YukleCariSecenekleriAsync(int firmaId)
     {
         CariSecenekleri = await _db.CariKartlar
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .OrderBy(x => x.Unvan)
             .Select(x => new SelectListItem
             {

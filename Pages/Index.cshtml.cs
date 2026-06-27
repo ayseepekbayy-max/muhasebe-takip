@@ -95,7 +95,7 @@ public class IndexModel : PageModel
         var gecikenFaturalar = await _db.Faturalar
             .AsNoTracking()
             .Include(x => x.CariKart)
-            .Where(x => x.FirmaId == firmaId && x.Durum != FaturaDurumu.Iptal && x.VadeTarihi != null && x.VadeTarihi < bugun && x.GenelToplam > x.OdenenToplam)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi && x.Durum != FaturaDurumu.Iptal && x.VadeTarihi != null && x.VadeTarihi < bugun && x.GenelToplam > x.OdenenToplam)
             .OrderBy(x => x.VadeTarihi)
             .Take(5)
             .ToListAsync();
@@ -115,7 +115,7 @@ public class IndexModel : PageModel
         var yaklasanFaturalar = await _db.Faturalar
             .AsNoTracking()
             .Include(x => x.CariKart)
-            .Where(x => x.FirmaId == firmaId && x.Durum != FaturaDurumu.Iptal && x.VadeTarihi != null && x.VadeTarihi >= bugun && x.VadeTarihi <= yediGunSonra && x.GenelToplam > x.OdenenToplam)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi && x.Durum != FaturaDurumu.Iptal && x.VadeTarihi != null && x.VadeTarihi >= bugun && x.VadeTarihi <= yediGunSonra && x.GenelToplam > x.OdenenToplam)
             .OrderBy(x => x.VadeTarihi)
             .Take(5)
             .ToListAsync();
@@ -151,7 +151,7 @@ public class IndexModel : PageModel
 
         var kritikStoklar = await _db.StokUrunler
             .AsNoTracking()
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .Select(x => new
             {
                 x.Id,
@@ -212,7 +212,7 @@ public class IndexModel : PageModel
 
             var faturaOzeti = await _db.Faturalar
                 .AsNoTracking()
-                .Where(x => x.FirmaId == firmaId && x.Durum != FaturaDurumu.Iptal)
+                .Where(x => x.FirmaId == firmaId && x.AktifMi && x.Durum != FaturaDurumu.Iptal)
                 .GroupBy(_ => 1)
                 .Select(g => new
                 {
@@ -228,11 +228,11 @@ public class IndexModel : PageModel
 
             CariSayisi = await _db.CariKartlar
                 .AsNoTracking()
-                .CountAsync(x => x.FirmaId == firmaId);
+                .CountAsync(x => x.FirmaId == firmaId && x.AktifMi);
 
             MusteriSayisi = await _db.Musteriler
                 .AsNoTracking()
-                .CountAsync(x => x.FirmaId == firmaId);
+                .CountAsync(x => x.FirmaId == firmaId && x.AktifMi);
 
             CalisanSayisi = await _db.Calisanlar
                 .AsNoTracking()
@@ -240,7 +240,7 @@ public class IndexModel : PageModel
 
             KritikStokSayisi = await _db.StokUrunler
                 .AsNoTracking()
-                .Where(x => x.FirmaId == firmaId)
+                .Where(x => x.FirmaId == firmaId && x.AktifMi)
                 .CountAsync(urun =>
                     (_db.StokHareketleri
                         .Where(h => h.FirmaId == firmaId && h.StokUrunId == urun.Id && h.Tip == StokHareketTipi.Giris)

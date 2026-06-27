@@ -48,6 +48,12 @@ public class Fatura
 
     public DateTime OlusturmaTarihi { get; set; } = DateTime.UtcNow;
 
+    public bool AktifMi { get; set; } = true;
+
+    public DateTime? ArsivTarihi { get; set; }
+
+    public string? ArsivNotu { get; set; }
+
     public List<FaturaKalem> Kalemler { get; set; } = new();
 
     [NotMapped]

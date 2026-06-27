@@ -57,7 +57,7 @@ public class DetayModel : PageModel
         var fatura = await _db.Faturalar
             .Include(x => x.CariKart)
             .Include(x => x.Kalemler)
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value && x.AktifMi);
 
         if (fatura == null)
             return NotFound();
@@ -165,7 +165,7 @@ public class DetayModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        var faturaVarMi = await _db.Faturalar.AnyAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+        var faturaVarMi = await _db.Faturalar.AnyAsync(x => x.Id == id && x.FirmaId == firmaId.Value && x.AktifMi);
         if (!faturaVarMi)
             return NotFound();
 
@@ -212,7 +212,7 @@ public class DetayModel : PageModel
         Fatura = await _db.Faturalar
             .Include(x => x.CariKart)
             .Include(x => x.Kalemler)
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi);
 
         if (Fatura == null)
             return;

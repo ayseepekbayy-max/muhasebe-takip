@@ -281,7 +281,7 @@ return RedirectToPage(new { id });
     private async Task YukleAsync(int id, int firmaId)
     {
         Musteri = await _db.Musteriler
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi);
 
         if (Musteri == null)
             return;

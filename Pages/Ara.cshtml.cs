@@ -33,7 +33,7 @@ public class AraModel : PageModel
         var lower = q.ToLower();
 
         var cariler = await _db.CariKartlar
-            .Where(x => x.FirmaId == firmaId.Value &&
+            .Where(x => x.FirmaId == firmaId.Value && x.AktifMi &&
                 ((x.Unvan ?? "").ToLower().Contains(lower) ||
                  (x.Telefon ?? "").ToLower().Contains(lower) ||
                  (x.VergiNo ?? "").ToLower().Contains(lower)))
@@ -44,7 +44,7 @@ public class AraModel : PageModel
 
         var faturalar = await _db.Faturalar
             .Include(x => x.CariKart)
-            .Where(x => x.FirmaId == firmaId.Value &&
+            .Where(x => x.FirmaId == firmaId.Value && x.AktifMi &&
                 ((x.FaturaNo ?? "").ToLower().Contains(lower) ||
                  (x.Aciklama ?? "").ToLower().Contains(lower) ||
                  (x.CariKart != null && (x.CariKart.Unvan ?? "").ToLower().Contains(lower))))
@@ -54,7 +54,7 @@ public class AraModel : PageModel
             .ToListAsync();
 
         var stoklar = await _db.StokUrunler
-            .Where(x => x.FirmaId == firmaId.Value &&
+            .Where(x => x.FirmaId == firmaId.Value && x.AktifMi &&
                 ((x.Ad ?? "").ToLower().Contains(lower) || (x.Kod ?? "").ToLower().Contains(lower)))
             .OrderBy(x => x.Ad)
             .Take(10)

@@ -76,6 +76,9 @@ public class IndexModel : PageModel
 
         Yeni.Ad = Yeni.AdSoyad;
         Yeni.FirmaId = firmaId.Value;
+        Yeni.AktifMi = true;
+        Yeni.ArsivTarihi = null;
+        Yeni.ArsivNotu = null;
 
         _db.Musteriler.Add(Yeni);
         await _db.SaveChangesWithAuditAsync(
@@ -99,34 +102,28 @@ public class IndexModel : PageModel
             return RedirectToPage("/Login");
 
         var musteri = await _db.Musteriler
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi);
 
         if (musteri == null)
             return RedirectToPage();
 
-        var isler = await _db.MusteriIsler
-            .Where(x => x.MusteriId == id && x.FirmaId == firmaId)
-            .ToListAsync();
-
-        if (isler.Count > 0)
-        {
-            TempData["Hata"] = "Bu musteriye bagli is veya masraf kayitlari var. Gecmis kayitlarin korunmasi icin musteri silinmedi.";
-            return RedirectToPage();
-        }
-
         var eskiDeger = IslemGecmisiSnapshots.Musteri(musteri);
-        _db.Musteriler.Remove(musteri);
+        musteri.AktifMi = false;
+        musteri.ArsivTarihi = DateTime.UtcNow;
+        musteri.ArsivNotu = "Silme yerine veri korunarak arşive taşındı.";
 
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
-                "Müşteriler",
-                "Silme",
-                $"{musteri.AdSoyad} müşterisi silindi (ID: {musteri.Id}).",
-                eskiDeger: eskiDeger),
+                "Musteriler",
+                "Arsivleme",
+                $"{musteri.AdSoyad} musterisi silinmeden arsive tasindi (ID: {musteri.Id}).",
+                eskiDeger,
+                IslemGecmisiSnapshots.Musteri(musteri)),
             anaKaydiOnceKaydet: false);
 
-        TempData["Basari"] = "Müşteri silindi.";
+        TempData["Basari"] = "Musteri silinmeden arsive tasindi. Is ve masraf kayitlari korundu.";
         return RedirectToPage();
+
     }
 
     public async Task<IActionResult> OnGetDisaAktarAsync()
@@ -199,7 +196,7 @@ public class IndexModel : PageModel
     {
         var genelOzet = await _db.Musteriler
             .AsNoTracking()
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .GroupBy(_ => 1)
             .Select(grup => new { Toplam = grup.Count() })
             .FirstOrDefaultAsync();
@@ -232,7 +229,7 @@ public class IndexModel : PageModel
 
         var sorgu = _db.Musteriler
             .AsNoTracking()
-            .Where(x => x.FirmaId == firmaId);
+            .Where(x => x.FirmaId == firmaId && x.AktifMi);
 
         if (!string.IsNullOrWhiteSpace(MusteriAra))
         {

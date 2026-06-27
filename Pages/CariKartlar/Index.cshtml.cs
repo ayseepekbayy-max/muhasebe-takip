@@ -61,7 +61,7 @@ public class IndexModel : PageModel
         {
             var cari = await _db.CariKartlar
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == DuzenleId.Value && x.FirmaId == firmaId.Value);
+                .FirstOrDefaultAsync(x => x.Id == DuzenleId.Value && x.FirmaId == firmaId.Value && x.AktifMi);
 
             if (cari != null)
             {
@@ -107,6 +107,9 @@ public class IndexModel : PageModel
         YeniCari.Ad = YeniCari.Unvan;
         YeniCari.FirmaId = firmaId.Value;
         YeniCari.OlusturmaTarihi = DateTime.UtcNow;
+        YeniCari.AktifMi = true;
+        YeniCari.ArsivTarihi = null;
+        YeniCari.ArsivNotu = null;
 
         try
         {
@@ -138,7 +141,7 @@ public class IndexModel : PageModel
             return RedirectToPage("/Login");
 
         var cari = await _db.CariKartlar
-            .FirstOrDefaultAsync(x => x.Id == DuzenlenenCari.Id && x.FirmaId == firmaId.Value);
+            .FirstOrDefaultAsync(x => x.Id == DuzenlenenCari.Id && x.FirmaId == firmaId.Value && x.AktifMi);
 
         if (cari == null)
         {
@@ -189,7 +192,7 @@ public class IndexModel : PageModel
             return RedirectToPage("/Login");
 
         var cari = await _db.CariKartlar
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value && x.AktifMi);
 
         if (cari == null)
         {
@@ -197,41 +200,23 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        var kasaHareketleri = await _db.KasaHareketleri
-            .Where(x => x.CariKartId == id && x.FirmaId == firmaId.Value)
-            .ToListAsync();
-
-        var faturalar = await _db.Faturalar
-            .Where(x => x.CariKartId == id && x.FirmaId == firmaId.Value)
-            .ToListAsync();
-
-        var ekDosyalar = await _db.EkDosyalar
-            .Where(x => x.CariKartId == id && x.FirmaId == firmaId.Value)
-            .ToListAsync();
-
-        foreach (var hareket in kasaHareketleri)
-            hareket.CariKartId = null;
-
-        foreach (var fatura in faturalar)
-            fatura.CariKartId = null;
-
-        foreach (var dosya in ekDosyalar)
-            dosya.CariKartId = null;
-
         var eskiDeger = IslemGecmisiSnapshots.Cari(cari);
-        _db.CariKartlar.Remove(cari);
+        cari.AktifMi = false;
+        cari.ArsivTarihi = DateTime.UtcNow;
+        cari.ArsivNotu = "Silme yerine veri korunarak arşive taşındı.";
 
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
                 "Cari Kartlar",
-                "Silme",
-                $"{cari.Unvan} ünvanlı cari kart silindi (ID: {cari.Id}). " +
-                $"{kasaHareketleri.Count} kasa hareketi, {faturalar.Count} fatura ve {ekDosyalar.Count} dosya korunarak cari bağlantıları kaldırıldı.",
-                eskiDeger: eskiDeger),
+                "Arsivleme",
+                $"{cari.Unvan} cari karti silinmeden arsive tasindi (ID: {cari.Id}).",
+                eskiDeger,
+                IslemGecmisiSnapshots.Cari(cari)),
             anaKaydiOnceKaydet: false);
 
-        TempData["Basari"] = "Cari kart silindi. Bağlı kayıtlar korunarak cari bağlantıları kaldırıldı.";
+        TempData["Basari"] = "Cari kart silinmeden arsive tasindi. Bagli kayitlar korundu.";
         return RedirectToPage();
+
     }
 
     public async Task<IActionResult> OnGetDisaAktarAsync()
@@ -301,7 +286,7 @@ public class IndexModel : PageModel
     {
         var cariSayilari = await _db.CariKartlar
             .AsNoTracking()
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .GroupBy(_ => 1)
             .Select(grup => new
             {
@@ -337,7 +322,7 @@ public class IndexModel : PageModel
     {
         var sorgu = _db.CariKartlar
             .AsNoTracking()
-            .Where(x => x.FirmaId == firmaId);
+            .Where(x => x.FirmaId == firmaId && x.AktifMi);
 
         if (!string.IsNullOrWhiteSpace(UnvanAra))
         {

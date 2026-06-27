@@ -132,7 +132,7 @@ public class MalzemelerModel : PageModel
         }
 
         var urun = await _db.StokUrunler
-            .FirstOrDefaultAsync(x => x.Id == SeciliStokUrunId && x.FirmaId == firmaId.Value);
+            .FirstOrDefaultAsync(x => x.Id == SeciliStokUrunId && x.FirmaId == firmaId.Value && x.AktifMi);
 
         if (urun == null)
         {
@@ -193,7 +193,7 @@ public class MalzemelerModel : PageModel
     private async Task YukleStoklariAsync(int firmaId)
     {
         StokUrunleri = await _db.StokUrunler
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .OrderBy(x => x.Ad)
             .ToListAsync();
     }

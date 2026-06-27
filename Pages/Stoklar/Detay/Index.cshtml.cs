@@ -89,7 +89,7 @@ public class IndexModel : PageModel
         }
 
         var urun = await _db.StokUrunler
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value && x.AktifMi);
 
         if (urun == null)
             return NotFound();
@@ -273,7 +273,7 @@ public class IndexModel : PageModel
     {
         Urun = await _db.StokUrunler
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi);
 
         if (Urun == null)
             return;

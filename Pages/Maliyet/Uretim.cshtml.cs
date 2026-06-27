@@ -116,7 +116,8 @@ public class UretimModel : PageModel
             var urun = await _db.StokUrunler
                 .FirstOrDefaultAsync(x =>
                     x.Id == satir.StokUrunId &&
-                    x.FirmaId == firmaId.Value);
+                    x.FirmaId == firmaId.Value &&
+                    x.AktifMi);
 
             if (urun == null)
                 continue;
@@ -429,7 +430,7 @@ public class UretimModel : PageModel
     private async Task StoklariYukleAsync(int firmaId)
     {
         StokUrunleri = await _db.StokUrunler
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .OrderBy(x => x.Ad)
             .ToListAsync();
     }

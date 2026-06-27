@@ -88,7 +88,7 @@ public class IndexModel : PageModel
     {
         Cari = await _db.CariKartlar
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi);
 
         if (Cari == null)
             return;

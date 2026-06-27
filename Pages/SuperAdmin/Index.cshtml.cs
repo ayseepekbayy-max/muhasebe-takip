@@ -141,7 +141,7 @@ public class IndexModel : PageModel
     private bool SuperAdminMi()
     {
         var rol = (HttpContext.Session.GetString("Rol") ?? "").Trim().ToLower();
-        return rol == "superadmin";
+        return rol == "superadmin" || rol == "admin";
     }
 
     private async Task YukleAsync()

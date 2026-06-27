@@ -25,4 +25,10 @@ public class CariKart
     public CariTip Tip { get; set; }
 
     public DateTime OlusturmaTarihi { get; set; } = DateTime.Now;
+
+    public bool AktifMi { get; set; } = true;
+
+    public DateTime? ArsivTarihi { get; set; }
+
+    public string? ArsivNotu { get; set; }
 }

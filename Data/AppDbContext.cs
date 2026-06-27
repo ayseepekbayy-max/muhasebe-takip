@@ -44,5 +44,11 @@ public class AppDbContext : DbContext
                 .HasForeignKey(x => x.FirmaId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        modelBuilder.Entity<Fatura>(entity =>
+        {
+            entity.HasIndex(x => new { x.FirmaId, x.FaturaNo })
+                .IsUnique();
+        });
     }
 }

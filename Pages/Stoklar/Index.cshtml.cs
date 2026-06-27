@@ -84,6 +84,9 @@ public class IndexModel : PageModel
         }
 
         Yeni.FirmaId = firmaId.Value;
+        Yeni.AktifMi = true;
+        Yeni.ArsivTarihi = null;
+        Yeni.ArsivNotu = null;
 
         _db.StokUrunler.Add(Yeni);
         await _db.SaveChangesWithAuditAsync(
@@ -105,7 +108,7 @@ public class IndexModel : PageModel
             return RedirectToPage("/Login");
 
         var urun = await _db.StokUrunler
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value && x.AktifMi);
 
         if (urun == null)
         {
@@ -113,29 +116,23 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        var hareketler = await _db.StokHareketleri
-            .Where(x => x.StokUrunId == id && x.FirmaId == firmaId.Value)
-            .ToListAsync();
-
-        if (hareketler.Count > 0)
-        {
-            TempData["Hata"] = "Bu urune ait stok hareketleri var. Gecmis kayitlarin korunmasi icin urun silinmedi.";
-            return RedirectToPage();
-        }
-
         var eskiDeger = IslemGecmisiSnapshots.StokUrun(urun);
-        _db.StokUrunler.Remove(urun);
+        urun.AktifMi = false;
+        urun.ArsivTarihi = DateTime.UtcNow;
+        urun.ArsivNotu = "Silme yerine veri korunarak arşive taşındı.";
 
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
                 "Stok",
-                "Silme",
-                $"{urun.Ad} stok ürünü ve {hareketler.Count} stok hareketi silindi (ID: {urun.Id}).",
-                eskiDeger: eskiDeger),
+                "Arsivleme",
+                $"{urun.Ad} stok urunu silinmeden arsive tasindi (ID: {urun.Id}).",
+                eskiDeger,
+                IslemGecmisiSnapshots.StokUrun(urun)),
             anaKaydiOnceKaydet: false);
 
-        TempData["Basari"] = "Ürün ve varsa ona ait stok hareketleri silindi.";
+        TempData["Basari"] = "Urun silinmeden arsive tasindi. Stok hareketleri korundu.";
         return RedirectToPage();
+
     }
 
     public async Task<IActionResult> OnGetDisaAktarAsync()
@@ -205,7 +202,7 @@ public class IndexModel : PageModel
     {
         var urunler = await _db.StokUrunler
             .AsNoTracking()
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .OrderBy(x => x.Ad)
             .ToListAsync();
 

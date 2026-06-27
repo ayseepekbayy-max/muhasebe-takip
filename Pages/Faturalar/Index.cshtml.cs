@@ -73,7 +73,7 @@ public class IndexModel : PageModel
         if (Yeni.CariKartId <= 0)
             ModelState.AddModelError("", "Cari seçimi zorunludur.");
 
-        var cariVarMi = await _db.CariKartlar.AnyAsync(x => x.Id == Yeni.CariKartId && x.FirmaId == firmaId.Value);
+        var cariVarMi = await _db.CariKartlar.AnyAsync(x => x.Id == Yeni.CariKartId && x.FirmaId == firmaId.Value && x.AktifMi);
         if (!cariVarMi)
             ModelState.AddModelError("", "Seçilen cari bulunamadı.");
 
@@ -92,6 +92,16 @@ public class IndexModel : PageModel
             ? await SiradakiFaturaNoAsync(firmaId.Value)
             : Yeni.FaturaNo.Trim();
 
+        var faturaNoVarMi = await _db.Faturalar
+            .AnyAsync(x => x.FirmaId == firmaId.Value && x.FaturaNo == faturaNo);
+        if (faturaNoVarMi)
+        {
+            ModelState.AddModelError("", "Bu fatura numarası bu firmada zaten kullanılıyor.");
+            Yeni.Kalemler = doluKalemler;
+            await VerileriYukleAsync(firmaId.Value);
+            return Page();
+        }
+
         var fatura = new Fatura
         {
             FirmaId = firmaId.Value,
@@ -107,6 +117,9 @@ public class IndexModel : PageModel
             Durum = FaturaDurumu.Bekliyor,
             Aciklama = Yeni.Aciklama,
             OlusturmaTarihi = DateTime.UtcNow,
+            AktifMi = true,
+            ArsivTarihi = null,
+            ArsivNotu = null,
             Kalemler = faturaKalemleri
         };
 
@@ -138,7 +151,7 @@ public class IndexModel : PageModel
         var fatura = await _db.Faturalar
             .Include(x => x.CariKart)
             .Include(x => x.Kalemler)
-            .FirstOrDefaultAsync(x => x.Id == Odeme.FaturaId && x.FirmaId == firmaId.Value);
+            .FirstOrDefaultAsync(x => x.Id == Odeme.FaturaId && x.FirmaId == firmaId.Value && x.AktifMi);
 
         if (fatura == null)
         {
@@ -222,7 +235,7 @@ public class IndexModel : PageModel
 
         var fatura = await _db.Faturalar
             .Include(x => x.Kalemler)
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value && x.AktifMi);
 
         if (fatura == null)
         {
@@ -230,39 +243,30 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        var kasaHareketleri = await _db.KasaHareketleri
-            .Where(x => x.FirmaId == firmaId.Value && x.FaturaId == fatura.Id)
-            .ToListAsync();
-
-        foreach (var hareket in kasaHareketleri)
-            hareket.FaturaId = null;
-
-        var dosyalar = await _db.EkDosyalar
-            .Where(x => x.FirmaId == firmaId.Value && x.FaturaId == fatura.Id)
-            .ToListAsync();
-
-        foreach (var dosya in dosyalar)
-            dosya.FaturaId = null;
-
         var eskiDeger = IslemGecmisiSnapshots.Fatura(fatura);
-        _db.Faturalar.Remove(fatura);
+        fatura.AktifMi = false;
+        fatura.ArsivTarihi = DateTime.UtcNow;
+        fatura.ArsivNotu = "Silme yerine veri korunarak arşive taşındı.";
+        fatura.Durum = FaturaDurumu.Iptal;
+
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
                 "Faturalar",
-                "Silme",
-                $"Fatura silindi: {fatura.FaturaNo} (ID: {fatura.Id}). " +
-                $"{kasaHareketleri.Count} kasa hareketi ve {dosyalar.Count} dosya korunarak fatura bağlantıları kaldırıldı.",
-                eskiDeger: eskiDeger),
+                "Arsivleme",
+                $"Fatura silinmeden arsive tasindi: {fatura.FaturaNo} (ID: {fatura.Id}).",
+                eskiDeger,
+                IslemGecmisiSnapshots.Fatura(fatura)),
             anaKaydiOnceKaydet: false);
 
-        TempData["Basari"] = "Fatura silindi.";
+        TempData["Basari"] = "Fatura silinmeden arsive tasindi. Bagli kasa ve dosya kayitlari korundu.";
         return RedirectToPage();
+
     }
 
     private async Task VerileriYukleAsync(int firmaId)
     {
         Cariler = await _db.CariKartlar
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .OrderBy(x => x.Unvan)
             .ToListAsync();
 
@@ -375,7 +379,7 @@ public class IndexModel : PageModel
     {
         var sorgu = _db.Faturalar
             .AsNoTracking()
-            .Where(x => x.FirmaId == firmaId);
+            .Where(x => x.FirmaId == firmaId && x.AktifMi);
 
         if (FiltreBaslangicTarihi.HasValue)
         {

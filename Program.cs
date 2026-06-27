@@ -51,14 +51,14 @@ builder.Services.AddScoped<EmailService>();
 var app = builder.Build();
 
 // Veritabanını migration ile güncelle
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Database:AutoMigrate"))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     db.Database.Migrate();
 
-    if (!db.Firmalar.Any())
+    if (app.Environment.IsDevelopment() && !db.Firmalar.Any())
     {
         db.Firmalar.Add(new Firma
         {
@@ -69,7 +69,7 @@ if (app.Environment.IsDevelopment())
         db.SaveChanges();
     }
 
-    if (!db.Kullanicilar.Any())
+    if (app.Environment.IsDevelopment() && !db.Kullanicilar.Any())
     {
         var firma = db.Firmalar.First();
 
@@ -167,6 +167,7 @@ if (builder.Configuration.GetValue<bool>("Maintenance:FixDefaultAdminOnStartup")
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
+    app.UseStatusCodePagesWithReExecute("/Error");
     app.UseHsts();
 }
 

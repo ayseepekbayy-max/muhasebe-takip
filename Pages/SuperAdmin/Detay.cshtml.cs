@@ -23,8 +23,8 @@ public class DetayModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
-        if (HttpContext.Session.GetString("Rol") != "SuperAdmin")
-            return RedirectToPage("/Login");
+        if (!SuperAdminMi())
+            return RedirectToPage("/Index");
 
         await YukleFirmaDetayi(id);
 
@@ -32,6 +32,12 @@ public class DetayModel : PageModel
             return NotFound();
 
         return Page();
+    }
+
+    private bool SuperAdminMi()
+    {
+        var rol = (HttpContext.Session.GetString("Rol") ?? "").Trim().ToLowerInvariant();
+        return rol == "superadmin" || rol == "admin";
     }
 
 
