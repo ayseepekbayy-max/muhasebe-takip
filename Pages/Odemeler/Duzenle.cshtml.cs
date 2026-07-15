@@ -63,6 +63,7 @@ public class DuzenleModel : PageModel
             return NotFound();
 
         Form.Temizle();
+        Form.OdemeGunu = Form.IlkOdemeTarihi.Day;
         Dogrula();
         if (!ModelState.IsValid)
             return Page();
@@ -129,8 +130,6 @@ public class DuzenleModel : PageModel
             ModelState.AddModelError("", "Kalan taksit sayÄ±sÄ± sÄ±fÄ±rdan kÃ¼Ã§Ã¼k olamaz.");
         if (Form.KalanTaksitSayisi > Form.ToplamTaksitSayisi)
             ModelState.AddModelError("", "Kalan taksit sayÄ±sÄ± toplam taksit sayÄ±sÄ±ndan bÃ¼yÃ¼k olamaz.");
-        if (Form.OdemeGunu is < 1 or > 31)
-            ModelState.AddModelError("", "Ã–deme gÃ¼nÃ¼ 1 ile 31 arasÄ±nda olmalÄ±dÄ±r.");
     }
 
     public class OdemeDuzenleForm
@@ -154,7 +153,7 @@ public class DuzenleModel : PageModel
         {
             OdemeAdi = (OdemeAdi ?? "").Trim();
             Aciklama = string.IsNullOrWhiteSpace(Aciklama) ? null : Aciklama.Trim();
-            OdemeGunu = Math.Clamp(OdemeGunu, 1, 31);
+            OdemeGunu = IlkOdemeTarihi.Day;
             BildirimGunu = Math.Max(0, BildirimGunu);
         }
     }

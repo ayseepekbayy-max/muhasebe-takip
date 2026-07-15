@@ -38,6 +38,7 @@ public class EkleModel : PageModel
             return RedirectToPage("/Login");
 
         Form.Temizle();
+        Form.OdemeGunu = Form.IlkOdemeTarihi.Day;
         Dogrula();
 
         if (!ModelState.IsValid)
@@ -99,8 +100,6 @@ public class EkleModel : PageModel
             ModelState.AddModelError("", "Kalan taksit sayÄ±sÄ± sÄ±fÄ±rdan kÃ¼Ã§Ã¼k olamaz.");
         if (Form.KalanTaksitSayisi.HasValue && Form.KalanTaksitSayisi.Value > Form.ToplamTaksitSayisi)
             ModelState.AddModelError("", "Kalan taksit sayÄ±sÄ± toplam taksit sayÄ±sÄ±ndan bÃ¼yÃ¼k olamaz.");
-        if (Form.OdemeGunu is < 1 or > 31)
-            ModelState.AddModelError("", "Ã–deme gÃ¼nÃ¼ 1 ile 31 arasÄ±nda olmalÄ±dÄ±r.");
         if (Form.BildirimGunu < 0)
             ModelState.AddModelError("", "Bildirim gÃ¼nÃ¼ negatif olamaz.");
     }
@@ -124,7 +123,7 @@ public class EkleModel : PageModel
         {
             OdemeAdi = (OdemeAdi ?? "").Trim();
             Aciklama = string.IsNullOrWhiteSpace(Aciklama) ? null : Aciklama.Trim();
-            OdemeGunu = Math.Clamp(OdemeGunu, 1, 31);
+            OdemeGunu = IlkOdemeTarihi.Day;
             BildirimGunu = Math.Max(0, BildirimGunu);
         }
     }
