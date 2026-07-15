@@ -44,10 +44,24 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     }
 });
 
-builder.Services.Configure<EmailSettings>(
-    builder.Configuration.GetSection("EmailSettings"));
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.PostConfigure<EmailSettings>(settings =>
+{
+    settings.SmtpHost = Environment.GetEnvironmentVariable("SMTP_HOST") ?? settings.SmtpHost;
+    if (int.TryParse(Environment.GetEnvironmentVariable("SMTP_PORT"), out var smtpPort))
+        settings.SmtpPort = smtpPort;
+    settings.SmtpUsername = Environment.GetEnvironmentVariable("SMTP_USERNAME") ?? settings.SmtpUsername;
+    settings.SmtpPassword = Environment.GetEnvironmentVariable("SMTP_PASSWORD") ?? settings.SmtpPassword;
+    settings.FromEmail = Environment.GetEnvironmentVariable("SMTP_FROM_EMAIL") ?? settings.FromEmail;
+    settings.FromName = Environment.GetEnvironmentVariable("SMTP_FROM_NAME") ?? settings.FromName;
+    if (bool.TryParse(Environment.GetEnvironmentVariable("SMTP_ENABLE_SSL"), out var enableSsl))
+        settings.EnableSsl = enableSsl;
+    settings.AppBaseUrl = Environment.GetEnvironmentVariable("APP_BASE_URL") ?? settings.AppBaseUrl;
+});
 
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddHostedService<OdemeEmailBildirimBackgroundService>();
 var app = builder.Build();
 
 // Veritabanını migration ile güncelle

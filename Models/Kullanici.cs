@@ -8,6 +8,10 @@ namespace MuhasebeTakip2.App.Models
 
         public string Email { get; set; } = "";
 
+        public bool OdemeEmailBildirimiAktifMi { get; set; } = true;
+
+        public bool EmailDogrulandiMi { get; set; } = false;
+
         public string Sifre { get; set; } = "";
 
         public string? SifreSifirlamaKodu { get; set; }

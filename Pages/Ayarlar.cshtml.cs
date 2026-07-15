@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Helpers;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages;
 
@@ -10,17 +11,27 @@ public class AyarlarModel : PageModel
 {
     private readonly AppDbContext _db;
     private readonly IWebHostEnvironment _env;
+    private readonly IEmailService _emailService;
+    private readonly IIslemGecmisiService _islemGecmisi;
 
-    public AyarlarModel(AppDbContext db, IWebHostEnvironment env)
+    public AyarlarModel(
+        AppDbContext db,
+        IWebHostEnvironment env,
+        IEmailService emailService,
+        IIslemGecmisiService islemGecmisi)
     {
         _db = db;
         _env = env;
+        _emailService = emailService;
+        _islemGecmisi = islemGecmisi;
     }
 
     [BindProperty] public string KullaniciAdi { get; set; } = "";
     [BindProperty] public string MevcutSifre { get; set; } = "";
     [BindProperty] public string YeniSifre { get; set; } = "";
     [BindProperty] public string YeniSifreTekrar { get; set; } = "";
+    [BindProperty] public string KullaniciEmail { get; set; } = "";
+    [BindProperty] public bool OdemeEmailBildirimiAktifMi { get; set; } = true;
 
     [BindProperty] public string FirmaAdi { get; set; } = "";
     [BindProperty] public string Adres { get; set; } = "";
@@ -126,7 +137,7 @@ public class AyarlarModel : PageModel
         if (firmaId == null || kullaniciId == null)
             return RedirectToPage("/Login");
 
-        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId.Value);
+        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId.Value && x.FirmaId == firmaId.Value);
         if (kullanici == null)
             return RedirectToPage("/Login");
 
@@ -181,6 +192,108 @@ public class AyarlarModel : PageModel
         return Page();
     }
 
+    public async Task<IActionResult> OnPostEmailBildirimKaydetAsync()
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var kullaniciId = HttpContext.Session.GetInt32("KullaniciId");
+        if (firmaId == null || kullaniciId == null)
+            return RedirectToPage("/Login");
+
+        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId.Value && x.FirmaId == firmaId.Value);
+        if (kullanici == null)
+            return RedirectToPage("/Login");
+
+        var yeniEmail = (KullaniciEmail ?? "").Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(yeniEmail) && !EmailService.IsValidEmail(yeniEmail))
+        {
+            Hata = "Geçerli bir e-posta adresi girin.";
+            await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+            KullaniciEmail = yeniEmail;
+            return Page();
+        }
+
+        if (OdemeEmailBildirimiAktifMi && string.IsNullOrWhiteSpace(yeniEmail))
+        {
+            Hata = "Ödeme e-posta bildirimi için kullanıcı e-posta adresi gereklidir.";
+            await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+            KullaniciEmail = yeniEmail;
+            OdemeEmailBildirimiAktifMi = true;
+            return Page();
+        }
+
+        var eskiEmail = kullanici.Email;
+        var eskiAktiflik = kullanici.OdemeEmailBildirimiAktifMi;
+
+        kullanici.Email = yeniEmail;
+        kullanici.OdemeEmailBildirimiAktifMi = OdemeEmailBildirimiAktifMi;
+        if (!string.Equals(eskiEmail, yeniEmail, StringComparison.OrdinalIgnoreCase))
+            kullanici.EmailDogrulandiMi = false;
+
+        await _islemGecmisi.KaydetAsync(
+            "Ayarlar",
+            "Güncelleme",
+            $"Ödeme e-posta bildirim ayarları güncellendi. E-posta: {Maskele(yeniEmail)}",
+            eskiDeger: new { Email = Maskele(eskiEmail), Aktif = eskiAktiflik },
+            yeniDeger: new { Email = Maskele(yeniEmail), Aktif = OdemeEmailBildirimiAktifMi });
+
+        await _db.SaveChangesAsync();
+        Mesaj = "E-posta bildirim ayarları kaydedildi.";
+        await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostTestEpostasiAsync()
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var kullaniciId = HttpContext.Session.GetInt32("KullaniciId");
+        if (firmaId == null || kullaniciId == null)
+            return RedirectToPage("/Login");
+
+        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId.Value && x.FirmaId == firmaId.Value);
+        if (kullanici == null)
+            return RedirectToPage("/Login");
+
+        if (!EmailService.IsValidEmail(kullanici.Email))
+        {
+            Hata = "Test e-postası göndermek için önce geçerli bir kullanıcı e-postası kaydedin.";
+            await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+            return Page();
+        }
+
+        var html = """
+<!doctype html>
+<html lang="tr">
+<body style="font-family:Segoe UI,Arial,sans-serif;color:#0f172a;">
+  <h2>Firmova ERP test e-postası</h2>
+  <p>Ödeme e-posta bildirim ayarlarınız çalışıyor.</p>
+</body>
+</html>
+""";
+
+        var sonuc = await _emailService.SendAsync(
+            kullanici.Email,
+            "Firmova ERP test e-postası",
+            html);
+
+        if (!sonuc.BasariliMi)
+        {
+            Hata = sonuc.HataMesaji ?? "Test e-postası gönderilemedi.";
+            await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+            return Page();
+        }
+
+        await _islemGecmisi.KaydetAsync(
+            "Ayarlar",
+            "Test E-postası",
+            $"Test e-postası gönderildi. E-posta: {Maskele(kullanici.Email)}",
+            yeniDeger: new { Email = Maskele(kullanici.Email) });
+
+        await _db.SaveChangesAsync();
+        Mesaj = "Test e-postası gönderildi.";
+        await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+        return Page();
+    }
+
     public async Task<IActionResult> OnPostMenuKaydetAsync()
     {
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
@@ -221,11 +334,13 @@ public class AyarlarModel : PageModel
     private async Task BilgileriYukle(int firmaId, int kullaniciId)
     {
         var firma = await _db.Firmalar.FirstOrDefaultAsync(x => x.Id == firmaId);
-        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId);
+        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId && x.FirmaId == firmaId);
         if (firma == null || kullanici == null)
             return;
 
         KullaniciAdi = kullanici.KullaniciAdi;
+        KullaniciEmail = kullanici.Email;
+        OdemeEmailBildirimiAktifMi = kullanici.OdemeEmailBildirimiAktifMi;
         FirmaAdi = firma.FirmaAdi;
         Adres = firma.Adres;
         Telefon = firma.Telefon;
@@ -242,5 +357,16 @@ public class AyarlarModel : PageModel
         MenuStoklar = firma.MenuStoklar;
         MenuMaliyet = firma.MenuMaliyet;
         MenuCekler = firma.MenuCekler;
+    }
+
+    private static string Maskele(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
+            return "";
+
+        var parts = email.Split('@', 2);
+        var name = parts[0];
+        var maskedName = name.Length <= 1 ? "*" : $"{name[0]}***";
+        return $"{maskedName}@{parts[1]}";
     }
 }

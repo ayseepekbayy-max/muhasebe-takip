@@ -27,11 +27,10 @@ public enum OdemeDurumu
 public class OdemePlani
 {
     public int Id { get; set; }
-
     public int FirmaId { get; set; }
     public Firma? Firma { get; set; }
 
-    [Required(ErrorMessage = "Ã–deme adÄ± zorunludur.")]
+    [Required(ErrorMessage = "Ödeme adı zorunludur.")]
     [MaxLength(150)]
     public string OdemeAdi { get; set; } = "";
 
@@ -40,16 +39,16 @@ public class OdemePlani
     [MaxLength(500)]
     public string? Aciklama { get; set; }
 
-    [Range(0.01, double.MaxValue, ErrorMessage = "AylÄ±k Ã¶deme tutarÄ± sÄ±fÄ±rdan bÃ¼yÃ¼k olmalÄ±dÄ±r.")]
+    [Range(0.01, double.MaxValue, ErrorMessage = "Aylık ödeme tutarı sıfırdan büyük olmalıdır.")]
     public decimal AylikOdemeTutari { get; set; }
 
-    [Range(1, 600, ErrorMessage = "Toplam taksit sayÄ±sÄ± 1 ile 600 arasÄ±nda olmalÄ±dÄ±r.")]
+    [Range(1, 600, ErrorMessage = "Toplam taksit sayısı 1 ile 600 arasında olmalıdır.")]
     public int ToplamTaksitSayisi { get; set; } = 1;
 
-    [Range(0, 600, ErrorMessage = "Kalan taksit sayÄ±sÄ± 0 ile 600 arasÄ±nda olmalÄ±dÄ±r.")]
+    [Range(0, 600, ErrorMessage = "Kalan taksit sayısı 0 ile 600 arasında olmalıdır.")]
     public int KalanTaksitSayisi { get; set; } = 1;
 
-    [Range(1, 31, ErrorMessage = "Ã–deme gÃ¼nÃ¼ 1 ile 31 arasÄ±nda olmalÄ±dÄ±r.")]
+    [Range(1, 31, ErrorMessage = "Ödeme günü 1 ile 31 arasında olmalıdır.")]
     public int OdemeGunu { get; set; } = 1;
 
     public DateTime IlkOdemeTarihi { get; set; } = DateTime.UtcNow.Date;
@@ -57,7 +56,7 @@ public class OdemePlani
     public DateTime? SonOdemeTarihi { get; set; }
     public bool SonOdemeYapildiMi { get; set; }
 
-    [Range(0, 60, ErrorMessage = "Bildirim gÃ¼nÃ¼ 0 ile 60 arasÄ±nda olmalÄ±dÄ±r.")]
+    [Range(0, 60, ErrorMessage = "Bildirim günü 0 ile 60 arasında olmalıdır.")]
     public int BildirimGunu { get; set; } = 3;
 
     public bool BildirimAktifMi { get; set; } = true;
@@ -65,6 +64,8 @@ public class OdemePlani
     public bool AktifMi { get; set; } = true;
     public DateTime OlusturmaTarihi { get; set; } = DateTime.UtcNow;
     public DateTime? GuncellemeTarihi { get; set; }
+    public int? OlusturanKullaniciId { get; set; }
+    public string? OlusturanKullaniciAdi { get; set; }
 
     public List<OdemeHareketi> Hareketler { get; set; } = new();
 
@@ -76,22 +77,22 @@ public static class OdemeTuruExtensions
     public static string Metin(this OdemeTuru tur) => tur switch
     {
         OdemeTuru.Kredi => "Kredi",
-        OdemeTuru.KrediKarti => "Kredi KartÄ±",
+        OdemeTuru.KrediKarti => "Kredi Kartı",
         OdemeTuru.Kira => "Kira",
         OdemeTuru.Vergi => "Vergi",
         OdemeTuru.Fatura => "Fatura",
         OdemeTuru.Personel => "Personel",
         OdemeTuru.Abonelik => "Abonelik",
-        _ => "DiÄŸer"
+        _ => "Diğer"
     };
 
     public static string Metin(this OdemeDurumu durum) => durum switch
     {
-        OdemeDurumu.Odendi => "Ã–dendi",
-        OdemeDurumu.Yaklasiyor => "YaklaÅŸÄ±yor",
-        OdemeDurumu.Bugun => "BugÃ¼n",
+        OdemeDurumu.Odendi => "Ödendi",
+        OdemeDurumu.Yaklasiyor => "Yaklaşıyor",
+        OdemeDurumu.Bugun => "Bugün",
         OdemeDurumu.Gecikti => "Gecikti",
-        OdemeDurumu.Tamamlandi => "TamamlandÄ±",
+        OdemeDurumu.Tamamlandi => "Tamamlandı",
         OdemeDurumu.Pasif => "Pasif",
         _ => "Bilinmiyor"
     };

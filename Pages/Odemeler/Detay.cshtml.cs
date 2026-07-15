@@ -36,6 +36,52 @@ public class DetayModel : PageModel
         return Page();
     }
 
+    public async Task<IActionResult> OnPostSilAsync(int id)
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var odeme = await _db.OdemePlanlari.FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+        if (odeme == null)
+            return NotFound();
+
+        var hareketler = await _db.OdemeHareketleri
+            .Where(x => x.FirmaId == firmaId.Value && x.OdemePlaniId == odeme.Id)
+            .ToListAsync();
+
+        var bildirimler = await _db.OdemeBildirimGecmisleri
+            .Where(x => x.FirmaId == firmaId.Value && x.OdemePlaniId == odeme.Id)
+            .ToListAsync();
+
+        var eskiDeger = new
+        {
+            odeme.Id,
+            odeme.OdemeAdi,
+            odeme.OdemeTuru,
+            odeme.AylikOdemeTutari,
+            odeme.ToplamTaksitSayisi,
+            odeme.KalanTaksitSayisi,
+            odeme.SonrakiOdemeTarihi,
+            HareketSayisi = hareketler.Count,
+            BildirimKaydiSayisi = bildirimler.Count
+        };
+
+        _db.OdemeBildirimGecmisleri.RemoveRange(bildirimler);
+        _db.OdemeHareketleri.RemoveRange(hareketler);
+        _db.OdemePlanlari.Remove(odeme);
+
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Ödemeler",
+                "Silme",
+                $"Ödeme planı silindi: {odeme.OdemeAdi} (ID: {odeme.Id}).",
+                eskiDeger),
+            anaKaydiOnceKaydet: false);
+
+        TempData["Basari"] = "Ödeme planı silindi.";
+        return RedirectToPage("/Odemeler/Index");
+    }
 
     private async Task YukleAsync(int id, int firmaId)
     {

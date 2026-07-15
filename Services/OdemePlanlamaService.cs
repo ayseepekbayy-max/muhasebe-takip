@@ -46,9 +46,6 @@ public static class OdemePlanlamaService
         if (sonraki == bugun)
             return OdemeDurumu.Bugun;
 
-        if (sonraki <= bugun.AddDays(Math.Max(0, odeme.BildirimGunu)))
-            return OdemeDurumu.Yaklasiyor;
-
         return OdemeDurumu.Yaklasiyor;
     }
 
@@ -56,11 +53,11 @@ public static class OdemePlanlamaService
     {
         var sonraki = ToUtcDate(odeme.SonrakiOdemeTarihi);
         if (sonraki < bugun)
-            return "Geciken Ã–deme";
+            return "Geciken Ödeme";
 
         if (sonraki == bugun)
-            return "BugÃ¼nkÃ¼ Ã–deme";
+            return "Bugünkü Ödeme";
 
-        return "YaklaÅŸan Ã–deme";
+        return "Yaklaşan Ödeme";
     }
 }

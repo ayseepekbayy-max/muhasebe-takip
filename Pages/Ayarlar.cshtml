@@ -58,13 +58,27 @@
     </section>
 
     <section class="app-form-panel">
+        <div class="panel-title-row"><div><h2>E-posta Bildirim Ayarları</h2><p>Ödemeler için kullanıcı e-posta bildirimlerini yönetin.</p></div></div>
+        <form method="post" asp-page-handler="EmailBildirimKaydet" class="app-form-grid">
+            <div class="form-field form-field-wide"><label asp-for="KullaniciEmail">Kullanıcı E-postası</label><input asp-for="KullaniciEmail" type="email" /></div>
+            <div class="form-field form-field-wide">
+                <label><input asp-for="OdemeEmailBildirimiAktifMi" type="checkbox" /> Ödeme e-posta bildirimleri aktif</label>
+            </div>
+            <div class="form-actions-row"><button type="submit" class="btn btn-primary">E-posta Ayarlarını Kaydet</button></div>
+        </form>
+        <form method="post" asp-page-handler="TestEpostasi" class="form-actions-row">
+            <button type="submit" class="btn btn-outline-primary">Test E-postası Gönder</button>
+        </form>
+    </section>
+
+    <section class="app-form-panel">
         <div class="panel-title-row"><div><h2>Menü Görünürlüğü</h2><p>Firmanız için hangi kategorilerin görüneceğini seçin.</p></div></div>
         <form method="post" asp-page-handler="MenuKaydet">
             <div class="settings-toggle-grid">
                 <label><input asp-for="MenuCariKartlar" type="checkbox" /> Cari Kartlar</label>
                 <label><input asp-for="MenuKasa" type="checkbox" /> Kasa</label>
                 <label><input asp-for="MenuRaporlar" type="checkbox" /> Raporlar</label>
-                <label><input asp-for="MenuOdemeler" type="checkbox" /> Ã–demeler</label>
+                <label><input asp-for="MenuOdemeler" type="checkbox" /> Ödemeler</label>
                 <label><input asp-for="MenuCalisanlar" type="checkbox" /> Çalışanlar</label>
                 <label><input asp-for="MenuMusteriler" type="checkbox" /> Müşteriler</label>
                 <label><input asp-for="MenuStoklar" type="checkbox" /> Stok</label>

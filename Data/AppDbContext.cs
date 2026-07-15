@@ -31,10 +31,17 @@ public class AppDbContext : DbContext
     public DbSet<IslemGecmisi> IslemGecmisleri { get; set; } = default!;
     public DbSet<OdemePlani> OdemePlanlari { get; set; } = default!;
     public DbSet<OdemeHareketi> OdemeHareketleri { get; set; } = default!;
+    public DbSet<OdemeBildirimGecmisi> OdemeBildirimGecmisleri { get; set; } = default!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Kullanici>(entity =>
+        {
+            entity.Property(x => x.OdemeEmailBildirimiAktifMi).HasDefaultValue(true);
+            entity.Property(x => x.EmailDogrulandiMi).HasDefaultValue(false);
+        });
 
         modelBuilder.Entity<IslemGecmisi>(entity =>
         {
@@ -81,5 +88,28 @@ public class AppDbContext : DbContext
                 .HasForeignKey(x => x.OdemePlaniId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+
+        modelBuilder.Entity<OdemeBildirimGecmisi>(entity =>
+        {
+            entity.HasIndex(x => x.FirmaId);
+            entity.HasIndex(x => new { x.FirmaId, x.KullaniciId, x.OdemePlaniId, x.BildirimTuru, x.OdemeDonemi });
+            entity.HasIndex(x => new { x.FirmaId, x.OdemePlaniId, x.BildirimTarihi });
+
+            entity.HasOne(x => x.Firma)
+                .WithMany()
+                .HasForeignKey(x => x.FirmaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.Kullanici)
+                .WithMany()
+                .HasForeignKey(x => x.KullaniciId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.OdemePlani)
+                .WithMany()
+                .HasForeignKey(x => x.OdemePlaniId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
     }
 }

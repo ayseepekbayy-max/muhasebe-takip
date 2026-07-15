@@ -34,12 +34,11 @@
     {
         return aciklama switch
         {
-            "\u00c3\u2013deme yap\u00c4\u00b1ld\u00c4\u00b1 olarak i\u00c5\u0178aretlendi." => "Ödeme yapıldı olarak işaretlendi.",
-            "\u00c3\u0192\u00e2\u20ac\u201cdeme yap\u00c3\u201e\u00c2\u00b1ld\u00c3\u201e\u00c2\u00b1 olarak i\u00c3\u2026\u00c5\u00b8aretlendi." => "Ödeme yapıldı olarak işaretlendi.",
+            "Ã–deme yapÄ±ldÄ± olarak iÅŸaretlendi." => "Ödeme yapıldı olarak işaretlendi.",
+            "Ãƒâ€“deme yapÃ„Â±ldÃ„Â± olarak iÃ…Å¸aretlendi." => "Ödeme yapıldı olarak işaretlendi.",
             _ => aciklama ?? ""
         };
     }
-
 }
 
 <div class="app-page">
@@ -59,6 +58,9 @@
                     <button type="submit" class="btn btn-primary">Ödeme Yapıldı</button>
                 </form>
             }
+            <form method="post" asp-page-handler="Sil" asp-route-id="@odeme.Id" class="inline-form" onsubmit="return confirm('Bu ödeme planı ve ödeme geçmişi silinecek. Devam edilsin mi?');">
+                <button type="submit" class="btn btn-outline-danger">Sil</button>
+            </form>
         </div>
     </section>
 

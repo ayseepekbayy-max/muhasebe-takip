@@ -57,19 +57,17 @@ public class SifremiUnuttumModel : PageModel
 
         await _db.SaveChangesAsync();
 
-       try
-{
-    await _emailService.SendAsync(
-        Email,
-        "FirmovaAI Şifre Sıfırlama Kodu",
-        $"Şifre sıfırlama kodunuz: {kod}\n\nBu kod 10 dakika geçerlidir.");
-}
-catch (Exception ex)
-{
-    Hata = "Mail gönderilirken hata oluştu: " + ex.Message;
-    return Page();
-}
+        var sonuc = await _emailService.SendAsync(
+            Email,
+            "FirmovaAI Şifre Sıfırlama Kodu",
+            $"Şifre sıfırlama kodunuz: {kod}\n\nBu kod 10 dakika geçerlidir.");
 
-return RedirectToPage("/SifreSifirla", new { email = Email });
+        if (!sonuc.BasariliMi)
+        {
+            Hata = sonuc.HataMesaji ?? "Mail gönderilirken hata oluştu.";
+            return Page();
+        }
+
+        return RedirectToPage("/SifreSifirla", new { email = Email });
     }
 }

@@ -64,6 +64,8 @@ public class EkleModel : PageModel
             BildirimAktifMi = Form.BildirimAktifMi,
             OtomatikTaksitDusur = Form.OtomatikTaksitDusur,
             AktifMi = Form.AktifMi,
+            OlusturanKullaniciId = HttpContext.Session.GetInt32("KullaniciId"),
+            OlusturanKullaniciAdi = HttpContext.Session.GetString("KullaniciAdi"),
             OlusturmaTarihi = DateTime.UtcNow
         };
 
