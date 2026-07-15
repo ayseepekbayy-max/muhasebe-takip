@@ -34,6 +34,42 @@
         <div class="app-alert app-alert-danger">@Model.SayfaHata</div>
     }
 
+
+    <section id="odeme-bildirimleri" class="dashboard-panel payment-notifications-panel">
+        <div class="panel-title-row">
+            <div>
+                <h2>Ödeme Bildirimleri</h2>
+                <p>Geciken ve yaklaşan ödeme planları</p>
+            </div>
+            <a class="panel-link" href="/Odemeler">Tümünü Gör</a>
+        </div>
+
+        @if (Model.OdemeBildirimleri.Count == 0)
+        {
+            <div class="empty-state">Bugün için ödeme bildirimi yok.</div>
+        }
+        else
+        {
+            <div class="payment-notification-list">
+                @foreach (var bildirim in Model.OdemeBildirimleri)
+                {
+                    <article class="payment-notification-item @bildirim.RenkSinifi">
+                        <a href="/Odemeler/Detay/@bildirim.OdemePlaniId" class="payment-notification-link">
+                            <span class="payment-notification-status">@bildirim.Durum</span>
+                            <strong>@bildirim.OdemeAdi</strong>
+                            <span>@bildirim.Tutar.ToString("N2") TL</span>
+                            <small>Son ödeme: @bildirim.SonOdemeTarihi.ToString("dd.MM.yyyy") · @bildirim.GunBilgisi</small>
+                        </a>
+                        <form method="post" asp-page-handler="OdemeBildirimiBugunGizle" class="payment-notification-hide">
+                            <input type="hidden" name="odemeId" value="@bildirim.OdemePlaniId" />
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">Bugün gösterme</button>
+                        </form>
+                    </article>
+                }
+            </div>
+        }
+    </section>
+
     <section class="dashboard-metric-grid">
         <article class="metric-card metric-card-positive">
             <span>Bugünkü Kasa Girişi</span>

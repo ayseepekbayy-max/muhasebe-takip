@@ -2,6 +2,7 @@
 @using MuhasebeTakip2.App.Data
 @using MuhasebeTakip2.App.Services
 @inject AppDbContext LayoutDb
+@inject IOdemeBildirimService OdemeBildirimService
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -30,18 +31,12 @@
         var demoMode = Context.Session.GetString("DemoMode") == "1";
         var marka = string.IsNullOrWhiteSpace(firmaAdi) ? "Firmova ERP" : firmaAdi;
         var firmaId = Context.Session.GetInt32("FirmaId");
+        var kullaniciId = Context.Session.GetInt32("KullaniciId");
         var bugun = DateTime.UtcNow.Date;
         var odemeBildirimSayisi = 0;
         if (firmaId != null)
         {
-            odemeBildirimSayisi = await LayoutDb.OdemePlanlari
-                .AsNoTracking()
-                .Where(x => x.FirmaId == firmaId.Value &&
-                            x.AktifMi &&
-                            x.BildirimAktifMi &&
-                            x.KalanTaksitSayisi > 0)
-                .CountAsync(x => x.SonrakiOdemeTarihi < bugun ||
-                                 x.SonrakiOdemeTarihi <= bugun.AddDays(x.BildirimGunu));
+            odemeBildirimSayisi = await OdemeBildirimService.AktifBildirimSayisiAsync(firmaId.Value, kullaniciId, bugun);
         }
     }
 

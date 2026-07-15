@@ -25,6 +25,7 @@ builder.Services.AddSession(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ConversationMemoryService>();
 builder.Services.AddScoped<IIslemGecmisiService, IslemGecmisiService>();
+builder.Services.AddScoped<IOdemeBildirimService, OdemeBildirimService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -61,7 +62,6 @@ builder.Services.PostConfigure<EmailSettings>(settings =>
 
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<EmailService>();
-builder.Services.AddHostedService<OdemeEmailBildirimBackgroundService>();
 var app = builder.Build();
 
 // Veritabanını migration ile güncelle

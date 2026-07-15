@@ -32,6 +32,7 @@ public class AppDbContext : DbContext
     public DbSet<OdemePlani> OdemePlanlari { get; set; } = default!;
     public DbSet<OdemeHareketi> OdemeHareketleri { get; set; } = default!;
     public DbSet<OdemeBildirimGecmisi> OdemeBildirimGecmisleri { get; set; } = default!;
+    public DbSet<OdemeBildirimGizleme> OdemeBildirimGizlemeleri { get; set; } = default!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -109,6 +110,29 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.OdemePlaniId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+
+        modelBuilder.Entity<OdemeBildirimGizleme>(entity =>
+        {
+            entity.HasIndex(x => x.FirmaId);
+            entity.HasIndex(x => new { x.FirmaId, x.KullaniciId, x.OdemePlaniId, x.GizlemeTarihi })
+                .IsUnique();
+
+            entity.HasOne(x => x.Firma)
+                .WithMany()
+                .HasForeignKey(x => x.FirmaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.Kullanici)
+                .WithMany()
+                .HasForeignKey(x => x.KullaniciId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.OdemePlani)
+                .WithMany()
+                .HasForeignKey(x => x.OdemePlaniId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
     }

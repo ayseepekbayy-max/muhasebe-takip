@@ -11,13 +11,16 @@ public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
     private readonly IIslemGecmisiService _islemGecmisi;
+    private readonly IOdemeBildirimService _odemeBildirimService;
 
     public IndexModel(
         AppDbContext db,
-        IIslemGecmisiService islemGecmisi)
+        IIslemGecmisiService islemGecmisi,
+        IOdemeBildirimService odemeBildirimService)
     {
         _db = db;
         _islemGecmisi = islemGecmisi;
+        _odemeBildirimService = odemeBildirimService;
     }
 
     public decimal BugunGiris { get; set; }
@@ -36,6 +39,7 @@ public class IndexModel : PageModel
     public List<KasaHareket> SonHareketler { get; set; } = new();
     public List<Models.IslemGecmisi> SonIslemler { get; set; } = new();
     public List<BildirimSatiri> Bildirimler { get; set; } = new();
+    public List<OdemeBildirimSatiri> OdemeBildirimleri { get; set; } = new();
 
     public string? SayfaHata { get; set; }
 
@@ -47,6 +51,23 @@ public class IndexModel : PageModel
 
         await VerileriYukleAsync(firmaId.Value);
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostOdemeBildirimiBugunGizleAsync(int odemeId)
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var kullaniciId = HttpContext.Session.GetInt32("KullaniciId");
+        if (firmaId == null || kullaniciId == null)
+            return RedirectToPage("/Login");
+
+        await _odemeBildirimService.BugunGizleAsync(
+            firmaId.Value,
+            kullaniciId.Value,
+            HttpContext.Session.GetString("KullaniciAdi"),
+            odemeId,
+            DateTime.UtcNow.Date);
+
+        return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostSilAsync(int id)
@@ -146,29 +167,6 @@ public class IndexModel : PageModel
                 Baslik = string.IsNullOrWhiteSpace(cek.No) ? "Çek" : cek.No,
                 Aciklama = $"{cek.Tarih:dd.MM.yyyy} - {cek.Tutar:N2}",
                 Url = "/Cekler"
-            });
-        }
-
-        var odemeBildirimleri = await _db.OdemePlanlari
-            .AsNoTracking()
-            .Where(x => x.FirmaId == firmaId &&
-                        x.AktifMi &&
-                        x.BildirimAktifMi &&
-                        x.KalanTaksitSayisi > 0 &&
-                        (x.SonrakiOdemeTarihi < bugun || x.SonrakiOdemeTarihi <= bugun.AddDays(x.BildirimGunu)))
-            .OrderBy(x => x.SonrakiOdemeTarihi)
-            .Take(5)
-            .ToListAsync();
-
-        foreach (var odeme in odemeBildirimleri)
-        {
-            Bildirimler.Add(new BildirimSatiri
-            {
-                Tur = OdemePlanlamaService.BildirimTuru(odeme, bugun),
-                Baslik = odeme.OdemeAdi,
-                Aciklama = $"{odeme.SonrakiOdemeTarihi:dd.MM.yyyy} - {odeme.AylikOdemeTutari:N2} TL",
-                Url = $"/Odemeler/Detay/{odeme.Id}",
-                Kritik = odeme.SonrakiOdemeTarihi.Date <= bugun
             });
         }
 
@@ -272,6 +270,7 @@ public class IndexModel : PageModel
                         .Where(h => h.FirmaId == firmaId && h.StokUrunId == urun.Id && h.Tip == StokHareketTipi.Cikis)
                         .Sum(h => (decimal?)h.Miktar) ?? 0) < urun.MinStokSeviyesi);
 
+            OdemeBildirimleri = await _odemeBildirimService.AktifBildirimleriGetirAsync(firmaId, HttpContext.Session.GetInt32("KullaniciId"), bugun);
             await BildirimleriYukleAsync(firmaId, bugun);
 
             SonHareketler = await _db.KasaHareketleri

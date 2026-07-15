@@ -4190,3 +4190,141 @@ a.app-top-btn {
         grid-template-columns: 1fr;
     }
 }
+
+
+/* In-app payment notifications */
+.payment-badge-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.payment-notifications-panel {
+    margin-bottom: 16px;
+}
+
+.payment-notification-list {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.payment-notification-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    min-height: 150px;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-left-width: 5px;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.payment-notification-link {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    color: #0f172a;
+    text-decoration: none;
+}
+
+.payment-notification-link strong,
+.payment-notification-link span,
+.payment-notification-link small {
+    overflow-wrap: anywhere;
+}
+
+.payment-notification-link strong {
+    font-size: 14px;
+    line-height: 1.25;
+}
+
+.payment-notification-link small {
+    color: #64748b;
+    font-weight: 700;
+}
+
+.payment-notification-status {
+    width: fit-content;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.payment-notification-hide {
+    margin-top: auto;
+}
+
+.payment-notification-hide .btn {
+    width: 100%;
+    white-space: normal;
+}
+
+.payment-notice-overdue {
+    border-left-color: #dc2626;
+    background: #fef2f2;
+}
+
+.payment-notice-overdue .payment-notification-status {
+    color: #991b1b;
+    background: #fee2e2;
+}
+
+.payment-notice-today {
+    border-left-color: #f97316;
+    background: #fff7ed;
+}
+
+.payment-notice-today .payment-notification-status {
+    color: #9a3412;
+    background: #ffedd5;
+}
+
+.payment-notice-one {
+    border-left-color: #eab308;
+    background: #fefce8;
+}
+
+.payment-notice-one .payment-notification-status {
+    color: #854d0e;
+    background: #fef3c7;
+}
+
+.payment-notice-two {
+    border-left-color: #2563eb;
+    background: #eff6ff;
+}
+
+.payment-notice-two .payment-notification-status {
+    color: #1d4ed8;
+    background: #dbeafe;
+}
+
+.payment-notice-three {
+    border-left-color: #16a34a;
+    background: #f0fdf4;
+}
+
+.payment-notice-three .payment-notification-status {
+    color: #166534;
+    background: #dcfce7;
+}
+
+@media (max-width: 1200px) {
+    .payment-notification-list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .payment-notification-list {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-notification-item {
+        min-height: 0;
+    }
+}
