@@ -98,9 +98,9 @@ public class DuzenleModel : PageModel
 
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
-                "Ã–demeler",
-                "DÃ¼zenleme",
-                $"Ã–deme planÄ± dÃ¼zenlendi: {odeme.OdemeAdi} (ID: {odeme.Id}).",
+                "Ödemeler",
+                "Düzenleme",
+                $"Ödeme planı düzenlendi: {odeme.OdemeAdi} (ID: {odeme.Id}).",
                 eskiDeger,
                 new
                 {
@@ -114,22 +114,22 @@ public class DuzenleModel : PageModel
                 }),
             anaKaydiOnceKaydet: false);
 
-        TempData["Basari"] = "Ã–deme planÄ± gÃ¼ncellendi.";
+        TempData["Basari"] = "Ödeme planı güncellendi.";
         return RedirectToPage("/Odemeler/Detay", new { id = odeme.Id });
     }
 
     private void Dogrula()
     {
         if (string.IsNullOrWhiteSpace(Form.OdemeAdi))
-            ModelState.AddModelError("", "Ã–deme adÄ± zorunludur.");
+            ModelState.AddModelError("", "Ödeme adı zorunludur.");
         if (Form.AylikOdemeTutari <= 0)
-            ModelState.AddModelError("", "AylÄ±k Ã¶deme tutarÄ± sÄ±fÄ±rdan bÃ¼yÃ¼k olmalÄ±dÄ±r.");
+            ModelState.AddModelError("", "Aylık ödeme tutarı sıfırdan büyük olmalıdır.");
         if (Form.ToplamTaksitSayisi <= 0)
-            ModelState.AddModelError("", "Toplam taksit sayÄ±sÄ± sÄ±fÄ±rdan bÃ¼yÃ¼k olmalÄ±dÄ±r.");
+            ModelState.AddModelError("", "Toplam taksit sayısı sıfırdan büyük olmalıdır.");
         if (Form.KalanTaksitSayisi < 0)
-            ModelState.AddModelError("", "Kalan taksit sayÄ±sÄ± sÄ±fÄ±rdan kÃ¼Ã§Ã¼k olamaz.");
+            ModelState.AddModelError("", "Kalan taksit sayısı sıfırdan küçük olamaz.");
         if (Form.KalanTaksitSayisi > Form.ToplamTaksitSayisi)
-            ModelState.AddModelError("", "Kalan taksit sayÄ±sÄ± toplam taksit sayÄ±sÄ±ndan bÃ¼yÃ¼k olamaz.");
+            ModelState.AddModelError("", "Kalan taksit sayısı toplam taksit sayısından büyük olamaz.");
     }
 
     public class OdemeDuzenleForm

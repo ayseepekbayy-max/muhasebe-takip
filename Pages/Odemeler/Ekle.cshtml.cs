@@ -70,9 +70,9 @@ public class EkleModel : PageModel
         _db.OdemePlanlari.Add(odeme);
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
-                "Ã–demeler",
+                "Ödemeler",
                 "Ekleme",
-                $"Ã–deme planÄ± eklendi: {odeme.OdemeAdi} (ID: {odeme.Id}).",
+                $"Ödeme planı eklendi: {odeme.OdemeAdi} (ID: {odeme.Id}).",
                 yeniDeger: new
                 {
                     odeme.Id,
@@ -84,24 +84,24 @@ public class EkleModel : PageModel
                 }),
             anaKaydiOnceKaydet: true);
 
-        TempData["Basari"] = "Ã–deme planÄ± eklendi.";
+        TempData["Basari"] = "Ödeme planı eklendi.";
         return RedirectToPage("/Odemeler/Index");
     }
 
     private void Dogrula()
     {
         if (string.IsNullOrWhiteSpace(Form.OdemeAdi))
-            ModelState.AddModelError("", "Ã–deme adÄ± zorunludur.");
+            ModelState.AddModelError("", "Ödeme adı zorunludur.");
         if (Form.AylikOdemeTutari <= 0)
-            ModelState.AddModelError("", "AylÄ±k Ã¶deme tutarÄ± sÄ±fÄ±rdan bÃ¼yÃ¼k olmalÄ±dÄ±r.");
+            ModelState.AddModelError("", "Aylık ödeme tutarı sıfırdan büyük olmalıdır.");
         if (Form.ToplamTaksitSayisi <= 0)
-            ModelState.AddModelError("", "Toplam taksit sayÄ±sÄ± sÄ±fÄ±rdan bÃ¼yÃ¼k olmalÄ±dÄ±r.");
+            ModelState.AddModelError("", "Toplam taksit sayısı sıfırdan büyük olmalıdır.");
         if (Form.KalanTaksitSayisi.HasValue && Form.KalanTaksitSayisi.Value < 0)
-            ModelState.AddModelError("", "Kalan taksit sayÄ±sÄ± sÄ±fÄ±rdan kÃ¼Ã§Ã¼k olamaz.");
+            ModelState.AddModelError("", "Kalan taksit sayısı sıfırdan küçük olamaz.");
         if (Form.KalanTaksitSayisi.HasValue && Form.KalanTaksitSayisi.Value > Form.ToplamTaksitSayisi)
-            ModelState.AddModelError("", "Kalan taksit sayÄ±sÄ± toplam taksit sayÄ±sÄ±ndan bÃ¼yÃ¼k olamaz.");
+            ModelState.AddModelError("", "Kalan taksit sayısı toplam taksit sayısından büyük olamaz.");
         if (Form.BildirimGunu < 0)
-            ModelState.AddModelError("", "Bildirim gÃ¼nÃ¼ negatif olamaz.");
+            ModelState.AddModelError("", "Bildirim günü negatif olamaz.");
     }
 
     public class OdemeForm

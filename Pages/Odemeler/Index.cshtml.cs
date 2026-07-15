@@ -53,13 +53,13 @@ public class IndexModel : PageModel
         var odeme = await _db.OdemePlanlari.FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
         if (odeme == null)
         {
-            TempData["Hata"] = "Ã–deme planÄ± bulunamadÄ±.";
+            TempData["Hata"] = "Ödeme planı bulunamadı.";
             return RedirectToPage();
         }
 
         if (!odeme.AktifMi || odeme.KalanTaksitSayisi <= 0)
         {
-            TempData["Hata"] = "Pasif veya tamamlanmÄ±ÅŸ Ã¶deme planÄ±na Ã¶deme iÅŸlenemez.";
+            TempData["Hata"] = "Pasif veya tamamlanmış ödeme planına ödeme işlenemez.";
             return RedirectToPage();
         }
 
@@ -74,7 +74,7 @@ public class IndexModel : PageModel
 
         if (ayniAydaOdemeVar)
         {
-            TempData["Hata"] = "Bu Ã¶deme planÄ± iÃ§in bu ay zaten Ã¶deme kaydÄ± var.";
+            TempData["Hata"] = "Bu ödeme planı için bu ay zaten ödeme kaydı var.";
             return RedirectToPage();
         }
 
@@ -101,7 +101,7 @@ public class IndexModel : PageModel
             OdemePlaniId = odeme.Id,
             OdemeTarihi = bugun,
             Tutar = odeme.AylikOdemeTutari,
-            Aciklama = "Ã–deme yapÄ±ldÄ± olarak iÅŸaretlendi.",
+            Aciklama = "Ödeme yapıldı olarak işaretlendi.",
             KalanTaksitSayisi = odeme.KalanTaksitSayisi,
             OlusturmaTarihi = DateTime.UtcNow,
             OlusturanKullaniciId = HttpContext.Session.GetInt32("KullaniciId"),
@@ -112,9 +112,9 @@ public class IndexModel : PageModel
 
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
-                "Ã–demeler",
-                "Ã–deme",
-                $"Ã–deme yapÄ±ldÄ±: {odeme.OdemeAdi} (ID: {odeme.Id}).",
+                "Ödemeler",
+                "Ödeme",
+                $"Ödeme yapıldı: {odeme.OdemeAdi} (ID: {odeme.Id}).",
                 eskiDeger,
                 new
                 {
@@ -128,8 +128,8 @@ public class IndexModel : PageModel
             anaKaydiOnceKaydet: true);
 
         TempData["Basari"] = odeme.KalanTaksitSayisi == 0
-            ? "Ã–deme kaydedildi ve plan tamamlandÄ±."
-            : "Ã–deme kaydedildi, kalan taksit gÃ¼ncellendi.";
+            ? "Ödeme kaydedildi ve plan tamamlandı."
+            : "Ödeme kaydedildi, kalan taksit güncellendi.";
 
         return RedirectToPage();
     }
@@ -153,7 +153,7 @@ public class IndexModel : PageModel
         var odeme = await _db.OdemePlanlari.FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
         if (odeme == null)
         {
-            TempData["Hata"] = "Ã–deme planÄ± bulunamadÄ±.";
+            TempData["Hata"] = "Ödeme planı bulunamadı.";
             return RedirectToPage();
         }
 
@@ -163,16 +163,16 @@ public class IndexModel : PageModel
 
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
-                "Ã–demeler",
-                aktifMi ? "AktifleÅŸtirme" : "Pasife Alma",
+                "Ödemeler",
+                aktifMi ? "Aktifleştirme" : "Pasife Alma",
                 aktifMi
-                    ? $"Ã–deme planÄ± aktifleÅŸtirildi: {odeme.OdemeAdi} (ID: {odeme.Id})."
-                    : $"Ã–deme planÄ± pasife alÄ±ndÄ±: {odeme.OdemeAdi} (ID: {odeme.Id}).",
+                    ? $"Ödeme planı aktifleştirildi: {odeme.OdemeAdi} (ID: {odeme.Id})."
+                    : $"Ödeme planı pasife alındı: {odeme.OdemeAdi} (ID: {odeme.Id}).",
                 eskiDeger,
                 new { odeme.Id, odeme.OdemeAdi, odeme.AktifMi }),
             anaKaydiOnceKaydet: false);
 
-        TempData["Basari"] = aktifMi ? "Ã–deme planÄ± aktifleÅŸtirildi." : "Ã–deme planÄ± pasife alÄ±ndÄ±.";
+        TempData["Basari"] = aktifMi ? "Ödeme planı aktifleştirildi." : "Ödeme planı pasife alındı.";
         return RedirectToPage();
     }
 

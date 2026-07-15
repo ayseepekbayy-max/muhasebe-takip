@@ -29,6 +29,17 @@
         OdemeDurumu.Pasif => "Pasif",
         _ => "Bilinmiyor"
     };
+
+    private static string HareketAciklama(string? aciklama)
+    {
+        return aciklama switch
+        {
+            "\u00c3\u2013deme yap\u00c4\u00b1ld\u00c4\u00b1 olarak i\u00c5\u0178aretlendi." => "Ödeme yapıldı olarak işaretlendi.",
+            "\u00c3\u0192\u00e2\u20ac\u201cdeme yap\u00c3\u201e\u00c2\u00b1ld\u00c3\u201e\u00c2\u00b1 olarak i\u00c3\u2026\u00c5\u00b8aretlendi." => "Ödeme yapıldı olarak işaretlendi.",
+            _ => aciklama ?? ""
+        };
+    }
+
 }
 
 <div class="app-page">
@@ -76,7 +87,6 @@
                         <tbody>
                             <tr><th>İlk Ödeme Tarihi</th><td>@odeme.IlkOdemeTarihi.ToString("dd.MM.yyyy")</td></tr>
                             <tr><th>Sonraki Ödeme Tarihi</th><td>@odeme.SonrakiOdemeTarihi.ToString("dd.MM.yyyy")</td></tr>
-                            <tr><th>Tahmini Son Ödeme Tarihi</th><td>@(odeme.SonOdemeTarihi?.ToString("dd.MM.yyyy") ?? "-")</td></tr>
                             <tr><th>Toplam Taksit</th><td>@odeme.ToplamTaksitSayisi</td></tr>
                             <tr><th>Ödeme Günü</th><td>@odeme.OdemeGunu</td></tr>
                             <tr><th>Otomatik Taksit Düşür</th><td>@(odeme.OtomatikTaksitDusur ? "Evet" : "Hayır")</td></tr>
@@ -105,7 +115,7 @@
                                         <td class="amount-cell">@hareket.Tutar.ToString("N2") TL</td>
                                         <td>@hareket.KalanTaksitSayisi</td>
                                         <td>@(hareket.OlusturanKullaniciAdi ?? "-")</td>
-                                        <td>@hareket.Aciklama</td>
+                                        <td>@HareketAciklama(hareket.Aciklama)</td>
                                     </tr>
                                 }
                             }
