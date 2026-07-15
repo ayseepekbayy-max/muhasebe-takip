@@ -1,3 +1,7 @@
+@using Microsoft.EntityFrameworkCore
+@using MuhasebeTakip2.App.Data
+@using MuhasebeTakip2.App.Services
+@inject AppDbContext LayoutDb
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -25,6 +29,20 @@
         var kullaniciAdi = Context.Session.GetString("KullaniciAdi");
         var demoMode = Context.Session.GetString("DemoMode") == "1";
         var marka = string.IsNullOrWhiteSpace(firmaAdi) ? "Firmova ERP" : firmaAdi;
+        var firmaId = Context.Session.GetInt32("FirmaId");
+        var bugun = DateTime.UtcNow.Date;
+        var odemeBildirimSayisi = 0;
+        if (firmaId != null)
+        {
+            odemeBildirimSayisi = await LayoutDb.OdemePlanlari
+                .AsNoTracking()
+                .Where(x => x.FirmaId == firmaId.Value &&
+                            x.AktifMi &&
+                            x.BildirimAktifMi &&
+                            x.KalanTaksitSayisi > 0)
+                .CountAsync(x => x.SonrakiOdemeTarihi < bugun ||
+                                 x.SonrakiOdemeTarihi <= bugun.AddDays(x.BildirimGunu));
+        }
     }
 
     @if (!loginSayfasiMi)
@@ -64,6 +82,11 @@
                             @if (Context.Session.GetString("MenuRaporlar") != "0")
                             {
                                 <li class="nav-item"><a class="nav-link" href="/Raporlar">Raporlar</a></li>
+                            }
+
+                            @if (Context.Session.GetString("MenuOdemeler") != "0")
+                            {
+                                <li class="nav-item"><a class="nav-link" href="/Odemeler">Ã–demeler</a></li>
                             }
 
                             <li class="nav-item dropdown app-nav-dropdown">
@@ -110,6 +133,10 @@
                         </form>
 
                         <div class="app-top-actions">
+                            @if (odemeBildirimSayisi > 0)
+                            {
+                                <a class="app-top-btn" href="/Odemeler" title="YaklaÅŸan veya geciken Ã¶demeler">Ã–deme <span class="badge bg-danger">@odemeBildirimSayisi</span></a>
+                            }
                             @if (!string.IsNullOrWhiteSpace(kullaniciAdi))
                             {
                                 <a class="app-top-btn" href="/Ayarlar">Ayarlar</a>

@@ -34,6 +34,7 @@ public class AyarlarModel : PageModel
     [BindProperty] public bool MenuCariKartlar { get; set; } = true;
     [BindProperty] public bool MenuKasa { get; set; } = true;
     [BindProperty] public bool MenuRaporlar { get; set; } = true;
+    [BindProperty] public bool MenuOdemeler { get; set; } = true;
     [BindProperty] public bool MenuCalisanlar { get; set; } = true;
     [BindProperty] public bool MenuMusteriler { get; set; } = true;
     [BindProperty] public bool MenuStoklar { get; set; } = true;
@@ -194,6 +195,7 @@ public class AyarlarModel : PageModel
         firma.MenuCariKartlar = MenuCariKartlar;
         firma.MenuKasa = MenuKasa;
         firma.MenuRaporlar = MenuRaporlar;
+        firma.MenuOdemeler = MenuOdemeler;
         firma.MenuCalisanlar = MenuCalisanlar;
         firma.MenuMusteriler = MenuMusteriler;
         firma.MenuStoklar = MenuStoklar;
@@ -204,6 +206,7 @@ public class AyarlarModel : PageModel
         HttpContext.Session.SetString("MenuCariKartlar", MenuCariKartlar ? "1" : "0");
         HttpContext.Session.SetString("MenuKasa", MenuKasa ? "1" : "0");
         HttpContext.Session.SetString("MenuRaporlar", MenuRaporlar ? "1" : "0");
+        HttpContext.Session.SetString("MenuOdemeler", MenuOdemeler ? "1" : "0");
         HttpContext.Session.SetString("MenuCalisanlar", MenuCalisanlar ? "1" : "0");
         HttpContext.Session.SetString("MenuMusteriler", MenuMusteriler ? "1" : "0");
         HttpContext.Session.SetString("MenuStoklar", MenuStoklar ? "1" : "0");
@@ -233,6 +236,7 @@ public class AyarlarModel : PageModel
         MenuCariKartlar = firma.MenuCariKartlar;
         MenuKasa = firma.MenuKasa;
         MenuRaporlar = firma.MenuRaporlar;
+        MenuOdemeler = firma.MenuOdemeler;
         MenuCalisanlar = firma.MenuCalisanlar;
         MenuMusteriler = firma.MenuMusteriler;
         MenuStoklar = firma.MenuStoklar;

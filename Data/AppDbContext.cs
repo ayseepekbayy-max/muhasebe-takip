@@ -29,6 +29,8 @@ public class AppDbContext : DbContext
     public DbSet<MaliyetKaydi> MaliyetKayitlari { get; set; } = default!;
     public DbSet<EkDosya> EkDosyalar { get; set; } = default!;
     public DbSet<IslemGecmisi> IslemGecmisleri { get; set; } = default!;
+    public DbSet<OdemePlani> OdemePlanlari { get; set; } = default!;
+    public DbSet<OdemeHareketi> OdemeHareketleri { get; set; } = default!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -49,6 +51,35 @@ public class AppDbContext : DbContext
         {
             entity.HasIndex(x => new { x.FirmaId, x.FaturaNo })
                 .IsUnique();
+        });
+
+        modelBuilder.Entity<OdemePlani>(entity =>
+        {
+            entity.HasIndex(x => x.FirmaId);
+            entity.HasIndex(x => new { x.FirmaId, x.AktifMi, x.SonrakiOdemeTarihi });
+            entity.Property(x => x.AylikOdemeTutari).HasPrecision(18, 2);
+
+            entity.HasOne(x => x.Firma)
+                .WithMany()
+                .HasForeignKey(x => x.FirmaId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OdemeHareketi>(entity =>
+        {
+            entity.HasIndex(x => x.FirmaId);
+            entity.HasIndex(x => new { x.FirmaId, x.OdemePlaniId, x.OdemeTarihi });
+            entity.Property(x => x.Tutar).HasPrecision(18, 2);
+
+            entity.HasOne(x => x.Firma)
+                .WithMany()
+                .HasForeignKey(x => x.FirmaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.OdemePlani)
+                .WithMany(x => x.Hareketler)
+                .HasForeignKey(x => x.OdemePlaniId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

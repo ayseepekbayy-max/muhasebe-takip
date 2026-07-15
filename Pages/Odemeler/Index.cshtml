@@ -1,0 +1,138 @@
+@page
+@using MuhasebeTakip2.App.Models
+@model MuhasebeTakip2.App.Pages.Odemeler.IndexModel
+@{
+    ViewData["Title"] = "Ã–demeler";
+}
+
+<div class="app-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">PlanlÄ± Ã¶deme ve taksit takibi</span>
+            <h1>Ã–demeler</h1>
+            <p>Kredi, kira, vergi, fatura ve abonelik Ã¶demelerini firmaya Ã¶zel olarak takip edin.</p>
+        </div>
+        <div class="app-page-actions">
+            <a class="btn btn-primary" asp-page="/Odemeler/Ekle">Yeni Ã–deme</a>
+        </div>
+    </section>
+
+    @if (TempData["Hata"] != null)
+    {
+        <div class="app-alert app-alert-danger">@TempData["Hata"]</div>
+    }
+    @if (TempData["Basari"] != null)
+    {
+        <div class="app-alert app-alert-success">@TempData["Basari"]</div>
+    }
+
+    <section class="metric-grid">
+        <article class="metric-card"><span>Bu Ay Toplam Ã–deme</span><strong>@Model.BuAyToplamOdeme.ToString("N2") TL</strong></article>
+        <article class="metric-card metric-card-warning"><span>YaklaÅŸan Ã–demeler</span><strong>@Model.YaklasanOdemeler</strong></article>
+        <article class="metric-card metric-card-negative"><span>Geciken Ã–demeler</span><strong>@Model.GecikenOdemeler</strong></article>
+        <article class="metric-card"><span>Toplam Kalan Kredi Borcu</span><strong>@Model.ToplamKalanKrediBorcu.ToString("N2") TL</strong></article>
+        <article class="metric-card metric-card-positive"><span>Aktif Ã–deme PlanÄ±</span><strong>@Model.AktifOdemePlaniSayisi</strong></article>
+    </section>
+
+    <section class="app-filter-bar">
+        <form method="get" class="app-form-grid">
+            <div class="form-field">
+                <label asp-for="FiltreOdemeTuru">Ã–deme TÃ¼rÃ¼</label>
+                <select asp-for="FiltreOdemeTuru">
+                    <option value="">TÃ¼mÃ¼</option>
+                    @foreach (var tur in Enum.GetValues<OdemeTuru>())
+                    {
+                        <option value="@tur">@tur.Metin()</option>
+                    }
+                </select>
+            </div>
+            <div class="form-field">
+                <label asp-for="FiltreDurum">Durum</label>
+                <select asp-for="FiltreDurum">
+                    <option value="">TÃ¼mÃ¼</option>
+                    <option value="Aktif">Aktif</option>
+                    <option value="Pasif">Pasif</option>
+                    <option value="Yaklasan">YaklaÅŸan</option>
+                    <option value="Geciken">Geciken</option>
+                    <option value="Tamamlanan">Tamamlanan</option>
+                </select>
+            </div>
+            <div class="form-field form-field-wide">
+                <label asp-for="Arama">Arama</label>
+                <input asp-for="Arama" placeholder="Ã–deme adÄ± veya aÃ§Ä±klama" />
+            </div>
+            <div class="form-actions-row">
+                <button type="submit" class="btn btn-primary">Filtrele</button>
+                <a class="btn btn-outline-dark" href="/Odemeler">Temizle</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="dashboard-panel">
+        <div class="panel-title-row"><div><h2>Ã–deme PlanlarÄ±</h2><p>@Model.Odemeler.Count kayÄ±t</p></div></div>
+        <div class="table-wrap">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Ã–deme AdÄ±</th>
+                        <th>TÃ¼r</th>
+                        <th>AylÄ±k Tutar</th>
+                        <th>Ã–deme Tarihi</th>
+                        <th>Kalan Taksit</th>
+                        <th>Toplam Taksit</th>
+                        <th>Durum</th>
+                        <th>Kalan Toplam</th>
+                        <th>Ä°ÅŸlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Odemeler.Count == 0)
+                    {
+                        <tr><td colspan="9" class="empty-row">HenÃ¼z Ã¶deme planÄ± yok.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var satir in Model.Odemeler)
+                        {
+                            var odeme = satir.Odeme;
+                            <tr>
+                                <td><strong>@odeme.OdemeAdi</strong></td>
+                                <td>@odeme.OdemeTuru.Metin()</td>
+                                <td class="amount-cell">@odeme.AylikOdemeTutari.ToString("N2") TL</td>
+                                <td>@odeme.SonrakiOdemeTarihi.ToString("dd.MM.yyyy")</td>
+                                <td>@odeme.KalanTaksitSayisi</td>
+                                <td>@odeme.ToplamTaksitSayisi</td>
+                                <td><span class="status-pill @satir.Durum.CssSinifi()">@satir.Durum.Metin()</span></td>
+                                <td class="amount-cell">@odeme.KalanToplamTutar.ToString("N2") TL</td>
+                                <td>
+                                    <div class="invoice-action-stack">
+                                        <a class="btn btn-outline-primary btn-sm" asp-page="/Odemeler/Detay" asp-route-id="@odeme.Id">Detay</a>
+                                        <a class="btn btn-outline-dark btn-sm" asp-page="/Odemeler/Duzenle" asp-route-id="@odeme.Id">DÃ¼zenle</a>
+                                        @if (odeme.AktifMi && odeme.KalanTaksitSayisi > 0)
+                                        {
+                                            <form method="post" asp-page-handler="OdemeYapildi" class="inline-form" onsubmit="return confirm('Bu Ã¶deme bu ay iÃ§in yapÄ±ldÄ± olarak iÅŸaretlenecek. Devam edilsin mi?');">
+                                                <input type="hidden" name="id" value="@odeme.Id" />
+                                                <button type="submit" class="btn btn-outline-success btn-sm">Ã–deme YapÄ±ldÄ±</button>
+                                            </form>
+                                            <form method="post" asp-page-handler="PasifeAl" class="inline-form">
+                                                <input type="hidden" name="id" value="@odeme.Id" />
+                                                <button type="submit" class="btn btn-outline-danger btn-sm">Pasife Al</button>
+                                            </form>
+                                        }
+                                        else if (!odeme.AktifMi)
+                                        {
+                                            <form method="post" asp-page-handler="Aktiflestir" class="inline-form">
+                                                <input type="hidden" name="id" value="@odeme.Id" />
+                                                <button type="submit" class="btn btn-outline-success btn-sm">AktifleÅŸtir</button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

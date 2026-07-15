@@ -16,6 +16,7 @@ namespace MuhasebeTakip2.App.Models
         public bool MenuCariKartlar { get; set; } = true;
         public bool MenuKasa { get; set; } = true;
         public bool MenuRaporlar { get; set; } = true;
+        public bool MenuOdemeler { get; set; } = true;
         public bool MenuCalisanlar { get; set; } = true;
         public bool MenuMusteriler { get; set; } = true;
         public bool MenuStoklar { get; set; } = true;

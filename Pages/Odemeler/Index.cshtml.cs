@@ -1,0 +1,240 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using MuhasebeTakip2.App.Data;
+using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
+
+namespace MuhasebeTakip2.App.Pages.Odemeler;
+
+public class IndexModel : PageModel
+{
+    private readonly AppDbContext _db;
+    private readonly IIslemGecmisiService _islemGecmisi;
+
+    public IndexModel(AppDbContext db, IIslemGecmisiService islemGecmisi)
+    {
+        _db = db;
+        _islemGecmisi = islemGecmisi;
+    }
+
+    public List<OdemeListeSatiri> Odemeler { get; set; } = new();
+    public decimal BuAyToplamOdeme { get; set; }
+    public int YaklasanOdemeler { get; set; }
+    public int GecikenOdemeler { get; set; }
+    public decimal ToplamKalanKrediBorcu { get; set; }
+    public int AktifOdemePlaniSayisi { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public OdemeTuru? FiltreOdemeTuru { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? FiltreDurum { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string? Arama { get; set; }
+
+    public async Task<IActionResult> OnGetAsync()
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        await VerileriYukleAsync(firmaId.Value);
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostOdemeYapildiAsync(int id)
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var odeme = await _db.OdemePlanlari.FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+        if (odeme == null)
+        {
+            TempData["Hata"] = "Ã–deme planÄ± bulunamadÄ±.";
+            return RedirectToPage();
+        }
+
+        if (!odeme.AktifMi || odeme.KalanTaksitSayisi <= 0)
+        {
+            TempData["Hata"] = "Pasif veya tamamlanmÄ±ÅŸ Ã¶deme planÄ±na Ã¶deme iÅŸlenemez.";
+            return RedirectToPage();
+        }
+
+        var bugun = DateTime.UtcNow.Date;
+        var ayBaslangic = new DateTime(bugun.Year, bugun.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var sonrakiAy = ayBaslangic.AddMonths(1);
+        var ayniAydaOdemeVar = await _db.OdemeHareketleri.AnyAsync(x =>
+            x.FirmaId == firmaId.Value &&
+            x.OdemePlaniId == odeme.Id &&
+            x.OdemeTarihi >= ayBaslangic &&
+            x.OdemeTarihi < sonrakiAy);
+
+        if (ayniAydaOdemeVar)
+        {
+            TempData["Hata"] = "Bu Ã¶deme planÄ± iÃ§in bu ay zaten Ã¶deme kaydÄ± var.";
+            return RedirectToPage();
+        }
+
+        var eskiDeger = new
+        {
+            odeme.Id,
+            odeme.OdemeAdi,
+            odeme.KalanTaksitSayisi,
+            odeme.SonrakiOdemeTarihi,
+            odeme.AktifMi,
+            odeme.SonOdemeYapildiMi
+        };
+
+        if (odeme.OtomatikTaksitDusur)
+            odeme.KalanTaksitSayisi = Math.Max(0, odeme.KalanTaksitSayisi - 1);
+
+        odeme.SonOdemeYapildiMi = true;
+        odeme.SonrakiOdemeTarihi = OdemePlanlamaService.SonrakiAy(odeme.SonrakiOdemeTarihi, odeme.OdemeGunu);
+        odeme.GuncellemeTarihi = DateTime.UtcNow;
+
+        var hareket = new OdemeHareketi
+        {
+            FirmaId = firmaId.Value,
+            OdemePlaniId = odeme.Id,
+            OdemeTarihi = bugun,
+            Tutar = odeme.AylikOdemeTutari,
+            Aciklama = "Ã–deme yapÄ±ldÄ± olarak iÅŸaretlendi.",
+            KalanTaksitSayisi = odeme.KalanTaksitSayisi,
+            OlusturmaTarihi = DateTime.UtcNow,
+            OlusturanKullaniciId = HttpContext.Session.GetInt32("KullaniciId"),
+            OlusturanKullaniciAdi = HttpContext.Session.GetString("KullaniciAdi")
+        };
+
+        _db.OdemeHareketleri.Add(hareket);
+
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Ã–demeler",
+                "Ã–deme",
+                $"Ã–deme yapÄ±ldÄ±: {odeme.OdemeAdi} (ID: {odeme.Id}).",
+                eskiDeger,
+                new
+                {
+                    odeme.Id,
+                    odeme.OdemeAdi,
+                    odeme.KalanTaksitSayisi,
+                    odeme.SonrakiOdemeTarihi,
+                    odeme.SonOdemeYapildiMi,
+                    HareketId = hareket.Id
+                }),
+            anaKaydiOnceKaydet: true);
+
+        TempData["Basari"] = odeme.KalanTaksitSayisi == 0
+            ? "Ã–deme kaydedildi ve plan tamamlandÄ±."
+            : "Ã–deme kaydedildi, kalan taksit gÃ¼ncellendi.";
+
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostPasifeAlAsync(int id)
+    {
+        return await AktiflikGuncelleAsync(id, false);
+    }
+
+    public async Task<IActionResult> OnPostAktiflestirAsync(int id)
+    {
+        return await AktiflikGuncelleAsync(id, true);
+    }
+
+    private async Task<IActionResult> AktiflikGuncelleAsync(int id, bool aktifMi)
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var odeme = await _db.OdemePlanlari.FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+        if (odeme == null)
+        {
+            TempData["Hata"] = "Ã–deme planÄ± bulunamadÄ±.";
+            return RedirectToPage();
+        }
+
+        var eskiDeger = new { odeme.Id, odeme.OdemeAdi, odeme.AktifMi };
+        odeme.AktifMi = aktifMi;
+        odeme.GuncellemeTarihi = DateTime.UtcNow;
+
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Ã–demeler",
+                aktifMi ? "AktifleÅŸtirme" : "Pasife Alma",
+                aktifMi
+                    ? $"Ã–deme planÄ± aktifleÅŸtirildi: {odeme.OdemeAdi} (ID: {odeme.Id})."
+                    : $"Ã–deme planÄ± pasife alÄ±ndÄ±: {odeme.OdemeAdi} (ID: {odeme.Id}).",
+                eskiDeger,
+                new { odeme.Id, odeme.OdemeAdi, odeme.AktifMi }),
+            anaKaydiOnceKaydet: false);
+
+        TempData["Basari"] = aktifMi ? "Ã–deme planÄ± aktifleÅŸtirildi." : "Ã–deme planÄ± pasife alÄ±ndÄ±.";
+        return RedirectToPage();
+    }
+
+    private async Task VerileriYukleAsync(int firmaId)
+    {
+        var bugun = DateTime.UtcNow.Date;
+        var ayBaslangic = new DateTime(bugun.Year, bugun.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var sonrakiAy = ayBaslangic.AddMonths(1);
+
+        var sorgu = _db.OdemePlanlari
+            .AsNoTracking()
+            .Include(x => x.Hareketler)
+            .Where(x => x.FirmaId == firmaId);
+
+        if (FiltreOdemeTuru.HasValue)
+            sorgu = sorgu.Where(x => x.OdemeTuru == FiltreOdemeTuru.Value);
+
+        if (!string.IsNullOrWhiteSpace(Arama))
+        {
+            var arama = Arama.Trim().ToLower();
+            sorgu = sorgu.Where(x =>
+                x.OdemeAdi.ToLower().Contains(arama) ||
+                (x.Aciklama != null && x.Aciklama.ToLower().Contains(arama)));
+        }
+
+        var planlar = await sorgu
+            .OrderBy(x => x.SonrakiOdemeTarihi)
+            .ThenBy(x => x.OdemeAdi)
+            .ToListAsync();
+
+        Odemeler = planlar.Select(x =>
+        {
+            var buAyOdendi = x.Hareketler.Any(h => h.OdemeTarihi >= ayBaslangic && h.OdemeTarihi < sonrakiAy);
+            var durum = OdemePlanlamaService.Durum(x, bugun, buAyOdendi);
+            return new OdemeListeSatiri(x, durum, buAyOdendi);
+        }).ToList();
+
+        if (!string.IsNullOrWhiteSpace(FiltreDurum))
+        {
+            Odemeler = FiltreDurum switch
+            {
+                "Aktif" => Odemeler.Where(x => x.Odeme.AktifMi && x.Odeme.KalanTaksitSayisi > 0).ToList(),
+                "Pasif" => Odemeler.Where(x => !x.Odeme.AktifMi).ToList(),
+                "Yaklasan" => Odemeler.Where(x => x.Durum == OdemeDurumu.Yaklasiyor || x.Durum == OdemeDurumu.Bugun).ToList(),
+                "Geciken" => Odemeler.Where(x => x.Durum == OdemeDurumu.Gecikti).ToList(),
+                "Tamamlanan" => Odemeler.Where(x => x.Durum == OdemeDurumu.Tamamlandi).ToList(),
+                _ => Odemeler
+            };
+        }
+
+        BuAyToplamOdeme = await _db.OdemeHareketleri
+            .AsNoTracking()
+            .Where(x => x.FirmaId == firmaId && x.OdemeTarihi >= ayBaslangic && x.OdemeTarihi < sonrakiAy)
+            .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        YaklasanOdemeler = Odemeler.Count(x => x.Durum == OdemeDurumu.Yaklasiyor || x.Durum == OdemeDurumu.Bugun);
+        GecikenOdemeler = Odemeler.Count(x => x.Durum == OdemeDurumu.Gecikti);
+        ToplamKalanKrediBorcu = planlar
+            .Where(x => x.FirmaId == firmaId && x.AktifMi && x.OdemeTuru is OdemeTuru.Kredi or OdemeTuru.KrediKarti)
+            .Sum(x => x.KalanToplamTutar);
+        AktifOdemePlaniSayisi = planlar.Count(x => x.AktifMi && x.KalanTaksitSayisi > 0);
+    }
+
+    public record OdemeListeSatiri(OdemePlani Odeme, OdemeDurumu Durum, bool BuAyOdendi);
+}

@@ -1,0 +1,101 @@
+@page "{id:int}"
+@model MuhasebeTakip2.App.Pages.Odemeler.DetayModel
+@{
+    ViewData["Title"] = "Ã–deme DetayÄ±";
+    var odeme = Model.Odeme!;
+}
+
+<div class="app-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">@odeme.OdemeTuru.Metin()</span>
+            <h1>@odeme.OdemeAdi</h1>
+            <p>@(string.IsNullOrWhiteSpace(odeme.Aciklama) ? "Ã–deme planÄ± detayÄ±" : odeme.Aciklama)</p>
+        </div>
+        <div class="app-page-actions">
+            <a class="btn btn-outline-dark" asp-page="/Odemeler/Duzenle" asp-route-id="@odeme.Id">DÃ¼zenle</a>
+            <a class="btn btn-outline-dark" href="/Odemeler">Liste</a>
+            @if (odeme.AktifMi && odeme.KalanTaksitSayisi > 0)
+            {
+                <form method="post" asp-page="/Odemeler/Index" asp-page-handler="OdemeYapildi" class="inline-form" onsubmit="return confirm('Bu Ã¶deme bu ay iÃ§in yapÄ±ldÄ± olarak iÅŸaretlenecek. Devam edilsin mi?');">
+                    <input type="hidden" name="id" value="@odeme.Id" />
+                    <button type="submit" class="btn btn-primary">Ã–deme YapÄ±ldÄ±</button>
+                </form>
+            }
+        </div>
+    </section>
+
+    @if (TempData["Hata"] != null)
+    {
+        <div class="app-alert app-alert-danger">@TempData["Hata"]</div>
+    }
+    @if (TempData["Basari"] != null)
+    {
+        <div class="app-alert app-alert-success">@TempData["Basari"]</div>
+    }
+
+    <section class="metric-grid">
+        <article class="metric-card"><span>AylÄ±k Tutar</span><strong>@odeme.AylikOdemeTutari.ToString("N2") TL</strong></article>
+        <article class="metric-card"><span>Kalan Taksit</span><strong>@odeme.KalanTaksitSayisi</strong></article>
+        <article class="metric-card"><span>Kalan Toplam BorÃ§</span><strong>@odeme.KalanToplamTutar.ToString("N2") TL</strong></article>
+        <article class="metric-card"><span>Durum</span><strong>@Model.Durum.Metin()</strong></article>
+    </section>
+
+    <section class="dashboard-content-grid">
+        <div class="dashboard-stack">
+            <section class="dashboard-panel">
+                <div class="panel-title-row"><div><h2>Plan Bilgileri</h2><p>Ã–deme takvimi ve ayarlar</p></div></div>
+                <div class="table-wrap">
+                    <table class="modern-table">
+                        <tbody>
+                            <tr><th>Ä°lk Ã–deme Tarihi</th><td>@odeme.IlkOdemeTarihi.ToString("dd.MM.yyyy")</td></tr>
+                            <tr><th>Sonraki Ã–deme Tarihi</th><td>@odeme.SonrakiOdemeTarihi.ToString("dd.MM.yyyy")</td></tr>
+                            <tr><th>Tahmini Son Ã–deme Tarihi</th><td>@(odeme.SonOdemeTarihi?.ToString("dd.MM.yyyy") ?? "-")</td></tr>
+                            <tr><th>Toplam Taksit</th><td>@odeme.ToplamTaksitSayisi</td></tr>
+                            <tr><th>Ã–deme GÃ¼nÃ¼</th><td>@odeme.OdemeGunu</td></tr>
+                            <tr><th>Otomatik Taksit DÃ¼ÅŸÃ¼r</th><td>@(odeme.OtomatikTaksitDusur ? "Evet" : "HayÄ±r")</td></tr>
+                            <tr><th>Aktif</th><td>@(odeme.AktifMi ? "Evet" : "HayÄ±r")</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="dashboard-panel">
+                <div class="panel-title-row"><div><h2>Ã–deme GeÃ§miÅŸi</h2><p>En yeniden eskiye</p></div></div>
+                <div class="table-wrap">
+                    <table class="modern-table">
+                        <thead><tr><th>Tarih</th><th>Tutar</th><th>Kalan Taksit</th><th>KullanÄ±cÄ±</th><th>AÃ§Ä±klama</th></tr></thead>
+                        <tbody>
+                            @if (Model.Hareketler.Count == 0)
+                            {
+                                <tr><td colspan="5" class="empty-row">HenÃ¼z Ã¶deme hareketi yok.</td></tr>
+                            }
+                            else
+                            {
+                                @foreach (var hareket in Model.Hareketler)
+                                {
+                                    <tr>
+                                        <td>@hareket.OdemeTarihi.ToString("dd.MM.yyyy")</td>
+                                        <td class="amount-cell">@hareket.Tutar.ToString("N2") TL</td>
+                                        <td>@hareket.KalanTaksitSayisi</td>
+                                        <td>@(hareket.OlusturanKullaniciAdi ?? "-")</td>
+                                        <td>@hareket.Aciklama</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <aside class="dashboard-panel">
+            <div class="panel-title-row"><div><h2>Bildirim AyarlarÄ±</h2><p>Program iÃ§i uyarÄ±</p></div></div>
+            <div class="summary-grid">
+                <article><span>Bildirim</span><strong>@(odeme.BildirimAktifMi ? "Aktif" : "Pasif")</strong></article>
+                <article><span>KaÃ§ GÃ¼n Ã–nce</span><strong>@odeme.BildirimGunu</strong></article>
+                <article><span>Bu Ay Ã–dendi</span><strong>@(Model.BuAyOdendi ? "Evet" : "HayÄ±r")</strong></article>
+            </div>
+        </aside>
+    </section>
+</div>

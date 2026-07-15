@@ -149,6 +149,29 @@ public class IndexModel : PageModel
             });
         }
 
+        var odemeBildirimleri = await _db.OdemePlanlari
+            .AsNoTracking()
+            .Where(x => x.FirmaId == firmaId &&
+                        x.AktifMi &&
+                        x.BildirimAktifMi &&
+                        x.KalanTaksitSayisi > 0 &&
+                        (x.SonrakiOdemeTarihi < bugun || x.SonrakiOdemeTarihi <= bugun.AddDays(x.BildirimGunu)))
+            .OrderBy(x => x.SonrakiOdemeTarihi)
+            .Take(5)
+            .ToListAsync();
+
+        foreach (var odeme in odemeBildirimleri)
+        {
+            Bildirimler.Add(new BildirimSatiri
+            {
+                Tur = OdemePlanlamaService.BildirimTuru(odeme, bugun),
+                Baslik = odeme.OdemeAdi,
+                Aciklama = $"{odeme.SonrakiOdemeTarihi:dd.MM.yyyy} - {odeme.AylikOdemeTutari:N2} TL",
+                Url = $"/Odemeler/Detay/{odeme.Id}",
+                Kritik = odeme.SonrakiOdemeTarihi.Date <= bugun
+            });
+        }
+
         var kritikStoklar = await _db.StokUrunler
             .AsNoTracking()
             .Where(x => x.FirmaId == firmaId && x.AktifMi)

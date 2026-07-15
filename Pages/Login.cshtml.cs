@@ -81,6 +81,7 @@ public class LoginModel : PageModel
             HttpContext.Session.SetString("MenuCariKartlar", firma.MenuCariKartlar ? "1" : "0");
             HttpContext.Session.SetString("MenuKasa", firma.MenuKasa ? "1" : "0");
             HttpContext.Session.SetString("MenuRaporlar", firma.MenuRaporlar ? "1" : "0");
+            HttpContext.Session.SetString("MenuOdemeler", firma.MenuOdemeler ? "1" : "0");
             HttpContext.Session.SetString("MenuCalisanlar", firma.MenuCalisanlar ? "1" : "0");
             HttpContext.Session.SetString("MenuMusteriler", firma.MenuMusteriler ? "1" : "0");
             HttpContext.Session.SetString("MenuStoklar", firma.MenuStoklar ? "1" : "0");
@@ -111,6 +112,7 @@ public class LoginModel : PageModel
         HttpContext.Session.SetString("MenuCariKartlar", firma.MenuCariKartlar ? "1" : "0");
         HttpContext.Session.SetString("MenuKasa", firma.MenuKasa ? "1" : "0");
         HttpContext.Session.SetString("MenuRaporlar", firma.MenuRaporlar ? "1" : "0");
+        HttpContext.Session.SetString("MenuOdemeler", firma.MenuOdemeler ? "1" : "0");
         HttpContext.Session.SetString("MenuCalisanlar", firma.MenuCalisanlar ? "1" : "0");
         HttpContext.Session.SetString("MenuMusteriler", firma.MenuMusteriler ? "1" : "0");
         HttpContext.Session.SetString("MenuStoklar", firma.MenuStoklar ? "1" : "0");

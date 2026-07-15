@@ -1,0 +1,55 @@
+@page
+@using MuhasebeTakip2.App.Models
+@model MuhasebeTakip2.App.Pages.Odemeler.EkleModel
+@{
+    ViewData["Title"] = "Yeni Ã–deme";
+}
+
+<div class="app-page">
+    <section class="app-page-header">
+        <div>
+            <span class="app-page-eyebrow">Ã–deme PlanÄ±</span>
+            <h1>Yeni Ã–deme</h1>
+            <p>Tekrarlayan Ã¶deme veya taksit planÄ± oluÅŸturun.</p>
+        </div>
+        <div class="app-page-actions">
+            <a class="btn btn-outline-dark" href="/Odemeler">Geri DÃ¶n</a>
+        </div>
+    </section>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="app-alert app-alert-danger">
+            @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@err.ErrorMessage</div>
+            }
+        </div>
+    }
+
+    <section class="app-form-panel">
+        <form method="post" class="app-form-grid">
+            <div class="form-field form-field-wide"><label asp-for="Form.OdemeAdi">Ã–deme AdÄ±</label><input asp-for="Form.OdemeAdi" /></div>
+            <div class="form-field">
+                <label asp-for="Form.OdemeTuru">Ã–deme TÃ¼rÃ¼</label>
+                <select asp-for="Form.OdemeTuru">
+                    @foreach (var tur in Enum.GetValues<OdemeTuru>())
+                    {
+                        <option value="@tur">@tur.Metin()</option>
+                    }
+                </select>
+            </div>
+            <div class="form-field"><label asp-for="Form.AylikOdemeTutari">AylÄ±k Ã–deme TutarÄ±</label><input asp-for="Form.AylikOdemeTutari" type="number" step="0.01" min="0" /></div>
+            <div class="form-field"><label asp-for="Form.ToplamTaksitSayisi">Toplam Taksit SayÄ±sÄ±</label><input asp-for="Form.ToplamTaksitSayisi" type="number" min="1" /></div>
+            <div class="form-field"><label asp-for="Form.KalanTaksitSayisi">Kalan Taksit SayÄ±sÄ±</label><input asp-for="Form.KalanTaksitSayisi" type="number" min="0" placeholder="BoÅŸsa toplam taksit" /></div>
+            <div class="form-field"><label asp-for="Form.IlkOdemeTarihi">Ä°lk Ã–deme Tarihi</label><input asp-for="Form.IlkOdemeTarihi" type="date" /></div>
+            <div class="form-field"><label asp-for="Form.OdemeGunu">Ã–deme GÃ¼nÃ¼</label><input asp-for="Form.OdemeGunu" type="number" min="1" max="31" /></div>
+            <div class="form-field"><label asp-for="Form.BildirimGunu">Bildirim KaÃ§ GÃ¼n Ã–nce GÃ¶nderilsin</label><input asp-for="Form.BildirimGunu" type="number" min="0" /></div>
+            <div class="form-field form-field-wide"><label asp-for="Form.Aciklama">AÃ§Ä±klama</label><input asp-for="Form.Aciklama" /></div>
+            <div class="form-field"><label><input asp-for="Form.BildirimAktifMi" type="checkbox" /> Bildirim aktif mi</label></div>
+            <div class="form-field"><label><input asp-for="Form.OtomatikTaksitDusur" type="checkbox" /> Ã–deme yapÄ±ldÄ±ÄŸÄ±nda kalan taksidi otomatik azalt</label></div>
+            <div class="form-field"><label><input asp-for="Form.AktifMi" type="checkbox" /> Aktif mi</label></div>
+            <div class="form-actions-row"><button type="submit" class="btn btn-primary">Ã–deme PlanÄ± OluÅŸtur</button></div>
+        </form>
+    </section>
+</div>
