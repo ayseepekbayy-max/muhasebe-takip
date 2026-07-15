@@ -646,7 +646,9 @@ namespace MuhasebeTakip2.App.Migrations
                         .HasColumnType("text");
 
                     b.Property<bool>("EmailDogrulandiMi")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<int>("FirmaId")
                         .HasColumnType("integer");
@@ -656,7 +658,9 @@ namespace MuhasebeTakip2.App.Migrations
                         .HasColumnType("text");
 
                     b.Property<bool>("OdemeEmailBildirimiAktifMi")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("Rol")
                         .IsRequired()

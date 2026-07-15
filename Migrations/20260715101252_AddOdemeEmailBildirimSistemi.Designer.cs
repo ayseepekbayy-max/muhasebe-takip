@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MuhasebeTakip2.App.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260715095640_AddOdemeEmailBildirimSistemi")]
+    [Migration("20260715101252_AddOdemeEmailBildirimSistemi")]
     partial class AddOdemeEmailBildirimSistemi
     {
         /// <inheritdoc />
@@ -649,7 +649,9 @@ namespace MuhasebeTakip2.App.Migrations
                         .HasColumnType("text");
 
                     b.Property<bool>("EmailDogrulandiMi")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<int>("FirmaId")
                         .HasColumnType("integer");
@@ -659,7 +661,9 @@ namespace MuhasebeTakip2.App.Migrations
                         .HasColumnType("text");
 
                     b.Property<bool>("OdemeEmailBildirimiAktifMi")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("Rol")
                         .IsRequired()

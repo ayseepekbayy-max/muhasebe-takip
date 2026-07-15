@@ -36,7 +36,7 @@ namespace MuhasebeTakip2.App.Migrations
                 table: "Kullanicilar",
                 type: "boolean",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.CreateTable(
                 name: "OdemeBildirimGecmisleri",
