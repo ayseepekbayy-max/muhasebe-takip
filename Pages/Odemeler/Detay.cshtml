@@ -1,35 +1,14 @@
 @page "{id:int}"
 @using MuhasebeTakip2.App.Models
+@using MuhasebeTakip2.App.Services
 @model MuhasebeTakip2.App.Pages.Odemeler.DetayModel
 @{
     ViewData["Title"] = "Ödeme Detayı";
     var odeme = Model.Odeme!;
+    var tamamlandi = OdemePlanlamaService.TamamlanmisMi(odeme);
 }
 
 @functions {
-    private static string OdemeTuruMetni(OdemeTuru tur) => tur switch
-    {
-        OdemeTuru.Kredi => "Kredi",
-        OdemeTuru.KrediKarti => "Kredi Kartı",
-        OdemeTuru.Kira => "Kira",
-        OdemeTuru.Vergi => "Vergi",
-        OdemeTuru.Fatura => "Fatura",
-        OdemeTuru.Personel => "Personel",
-        OdemeTuru.Abonelik => "Abonelik",
-        _ => "Diğer"
-    };
-
-    private static string OdemeDurumuMetni(OdemeDurumu durum) => durum switch
-    {
-        OdemeDurumu.Odendi => "Ödendi",
-        OdemeDurumu.Yaklasiyor => "Yaklaşıyor",
-        OdemeDurumu.Bugun => "Bugün",
-        OdemeDurumu.Gecikti => "Gecikti",
-        OdemeDurumu.Tamamlandi => "Tamamlandı",
-        OdemeDurumu.Pasif => "Pasif",
-        _ => "Bilinmiyor"
-    };
-
     private static string HareketAciklama(string? aciklama)
     {
         return aciklama switch
@@ -44,14 +23,14 @@
 <div class="app-page">
     <section class="app-page-header">
         <div>
-            <span class="app-page-eyebrow">@OdemeTuruMetni(odeme.OdemeTuru)</span>
+            <span class="app-page-eyebrow">@odeme.OdemeTuru.Metin()</span>
             <h1>@odeme.OdemeAdi</h1>
             <p>@(string.IsNullOrWhiteSpace(odeme.Aciklama) ? "Ödeme planı detayı" : odeme.Aciklama)</p>
         </div>
         <div class="app-page-actions">
             <a class="btn btn-outline-dark" asp-page="/Odemeler/Duzenle" asp-route-id="@odeme.Id">Düzenle</a>
             <a class="btn btn-outline-dark" href="/Odemeler">Liste</a>
-            @if (odeme.AktifMi && odeme.KalanTaksitSayisi > 0)
+            @if (odeme.AktifMi && !tamamlandi)
             {
                 <form method="post" asp-page="/Odemeler/Index" asp-page-handler="OdemeYapildi" class="inline-form" onsubmit="return confirm('Bu ödeme bu ay için yapıldı olarak işaretlenecek. Devam edilsin mi?');">
                     <input type="hidden" name="id" value="@odeme.Id" />
@@ -73,11 +52,30 @@
         <div class="app-alert app-alert-success">@TempData["Basari"]</div>
     }
 
+    @if (tamamlandi)
+    {
+        <section class="dashboard-panel payment-completed-panel">
+            <div class="panel-title-row">
+                <div>
+                    <h2>Ödeme tamamlandı</h2>
+                    <p>Tüm taksitler ödendi.</p>
+                </div>
+            </div>
+            <div class="summary-grid">
+                <article><span>Tamamlanma Tarihi</span><strong>@(odeme.TamamlanmaTarihi?.ToString("dd.MM.yyyy") ?? "-")</strong></article>
+                <article><span>Toplam Taksit</span><strong>@odeme.ToplamTaksitSayisi</strong></article>
+                <article><span>Toplam Ödenen Tutar</span><strong>@Model.ToplamOdenenTutar.ToString("N2") TL</strong></article>
+                <article><span>İlk Ödeme Tarihi</span><strong>@odeme.IlkOdemeTarihi.ToString("dd.MM.yyyy")</strong></article>
+                <article><span>Son Ödeme Hareketi</span><strong>@(Model.SonOdemeHareketiTarihi?.ToString("dd.MM.yyyy") ?? "-")</strong></article>
+            </div>
+        </section>
+    }
+
     <section class="metric-grid">
         <article class="metric-card"><span>Aylık Tutar</span><strong>@odeme.AylikOdemeTutari.ToString("N2") TL</strong></article>
         <article class="metric-card"><span>Kalan Taksit</span><strong>@odeme.KalanTaksitSayisi</strong></article>
         <article class="metric-card"><span>Kalan Toplam Borç</span><strong>@odeme.KalanToplamTutar.ToString("N2") TL</strong></article>
-        <article class="metric-card"><span>Durum</span><strong>@OdemeDurumuMetni(Model.Durum)</strong></article>
+        <article class="metric-card"><span>Durum</span><strong>@Model.Durum.Metin()</strong></article>
     </section>
 
     <section class="dashboard-content-grid">
@@ -88,7 +86,10 @@
                     <table class="modern-table">
                         <tbody>
                             <tr><th>İlk Ödeme Tarihi</th><td>@odeme.IlkOdemeTarihi.ToString("dd.MM.yyyy")</td></tr>
-                            <tr><th>Sonraki Ödeme Tarihi</th><td>@odeme.SonrakiOdemeTarihi.ToString("dd.MM.yyyy")</td></tr>
+                            @if (!tamamlandi)
+                            {
+                                <tr><th>Sonraki Ödeme Tarihi</th><td>@(odeme.SonrakiOdemeTarihi?.ToString("dd.MM.yyyy") ?? "-")</td></tr>
+                            }
                             <tr><th>Toplam Taksit</th><td>@odeme.ToplamTaksitSayisi</td></tr>
                             <tr><th>Ödeme Günü</th><td>@odeme.OdemeGunu</td></tr>
                             <tr><th>Otomatik Taksit Düşür</th><td>@(odeme.OtomatikTaksitDusur ? "Evet" : "Hayır")</td></tr>
@@ -128,9 +129,9 @@
         </div>
 
         <aside class="dashboard-panel">
-            <div class="panel-title-row"><div><h2>Bildirim Ayarları</h2><p>Program içi uyarı</p></div></div>
+            <div class="panel-title-row"><div><h2>Bildirim Ayarları</h2><p>@(tamamlandi ? "Tamamlanan planda bildirim gösterilmez" : "Program içi uyarı")</p></div></div>
             <div class="summary-grid">
-                <article><span>Bildirim</span><strong>@(odeme.BildirimAktifMi ? "Aktif" : "Pasif")</strong></article>
+                <article><span>Bildirim</span><strong>@(!tamamlandi && odeme.BildirimAktifMi ? "Aktif" : "Pasif")</strong></article>
                 <article><span>Kaç Gün Önce</span><strong>@odeme.BildirimGunu</strong></article>
                 <article><span>Bu Ay Ödendi</span><strong>@(Model.BuAyOdendi ? "Evet" : "Hayır")</strong></article>
             </div>

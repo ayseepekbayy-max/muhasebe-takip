@@ -66,6 +66,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(x => x.FirmaId);
             entity.HasIndex(x => new { x.FirmaId, x.AktifMi, x.SonrakiOdemeTarihi });
             entity.Property(x => x.AylikOdemeTutari).HasPrecision(18, 2);
+            entity.Property(x => x.TamamlandiMi).HasDefaultValue(false);
 
             entity.HasOne(x => x.Firma)
                 .WithMany()

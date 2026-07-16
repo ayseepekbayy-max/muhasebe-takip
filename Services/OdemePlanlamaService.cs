@@ -28,18 +28,26 @@ public static class OdemePlanlamaService
         return AyIcinGecerliGun(sonAy, odemeGunu);
     }
 
+    public static bool TamamlanmisMi(OdemePlani odeme)
+    {
+        return odeme.TamamlandiMi || odeme.KalanTaksitSayisi <= 0;
+    }
+
     public static OdemeDurumu Durum(OdemePlani odeme, DateTime bugun, bool buAyOdendi)
     {
+        if (TamamlanmisMi(odeme))
+            return OdemeDurumu.Tamamlandi;
+
         if (!odeme.AktifMi)
             return OdemeDurumu.Pasif;
-
-        if (odeme.KalanTaksitSayisi <= 0)
-            return OdemeDurumu.Tamamlandi;
 
         if (buAyOdendi)
             return OdemeDurumu.Odendi;
 
-        var sonraki = ToUtcDate(odeme.SonrakiOdemeTarihi);
+        if (odeme.SonrakiOdemeTarihi == null)
+            return OdemeDurumu.Tamamlandi;
+
+        var sonraki = ToUtcDate(odeme.SonrakiOdemeTarihi.Value);
         if (sonraki < bugun)
             return OdemeDurumu.Gecikti;
 
@@ -51,7 +59,10 @@ public static class OdemePlanlamaService
 
     public static string BildirimTuru(OdemePlani odeme, DateTime bugun)
     {
-        var sonraki = ToUtcDate(odeme.SonrakiOdemeTarihi);
+        if (TamamlanmisMi(odeme) || odeme.SonrakiOdemeTarihi == null)
+            return "Tamamlanan Ödeme";
+
+        var sonraki = ToUtcDate(odeme.SonrakiOdemeTarihi.Value);
         if (sonraki < bugun)
             return "Geciken Ödeme";
 

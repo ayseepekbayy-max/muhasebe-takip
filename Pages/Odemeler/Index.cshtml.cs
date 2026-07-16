@@ -19,11 +19,15 @@ public class IndexModel : PageModel
     }
 
     public List<OdemeListeSatiri> Odemeler { get; set; } = new();
+    public List<TamamlananOdemeSatiri> TamamlananOdemeler { get; set; } = new();
     public decimal BuAyToplamOdeme { get; set; }
     public int YaklasanOdemeler { get; set; }
     public int GecikenOdemeler { get; set; }
     public decimal ToplamKalanKrediBorcu { get; set; }
     public int AktifOdemePlaniSayisi { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public string Gorunum { get; set; } = "Aktif";
 
     [BindProperty(SupportsGet = true)]
     public OdemeTuru? FiltreOdemeTuru { get; set; }
@@ -57,9 +61,15 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
-        if (!odeme.AktifMi || odeme.KalanTaksitSayisi <= 0)
+        if (OdemePlanlamaService.TamamlanmisMi(odeme))
         {
-            TempData["Hata"] = "Pasif veya tamamlanmış ödeme planına ödeme işlenemez.";
+            TempData["Hata"] = "Bu ödeme planının tüm taksitleri tamamlanmıştır.";
+            return RedirectToPage();
+        }
+
+        if (!odeme.AktifMi)
+        {
+            TempData["Hata"] = "Pasif ödeme planına ödeme işlenemez.";
             return RedirectToPage();
         }
 
@@ -85,15 +95,31 @@ public class IndexModel : PageModel
             odeme.KalanTaksitSayisi,
             odeme.SonrakiOdemeTarihi,
             odeme.AktifMi,
+            odeme.TamamlandiMi,
+            odeme.TamamlanmaTarihi,
             odeme.SonOdemeYapildiMi
         };
 
         if (odeme.OtomatikTaksitDusur)
             odeme.KalanTaksitSayisi = Math.Max(0, odeme.KalanTaksitSayisi - 1);
 
+        var tamamlandi = odeme.KalanTaksitSayisi <= 0;
         odeme.SonOdemeYapildiMi = true;
-        odeme.SonrakiOdemeTarihi = OdemePlanlamaService.SonrakiAy(odeme.SonrakiOdemeTarihi, odeme.OdemeGunu);
         odeme.GuncellemeTarihi = DateTime.UtcNow;
+
+        if (tamamlandi)
+        {
+            odeme.KalanTaksitSayisi = 0;
+            odeme.TamamlandiMi = true;
+            odeme.TamamlanmaTarihi = bugun;
+            odeme.SonrakiOdemeTarihi = null;
+            odeme.AktifMi = false;
+            odeme.BildirimAktifMi = false;
+        }
+        else if (odeme.SonrakiOdemeTarihi.HasValue)
+        {
+            odeme.SonrakiOdemeTarihi = OdemePlanlamaService.SonrakiAy(odeme.SonrakiOdemeTarihi.Value, odeme.OdemeGunu);
+        }
 
         var hareket = new OdemeHareketi
         {
@@ -111,24 +137,46 @@ public class IndexModel : PageModel
         _db.OdemeHareketleri.Add(hareket);
 
         await _db.SaveChangesWithAuditAsync(
-            () => _islemGecmisi.KaydetAsync(
-                "Ödemeler",
-                "Ödeme",
-                $"Ödeme yapıldı: {odeme.OdemeAdi} (ID: {odeme.Id}).",
-                eskiDeger,
-                new
+            async () =>
+            {
+                await _islemGecmisi.KaydetAsync(
+                    "Ödemeler",
+                    "Ödeme",
+                    $"Ödeme yapıldı: {odeme.OdemeAdi} (ID: {odeme.Id}).",
+                    eskiDeger,
+                    new
+                    {
+                        odeme.Id,
+                        odeme.OdemeAdi,
+                        odeme.KalanTaksitSayisi,
+                        odeme.SonrakiOdemeTarihi,
+                        odeme.TamamlandiMi,
+                        odeme.TamamlanmaTarihi,
+                        odeme.SonOdemeYapildiMi,
+                        HareketId = hareket.Id
+                    });
+
+                if (tamamlandi)
                 {
-                    odeme.Id,
-                    odeme.OdemeAdi,
-                    odeme.KalanTaksitSayisi,
-                    odeme.SonrakiOdemeTarihi,
-                    odeme.SonOdemeYapildiMi,
-                    HareketId = hareket.Id
-                }),
+                    await _islemGecmisi.KaydetAsync(
+                        "Ödemeler",
+                        "Tamamlandı",
+                        $"{odeme.OdemeAdi} ödeme planının tüm taksitleri tamamlandı.",
+                        eskiDeger,
+                        new
+                        {
+                            odeme.Id,
+                            odeme.OdemeAdi,
+                            odeme.KalanTaksitSayisi,
+                            odeme.TamamlandiMi,
+                            odeme.TamamlanmaTarihi
+                        });
+                }
+            },
             anaKaydiOnceKaydet: true);
 
-        TempData["Basari"] = odeme.KalanTaksitSayisi == 0
-            ? "Ödeme kaydedildi ve plan tamamlandı."
+        TempData["Basari"] = tamamlandi
+            ? $"{odeme.OdemeAdi} başarıyla tamamlandı. Tüm taksitler ödendi."
             : "Ödeme kaydedildi, kalan taksit güncellendi.";
 
         return RedirectToPage();
@@ -154,6 +202,12 @@ public class IndexModel : PageModel
         if (odeme == null)
         {
             TempData["Hata"] = "Ödeme planı bulunamadı.";
+            return RedirectToPage();
+        }
+
+        if (OdemePlanlamaService.TamamlanmisMi(odeme))
+        {
+            TempData["Hata"] = "Bu ödeme planının tüm taksitleri tamamlanmıştır.";
             return RedirectToPage();
         }
 
@@ -199,29 +253,43 @@ public class IndexModel : PageModel
         }
 
         var planlar = await sorgu
-            .OrderBy(x => x.SonrakiOdemeTarihi)
+            .OrderBy(x => x.SonrakiOdemeTarihi == null)
+            .ThenBy(x => x.SonrakiOdemeTarihi)
             .ThenBy(x => x.OdemeAdi)
             .ToListAsync();
 
-        Odemeler = planlar.Select(x =>
+        var satirlar = planlar.Select(x =>
         {
             var buAyOdendi = x.Hareketler.Any(h => h.OdemeTarihi >= ayBaslangic && h.OdemeTarihi < sonrakiAy);
             var durum = OdemePlanlamaService.Durum(x, bugun, buAyOdendi);
             return new OdemeListeSatiri(x, durum, buAyOdendi);
         }).ToList();
 
+        Odemeler = satirlar
+            .Where(x => !OdemePlanlamaService.TamamlanmisMi(x.Odeme) && x.Odeme.AktifMi)
+            .ToList();
+
         if (!string.IsNullOrWhiteSpace(FiltreDurum))
         {
             Odemeler = FiltreDurum switch
             {
-                "Aktif" => Odemeler.Where(x => x.Odeme.AktifMi && x.Odeme.KalanTaksitSayisi > 0).ToList(),
-                "Pasif" => Odemeler.Where(x => !x.Odeme.AktifMi).ToList(),
                 "Yaklasan" => Odemeler.Where(x => x.Durum == OdemeDurumu.Yaklasiyor || x.Durum == OdemeDurumu.Bugun).ToList(),
                 "Geciken" => Odemeler.Where(x => x.Durum == OdemeDurumu.Gecikti).ToList(),
-                "Tamamlanan" => Odemeler.Where(x => x.Durum == OdemeDurumu.Tamamlandi).ToList(),
+                "Pasif" => satirlar.Where(x => !OdemePlanlamaService.TamamlanmisMi(x.Odeme) && !x.Odeme.AktifMi).ToList(),
                 _ => Odemeler
             };
         }
+
+        TamamlananOdemeler = satirlar
+            .Where(x => OdemePlanlamaService.TamamlanmisMi(x.Odeme))
+            .Select(x => new TamamlananOdemeSatiri(
+                x.Odeme,
+                x.Odeme.Hareketler.Sum(h => h.Tutar),
+                x.Odeme.TamamlanmaTarihi,
+                x.Odeme.Hareketler.OrderByDescending(h => h.OdemeTarihi).ThenByDescending(h => h.Id).FirstOrDefault()?.OdemeTarihi))
+            .OrderByDescending(x => x.TamamlanmaTarihi ?? x.SonOdemeHareketiTarihi ?? x.Odeme.OlusturmaTarihi)
+            .ThenBy(x => x.Odeme.OdemeAdi)
+            .ToList();
 
         BuAyToplamOdeme = await _db.OdemeHareketleri
             .AsNoTracking()
@@ -231,10 +299,14 @@ public class IndexModel : PageModel
         YaklasanOdemeler = Odemeler.Count(x => x.Durum == OdemeDurumu.Yaklasiyor || x.Durum == OdemeDurumu.Bugun);
         GecikenOdemeler = Odemeler.Count(x => x.Durum == OdemeDurumu.Gecikti);
         ToplamKalanKrediBorcu = planlar
-            .Where(x => x.FirmaId == firmaId && x.AktifMi && x.OdemeTuru is OdemeTuru.Kredi or OdemeTuru.KrediKarti)
+            .Where(x => x.FirmaId == firmaId &&
+                        x.AktifMi &&
+                        !OdemePlanlamaService.TamamlanmisMi(x) &&
+                        x.OdemeTuru is OdemeTuru.Kredi or OdemeTuru.KrediKarti)
             .Sum(x => x.KalanToplamTutar);
-        AktifOdemePlaniSayisi = planlar.Count(x => x.AktifMi && x.KalanTaksitSayisi > 0);
+        AktifOdemePlaniSayisi = Odemeler.Count;
     }
 
     public record OdemeListeSatiri(OdemePlani Odeme, OdemeDurumu Durum, bool BuAyOdendi);
+    public record TamamlananOdemeSatiri(OdemePlani Odeme, decimal ToplamOdenenTutar, DateTime? TamamlanmaTarihi, DateTime? SonOdemeHareketiTarihi);
 }

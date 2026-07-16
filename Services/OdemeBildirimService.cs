@@ -36,9 +36,11 @@ public class OdemeBildirimService : IOdemeBildirimService
             .AsNoTracking()
             .Where(x => x.FirmaId == firmaId &&
                         x.AktifMi &&
+                        !x.TamamlandiMi &&
                         x.BildirimAktifMi &&
                         x.KalanTaksitSayisi > 0 &&
-                        x.SonrakiOdemeTarihi.Date <= ucGunSonra)
+                        x.SonrakiOdemeTarihi != null &&
+                        x.SonrakiOdemeTarihi.Value.Date <= ucGunSonra)
             .OrderBy(x => x.SonrakiOdemeTarihi)
             .ThenBy(x => x.OdemeAdi)
             .ToListAsync(cancellationToken);
@@ -105,7 +107,7 @@ public class OdemeBildirimService : IOdemeBildirimService
 
     private static OdemeBildirimSatiri SatiraDonustur(OdemePlani odeme, DateTime bugun)
     {
-        var sonOdemeTarihi = OdemePlanlamaService.ToUtcDate(odeme.SonrakiOdemeTarihi);
+        var sonOdemeTarihi = OdemePlanlamaService.ToUtcDate(odeme.SonrakiOdemeTarihi!.Value);
         var kalanGun = (sonOdemeTarihi - bugun).Days;
 
         return new OdemeBildirimSatiri

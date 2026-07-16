@@ -45,7 +45,8 @@ public class EkleModel : PageModel
             return Page();
 
         var ilkOdemeTarihi = OdemePlanlamaService.AyIcinGecerliGun(Form.IlkOdemeTarihi, Form.OdemeGunu);
-        var kalanTaksit = Form.KalanTaksitSayisi ?? Form.ToplamTaksitSayisi;
+        var kalanTaksit = Math.Max(0, Form.KalanTaksitSayisi ?? Form.ToplamTaksitSayisi);
+        var baslangictaTamamlandi = kalanTaksit == 0;
 
         var odeme = new OdemePlani
         {
@@ -55,15 +56,17 @@ public class EkleModel : PageModel
             Aciklama = Form.Aciklama,
             AylikOdemeTutari = Form.AylikOdemeTutari,
             ToplamTaksitSayisi = Form.ToplamTaksitSayisi,
-            KalanTaksitSayisi = Math.Max(0, kalanTaksit),
+            KalanTaksitSayisi = kalanTaksit,
             OdemeGunu = Form.OdemeGunu,
             IlkOdemeTarihi = ilkOdemeTarihi,
-            SonrakiOdemeTarihi = ilkOdemeTarihi,
+            SonrakiOdemeTarihi = baslangictaTamamlandi ? null : ilkOdemeTarihi,
             SonOdemeTarihi = OdemePlanlamaService.TahminiSonOdemeTarihi(ilkOdemeTarihi, Form.OdemeGunu, Form.ToplamTaksitSayisi),
             BildirimGunu = Form.BildirimGunu,
             BildirimAktifMi = Form.BildirimAktifMi,
             OtomatikTaksitDusur = Form.OtomatikTaksitDusur,
-            AktifMi = Form.AktifMi,
+            AktifMi = baslangictaTamamlandi ? false : Form.AktifMi,
+            TamamlandiMi = baslangictaTamamlandi,
+            TamamlanmaTarihi = null,
             OlusturanKullaniciId = HttpContext.Session.GetInt32("KullaniciId"),
             OlusturanKullaniciAdi = HttpContext.Session.GetString("KullaniciAdi"),
             OlusturmaTarihi = DateTime.UtcNow
@@ -82,7 +85,8 @@ public class EkleModel : PageModel
                     odeme.OdemeTuru,
                     odeme.AylikOdemeTutari,
                     odeme.KalanTaksitSayisi,
-                    odeme.SonrakiOdemeTarihi
+                    odeme.SonrakiOdemeTarihi,
+                    odeme.TamamlandiMi
                 }),
             anaKaydiOnceKaydet: true);
 

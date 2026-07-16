@@ -52,9 +52,11 @@ public class OdemePlani
     public int OdemeGunu { get; set; } = 1;
 
     public DateTime IlkOdemeTarihi { get; set; } = DateTime.UtcNow.Date;
-    public DateTime SonrakiOdemeTarihi { get; set; } = DateTime.UtcNow.Date;
+    public DateTime? SonrakiOdemeTarihi { get; set; } = DateTime.UtcNow.Date;
     public DateTime? SonOdemeTarihi { get; set; }
     public bool SonOdemeYapildiMi { get; set; }
+    public bool TamamlandiMi { get; set; } = false;
+    public DateTime? TamamlanmaTarihi { get; set; }
 
     [Range(0, 60, ErrorMessage = "Bildirim günü 0 ile 60 arasında olmalıdır.")]
     public int BildirimGunu { get; set; } = 3;

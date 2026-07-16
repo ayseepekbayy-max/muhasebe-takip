@@ -1,33 +1,10 @@
 @page
 @using MuhasebeTakip2.App.Models
+@using MuhasebeTakip2.App.Services
 @model MuhasebeTakip2.App.Pages.Odemeler.IndexModel
 @{
     ViewData["Title"] = "Ödemeler";
-}
-
-@functions {
-    private static string OdemeTuruMetni(OdemeTuru tur) => tur switch
-    {
-        OdemeTuru.Kredi => "Kredi",
-        OdemeTuru.KrediKarti => "Kredi Kartı",
-        OdemeTuru.Kira => "Kira",
-        OdemeTuru.Vergi => "Vergi",
-        OdemeTuru.Fatura => "Fatura",
-        OdemeTuru.Personel => "Personel",
-        OdemeTuru.Abonelik => "Abonelik",
-        _ => "Diğer"
-    };
-
-    private static string OdemeDurumuMetni(OdemeDurumu durum) => durum switch
-    {
-        OdemeDurumu.Odendi => "Ödendi",
-        OdemeDurumu.Yaklasiyor => "Yaklaşıyor",
-        OdemeDurumu.Bugun => "Bugün",
-        OdemeDurumu.Gecikti => "Gecikti",
-        OdemeDurumu.Tamamlandi => "Tamamlandı",
-        OdemeDurumu.Pasif => "Pasif",
-        _ => "Bilinmiyor"
-    };
+    var tamamlananGorunum = string.Equals(Model.Gorunum, "Tamamlanan", StringComparison.OrdinalIgnoreCase);
 }
 
 <div class="app-page payments-page">
@@ -57,28 +34,34 @@
     </section>
 
     <section class="payments-filter-card">
+        <div class="payments-view-tabs">
+            <a class="@(tamamlananGorunum ? "" : "active")" asp-page="/Odemeler/Index" asp-route-Gorunum="Aktif">Aktif Ödemeler</a>
+            <a class="@(tamamlananGorunum ? "active" : "")" asp-page="/Odemeler/Index" asp-route-Gorunum="Tamamlanan">Tamamlanan Ödemeler</a>
+        </div>
         <form method="get" class="payments-filter-form">
+            <input type="hidden" name="Gorunum" value="@(tamamlananGorunum ? "Tamamlanan" : "Aktif")" />
             <div class="form-field">
                 <label asp-for="FiltreOdemeTuru">Ödeme Türü</label>
                 <select asp-for="FiltreOdemeTuru">
                     <option value="">Tümü</option>
                     @foreach (var tur in Enum.GetValues<OdemeTuru>())
                     {
-                        <option value="@tur">@OdemeTuruMetni(tur)</option>
+                        <option value="@tur">@tur.Metin()</option>
                     }
                 </select>
             </div>
-            <div class="form-field">
-                <label asp-for="FiltreDurum">Durum</label>
-                <select asp-for="FiltreDurum">
-                    <option value="">Tümü</option>
-                    <option value="Aktif">Aktif</option>
-                    <option value="Pasif">Pasif</option>
-                    <option value="Yaklasan">Yaklaşan</option>
-                    <option value="Geciken">Geciken</option>
-                    <option value="Tamamlanan">Tamamlanan</option>
-                </select>
-            </div>
+            @if (!tamamlananGorunum)
+            {
+                <div class="form-field">
+                    <label asp-for="FiltreDurum">Durum</label>
+                    <select asp-for="FiltreDurum">
+                        <option value="">Tümü</option>
+                        <option value="Yaklasan">Yaklaşan</option>
+                        <option value="Geciken">Geciken</option>
+                        <option value="Pasif">Pasif</option>
+                    </select>
+                </div>
+            }
             <div class="form-field payments-search-field">
                 <label asp-for="Arama">Arama</label>
                 <input asp-for="Arama" placeholder="Ödeme adı veya açıklama" />
@@ -90,79 +73,121 @@
         </form>
     </section>
 
-    <section class="payments-table-card">
-        <div class="payments-table-title">
-            <h2>Ödeme Planları</h2>
-            <span>@Model.Odemeler.Count kayıt</span>
-        </div>
-        <div class="table-wrap">
-            <table class="modern-table payments-table">
-                <thead>
-                    <tr>
-                        <th>Ödeme Adı</th>
-                        <th>Tür</th>
-                        <th>Aylık Tutar</th>
-                        <th>Ödeme Tarihi</th>
-                        <th>Kalan Taksit</th>
-                        <th>Toplam Taksit</th>
-                        <th>Durum</th>
-                        <th>Kalan Toplam</th>
-                        <th>İşlemler</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Odemeler.Count == 0)
-                    {
+    @if (tamamlananGorunum)
+    {
+        <section class="payments-table-card">
+            <div class="payments-table-title">
+                <h2>Tamamlanan Ödemeler</h2>
+                <span>@Model.TamamlananOdemeler.Count kayıt</span>
+            </div>
+            <div class="table-wrap">
+                <table class="modern-table payments-table">
+                    <thead>
                         <tr>
-                            <td colspan="9" class="payments-empty-cell">
-                                <span>Henüz ödeme planı eklenmedi.</span>
-                                <a class="btn btn-outline-primary btn-sm" asp-page="/Odemeler/Ekle">İlk Ödemeyi Ekle</a>
-                            </td>
+                            <th>Ödeme Adı</th>
+                            <th>Tür</th>
+                            <th>Aylık Tutar</th>
+                            <th>Toplam Taksit</th>
+                            <th>Tamamlanma Tarihi</th>
+                            <th>Toplam Ödenen</th>
+                            <th>İşlemler</th>
                         </tr>
-                    }
-                    else
-                    {
-                        @foreach (var satir in Model.Odemeler)
+                    </thead>
+                    <tbody>
+                        @if (Model.TamamlananOdemeler.Count == 0)
                         {
-                            var odeme = satir.Odeme;
+                            <tr><td colspan="7" class="payments-empty-cell"><span>Tamamlanan ödeme bulunmuyor.</span></td></tr>
+                        }
+                        else
+                        {
+                            @foreach (var satir in Model.TamamlananOdemeler)
+                            {
+                                var odeme = satir.Odeme;
+                                <tr>
+                                    <td><strong>@odeme.OdemeAdi</strong></td>
+                                    <td>@odeme.OdemeTuru.Metin()</td>
+                                    <td class="amount-cell">@odeme.AylikOdemeTutari.ToString("N2") TL</td>
+                                    <td>@odeme.ToplamTaksitSayisi</td>
+                                    <td>@(satir.TamamlanmaTarihi?.ToString("dd.MM.yyyy") ?? "-")</td>
+                                    <td class="amount-cell">@satir.ToplamOdenenTutar.ToString("N2") TL</td>
+                                    <td><a class="btn btn-outline-primary btn-sm" asp-page="/Odemeler/Detay" asp-route-id="@odeme.Id">Detay</a></td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="payments-table-card">
+            <div class="payments-table-title">
+                <h2>Aktif Ödemeler</h2>
+                <span>@Model.Odemeler.Count kayıt</span>
+            </div>
+            <div class="table-wrap">
+                <table class="modern-table payments-table">
+                    <thead>
+                        <tr>
+                            <th>Ödeme Adı</th>
+                            <th>Tür</th>
+                            <th>Aylık Tutar</th>
+                            <th>Ödeme Tarihi</th>
+                            <th>Kalan Taksit</th>
+                            <th>Toplam Taksit</th>
+                            <th>Durum</th>
+                            <th>Kalan Toplam</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Odemeler.Count == 0)
+                        {
                             <tr>
-                                <td><strong>@odeme.OdemeAdi</strong></td>
-                                <td>@OdemeTuruMetni(odeme.OdemeTuru)</td>
-                                <td class="amount-cell">@odeme.AylikOdemeTutari.ToString("N2") TL</td>
-                                <td>@odeme.SonrakiOdemeTarihi.ToString("dd.MM.yyyy")</td>
-                                <td>@odeme.KalanTaksitSayisi</td>
-                                <td>@odeme.ToplamTaksitSayisi</td>
-                                <td><span class="status-pill @satir.Durum.CssSinifi()">@OdemeDurumuMetni(satir.Durum)</span></td>
-                                <td class="amount-cell">@odeme.KalanToplamTutar.ToString("N2") TL</td>
-                                <td>
-                                    <div class="payments-action-stack">
-                                        <a class="btn btn-outline-primary btn-sm" asp-page="/Odemeler/Detay" asp-route-id="@odeme.Id">Detay</a>
-                                        <a class="btn btn-outline-dark btn-sm" asp-page="/Odemeler/Duzenle" asp-route-id="@odeme.Id">Düzenle</a>
-                                        @if (odeme.AktifMi && odeme.KalanTaksitSayisi > 0)
-                                        {
-                                            <form method="post" asp-page-handler="OdemeYapildi" class="inline-form" onsubmit="return confirm('Bu ödeme bu ay için yapıldı olarak işaretlenecek. Devam edilsin mi?');">
-                                                <input type="hidden" name="id" value="@odeme.Id" />
-                                                <button type="submit" class="btn btn-outline-success btn-sm">Ödeme Yapıldı</button>
-                                            </form>
-                                            <form method="post" asp-page-handler="PasifeAl" class="inline-form">
-                                                <input type="hidden" name="id" value="@odeme.Id" />
-                                                <button type="submit" class="btn btn-outline-danger btn-sm">Pasife Al</button>
-                                            </form>
-                                        }
-                                        else if (!odeme.AktifMi)
-                                        {
-                                            <form method="post" asp-page-handler="Aktiflestir" class="inline-form">
-                                                <input type="hidden" name="id" value="@odeme.Id" />
-                                                <button type="submit" class="btn btn-outline-success btn-sm">Aktifleştir</button>
-                                            </form>
-                                        }
-                                    </div>
+                                <td colspan="9" class="payments-empty-cell">
+                                    <span>Aktif ödeme planı bulunmuyor.</span>
+                                    <a class="btn btn-outline-primary btn-sm" asp-page="/Odemeler/Ekle">İlk Ödemeyi Ekle</a>
                                 </td>
                             </tr>
                         }
-                    }
-                </tbody>
-            </table>
-        </div>
-    </section>
+                        else
+                        {
+                            @foreach (var satir in Model.Odemeler)
+                            {
+                                var odeme = satir.Odeme;
+                                <tr>
+                                    <td><strong>@odeme.OdemeAdi</strong></td>
+                                    <td>@odeme.OdemeTuru.Metin()</td>
+                                    <td class="amount-cell">@odeme.AylikOdemeTutari.ToString("N2") TL</td>
+                                    <td>@(odeme.SonrakiOdemeTarihi?.ToString("dd.MM.yyyy") ?? "-")</td>
+                                    <td>@odeme.KalanTaksitSayisi</td>
+                                    <td>@odeme.ToplamTaksitSayisi</td>
+                                    <td><span class="status-pill @satir.Durum.CssSinifi()">@satir.Durum.Metin()</span></td>
+                                    <td class="amount-cell">@odeme.KalanToplamTutar.ToString("N2") TL</td>
+                                    <td>
+                                        <div class="payments-action-stack">
+                                            <a class="btn btn-outline-primary btn-sm" asp-page="/Odemeler/Detay" asp-route-id="@odeme.Id">Detay</a>
+                                            <a class="btn btn-outline-dark btn-sm" asp-page="/Odemeler/Duzenle" asp-route-id="@odeme.Id">Düzenle</a>
+                                            @if (odeme.AktifMi && !OdemePlanlamaService.TamamlanmisMi(odeme))
+                                            {
+                                                <form method="post" asp-page-handler="OdemeYapildi" class="inline-form" onsubmit="return confirm('Bu ödeme bu ay için yapıldı olarak işaretlenecek. Devam edilsin mi?');">
+                                                    <input type="hidden" name="id" value="@odeme.Id" />
+                                                    <button type="submit" class="btn btn-outline-success btn-sm">Ödeme Yapıldı</button>
+                                                </form>
+                                                <form method="post" asp-page-handler="PasifeAl" class="inline-form">
+                                                    <input type="hidden" name="id" value="@odeme.Id" />
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm">Pasife Al</button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
 </div>

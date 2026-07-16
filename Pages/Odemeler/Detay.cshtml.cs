@@ -22,6 +22,8 @@ public class DetayModel : PageModel
     public List<OdemeHareketi> Hareketler { get; set; } = new();
     public OdemeDurumu Durum { get; set; }
     public bool BuAyOdendi { get; set; }
+    public decimal ToplamOdenenTutar { get; set; }
+    public DateTime? SonOdemeHareketiTarihi { get; set; }
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
@@ -63,6 +65,7 @@ public class DetayModel : PageModel
             odeme.ToplamTaksitSayisi,
             odeme.KalanTaksitSayisi,
             odeme.SonrakiOdemeTarihi,
+            odeme.TamamlandiMi,
             HareketSayisi = hareketler.Count,
             BildirimKaydiSayisi = bildirimler.Count
         };
@@ -98,6 +101,9 @@ public class DetayModel : PageModel
             .OrderByDescending(x => x.OdemeTarihi)
             .ThenByDescending(x => x.Id)
             .ToListAsync();
+
+        ToplamOdenenTutar = Hareketler.Sum(x => x.Tutar);
+        SonOdemeHareketiTarihi = Hareketler.FirstOrDefault()?.OdemeTarihi;
 
         var bugun = DateTime.UtcNow.Date;
         var ayBaslangic = new DateTime(bugun.Year, bugun.Month, 1, 0, 0, 0, DateTimeKind.Utc);

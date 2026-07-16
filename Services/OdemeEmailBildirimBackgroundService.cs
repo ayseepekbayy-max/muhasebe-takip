@@ -72,9 +72,11 @@ public class OdemeEmailBildirimBackgroundService : BackgroundService
             .AsNoTracking()
             .Include(x => x.Firma)
             .Where(x => x.AktifMi &&
+                        !x.TamamlandiMi &&
                         x.BildirimAktifMi &&
                         x.KalanTaksitSayisi > 0 &&
-                        x.SonrakiOdemeTarihi.Date <= bugun.AddDays(x.BildirimGunu))
+                        x.SonrakiOdemeTarihi != null &&
+                        x.SonrakiOdemeTarihi.Value.Date <= bugun.AddDays(x.BildirimGunu))
             .OrderBy(x => x.SonrakiOdemeTarihi)
             .Take(100)
             .ToListAsync(cancellationToken);
@@ -108,7 +110,7 @@ public class OdemeEmailBildirimBackgroundService : BackgroundService
         if (kullanici == null || !EmailService.IsValidEmail(kullanici.Email))
             return;
 
-        var donem = plan.SonrakiOdemeTarihi.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+        var donem = plan.SonrakiOdemeTarihi!.Value.ToString("yyyy-MM", CultureInfo.InvariantCulture);
         var dahaOnceBasarili = await db.OdemeBildirimGecmisleri.AnyAsync(x =>
             x.FirmaId == plan.FirmaId &&
             x.KullaniciId == kullanici.Id &&
@@ -121,7 +123,7 @@ public class OdemeEmailBildirimBackgroundService : BackgroundService
         if (dahaOnceBasarili)
             return;
 
-        var gecikmis = plan.SonrakiOdemeTarihi.Date < bugun;
+        var gecikmis = plan.SonrakiOdemeTarihi!.Value.Date < bugun;
         var konu = EmailService.SanitizeSubject($"{(gecikmis ? "Gecikmiş Ödeme" : "Yaklaşan Ödeme")}: {plan.OdemeAdi}");
         var html = MailHtml(plan, kullanici, emailSettings, bugun, gecikmis);
         var sonuc = await emailService.SendAsync(kullanici.Email, konu, html, cancellationToken);
@@ -173,7 +175,7 @@ public class OdemeEmailBildirimBackgroundService : BackgroundService
     private string MailHtml(OdemePlani plan, Kullanici kullanici, EmailSettings settings, DateTime bugun, bool gecikmis)
     {
         var tr = CultureInfo.GetCultureInfo("tr-TR");
-        var kalanGun = (plan.SonrakiOdemeTarihi.Date - bugun).Days;
+        var kalanGun = (plan.SonrakiOdemeTarihi!.Value.Date - bugun).Days;
         var baseUrl = string.IsNullOrWhiteSpace(settings.AppBaseUrl) ? "" : settings.AppBaseUrl.TrimEnd('/');
         var odemelerUrl = string.IsNullOrWhiteSpace(baseUrl) ? "/Odemeler" : $"{baseUrl}/Odemeler";
         var firmaAdi = plan.Firma?.FirmaAdi ?? "Firma";
@@ -193,7 +195,7 @@ public class OdemeEmailBildirimBackgroundService : BackgroundService
         <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;">Ödeme adı</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>{E(plan.OdemeAdi)}</strong></td></tr>
         <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;">Tür</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">{E(plan.OdemeTuru.Metin())}</td></tr>
         <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;">Aylık tutar</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">{plan.AylikOdemeTutari.ToString("C2", tr)}</td></tr>
-        <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;">Sonraki ödeme tarihi</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">{plan.SonrakiOdemeTarihi:dd.MM.yyyy}</td></tr>
+        <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;">Sonraki ödeme tarihi</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">{plan.SonrakiOdemeTarihi!.Value:dd.MM.yyyy}</td></tr>
         <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;">Ödemeye kalan gün</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">{kalanGun}</td></tr>
         <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;">Kalan taksit</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">{plan.KalanTaksitSayisi}</td></tr>
         <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;">Kalan toplam</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;">{plan.KalanToplamTutar.ToString("C2", tr)}</td></tr>

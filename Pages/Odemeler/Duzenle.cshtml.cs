@@ -41,7 +41,7 @@ public class DuzenleModel : PageModel
             ToplamTaksitSayisi = odeme.ToplamTaksitSayisi,
             KalanTaksitSayisi = odeme.KalanTaksitSayisi,
             IlkOdemeTarihi = odeme.IlkOdemeTarihi.Date,
-            SonrakiOdemeTarihi = odeme.SonrakiOdemeTarihi.Date,
+            SonrakiOdemeTarihi = odeme.SonrakiOdemeTarihi?.Date ?? DateTime.UtcNow.Date,
             OdemeGunu = odeme.OdemeGunu,
             BildirimGunu = odeme.BildirimGunu,
             BildirimAktifMi = odeme.BildirimAktifMi,
@@ -76,23 +76,29 @@ public class DuzenleModel : PageModel
             odeme.AylikOdemeTutari,
             odeme.KalanTaksitSayisi,
             odeme.SonrakiOdemeTarihi,
+            odeme.TamamlandiMi,
             odeme.AktifMi
         };
+
+        var kalanTaksit = Math.Max(0, Form.KalanTaksitSayisi);
+        var tamamlandi = kalanTaksit == 0 || odeme.TamamlandiMi;
 
         odeme.OdemeAdi = Form.OdemeAdi;
         odeme.OdemeTuru = Form.OdemeTuru;
         odeme.Aciklama = Form.Aciklama;
         odeme.AylikOdemeTutari = Form.AylikOdemeTutari;
         odeme.ToplamTaksitSayisi = Form.ToplamTaksitSayisi;
-        odeme.KalanTaksitSayisi = Math.Max(0, Form.KalanTaksitSayisi);
+        odeme.KalanTaksitSayisi = kalanTaksit;
         odeme.OdemeGunu = Form.OdemeGunu;
         odeme.IlkOdemeTarihi = OdemePlanlamaService.AyIcinGecerliGun(Form.IlkOdemeTarihi, Form.OdemeGunu);
-        odeme.SonrakiOdemeTarihi = OdemePlanlamaService.AyIcinGecerliGun(Form.SonrakiOdemeTarihi, Form.OdemeGunu);
+        odeme.SonrakiOdemeTarihi = tamamlandi ? null : OdemePlanlamaService.AyIcinGecerliGun(Form.SonrakiOdemeTarihi, Form.OdemeGunu);
         odeme.SonOdemeTarihi = OdemePlanlamaService.TahminiSonOdemeTarihi(odeme.IlkOdemeTarihi, Form.OdemeGunu, Form.ToplamTaksitSayisi);
         odeme.BildirimGunu = Form.BildirimGunu;
-        odeme.BildirimAktifMi = Form.BildirimAktifMi;
+        odeme.BildirimAktifMi = tamamlandi ? false : Form.BildirimAktifMi;
         odeme.OtomatikTaksitDusur = Form.OtomatikTaksitDusur;
-        odeme.AktifMi = Form.AktifMi;
+        odeme.AktifMi = tamamlandi ? false : Form.AktifMi;
+        odeme.TamamlandiMi = tamamlandi;
+        odeme.TamamlanmaTarihi = tamamlandi ? odeme.TamamlanmaTarihi : null;
         odeme.SonOdemeYapildiMi = false;
         odeme.GuncellemeTarihi = DateTime.UtcNow;
 
@@ -110,6 +116,7 @@ public class DuzenleModel : PageModel
                     odeme.AylikOdemeTutari,
                     odeme.KalanTaksitSayisi,
                     odeme.SonrakiOdemeTarihi,
+                    odeme.TamamlandiMi,
                     odeme.AktifMi
                 }),
             anaKaydiOnceKaydet: false);
