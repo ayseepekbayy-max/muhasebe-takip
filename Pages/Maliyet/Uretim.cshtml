@@ -18,6 +18,29 @@
 
 <div id="toast" class="toast" hidden></div>
 
+<div id="importPreviewModal" class="import-modal" hidden>
+    <div class="import-dialog">
+        <div class="import-title">
+            <div>
+                <strong>Çizimden İçe Aktar</strong>
+                <span id="importSummary">Dosya bekleniyor.</span>
+            </div>
+            <button type="button" class="mini-btn" id="cancelImportTop">Kapat</button>
+        </div>
+        <div id="importErrors" class="alert error" hidden></div>
+        <div class="import-duplicate-mode">
+            <label><input type="radio" name="duplicateMode" value="skip" checked> Zaten aktarılmış olanları atla</label>
+            <label><input type="radio" name="duplicateMode" value="update"> Mevcut dolapları güncelle</label>
+            <label><input type="radio" name="duplicateMode" value="copy"> Yeni kopya olarak ekle</label>
+        </div>
+        <div id="importPreviewList" class="import-list"></div>
+        <div class="actions">
+            <button type="button" class="primary" id="confirmImportBtn">Seçilenleri Aktar</button>
+            <button type="button" class="danger" id="cancelImportBtn">İptal</button>
+        </div>
+    </div>
+</div>
+
 <form method="post" id="maliyetForm">
     <input asp-for="UretimAdedi" type="hidden" id="UretimAdedi" />
     <input asp-for="DolaplarJson" type="hidden" id="DolaplarJson" />
@@ -46,7 +69,12 @@
                 <h2>3. Dolap Ekle</h2>
                 <p>Dolap listeye eklenir; mevcut dolaplar korunur.</p>
             </div>
-            <button type="button" class="soft" id="addCabinetBtn">Dolabı Ekle</button>
+            <div class="title-actions">
+                <button type="button" class="soft" id="addCabinetBtn">Dolabı Ekle</button>
+                <label class="soft import-label">Çizimden İçe Aktar
+                    <input id="importCostFile" type="file" accept=".json,application/json" hidden>
+                </label>
+            </div>
         </div>
         <div class="grid cabinet-grid">
             <label>Dolap Reçetesi
@@ -167,12 +195,12 @@
 <style>
     .alert{padding:10px 12px;border-radius:10px;margin-bottom:12px}.error{color:#b42318;background:#fef2f2;border:1px solid #fecaca}.ok{color:#166534;background:#f0fdf4;border:1px solid #bbf7d0}
     .box{border:1px solid #444;border-radius:10px;padding:18px;margin-bottom:16px;background:#f8fafc}.box h2{margin:0 0 12px;color:#0f2747;font-size:28px;font-weight:800}.box p{margin:0;color:#475569}
-    .title-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.grid{display:grid;gap:12px}.two{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}.common-grid,.cabinet-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+    .title-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.title-actions{display:flex;gap:10px;flex-wrap:wrap}.grid{display:grid;gap:12px}.two{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}.common-grid,.cabinet-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
     label{font-weight:700;color:#0f172a}input,select{width:100%;min-height:40px;padding:8px 10px;border:1px solid #dbe4ee;border-radius:10px;background:white;font-size:15px}input[type=checkbox]{width:auto;min-height:auto}
     .scroll{width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse}.material-table,.cut-table,.part-table{min-width:840px}th{text-align:left;border-bottom:1px solid #64748b;padding:8px;color:#1e293b;white-space:nowrap}td{border-bottom:1px solid #e2e8f0;padding:8px;vertical-align:top}
     .soft,.primary,.danger,.delete-row,.mini-btn,.link-toggle{border:none;border-radius:12px;padding:11px 14px;font-weight:800;cursor:pointer}.soft,.mini-btn,.link-toggle{background:#eef2ff;color:#312e81;border:1px solid #c7d2fe}.primary{background:#4f46e5;color:white}.danger,.delete-row{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}.actions{display:flex;gap:10px;flex-wrap:wrap}.stock-check{display:block;margin-top:14px}
     .cabinet-card{border:1px solid #dbe4ee;background:white;border-radius:10px;margin-top:12px}.cabinet-summary{display:grid;grid-template-columns:48px 1.5fr 1fr .7fr .9fr .9fr auto;gap:10px;align-items:center;padding:12px}.cabinet-actions{display:flex;gap:6px;flex-wrap:wrap}.cabinet-detail{border-top:1px solid #e2e8f0;padding:12px}.detail-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:12px 0 8px}.detail-head h3{margin:0;color:#0f2747;font-size:20px}
-    .empty-state{padding:14px;border:1px dashed #cbd5e1;border-radius:10px;background:white;color:#475569}.result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.result-grid div{border:1px solid #dbe4ee;background:white;border-radius:10px;padding:12px}.result-grid span{display:block;margin-top:8px;font-size:22px;font-weight:800;color:#312e81}.server-result{margin-top:12px}.hidden-transfer{display:none}.toast{position:fixed;right:16px;bottom:16px;padding:12px 14px;background:#166534;color:white;border-radius:10px;font-weight:800;z-index:20}
+    .empty-state{padding:14px;border:1px dashed #cbd5e1;border-radius:10px;background:white;color:#475569}.result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.result-grid div{border:1px solid #dbe4ee;background:white;border-radius:10px;padding:12px}.result-grid span{display:block;margin-top:8px;font-size:22px;font-weight:800;color:#312e81}.server-result{margin-top:12px}.hidden-transfer{display:none}.toast{position:fixed;right:16px;bottom:16px;padding:12px 14px;background:#166534;color:white;border-radius:10px;font-weight:800;z-index:20}.import-label{display:inline-flex;align-items:center}.import-modal{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:30;padding:18px;overflow:auto}.import-dialog{max-width:980px;margin:32px auto;background:white;border-radius:10px;padding:18px;border:1px solid #dbe4ee}.import-title{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}.import-title strong{display:block;font-size:22px;color:#0f2747}.import-title span{display:block;color:#64748b}.import-duplicate-mode{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0}.import-duplicate-mode label{font-weight:600}.import-list{display:grid;gap:8px;max-height:430px;overflow:auto}.import-row{display:grid;grid-template-columns:32px 1.5fr 1fr .6fr .9fr;gap:10px;align-items:center;border:1px solid #e2e8f0;border-radius:10px;padding:10px}.status-ready{color:#166534}.status-missing{color:#92400e}.status-invalid,.status-duplicate{color:#991b1b}
     @@media(max-width:900px){.cabinet-summary{grid-template-columns:1fr}.cabinet-actions .mini-btn,.cabinet-actions .delete-row{width:100%}.title-row{flex-direction:column}.soft,.primary,.danger,.link-toggle{width:100%}.box h2{font-size:23px}}
 </style>
 
@@ -370,11 +398,11 @@
         list.innerHTML = cabinets.map(function (cab, index) {
             return '<div class="cabinet-card"><div class="cabinet-summary">' +
                 '<strong>' + (index + 1) + '</strong>' +
-                '<strong>' + cab.name + '</strong>' +
+                '<strong>' + cab.name + (cab.missingRecipe ? ' · Reçete Eksik' : '') + '</strong>' +
                 '<span>' + fmt(cab.width,1) + ' × ' + fmt(cab.height,1) + ' × ' + fmt(cab.depth,1) + '</span>' +
                 '<span>' + cab.quantity + ' adet</span>' +
                 '<span>' + fmt(cabinetPartQty(cab),0) + ' parça</span>' +
-                '<span>' + fmt(cabinetBandMeters(cab),3) + ' m</span>' +
+                '<span>' + (cab.missingRecipe ? 'Üretim reçetesi henüz tanımlanmadı' : fmt(cabinetBandMeters(cab),3) + ' m') + '</span>' +
                 '<div class="cabinet-actions"><button type="button" class="mini-btn" onclick="toggleCabinet(\'' + cab.id + '\')">Detay</button><button type="button" class="mini-btn" onclick="editCabinet(\'' + cab.id + '\')">Düzenle</button><button type="button" class="mini-btn" onclick="copyCabinet(\'' + cab.id + '\')">Kopyala</button><button type="button" class="delete-row" onclick="deleteCabinet(\'' + cab.id + '\')">Sil</button></div>' +
                 '</div>' + (cab.open ? renderCabinetDetail(cab) : '') + '</div>';
         }).join('');
@@ -533,6 +561,200 @@
         document.getElementById('emptyMaterial').hidden = hasRows;
         document.getElementById('materialWrap').hidden = !hasRows;
     }
+
+
+    var FIRMOVA_COST_TRANSFER_FORMAT = 'firmova-design-cost-transfer';
+    var FIRMOVA_COST_TRANSFER_VERSION = 1;
+    var recipeCodeMap = {
+        ust_dolap_tek_kapak: 'singleUpper',
+        ust_dolap_cift_kapak: 'doubleUpper',
+        eviye_dolabi_tek_kapak: 'singleSink',
+        eviye_dolabi_cift_kapak: 'doubleSink'
+    };
+    var pendingImport = null;
+    var importedSourceIndex = {};
+
+    function rebuildImportedSourceIndex() {
+        importedSourceIndex = {};
+        cabinets.forEach(function(cab) {
+            (cab.sourceObjectIds || []).forEach(function(id) {
+                importedSourceIndex[id] = cab.id;
+            });
+        });
+    }
+
+    function validateCostTransfer(data) {
+        var errors = [];
+        if (!data || typeof data !== 'object') errors.push('JSON dosyası okunamadı.');
+        if (data?.format !== FIRMOVA_COST_TRANSFER_FORMAT) errors.push('Dosya formatı desteklenmiyor.');
+        if (data?.version !== FIRMOVA_COST_TRANSFER_VERSION) errors.push('Dosya sürümü desteklenmiyor.');
+        if (data?.units !== 'cm') errors.push('Ölçü birimi cm olmalıdır.');
+        if (!Array.isArray(data?.cabinets)) errors.push('Dolap listesi bulunamadı.');
+        var seen = {};
+        (data?.cabinets || []).forEach(function(cab, index) {
+            if (!cab.sourceObjectId) errors.push((index + 1) + '. dolapta kaynak nesne kimliği yok.');
+            if (cab.sourceObjectId && seen[cab.sourceObjectId]) errors.push('Aynı sourceObjectId dosyada birden fazla kez var: ' + cab.sourceObjectId);
+            seen[cab.sourceObjectId] = true;
+            ['widthCm','heightCm','depthCm'].forEach(function(field) {
+                var value = parseNum(cab[field]);
+                if (value <= 0 || value > 1000) errors.push((index + 1) + '. dolap ölçüsü geçersiz: ' + field);
+            });
+            var quantity = Math.floor(parseNum(cab.quantity || 1));
+            if (quantity < 1 || quantity > 999) errors.push((index + 1) + '. dolap adedi geçersiz.');
+        });
+        return errors;
+    }
+
+    function importStatus(cab) {
+        if (parseNum(cab.widthCm) <= 0 || parseNum(cab.heightCm) <= 0 || parseNum(cab.depthCm) <= 0) return { key: 'invalid', text: 'Geçersiz Ölçü' };
+        var sourceIds = cab.sourceObjectIds || [cab.sourceObjectId];
+        if (sourceIds.some(function(id) { return importedSourceIndex[id]; })) return { key: 'duplicate', text: 'Zaten Aktarılmış' };
+        if (recipeCodeMap[cab.recipeCode]) return { key: 'ready', text: 'Reçete Hazır' };
+        return { key: 'missing', text: 'Reçete Eksik' };
+    }
+
+    function normalizeImportedCabinets(rawCabinets) {
+        var groups = {};
+        rawCabinets.forEach(function(cab) {
+            var key = [
+                cab.recipeCode || '',
+                Math.round(parseNum(cab.widthCm) * 100),
+                Math.round(parseNum(cab.heightCm) * 100),
+                Math.round(parseNum(cab.depthCm) * 100),
+                Math.round(parseNum(cab.doorCount || 0)),
+                Math.round(parseNum(cab.shelfCount || 0))
+            ].join('|');
+            if (!groups[key]) {
+                groups[key] = {
+                    sourceObjectId: cab.sourceObjectId,
+                    sourceObjectIds: [],
+                    sourceType: cab.sourceType || '',
+                    recipeCode: cab.recipeCode || 'recete_tanimlanmadi',
+                    displayName: cab.displayName || cab.sourceType || 'Dolap',
+                    widthCm: parseNum(cab.widthCm),
+                    heightCm: parseNum(cab.heightCm),
+                    depthCm: parseNum(cab.depthCm),
+                    quantity: 0,
+                    doorCount: Math.round(parseNum(cab.doorCount || 0)),
+                    shelfCount: Math.round(parseNum(cab.shelfCount || 0))
+                };
+            }
+            groups[key].quantity += Math.max(1, Math.floor(parseNum(cab.quantity || 1)));
+            groups[key].sourceObjectIds.push(cab.sourceObjectId);
+        });
+        return Object.values(groups);
+    }
+
+    function showImportError(errors) {
+        var box = document.getElementById('importErrors');
+        box.hidden = false;
+        box.innerText = errors.join('\n');
+        document.getElementById('importPreviewModal').hidden = false;
+    }
+
+    function renderImportPreview() {
+        rebuildImportedSourceIndex();
+        var modal = document.getElementById('importPreviewModal');
+        var list = document.getElementById('importPreviewList');
+        var summary = document.getElementById('importSummary');
+        var errors = document.getElementById('importErrors');
+        errors.hidden = true;
+        list.innerHTML = '';
+        if (!pendingImport) return;
+        summary.innerText = pendingImport.projectName + ' · ' + new Date(pendingImport.exportedAt).toLocaleString('tr-TR') + ' · ' + pendingImport.cabinets.length + ' dolap';
+        pendingImport.cabinets.forEach(function(cab, index) {
+            var status = importStatus(cab);
+            var row = document.createElement('label');
+            row.className = 'import-row';
+            var checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = status.key === 'ready' || status.key === 'missing';
+            checkbox.disabled = status.key === 'invalid' || status.key === 'duplicate';
+            checkbox.dataset.importIndex = index;
+            row.appendChild(checkbox);
+            [cab.displayName, fmt(cab.widthCm,1) + ' × ' + fmt(cab.heightCm,1) + ' × ' + fmt(cab.depthCm,1), cab.quantity + ' adet'].forEach(function(text) {
+                var span = document.createElement('span');
+                span.innerText = text;
+                row.appendChild(span);
+            });
+            var state = document.createElement('strong');
+            state.className = 'status-' + status.key;
+            state.innerText = status.text;
+            row.appendChild(state);
+            list.appendChild(row);
+        });
+        modal.hidden = false;
+    }
+
+    function closeImportPreview() {
+        document.getElementById('importPreviewModal').hidden = true;
+        document.getElementById('importCostFile').value = '';
+    }
+
+    function cabinetFromImport(cab) {
+        var recipeKey = recipeCodeMap[cab.recipeCode];
+        var result = recipeKey
+            ? buildCabinet(recipeKey, parseNum(cab.widthCm), parseNum(cab.heightCm), parseNum(cab.depthCm), parseNum(cab.quantity), 1.8)
+            : { id: uid(), recipeKey: '', name: cab.displayName || 'Reçete Eksik', width: parseNum(cab.widthCm), height: parseNum(cab.heightCm), depth: parseNum(cab.depthCm), quantity: Math.max(1, Math.floor(parseNum(cab.quantity || 1))), thickness: 1.8, open: false, parts: [], bands: [], missingRecipe: true };
+        result.recipeCode = cab.recipeCode;
+        result.sourceProjectId = pendingImport.projectId;
+        result.transferId = pendingImport.transferId;
+        result.sourceType = cab.sourceType || '';
+        result.sourceObjectIds = cab.sourceObjectIds || [cab.sourceObjectId];
+        result.importedFromDrawing = true;
+        if (result.missingRecipe) result.missingRecipeNote = 'Bu dolap için üretim reçetesi henüz tanımlanmadı.';
+        return result;
+    }
+
+    function confirmImport() {
+        if (!pendingImport) return;
+        rebuildImportedSourceIndex();
+        var duplicateMode = document.querySelector('[name="duplicateMode"]:checked')?.value || 'skip';
+        var selected = Array.prototype.map.call(document.querySelectorAll('[data-import-index]:checked'), function(input) {
+            return pendingImport.cabinets[Number(input.dataset.importIndex)];
+        });
+        selected.forEach(function(cab) {
+            var existingIds = (cab.sourceObjectIds || [cab.sourceObjectId]).map(function(id) { return importedSourceIndex[id]; }).filter(Boolean);
+            if (existingIds.length && duplicateMode === 'skip') return;
+            if (existingIds.length && duplicateMode === 'update') {
+                var updated = cabinetFromImport(cab);
+                cabinets = cabinets.map(function(existing) { return existing.id === existingIds[0] ? Object.assign(updated, { id: existing.id }) : existing; });
+            } else {
+                cabinets.push(cabinetFromImport(cab));
+            }
+        });
+        showToast(selected.length + ' dolap içe aktarıldı.');
+        closeImportPreview();
+        renderAll();
+    }
+
+    document.getElementById('importCostFile')?.addEventListener('change', function(event) {
+        var file = event.target.files && event.target.files[0];
+        if (!file) return;
+        if (file.size > 1024 * 1024) {
+            pendingImport = null;
+            showImportError(['Dosya çok büyük. En fazla 1 MB JSON dosyası seçin.']);
+            return;
+        }
+        var reader = new FileReader();
+        reader.onload = function() {
+            try {
+                var data = JSON.parse(String(reader.result || ''));
+                var errors = validateCostTransfer(data);
+                if (errors.length) { pendingImport = null; showImportError(errors); return; }
+                data.cabinets = normalizeImportedCabinets(data.cabinets);
+                pendingImport = data;
+                renderImportPreview();
+            } catch (_) {
+                pendingImport = null;
+                showImportError(['JSON dosyası geçerli değil.']);
+            }
+        };
+        reader.readAsText(file, 'utf-8');
+    });
+    document.getElementById('confirmImportBtn')?.addEventListener('click', confirmImport);
+    document.getElementById('cancelImportBtn')?.addEventListener('click', closeImportPreview);
+    document.getElementById('cancelImportTop')?.addEventListener('click', closeImportPreview);
 
     document.getElementById('cabinetRecipe').addEventListener('change', function() {
         var recipe = recipes[this.value];
