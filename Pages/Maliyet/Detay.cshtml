@@ -43,6 +43,39 @@ else
         </div>
     </section>
 
+    @if (Model.Dolaplar.Any())
+    {
+        <section class="detail-box">
+            <h2>Dolap Listesi</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sıra</th>
+                            <th>Dolap Adı</th>
+                            <th>Ölçü</th>
+                            <th>Dolap Adedi</th>
+                            <th>Toplam Parça Adedi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.Dolaplar.Count; i++)
+                        {
+                            var dolap = Model.Dolaplar[i];
+                            <tr>
+                                <td>@(i + 1)</td>
+                                <td>@dolap.Ad</td>
+                                <td>@dolap.Genislik.ToString("N1") × @dolap.Yukseklik.ToString("N1") × @dolap.Derinlik.ToString("N1")</td>
+                                <td>@dolap.Adet.ToString("N0")</td>
+                                <td>@dolap.ParcaAdedi.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+
     @await Html.PartialAsync("_MaliyetDetayTablo", ("Plaka Detayları", Model.Detay.Plakalar))
     @await Html.PartialAsync("_MaliyetDetayTablo", ("Bantlama Detayları", Model.Detay.Bantlamalar))
     @await Html.PartialAsync("_MaliyetDetayTablo", ("Arkalık Detayları", Model.Detay.Arkaliklar))

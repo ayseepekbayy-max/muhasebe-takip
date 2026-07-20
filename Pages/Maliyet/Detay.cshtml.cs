@@ -20,6 +20,8 @@ public class DetayModel : PageModel
 
     public MaliyetKaydiDetay Detay { get; set; } = new();
 
+    public List<MaliyetDolapOzet> Dolaplar { get; set; } = new();
+
     public async Task<IActionResult> OnGetAsync(int id)
     {
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
@@ -36,8 +38,73 @@ public class DetayModel : PageModel
             return RedirectToPage("/Maliyet/Index");
 
         Detay = DetayOku(Kayit.DetayJson);
+        Dolaplar = DolaplariOku(Detay.DolaplarJson);
 
         return Page();
+    }
+
+    private static List<MaliyetDolapOzet> DolaplariOku(string? json)
+    {
+        var liste = new List<MaliyetDolapOzet>();
+
+        if (string.IsNullOrWhiteSpace(json))
+            return liste;
+
+        try
+        {
+            using var belge = JsonDocument.Parse(json);
+            if (belge.RootElement.ValueKind != JsonValueKind.Array)
+                return liste;
+
+            foreach (var item in belge.RootElement.EnumerateArray())
+            {
+                var adet = GetDecimal(item, "quantity");
+                var parcaAdedi = 0m;
+
+                if (item.TryGetProperty("parts", out var parts) && parts.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var part in parts.EnumerateArray())
+                        parcaAdedi += GetDecimal(part, "adet") * adet;
+                }
+
+                liste.Add(new MaliyetDolapOzet
+                {
+                    Ad = GetString(item, "name"),
+                    Genislik = GetDecimal(item, "width"),
+                    Yukseklik = GetDecimal(item, "height"),
+                    Derinlik = GetDecimal(item, "depth"),
+                    Adet = adet,
+                    ParcaAdedi = parcaAdedi
+                });
+            }
+        }
+        catch
+        {
+            return new List<MaliyetDolapOzet>();
+        }
+
+        return liste;
+    }
+
+    private static string GetString(JsonElement item, string name)
+    {
+        return item.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString() ?? ""
+            : "";
+    }
+
+    private static decimal GetDecimal(JsonElement item, string name)
+    {
+        if (!item.TryGetProperty(name, out var value))
+            return 0;
+
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetDecimal(out var result))
+            return result;
+
+        if (value.ValueKind == JsonValueKind.String && decimal.TryParse(value.GetString(), out result))
+            return result;
+
+        return 0;
     }
 
     private static MaliyetKaydiDetay DetayOku(string? json)
@@ -54,4 +121,20 @@ public class DetayModel : PageModel
             return new MaliyetKaydiDetay();
         }
     }
+}
+
+
+public class MaliyetDolapOzet
+{
+    public string Ad { get; set; } = "";
+
+    public decimal Genislik { get; set; }
+
+    public decimal Yukseklik { get; set; }
+
+    public decimal Derinlik { get; set; }
+
+    public decimal Adet { get; set; }
+
+    public decimal ParcaAdedi { get; set; }
 }

@@ -27,6 +27,24 @@ public class UretimModel : PageModel
     public decimal UretimAdedi { get; set; } = 1;
 
     [BindProperty]
+    public string Aciklama { get; set; } = "";
+
+    [BindProperty]
+    public decimal OrtakPlakaEnCm { get; set; }
+
+    [BindProperty]
+    public decimal OrtakPlakaBoyCm { get; set; }
+
+    [BindProperty]
+    public decimal OrtakPlakaFiyati { get; set; }
+
+    [BindProperty]
+    public decimal OrtakBantMetreFiyati { get; set; }
+
+    [BindProperty]
+    public string DolaplarJson { get; set; } = "[]";
+
+    [BindProperty]
     public List<PlakaSatiri> Plakalar { get; set; } = new();
 
     [BindProperty]
@@ -202,6 +220,7 @@ public class UretimModel : PageModel
             ToplamMaliyet = ToplamMaliyet,
             BirimMaliyet = BirimMaliyet,
             Kaynak = "Üretim",
+            OkunanMetin = Aciklama?.Trim() ?? "",
             DetayJson = JsonSerializer.Serialize(detay),
             HesapTarihi = DateTime.UtcNow
         };
@@ -221,6 +240,12 @@ public class UretimModel : PageModel
     {
         return new MaliyetKaydiDetay
         {
+            Aciklama = Aciklama?.Trim() ?? "",
+            OrtakPlakaEnCm = OrtakPlakaEnCm,
+            OrtakPlakaBoyCm = OrtakPlakaBoyCm,
+            OrtakPlakaFiyati = OrtakPlakaFiyati,
+            OrtakBantMetreFiyati = OrtakBantMetreFiyati,
+            DolaplarJson = DolaplarJson ?? "[]",
             Plakalar = Plakalar
                 .Where(x => x.ToplamMaliyet > 0)
                 .Select(x => new MaliyetDetaySatiri
@@ -451,9 +476,7 @@ public class UretimModel : PageModel
             .Select(_ => new PlakaSatiri())
             .ToList();
 
-        Malzemeler = Enumerable.Range(0, 8)
-            .Select(_ => new MalzemeSatiri())
-            .ToList();
+        Malzemeler = new List<MalzemeSatiri>();
     }
 
     private void BelgeAktariminiUygula()
@@ -480,9 +503,6 @@ public class UretimModel : PageModel
             })
             .ToList();
 
-        while (aktarilanMalzemeler.Count < 8)
-            aktarilanMalzemeler.Add(new MalzemeSatiri());
-
         Malzemeler = aktarilanMalzemeler;
         Mesaj = "Belgeden okunan maliyet kalemleri Ek Malzemeler bölümüne aktarıldı. Kontrol edip Maliyeti Hesapla diyebilirsiniz.";
     }
@@ -494,17 +514,9 @@ public class UretimModel : PageModel
         Arkaliklar ??= new List<PlakaSatiri>();
         Malzemeler ??= new List<MalzemeSatiri>();
 
-        if (!Plakalar.Any())
-            Plakalar.Add(new PlakaSatiri());
-
-        if (!Bantlamalar.Any())
-            Bantlamalar.Add(new BantlamaSatiri());
-
-        if (!Arkaliklar.Any())
-            Arkaliklar.Add(new PlakaSatiri());
-
-        while (Malzemeler.Count < 8)
-            Malzemeler.Add(new MalzemeSatiri());
+        Malzemeler = Malzemeler
+            .Where(x => x.StokUrunId > 0 || x.BirParcaKullanimMiktari > 0 || x.BirimMaliyet > 0)
+            .ToList();
     }
 }
 

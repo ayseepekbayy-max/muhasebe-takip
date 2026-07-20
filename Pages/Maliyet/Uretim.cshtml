@@ -16,26 +16,41 @@
     <div class="alert ok">@Model.Mesaj</div>
 }
 
-<form method="post">
+<div id="toast" class="toast" hidden></div>
+
+<form method="post" id="maliyetForm">
+    <input asp-for="UretimAdedi" type="hidden" id="UretimAdedi" />
+    <input asp-for="DolaplarJson" type="hidden" id="DolaplarJson" />
+
     <section class="box">
-        <h2>1. Üretim Bilgileri</h2>
+        <h2>1. Proje ve Maliyet Bilgileri</h2>
         <div class="grid two">
-            <label>Üretilecek Ürün / İş Adı <input asp-for="UretimAdi" /></label>
-            <label>Üretilecek Ürün Adedi <input asp-for="UretimAdedi" type="number" step="0.01" /></label>
+            <label>Proje / Maliyet Adı <input asp-for="UretimAdi" /></label>
+            <label>Açıklama <input asp-for="Aciklama" /></label>
         </div>
     </section>
 
-    <section class="box recipe-box">
+    <section class="box">
+        <h2>2. Ortak Plaka ve Bant Bilgileri</h2>
+        <div class="grid common-grid">
+            <label>Ortak Plaka En (cm) <input asp-for="OrtakPlakaEnCm" id="commonPlakaEn" type="number" step="0.01" /></label>
+            <label>Ortak Plaka Boy (cm) <input asp-for="OrtakPlakaBoyCm" id="commonPlakaBoy" type="number" step="0.01" /></label>
+            <label>Ortak Plaka Fiyatı <input asp-for="OrtakPlakaFiyati" id="commonPlakaFiyati" type="number" step="0.01" /></label>
+            <label>Bant Metre Fiyatı <input asp-for="OrtakBantMetreFiyati" id="commonBantFiyati" type="number" step="0.01" /></label>
+        </div>
+    </section>
+
+    <section class="box">
         <div class="title-row">
             <div>
-                <h2>2. Dolap Reçetesi</h2>
-                <p>Hazır reçeteyi seçip ölçüleri kontrol edin; satırlar yalnızca Reçeteyi Uygula ile oluşturulur.</p>
+                <h2>3. Dolap Ekle</h2>
+                <p>Dolap listeye eklenir; mevcut dolaplar korunur.</p>
             </div>
-            <button type="button" class="soft" onclick="applyRecipe()">Reçeteyi Uygula</button>
+            <button type="button" class="soft" id="addCabinetBtn">Dolabı Ekle</button>
         </div>
-        <div class="grid recipe-grid">
-            <label>Reçete
-                <select id="recipeType">
+        <div class="grid cabinet-grid">
+            <label>Dolap Reçetesi
+                <select id="cabinetRecipe">
                     <option value="">-- Reçete Seçin --</option>
                     <option value="singleUpper">Tek Kapaklı Üst Dolap</option>
                     <option value="doubleUpper">Çift Kapaklı Üst Dolap</option>
@@ -43,153 +58,60 @@
                     <option value="doubleSink">Çift Kapaklı Eviye Dolabı</option>
                 </select>
             </label>
-            <label>Dolap Genişliği (cm) <input id="recipeWidth" type="number" step="0.01" value="60" /></label>
-            <label>Dolap Yüksekliği (cm) <input id="recipeHeight" type="number" step="0.01" value="72" /></label>
-            <label>Dolap Derinliği (cm) <input id="recipeDepth" type="number" step="0.01" value="33" /></label>
-            <label>Gövde Kalınlığı (cm) <input id="recipeThickness" type="number" step="0.01" value="1.8" /></label>
-        </div>
-        <div class="grid recipe-grid common-values">
-            <label>Ortak Plaka En (cm) <input id="commonPlakaEn" type="number" step="0.01" /></label>
-            <label>Ortak Plaka Boy (cm) <input id="commonPlakaBoy" type="number" step="0.01" /></label>
-            <label>Ortak Plaka Fiyatı <input id="commonPlakaFiyati" type="number" step="0.01" /></label>
-            <label>Bant Metre Fiyatı <input id="commonBantFiyati" type="number" step="0.01" /></label>
+            <label>Dolap Genişliği (cm) <input id="cabinetWidth" type="number" step="0.01" value="60" /></label>
+            <label>Dolap Yüksekliği (cm) <input id="cabinetHeight" type="number" step="0.01" value="72" /></label>
+            <label>Dolap Derinliği (cm) <input id="cabinetDepth" type="number" step="0.01" value="33" /></label>
+            <label>Gövde Kalınlığı (cm) <input id="cabinetThickness" type="number" step="0.01" value="1.8" /></label>
+            <label>Dolap Adedi <input id="cabinetQty" type="number" step="1" min="1" value="1" /></label>
         </div>
     </section>
 
     <section class="box">
         <div class="title-row">
             <div>
-                <h2>3. Plaka Maliyeti</h2>
-                <p>Gövde, kapak, raf gibi farklı ölçüleri ayrı satır girin.</p>
+                <h2>4. Eklenen Dolaplar</h2>
+                <p>Detay alanı varsayılan olarak kapalıdır; her dolap ayrı düzenlenir.</p>
             </div>
-            <button type="button" class="soft" onclick="addPlaka()">+ Plaka Satırı Ekle</button>
         </div>
-        <div class="scroll">
-            <table class="plaka-table">
-                <thead>
-                    <tr>
-                        <th>Açıklama</th><th>Plaka En</th><th>Plaka Boy</th><th>Plaka Fiyatı</th>
-                        <th>Parça En</th><th>Parça Boy</th><th>Parça Adedi</th><th>Toplam</th><th>İşlem</th>
-                    </tr>
-                </thead>
-                <tbody id="plakaRows">
-                    @for (var i = 0; i < Model.Plakalar.Count; i++)
-                    {
-                        <tr data-plaka-row>
-                            <td><input asp-for="Plakalar[i].Aciklama" placeholder="Örn: Kapak" /></td>
-                            <td><input asp-for="Plakalar[i].PlakaEnCm" type="number" step="0.01" /></td>
-                            <td><input asp-for="Plakalar[i].PlakaBoyCm" type="number" step="0.01" /></td>
-                            <td><input asp-for="Plakalar[i].PlakaFiyati" type="number" step="0.01" /></td>
-                            <td><input asp-for="Plakalar[i].ParcaEnCm" type="number" step="0.01" /></td>
-                            <td><input asp-for="Plakalar[i].ParcaBoyCm" type="number" step="0.01" /></td>
-                            <td><input asp-for="Plakalar[i].ParcaAdedi" type="number" step="0.01" /></td>
-                            <td>@Model.Plakalar[i].ToplamMaliyet.ToString("N2")</td>
-                            <td><button type="button" class="delete-row" onclick="removeRow(this, 'plaka')">Sil</button></td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        <div id="cabinetList" class="cabinet-list">
+            <div class="empty-state">Henüz dolap eklenmedi.</div>
         </div>
     </section>
 
     <section class="box">
         <div class="title-row">
             <div>
-                <h2>4. Bantlama Maliyeti</h2>
-                <p>Kesilen parçaların bantlama ölçülerini eski mantıkla ayrı girin.</p>
+                <h2>5. Ek Malzemeler</h2>
+                <p>Malzeme eklenene kadar boş satır gösterilmez.</p>
             </div>
-            <button type="button" class="soft" onclick="addBantlama()">+ Bantlama Satırı Ekle</button>
+            <button type="button" class="soft" onclick="addMalzeme()">Malzeme Ekle</button>
         </div>
-        <div class="scroll">
-            <table class="bant-table">
-                <thead>
-                    <tr>
-                        <th>Açıklama</th><th>Parça En</th><th>Parça Boy</th><th>Parça Adedi</th><th>Bant Metre Fiyatı</th><th>Bant Kenarları</th><th>Toplam Metre</th><th>Toplam</th><th>İşlem</th>
-                    </tr>
-                </thead>
-                <tbody id="bantlamaRows">
-                    @for (var i = 0; i < Model.Bantlamalar.Count; i++)
-                    {
-                        <tr data-bantlama-row>
-                            <td><input asp-for="Bantlamalar[i].Aciklama" placeholder="Örn: Kapak bant" /></td>
-                            <td><input asp-for="Bantlamalar[i].ParcaEnCm" type="number" step="0.01" /></td>
-                            <td><input asp-for="Bantlamalar[i].ParcaBoyCm" type="number" step="0.01" /></td>
-                            <td><input asp-for="Bantlamalar[i].ParcaAdedi" type="number" step="0.01" /></td>
-                            <td><input asp-for="Bantlamalar[i].BantMetreFiyati" type="number" step="0.01" /></td>
-                            <td class="checks">
-                                <label><input type="hidden" name="Bantlamalar[@i].BantUstAlt" value="false" /><input name="Bantlamalar[@i].BantUstAlt" type="checkbox" value="true" @(Model.Bantlamalar[i].BantUstAlt ? "checked" : "") /> Üst/Alt</label>
-                                <label><input type="hidden" name="Bantlamalar[@i].BantSagSol" value="false" /><input name="Bantlamalar[@i].BantSagSol" type="checkbox" value="true" @(Model.Bantlamalar[i].BantSagSol ? "checked" : "") /> Sağ/Sol</label>
-                            </td>
-                            <td>@Model.Bantlamalar[i].ToplamMetre.ToString("N2")</td>
-                            <td>@Model.Bantlamalar[i].ToplamMaliyet.ToString("N2")</td>
-                            <td><button type="button" class="delete-row" onclick="removeRow(this, 'bantlama')">Sil</button></td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </section>
-    <section class="box">
-        <div class="title-row">
-            <div>
-                <h2>5. Plaka Maliyeti (Arkalık)</h2>
-                <p>Arkalık ölçülerini ve farklı plaka tiplerini burada girin.</p>
-            </div>
-            <button type="button" class="soft" onclick="addArkalik()">+ Arkalık Satırı Ekle</button>
-        </div>
-        <div class="scroll">
-            <table class="small-table">
-                <thead><tr><th>Açıklama</th><th>Plaka En</th><th>Plaka Boy</th><th>Plaka Fiyatı</th><th>Parça En</th><th>Parça Boy</th><th>Parça Adedi</th><th>Toplam</th><th>İşlem</th></tr></thead>
-                <tbody id="arkalikRows">
-                    @for (var i = 0; i < Model.Arkaliklar.Count; i++)
-                    {
-                        <tr data-arkalik-row>
-                            <td><input asp-for="Arkaliklar[i].Aciklama" placeholder="Örn: Arkalık" /></td>
-                            <td><input asp-for="Arkaliklar[i].PlakaEnCm" type="number" step="0.01" /></td>
-                            <td><input asp-for="Arkaliklar[i].PlakaBoyCm" type="number" step="0.01" /></td>
-                            <td><input asp-for="Arkaliklar[i].PlakaFiyati" type="number" step="0.01" /></td>
-                            <td><input asp-for="Arkaliklar[i].ParcaEnCm" type="number" step="0.01" /></td>
-                            <td><input asp-for="Arkaliklar[i].ParcaBoyCm" type="number" step="0.01" /></td>
-                            <td><input asp-for="Arkaliklar[i].ParcaAdedi" type="number" step="0.01" /></td>
-                            <td>@Model.Arkaliklar[i].ToplamMaliyet.ToString("N2")</td>
-                            <td><button type="button" class="delete-row" onclick="removeRow(this, 'arkalik')">Sil</button></td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <section class="box">
-        <div class="title-row">
-            <div>
-                <h2>6. Ek Malzemeler</h2>
-                <p>Vida, menteşe, ray, kulp gibi ürünleri ihtiyaç oldukça artırın.</p>
-            </div>
-            <button type="button" class="soft" onclick="addMalzeme()">+ Malzeme Satırı Ekle</button>
-        </div>
-        <div class="scroll">
+        <div id="emptyMaterial" class="empty-state">Henüz ek malzeme eklenmedi.</div>
+        <div class="scroll" id="materialWrap" hidden>
             <table class="material-table">
                 <thead><tr><th>Stok Ürünü</th><th>1 Ürün İçin Kullanım</th><th>Birim Maliyet</th><th>Toplam Kullanım</th><th>Toplam Maliyet</th><th>İşlem</th></tr></thead>
                 <tbody id="malzemeRows">
                     @for (var i = 0; i < Model.Malzemeler.Count; i++)
                     {
-                        <tr data-malzeme-row>
-                            <td>
-                                <select asp-for="Malzemeler[i].StokUrunId">
-                                    <option value="0">-- Ürün Seçin --</option>
-                                    @foreach (var item in Model.StokUrunleri)
-                                    {
-                                        <option value="@item.Id">@item.Ad (@item.Birim)</option>
-                                    }
-                                </select>
-                            </td>
-                            <td><input asp-for="Malzemeler[i].BirParcaKullanimMiktari" type="number" step="0.01" /></td>
-                            <td><input asp-for="Malzemeler[i].BirimMaliyet" type="number" step="0.01" /></td>
-                            <td>@Model.Malzemeler[i].ToplamKullanimMiktari.ToString("N2")</td>
-                            <td>@Model.Malzemeler[i].ToplamMaliyet.ToString("N2")</td>
-                            <td><button type="button" class="delete-row" onclick="removeRow(this, 'malzeme')">Sil</button></td>
-                        </tr>
+                        if (Model.Malzemeler[i].StokUrunId > 0 || Model.Malzemeler[i].BirParcaKullanimMiktari > 0 || Model.Malzemeler[i].BirimMaliyet > 0)
+                        {
+                            <tr data-malzeme-row>
+                                <td>
+                                    <select asp-for="Malzemeler[i].StokUrunId">
+                                        <option value="0">-- Ürün Seçin --</option>
+                                        @foreach (var item in Model.StokUrunleri)
+                                        {
+                                            <option value="@item.Id">@item.Ad (@item.Birim)</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td><input asp-for="Malzemeler[i].BirParcaKullanimMiktari" type="number" step="0.01" /></td>
+                                <td><input asp-for="Malzemeler[i].BirimMaliyet" type="number" step="0.01" /></td>
+                                <td>@Model.Malzemeler[i].ToplamKullanimMiktari.ToString("N2")</td>
+                                <td>@Model.Malzemeler[i].ToplamMaliyet.ToString("N2")</td>
+                                <td><button type="button" class="delete-row" onclick="removeMaterial(this)">Sil</button></td>
+                            </tr>
+                        }
                     }
                 </tbody>
             </table>
@@ -197,30 +119,42 @@
         <label class="stock-check"><input asp-for="StoktanDus" type="checkbox" /> Hesaplanan ek malzemeleri stoktan düş</label>
     </section>
 
-    <div class="actions">
-        <button type="submit" asp-page-handler="Hesapla" class="primary">Maliyeti Hesapla</button>
-        <button type="submit" asp-page-handler="StokDus" class="danger">Hesapla ve Stoktan Düş</button>
-    </div>
-</form>
-
-<section class="box result">
-    <h2>7. Sonuç</h2>
-    @if (!Model.HesaplandiMi)
-    {
-        <div>Bilgileri girip maliyeti hesaplayın.</div>
-    }
-    else
-    {
-        <div class="result-grid">
-            <div><b>Plaka Maliyeti</b><span>@Model.PlakaMaliyeti.ToString("N2") TL</span></div>
-            <div><b>Bantlama Maliyeti</b><span>@Model.BantlamaMaliyeti.ToString("N2") TL</span></div>
-            <div><b>Arkalık Maliyeti</b><span>@Model.ArkalikMaliyeti.ToString("N2") TL</span></div>
-            <div><b>Malzeme Maliyeti</b><span>@Model.MalzemeMaliyeti.ToString("N2") TL</span></div>
-            <div><b>Toplam Maliyet</b><span>@Model.ToplamMaliyet.ToString("N2") TL</span></div>
-            <div><b>Birim Maliyet</b><span>@Model.BirimMaliyet.ToString("N2") TL</span></div>
+    <section class="box">
+        <button type="button" class="link-toggle" id="cutListToggle">6. Birleştirilmiş Kesim Listesi</button>
+        <div id="cutListPanel" hidden>
+            <div id="cutList"></div>
         </div>
-    }
-</section>
+    </section>
+
+    <section class="box result">
+        <h2>7. Maliyet Sonucu</h2>
+        <div class="result-grid" id="liveResult"></div>
+        @if (Model.HesaplandiMi)
+        {
+            <div class="result-grid server-result">
+                <div><b>Kaydedilen Plaka Maliyeti</b><span>@Model.PlakaMaliyeti.ToString("N2") TL</span></div>
+                <div><b>Kaydedilen Bantlama Maliyeti</b><span>@Model.BantlamaMaliyeti.ToString("N2") TL</span></div>
+                <div><b>Kaydedilen Malzeme Maliyeti</b><span>@Model.MalzemeMaliyeti.ToString("N2") TL</span></div>
+                <div><b>Kaydedilen Genel Maliyet</b><span>@Model.ToplamMaliyet.ToString("N2") TL</span></div>
+            </div>
+        }
+    </section>
+
+    <section class="box hidden-transfer" aria-hidden="true">
+        <h2>Gizli Aktarım Satırları</h2>
+        <table><tbody id="plakaRows"></tbody></table>
+        <table><tbody id="bantlamaRows"></tbody></table>
+        <table><tbody id="arkalikRows"></tbody></table>
+    </section>
+
+    <section class="box">
+        <h2>8. Kaydetme İşlemleri</h2>
+        <div class="actions">
+            <button type="submit" asp-page-handler="Hesapla" class="primary">Maliyeti Hesapla ve Kaydet</button>
+            <button type="submit" asp-page-handler="StokDus" class="danger">Hesapla, Kaydet ve Stoktan Düş</button>
+        </div>
+    </section>
+</form>
 
 <select id="stokOptions" style="display:none;">
     <option value="0">-- Ürün Seçin --</option>
@@ -233,15 +167,18 @@
 <style>
     .alert{padding:10px 12px;border-radius:10px;margin-bottom:12px}.error{color:#b42318;background:#fef2f2;border:1px solid #fecaca}.ok{color:#166534;background:#f0fdf4;border:1px solid #bbf7d0}
     .box{border:1px solid #444;border-radius:10px;padding:18px;margin-bottom:16px;background:#f8fafc}.box h2{margin:0 0 12px;color:#0f2747;font-size:28px;font-weight:800}.box p{margin:0;color:#475569}
-    .title-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.grid{display:grid;gap:12px}.two{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}.recipe-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:14px}.common-values{padding-top:12px;border-top:1px solid #dbe4ee}
+    .title-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.grid{display:grid;gap:12px}.two{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}.common-grid,.cabinet-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
     label{font-weight:700;color:#0f172a}input,select{width:100%;min-height:40px;padding:8px 10px;border:1px solid #dbe4ee;border-radius:10px;background:white;font-size:15px}input[type=checkbox]{width:auto;min-height:auto}
-    .scroll{width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse}.plaka-table,.small-table{min-width:950px}.bant-table{min-width:1080px}.material-table{min-width:940px}th{text-align:left;border-bottom:1px solid #64748b;padding:8px;color:#1e293b;white-space:nowrap}td{border-bottom:1px solid #e2e8f0;padding:8px;vertical-align:top;min-width:95px}td:first-child{min-width:150px}.checks{min-width:150px}.checks label{display:block;font-weight:500;margin-bottom:6px;white-space:nowrap}
-    .soft,.primary,.danger,.delete-row{border:none;border-radius:12px;padding:11px 14px;font-weight:800;cursor:pointer}.soft{background:#eef2ff;color:#312e81;border:1px solid #c7d2fe}.primary{background:#4f46e5;color:white}.danger,.delete-row{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.stock-check{display:block;margin-top:14px}
-    .result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.result-grid div{border:1px solid #dbe4ee;background:white;border-radius:10px;padding:12px}.result-grid span{display:block;margin-top:8px;font-size:22px;font-weight:800;color:#312e81}
-    @@media(max-width:768px){.title-row{flex-direction:column}.soft,.primary,.danger,.delete-row{width:100%}.box h2{font-size:23px}}
+    .scroll{width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse}.material-table,.cut-table,.part-table{min-width:840px}th{text-align:left;border-bottom:1px solid #64748b;padding:8px;color:#1e293b;white-space:nowrap}td{border-bottom:1px solid #e2e8f0;padding:8px;vertical-align:top}
+    .soft,.primary,.danger,.delete-row,.mini-btn,.link-toggle{border:none;border-radius:12px;padding:11px 14px;font-weight:800;cursor:pointer}.soft,.mini-btn,.link-toggle{background:#eef2ff;color:#312e81;border:1px solid #c7d2fe}.primary{background:#4f46e5;color:white}.danger,.delete-row{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}.actions{display:flex;gap:10px;flex-wrap:wrap}.stock-check{display:block;margin-top:14px}
+    .cabinet-card{border:1px solid #dbe4ee;background:white;border-radius:10px;margin-top:12px}.cabinet-summary{display:grid;grid-template-columns:48px 1.5fr 1fr .7fr .9fr .9fr auto;gap:10px;align-items:center;padding:12px}.cabinet-actions{display:flex;gap:6px;flex-wrap:wrap}.cabinet-detail{border-top:1px solid #e2e8f0;padding:12px}.detail-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:12px 0 8px}.detail-head h3{margin:0;color:#0f2747;font-size:20px}
+    .empty-state{padding:14px;border:1px dashed #cbd5e1;border-radius:10px;background:white;color:#475569}.result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.result-grid div{border:1px solid #dbe4ee;background:white;border-radius:10px;padding:12px}.result-grid span{display:block;margin-top:8px;font-size:22px;font-weight:800;color:#312e81}.server-result{margin-top:12px}.hidden-transfer{display:none}.toast{position:fixed;right:16px;bottom:16px;padding:12px 14px;background:#166534;color:white;border-radius:10px;font-weight:800;z-index:20}
+    @@media(max-width:900px){.cabinet-summary{grid-template-columns:1fr}.cabinet-actions .mini-btn,.cabinet-actions .delete-row{width:100%}.title-row{flex-direction:column}.soft,.primary,.danger,.link-toggle{width:100%}.box h2{font-size:23px}}
 </style>
 
 <script>
+    var cabinets = [];
+    var editingId = null;
     var recipes = {
         singleUpper: { name: 'Tek Kapaklı Üst Dolap', width: 30, height: 72, depth: 33, hasShelf: true, doorCount: 1 },
         doubleUpper: { name: 'Çift Kapaklı Üst Dolap', width: 60, height: 72, depth: 33, hasShelf: true, doorCount: 2 },
@@ -249,188 +186,382 @@
         doubleSink: { name: 'Çift Kapaklı Eviye Dolabı', width: 60, height: 72, depth: 33, hasShelf: false, doorCount: 2 }
     };
 
-    function numberValue(id) {
-        var value = parseFloat((document.getElementById(id).value || '').replace(',', '.'));
-        return isNaN(value) ? 0 : value;
+    function parseNum(value) {
+        var parsed = parseFloat(String(value || '').replace(',', '.'));
+        return isNaN(parsed) ? 0 : parsed;
     }
 
-    function formatNumber(value) {
-        var rounded = Math.round(value * 100) / 100;
-        return String(rounded);
+    function fmt(value, digits) {
+        return (Math.round((value || 0) * 1000) / 1000).toLocaleString('tr-TR', { minimumFractionDigits: digits || 0, maximumFractionDigits: digits === undefined ? 3 : digits });
+    }
+
+    function uid() {
+        return 'cab_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+    }
+
+    function showToast(message) {
+        var toast = document.getElementById('toast');
+        toast.innerText = message;
+        toast.hidden = false;
+        setTimeout(function () { toast.hidden = true; }, 2200);
     }
 
     function input(name,type,ph,value){
         var x=document.createElement('input');
         x.name=name;x.type=type||'number';x.step='0.01';
         if(ph)x.placeholder=ph;
-        if(value !== undefined)x.value=formatNumber(value);
+        if(value !== undefined)x.value=String(value);
+        return x;
+    }
+
+    function hiddenInput(name, value) {
+        var x = document.createElement('input');
+        x.type = 'hidden';
+        x.name = name;
+        x.value = String(value);
         return x;
     }
 
     function cell(c){var td=document.createElement('td');if(typeof c==='string')td.innerText=c;else td.appendChild(c);return td;}
 
-    function removeRow(button, group) {
-        var row = button.closest('tr');
-        if (row) row.remove();
-        renumberRows(group);
+    function recipeParts(cabinet) {
+        var width = parseNum(cabinet.width);
+        var height = parseNum(cabinet.height);
+        var depth = parseNum(cabinet.depth);
+        var thickness = parseNum(cabinet.thickness) || 1.8;
+        var recipe = recipes[cabinet.recipeKey];
+        if (!recipe) return [];
+        var bodyWidth = width - (thickness * 2);
+        var doorHeight = height - 0.3;
+        var doorWidth = recipe.doorCount === 2 ? (width - 0.6) / 2 : width - 0.3;
+        var parts = [
+            { id: uid(), aciklama: 'Alt/Üst', en: bodyWidth, boy: depth - 1, adet: 2 },
+            { id: uid(), aciklama: 'Dikme', en: height, boy: depth, adet: 2 },
+            { id: uid(), aciklama: 'Kapak', en: doorHeight, boy: doorWidth, adet: recipe.doorCount }
+        ];
+        if (recipe.hasShelf) {
+            parts.splice(1, 0, { id: uid(), aciklama: 'Raf', en: bodyWidth, boy: depth - 2, adet: 1 });
+        }
+        return parts;
     }
 
-    function clearRows(id) {
-        document.getElementById(id).innerHTML = '';
-    }
-
-    function rowsHaveValues(selector) {
-        return Array.prototype.some.call(document.querySelectorAll(selector + ' input, ' + selector + ' select'), function (field) {
-            if (field.type === 'hidden' || field.type === 'checkbox') return false;
-            return String(field.value || '').trim() !== '' && String(field.value || '').trim() !== '0';
+    function recipeBands(cabinet, parts) {
+        var height = parseNum(cabinet.height);
+        var recipe = recipes[cabinet.recipeKey];
+        return parts.map(function (part) {
+            var mode = part.aciklama === 'Kapak' ? 'all' : 'one-long';
+            var lengthCm = part.aciklama === 'Kapak'
+                ? ((part.en * 2) + (part.boy * 2)) * part.adet
+                : (part.aciklama === 'Dikme' ? height : part.en) * part.adet;
+            return {
+                id: uid(),
+                parcaId: part.id,
+                aciklama: part.aciklama + ' bant',
+                bantSekli: mode,
+                uzunlukCm: lengthCm,
+                adet: part.adet,
+                bantUstAlt: true,
+                bantSagSol: mode === 'all'
+            };
         });
     }
 
-    function renumberRows(group) {
-        var selector = group === 'plaka' ? '[data-plaka-row]' : group === 'bantlama' ? '[data-bantlama-row]' : group === 'arkalik' ? '[data-arkalik-row]' : '[data-malzeme-row]';
-        document.querySelectorAll(selector).forEach(function(row, index) {
-            row.querySelectorAll('[name]').forEach(function(field) {
-                field.name = field.name.replace(/\[\d+\]/, '[' + index + ']');
+    function buildCabinet(recipeKey, width, height, depth, qty, thickness) {
+        var base = { id: uid(), recipeKey: recipeKey, name: recipes[recipeKey].name, width: width, height: height, depth: depth, quantity: Math.max(1, Math.floor(qty || 1)), thickness: thickness || 1.8, open: false };
+        base.parts = recipeParts(base);
+        base.bands = recipeBands(base, base.parts);
+        return base;
+    }
+
+    function addOrUpdateCabinet() {
+        var key = document.getElementById('cabinetRecipe').value;
+        if (!recipes[key]) { alert('Lütfen bir dolap reçetesi seçin.'); return; }
+        var next = buildCabinet(key, parseNum(document.getElementById('cabinetWidth').value), parseNum(document.getElementById('cabinetHeight').value), parseNum(document.getElementById('cabinetDepth').value), parseNum(document.getElementById('cabinetQty').value), parseNum(document.getElementById('cabinetThickness').value));
+        if (next.width <= 0 || next.height <= 0 || next.depth <= 0) { alert('Dolap ölçüleri sıfırdan büyük olmalı.'); return; }
+        if (editingId) {
+            var existing = cabinets.find(function (x) { return x.id === editingId; });
+            if (existing && !confirm('Bu dolabın otomatik parçaları yeni ölçülere göre yeniden hesaplansın mı?')) return;
+            next.id = editingId;
+            cabinets = cabinets.map(function (x) { return x.id === editingId ? next : x; });
+            editingId = null;
+            document.getElementById('addCabinetBtn').innerText = 'Dolabı Ekle';
+            showToast('Dolap güncellendi.');
+        } else {
+            cabinets.push(next);
+            showToast('Dolap listeye eklendi.');
+        }
+        renderAll();
+    }
+
+    function editCabinet(id) {
+        var cab = cabinets.find(function (x) { return x.id === id; });
+        if (!cab) return;
+        editingId = id;
+        document.getElementById('cabinetRecipe').value = cab.recipeKey;
+        document.getElementById('cabinetWidth').value = cab.width;
+        document.getElementById('cabinetHeight').value = cab.height;
+        document.getElementById('cabinetDepth').value = cab.depth;
+        document.getElementById('cabinetThickness').value = cab.thickness;
+        document.getElementById('cabinetQty').value = cab.quantity;
+        document.getElementById('addCabinetBtn').innerText = 'Dolabı Güncelle';
+    }
+
+    function copyCabinet(id) {
+        var cab = cabinets.find(function (x) { return x.id === id; });
+        if (!cab) return;
+        var copy = JSON.parse(JSON.stringify(cab));
+        copy.id = uid();
+        copy.parts.forEach(function (p) { p.id = uid(); });
+        copy.bands.forEach(function (b) { b.id = uid(); });
+        copy.open = false;
+        cabinets.push(copy);
+        showToast('Dolap kopyalandı.');
+        renderAll();
+    }
+
+    function deleteCabinet(id) {
+        if (!confirm('Bu dolap silinsin mi?')) return;
+        cabinets = cabinets.filter(function (x) { return x.id !== id; });
+        renderAll();
+    }
+
+    function toggleCabinet(id) {
+        cabinets.forEach(function (x) { if (x.id === id) x.open = !x.open; });
+        renderAll();
+    }
+
+    function updatePart(cabinetId, partId, field, value) {
+        var cab = cabinets.find(function (x) { return x.id === cabinetId; });
+        if (!cab) return;
+        var part = cab.parts.find(function (x) { return x.id === partId; });
+        if (!part) return;
+        part[field] = field === 'aciklama' ? value : parseNum(value);
+        cab.bands = recipeBands(cab, cab.parts);
+        renderAll();
+    }
+
+    function addCustomPart(cabinetId) {
+        var cab = cabinets.find(function (x) { return x.id === cabinetId; });
+        if (!cab) return;
+        cab.parts.push({ id: uid(), aciklama: 'Özel Parça', en: 0, boy: 0, adet: 1 });
+        cab.bands = recipeBands(cab, cab.parts);
+        renderAll();
+    }
+
+    function deletePart(cabinetId, partId) {
+        var cab = cabinets.find(function (x) { return x.id === cabinetId; });
+        if (!cab) return;
+        cab.parts = cab.parts.filter(function (x) { return x.id !== partId; });
+        cab.bands = recipeBands(cab, cab.parts);
+        renderAll();
+    }
+
+    function cabinetBandMeters(cab) {
+        return cab.bands.reduce(function (sum, band) { return sum + (band.uzunlukCm * cab.quantity / 100); }, 0);
+    }
+
+    function cabinetPartQty(cab) {
+        return cab.parts.reduce(function (sum, part) { return sum + (part.adet * cab.quantity); }, 0);
+    }
+
+    function renderCabinetList() {
+        var list = document.getElementById('cabinetList');
+        if (!cabinets.length) { list.innerHTML = '<div class="empty-state">Henüz dolap eklenmedi.</div>'; return; }
+        list.innerHTML = cabinets.map(function (cab, index) {
+            return '<div class="cabinet-card"><div class="cabinet-summary">' +
+                '<strong>' + (index + 1) + '</strong>' +
+                '<strong>' + cab.name + '</strong>' +
+                '<span>' + fmt(cab.width,1) + ' × ' + fmt(cab.height,1) + ' × ' + fmt(cab.depth,1) + '</span>' +
+                '<span>' + cab.quantity + ' adet</span>' +
+                '<span>' + fmt(cabinetPartQty(cab),0) + ' parça</span>' +
+                '<span>' + fmt(cabinetBandMeters(cab),3) + ' m</span>' +
+                '<div class="cabinet-actions"><button type="button" class="mini-btn" onclick="toggleCabinet(\'' + cab.id + '\')">Detay</button><button type="button" class="mini-btn" onclick="editCabinet(\'' + cab.id + '\')">Düzenle</button><button type="button" class="mini-btn" onclick="copyCabinet(\'' + cab.id + '\')">Kopyala</button><button type="button" class="delete-row" onclick="deleteCabinet(\'' + cab.id + '\')">Sil</button></div>' +
+                '</div>' + (cab.open ? renderCabinetDetail(cab) : '') + '</div>';
+        }).join('');
+    }
+
+    function renderCabinetDetail(cab) {
+        var partRows = cab.parts.map(function (part) {
+            return '<tr><td><input value="' + escapeHtml(part.aciklama) + '" onchange="updatePart(\'' + cab.id + '\',\'' + part.id + '\',\'aciklama\',this.value)"></td><td><input type="number" step="0.01" value="' + part.en + '" onchange="updatePart(\'' + cab.id + '\',\'' + part.id + '\',\'en\',this.value)"></td><td><input type="number" step="0.01" value="' + part.boy + '" onchange="updatePart(\'' + cab.id + '\',\'' + part.id + '\',\'boy\',this.value)"></td><td><input type="number" step="0.01" value="' + part.adet + '" onchange="updatePart(\'' + cab.id + '\',\'' + part.id + '\',\'adet\',this.value)"></td><td>' + cab.quantity + '</td><td>' + fmt(part.adet * cab.quantity,0) + '</td><td><button type="button" class="delete-row" onclick="deletePart(\'' + cab.id + '\',\'' + part.id + '\')">Sil</button></td></tr>';
+        }).join('');
+        var bandRows = cab.bands.map(function (band) {
+            return '<tr><td>' + escapeHtml(band.aciklama) + '</td><td>' + (band.bantSekli === 'all' ? '4 kenar' : '1 uzun kenar') + '</td><td>' + fmt(band.uzunlukCm,1) + ' cm</td><td>' + cab.quantity + '</td><td>' + fmt(band.uzunlukCm * cab.quantity / 100,3) + ' m</td></tr>';
+        }).join('');
+        return '<div class="cabinet-detail"><div class="detail-head"><h3>Parçalar</h3><button type="button" class="mini-btn" onclick="addCustomPart(\'' + cab.id + '\')">Özel Parça Ekle</button></div><div class="scroll"><table class="part-table"><thead><tr><th>Açıklama</th><th>Parça Eni</th><th>Parça Boyu</th><th>Bir Dolaptaki Adet</th><th>Dolap Adedi</th><th>Genel Adet</th><th>İşlem</th></tr></thead><tbody>' + partRows + '</tbody></table></div><div class="detail-head"><h3>Bantlama</h3></div><div class="scroll"><table class="part-table"><thead><tr><th>Açıklama</th><th>Bantlanan Kenar</th><th>Bir Dolaptaki Bant</th><th>Dolap Adedi</th><th>Toplam Metre</th></tr></thead><tbody>' + bandRows + '</tbody></table></div></div>';
+    }
+
+    function escapeHtml(value) {
+        return String(value || '').replace(/[&<>"']/g, function (m) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]; });
+    }
+
+    function combinedParts() {
+        var map = {};
+        cabinets.forEach(function (cab) {
+            cab.parts.forEach(function (part) {
+                var key = [part.aciklama.trim().toLocaleLowerCase('tr-TR'), Math.round(part.en * 100), Math.round(part.boy * 100)].join('|');
+                if (!map[key]) map[key] = { aciklama: part.aciklama, en: part.en, boy: part.boy, adet: 0 };
+                map[key].adet += part.adet * cab.quantity;
             });
-            row.querySelectorAll('[id]').forEach(function(field) {
-                field.id = field.id.replace(/_\d+__/, '_' + index + '__');
-            });
         });
+        return Object.values(map);
     }
 
-    function addPlaka(data){
-        data = data || {};
-        var i=document.querySelectorAll('[data-plaka-row]').length;
-        var r=document.createElement('tr');r.setAttribute('data-plaka-row','');
-        if (data.partKey) r.setAttribute('data-recipe-part', data.partKey);
-        r.appendChild(cell(input('Plakalar['+i+'].Aciklama','text','Örn: Raf', data.aciklama)));
-        ['PlakaEnCm','PlakaBoyCm','PlakaFiyati','ParcaEnCm','ParcaBoyCm','ParcaAdedi'].forEach(function(n){
-            r.appendChild(cell(input('Plakalar['+i+'].'+n, 'number', null, data[n])));
-        });
-        r.appendChild(cell('0,00'));
-        r.appendChild(cell(actionButton('plaka')));
-        document.getElementById('plakaRows').appendChild(r);
-    }
-
-    function actionButton(group) {
-        var button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'delete-row';
-        button.innerText = 'Sil';
-        button.onclick = function () { removeRow(button, group); };
-        return button;
-    }
-
-    function addBantlama(data){
-        data = data || {};
-        var i=document.querySelectorAll('[data-bantlama-row]').length;
-        var r=document.createElement('tr');r.setAttribute('data-bantlama-row','');
-        if (data.partKey) r.setAttribute('data-recipe-part', data.partKey);
-        r.appendChild(cell(input('Bantlamalar['+i+'].Aciklama','text','Örn: Kapak bant', data.aciklama)));
-        ['ParcaEnCm','ParcaBoyCm','ParcaAdedi','BantMetreFiyati'].forEach(function(n){
-            r.appendChild(cell(input('Bantlamalar['+i+'].'+n, 'number', null, data[n])));
-        });
-        var c=document.createElement('td');c.className='checks';
-        var ustAlt = data.BantUstAlt !== undefined ? data.BantUstAlt : true;
-        var sagSol = data.BantSagSol !== undefined ? data.BantSagSol : true;
-        c.innerHTML='<label><input type="hidden" name="Bantlamalar['+i+'].BantUstAlt" value="false"><input name="Bantlamalar['+i+'].BantUstAlt" type="checkbox" value="true" '+(ustAlt ? 'checked' : '')+'> Üst/Alt</label><label><input type="hidden" name="Bantlamalar['+i+'].BantSagSol" value="false"><input name="Bantlamalar['+i+'].BantSagSol" type="checkbox" value="true" '+(sagSol ? 'checked' : '')+'> Sağ/Sol</label>';
-        r.appendChild(c);r.appendChild(cell('0,00'));r.appendChild(cell('0,00'));r.appendChild(cell(actionButton('bantlama')));
-        document.getElementById('bantlamaRows').appendChild(r);
-    }
-
-    function addArkalik(data){
-        data = data || {};
-        var i=document.querySelectorAll('[data-arkalik-row]').length;
-        var r=document.createElement('tr');r.setAttribute('data-arkalik-row','');
-        r.appendChild(cell(input('Arkaliklar['+i+'].Aciklama','text','Örn: Arkalık', data.aciklama)));
-        ['PlakaEnCm','PlakaBoyCm','PlakaFiyati','ParcaEnCm','ParcaBoyCm','ParcaAdedi'].forEach(function(n){
-            r.appendChild(cell(input('Arkaliklar['+i+'].'+n, 'number', null, data[n])));
-        });
-        r.appendChild(cell('0,00'));r.appendChild(cell(actionButton('arkalik')));
-        document.getElementById('arkalikRows').appendChild(r);
-    }
-
-    function addMalzeme(){
-        var i=document.querySelectorAll('[data-malzeme-row]').length;
-        var r=document.createElement('tr');r.setAttribute('data-malzeme-row','');
-        var s=document.createElement('select');s.name='Malzemeler['+i+'].StokUrunId';s.innerHTML=document.getElementById('stokOptions').innerHTML;
-        r.appendChild(cell(s));r.appendChild(cell(input('Malzemeler['+i+'].BirParcaKullanimMiktari')));r.appendChild(cell(input('Malzemeler['+i+'].BirimMaliyet')));r.appendChild(cell('0,00'));r.appendChild(cell('0,00'));r.appendChild(cell(actionButton('malzeme')));
-        document.getElementById('malzemeRows').appendChild(r);
-    }
-
-    function currentCommonValues() {
-        var firstPlaka = document.querySelector('[data-plaka-row]');
-        var firstBant = document.querySelector('[data-bantlama-row]');
+    function totals() {
+        var commonPlakaEn = parseNum(document.getElementById('commonPlakaEn').value);
+        var commonPlakaBoy = parseNum(document.getElementById('commonPlakaBoy').value);
+        var plakaFiyat = parseNum(document.getElementById('commonPlakaFiyati').value);
+        var bantFiyat = parseNum(document.getElementById('commonBantFiyati').value);
+        var pieces = combinedParts();
+        var totalAreaM2 = pieces.reduce(function (sum, p) { return sum + ((p.en * p.boy / 10000) * p.adet); }, 0);
+        var boardArea = commonPlakaEn > 0 && commonPlakaBoy > 0 ? (commonPlakaEn * commonPlakaBoy / 10000) : 0;
+        var neededBoards = boardArea > 0 ? Math.ceil(totalAreaM2 / boardArea) : 0;
+        var bandMeters = cabinets.reduce(function (sum, cab) { return sum + cabinetBandMeters(cab); }, 0);
+        var materialCost = currentMaterialCost();
         return {
-            plakaEn: numberValue('commonPlakaEn') || getRowNumber(firstPlaka, 'PlakaEnCm'),
-            plakaBoy: numberValue('commonPlakaBoy') || getRowNumber(firstPlaka, 'PlakaBoyCm'),
-            plakaFiyati: numberValue('commonPlakaFiyati') || getRowNumber(firstPlaka, 'PlakaFiyati'),
-            bantFiyati: numberValue('commonBantFiyati') || getRowNumber(firstBant, 'BantMetreFiyati')
+            cabinetQty: cabinets.reduce(function (sum, cab) { return sum + cab.quantity; }, 0),
+            partQty: pieces.reduce(function (sum, p) { return sum + p.adet; }, 0),
+            area: totalAreaM2,
+            boards: neededBoards,
+            plateCost: boardArea > 0 ? (totalAreaM2 / boardArea) * plakaFiyat : 0,
+            bandMeters: bandMeters,
+            bandCost: bandMeters * bantFiyat,
+            materialCost: materialCost
         };
     }
 
-    function getRowNumber(row, field) {
-        if (!row) return 0;
-        var input = row.querySelector('[name$=".' + field + '"]');
-        if (!input) return 0;
-        var value = parseFloat((input.value || '').replace(',', '.'));
-        return isNaN(value) ? 0 : value;
+    function currentMaterialCost() {
+        var totalCabinets = cabinets.reduce(function (sum, cab) { return sum + cab.quantity; }, 0) || 1;
+        return Array.prototype.reduce.call(document.querySelectorAll('[data-malzeme-row]'), function (sum, row) {
+            var usage = parseNum(row.querySelector('[name$=".BirParcaKullanimMiktari"]').value);
+            var cost = parseNum(row.querySelector('[name$=".BirimMaliyet"]').value);
+            return sum + (usage * totalCabinets * cost);
+        }, 0);
     }
 
-    function applyRecipe() {
-        var key = document.getElementById('recipeType').value;
-        var recipe = recipes[key];
-        if (!recipe) {
-            alert('Lütfen bir dolap reçetesi seçin.');
-            return;
-        }
-
-        var hasExistingRows = rowsHaveValues('#plakaRows') || rowsHaveValues('#bantlamaRows') || rowsHaveValues('#arkalikRows');
-        if (hasExistingRows && !confirm('Mevcut plaka, bantlama ve arkalık satırları reçete ile değiştirilsin mi?')) {
-            return;
-        }
-
-        var width = numberValue('recipeWidth');
-        var height = numberValue('recipeHeight');
-        var depth = numberValue('recipeDepth');
-        var thickness = numberValue('recipeThickness') || 1.8;
-        if (width <= 0 || height <= 0 || depth <= 0 || thickness <= 0) {
-            alert('Reçete ölçülerini sıfırdan büyük girin.');
-            return;
-        }
-
-        var common = currentCommonValues();
-        clearRows('plakaRows');
-        clearRows('bantlamaRows');
-        clearRows('arkalikRows');
-
-        var bodyWidth = width - (thickness * 2);
-        var altUstDepth = depth - 1;
-        var shelfDepth = depth - 2;
-        var doorWidth = recipe.doorCount === 2 ? (width - 0.6) / 2 : width - 0.3;
-        var doorHeight = height - 0.3;
-
-        addPlaka({ partKey: 'altust', aciklama: 'Alt/Üst', PlakaEnCm: common.plakaEn, PlakaBoyCm: common.plakaBoy, PlakaFiyati: common.plakaFiyati, ParcaEnCm: bodyWidth, ParcaBoyCm: altUstDepth, ParcaAdedi: 2 });
-        if (recipe.hasShelf) {
-            addPlaka({ partKey: 'raf', aciklama: 'Raf', PlakaEnCm: common.plakaEn, PlakaBoyCm: common.plakaBoy, PlakaFiyati: common.plakaFiyati, ParcaEnCm: bodyWidth, ParcaBoyCm: shelfDepth, ParcaAdedi: 1 });
-        }
-        addPlaka({ partKey: 'dikme', aciklama: 'Dikme', PlakaEnCm: common.plakaEn, PlakaBoyCm: common.plakaBoy, PlakaFiyati: common.plakaFiyati, ParcaEnCm: height, ParcaBoyCm: depth, ParcaAdedi: 2 });
-        addPlaka({ partKey: 'kapak', aciklama: 'Kapak', PlakaEnCm: common.plakaEn, PlakaBoyCm: common.plakaBoy, PlakaFiyati: common.plakaFiyati, ParcaEnCm: doorHeight, ParcaBoyCm: doorWidth, ParcaAdedi: recipe.doorCount });
-
-        addBantlama({ partKey: 'altust', aciklama: 'Alt/Üst bant', ParcaEnCm: bodyWidth / 2, ParcaBoyCm: altUstDepth, ParcaAdedi: 2, BantMetreFiyati: common.bantFiyati, BantUstAlt: true, BantSagSol: false });
-        if (recipe.hasShelf) {
-            addBantlama({ partKey: 'raf', aciklama: 'Raf bant', ParcaEnCm: bodyWidth / 2, ParcaBoyCm: shelfDepth, ParcaAdedi: 1, BantMetreFiyati: common.bantFiyati, BantUstAlt: true, BantSagSol: false });
-        }
-        addBantlama({ partKey: 'dikme', aciklama: 'Dikme bant', ParcaEnCm: height / 2, ParcaBoyCm: depth, ParcaAdedi: 2, BantMetreFiyati: common.bantFiyati, BantUstAlt: true, BantSagSol: false });
-        addBantlama({ partKey: 'kapak', aciklama: 'Kapak bant', ParcaEnCm: doorHeight, ParcaBoyCm: doorWidth, ParcaAdedi: recipe.doorCount, BantMetreFiyati: common.bantFiyati, BantUstAlt: true, BantSagSol: true });
+    function renderCutList() {
+        var parts = combinedParts();
+        var target = document.getElementById('cutList');
+        if (!parts.length) { target.innerHTML = '<div class="empty-state">Kesim listesi için dolap ekleyin.</div>'; return; }
+        target.innerHTML = '<div class="scroll"><table class="cut-table"><thead><tr><th>Açıklama</th><th>Ölçü</th><th>Toplam Adet</th></tr></thead><tbody>' + parts.map(function (p) {
+            return '<tr><td>' + escapeHtml(p.aciklama) + '</td><td>' + fmt(p.en,1) + ' × ' + fmt(p.boy,1) + '</td><td>' + fmt(p.adet,0) + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
     }
 
-    document.getElementById('recipeType').addEventListener('change', function() {
+    function renderResult() {
+        var t = totals();
+        document.getElementById('liveResult').innerHTML =
+            '<div><b>Toplam Dolap Adedi</b><span>' + fmt(t.cabinetQty,0) + '</span></div>' +
+            '<div><b>Toplam Parça Adedi</b><span>' + fmt(t.partQty,0) + '</span></div>' +
+            '<div><b>Toplam Kullanılan Plaka Alanı</b><span>' + fmt(t.area,3) + ' m²</span></div>' +
+            '<div><b>İhtiyaç Duyulan Plaka Adedi</b><span>' + fmt(t.boards,0) + '</span></div>' +
+            '<div><b>Toplam Plaka Maliyeti</b><span>' + fmt(t.plateCost,2) + ' TL</span></div>' +
+            '<div><b>Toplam Bant Metresi</b><span>' + fmt(t.bandMeters,3) + ' m</span></div>' +
+            '<div><b>Toplam Bant Maliyeti</b><span>' + fmt(t.bandCost,2) + ' TL</span></div>' +
+            '<div><b>Toplam Ek Malzeme Maliyeti</b><span>' + fmt(t.materialCost,2) + ' TL</span></div>' +
+            '<div><b>Genel Maliyet</b><span>' + fmt(t.plateCost + t.bandCost + t.materialCost,2) + ' TL</span></div>';
+    }
+
+    function renderAll() {
+        renderCabinetList();
+        renderCutList();
+        renderResult();
+        prepareHiddenRows();
+        toggleMaterialEmpty();
+    }
+
+    function prepareHiddenRows() {
+        document.getElementById('DolaplarJson').value = JSON.stringify(cabinets);
+        document.getElementById('UretimAdedi').value = Math.max(1, cabinets.reduce(function (sum, cab) { return sum + cab.quantity; }, 0));
+        var common = { en: parseNum(document.getElementById('commonPlakaEn').value), boy: parseNum(document.getElementById('commonPlakaBoy').value), fiyat: parseNum(document.getElementById('commonPlakaFiyati').value), bant: parseNum(document.getElementById('commonBantFiyati').value) };
+        var plakaRows = document.getElementById('plakaRows');
+        var bantRows = document.getElementById('bantlamaRows');
+        var arkalikRows = document.getElementById('arkalikRows');
+        plakaRows.innerHTML = ''; bantRows.innerHTML = ''; arkalikRows.innerHTML = '';
+        combinedParts().forEach(function (part, index) {
+            var r = document.createElement('tr');
+            r.appendChild(cell(input('Plakalar['+index+'].Aciklama','text',null,part.aciklama)));
+            r.appendChild(cell(input('Plakalar['+index+'].PlakaEnCm','number',null,common.en)));
+            r.appendChild(cell(input('Plakalar['+index+'].PlakaBoyCm','number',null,common.boy)));
+            r.appendChild(cell(input('Plakalar['+index+'].PlakaFiyati','number',null,common.fiyat)));
+            r.appendChild(cell(input('Plakalar['+index+'].ParcaEnCm','number',null,part.en)));
+            r.appendChild(cell(input('Plakalar['+index+'].ParcaBoyCm','number',null,part.boy)));
+            r.appendChild(cell(input('Plakalar['+index+'].ParcaAdedi','number',null,part.adet)));
+            plakaRows.appendChild(r);
+        });
+        var bandIndex = 0;
+        cabinets.forEach(function (cab) {
+            cab.bands.forEach(function (band) {
+                var part = cab.parts.find(function (p) { return p.id === band.parcaId; }) || { en: 0, boy: 0 };
+                var hiddenWidth = band.bantSekli === 'all' ? part.en : band.uzunlukCm / band.adet / 2;
+                var r = document.createElement('tr');
+                r.appendChild(cell(input('Bantlamalar['+bandIndex+'].Aciklama','text',null,band.aciklama)));
+                r.appendChild(cell(input('Bantlamalar['+bandIndex+'].ParcaEnCm','number',null,band.bantSekli === 'all' ? part.en : hiddenWidth)));
+                r.appendChild(cell(input('Bantlamalar['+bandIndex+'].ParcaBoyCm','number',null,part.boy)));
+                r.appendChild(cell(input('Bantlamalar['+bandIndex+'].ParcaAdedi','number',null,band.adet * cab.quantity)));
+                r.appendChild(cell(input('Bantlamalar['+bandIndex+'].BantMetreFiyati','number',null,common.bant)));
+                r.appendChild(cell(hiddenInput('Bantlamalar['+bandIndex+'].BantUstAlt', 'true')));
+                r.appendChild(cell(hiddenInput('Bantlamalar['+bandIndex+'].BantSagSol', band.bantSekli === 'all' ? 'true' : 'false')));
+                bantRows.appendChild(r);
+                bandIndex++;
+            });
+        });
+    }
+
+    function addMalzeme(){
+        var rows = document.querySelectorAll('[data-malzeme-row]').length;
+        var r=document.createElement('tr');r.setAttribute('data-malzeme-row','');
+        var s=document.createElement('select');s.name='Malzemeler['+rows+'].StokUrunId';s.innerHTML=document.getElementById('stokOptions').innerHTML;
+        r.appendChild(cell(s));r.appendChild(cell(input('Malzemeler['+rows+'].BirParcaKullanimMiktari')));r.appendChild(cell(input('Malzemeler['+rows+'].BirimMaliyet')));r.appendChild(cell('0,00'));r.appendChild(cell('0,00'));
+        var b=document.createElement('button');b.type='button';b.className='delete-row';b.innerText='Sil';b.onclick=function(){removeMaterial(b);};
+        r.appendChild(cell(b));
+        document.getElementById('malzemeRows').appendChild(r);
+        toggleMaterialEmpty();
+    }
+
+    function removeMaterial(button) {
+        var row = button.closest('tr');
+        if (row) row.remove();
+        document.querySelectorAll('[data-malzeme-row]').forEach(function(row, index) {
+            row.querySelectorAll('[name]').forEach(function(field) { field.name = field.name.replace(/\[\d+\]/, '[' + index + ']'); });
+        });
+        renderResult();
+        toggleMaterialEmpty();
+    }
+
+    function toggleMaterialEmpty() {
+        var hasRows = document.querySelectorAll('[data-malzeme-row]').length > 0;
+        document.getElementById('emptyMaterial').hidden = hasRows;
+        document.getElementById('materialWrap').hidden = !hasRows;
+    }
+
+    document.getElementById('cabinetRecipe').addEventListener('change', function() {
         var recipe = recipes[this.value];
         if (!recipe) return;
-        document.getElementById('recipeWidth').value = formatNumber(recipe.width);
-        document.getElementById('recipeHeight').value = formatNumber(recipe.height);
-        document.getElementById('recipeDepth').value = formatNumber(recipe.depth);
-        document.getElementById('recipeThickness').value = '1.8';
+        document.getElementById('cabinetWidth').value = recipe.width;
+        document.getElementById('cabinetHeight').value = recipe.height;
+        document.getElementById('cabinetDepth').value = recipe.depth;
+        document.getElementById('cabinetThickness').value = 1.8;
+        document.getElementById('cabinetQty').value = 1;
     });
+    document.getElementById('addCabinetBtn').addEventListener('click', addOrUpdateCabinet);
+    document.getElementById('cutListToggle').addEventListener('click', function () {
+        var panel = document.getElementById('cutListPanel');
+        panel.hidden = !panel.hidden;
+    });
+    document.getElementById('maliyetForm').addEventListener('submit', function () {
+        prepareHiddenRows();
+    });
+    ['commonPlakaEn','commonPlakaBoy','commonPlakaFiyati','commonBantFiyati'].forEach(function (id) {
+        document.getElementById(id).addEventListener('input', renderAll);
+    });
+    document.addEventListener('input', function (event) {
+        if (event.target.closest('#malzemeRows')) renderResult();
+    });
+
+    try {
+        cabinets = JSON.parse(document.getElementById('DolaplarJson').value || '[]') || [];
+    } catch (_) {
+        cabinets = [];
+    }
+    renderAll();
 </script>

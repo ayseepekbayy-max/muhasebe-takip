@@ -2,6 +2,18 @@ namespace MuhasebeTakip2.App.Models;
 
 public class MaliyetKaydiDetay
 {
+    public string Aciklama { get; set; } = "";
+
+    public decimal OrtakPlakaEnCm { get; set; }
+
+    public decimal OrtakPlakaBoyCm { get; set; }
+
+    public decimal OrtakPlakaFiyati { get; set; }
+
+    public decimal OrtakBantMetreFiyati { get; set; }
+
+    public string DolaplarJson { get; set; } = "[]";
+
     public List<MaliyetDetaySatiri> Plakalar { get; set; } = new();
 
     public List<MaliyetDetaySatiri> Bantlamalar { get; set; } = new();
