@@ -25,10 +25,41 @@
         </div>
     </section>
 
+    <section class="box recipe-box">
+        <div class="title-row">
+            <div>
+                <h2>2. Dolap Reçetesi</h2>
+                <p>Hazır reçeteyi seçip ölçüleri kontrol edin; satırlar yalnızca Reçeteyi Uygula ile oluşturulur.</p>
+            </div>
+            <button type="button" class="soft" onclick="applyRecipe()">Reçeteyi Uygula</button>
+        </div>
+        <div class="grid recipe-grid">
+            <label>Reçete
+                <select id="recipeType">
+                    <option value="">-- Reçete Seçin --</option>
+                    <option value="singleUpper">Tek Kapaklı Üst Dolap</option>
+                    <option value="doubleUpper">Çift Kapaklı Üst Dolap</option>
+                    <option value="singleSink">Tek Kapaklı Eviye Dolabı</option>
+                    <option value="doubleSink">Çift Kapaklı Eviye Dolabı</option>
+                </select>
+            </label>
+            <label>Dolap Genişliği (cm) <input id="recipeWidth" type="number" step="0.01" value="60" /></label>
+            <label>Dolap Yüksekliği (cm) <input id="recipeHeight" type="number" step="0.01" value="72" /></label>
+            <label>Dolap Derinliği (cm) <input id="recipeDepth" type="number" step="0.01" value="33" /></label>
+            <label>Gövde Kalınlığı (cm) <input id="recipeThickness" type="number" step="0.01" value="1.8" /></label>
+        </div>
+        <div class="grid recipe-grid common-values">
+            <label>Ortak Plaka En (cm) <input id="commonPlakaEn" type="number" step="0.01" /></label>
+            <label>Ortak Plaka Boy (cm) <input id="commonPlakaBoy" type="number" step="0.01" /></label>
+            <label>Ortak Plaka Fiyatı <input id="commonPlakaFiyati" type="number" step="0.01" /></label>
+            <label>Bant Metre Fiyatı <input id="commonBantFiyati" type="number" step="0.01" /></label>
+        </div>
+    </section>
+
     <section class="box">
         <div class="title-row">
             <div>
-                <h2>2. Plaka Maliyeti</h2>
+                <h2>3. Plaka Maliyeti</h2>
                 <p>Gövde, kapak, raf gibi farklı ölçüleri ayrı satır girin.</p>
             </div>
             <button type="button" class="soft" onclick="addPlaka()">+ Plaka Satırı Ekle</button>
@@ -38,7 +69,7 @@
                 <thead>
                     <tr>
                         <th>Açıklama</th><th>Plaka En</th><th>Plaka Boy</th><th>Plaka Fiyatı</th>
-                        <th>Parça En</th><th>Parça Boy</th><th>Parça Adedi</th><th>Toplam</th>
+                        <th>Parça En</th><th>Parça Boy</th><th>Parça Adedi</th><th>Toplam</th><th>İşlem</th>
                     </tr>
                 </thead>
                 <tbody id="plakaRows">
@@ -53,6 +84,7 @@
                             <td><input asp-for="Plakalar[i].ParcaBoyCm" type="number" step="0.01" /></td>
                             <td><input asp-for="Plakalar[i].ParcaAdedi" type="number" step="0.01" /></td>
                             <td>@Model.Plakalar[i].ToplamMaliyet.ToString("N2")</td>
+                            <td><button type="button" class="delete-row" onclick="removeRow(this, 'plaka')">Sil</button></td>
                         </tr>
                     }
                 </tbody>
@@ -63,7 +95,7 @@
     <section class="box">
         <div class="title-row">
             <div>
-                <h2>3. Bantlama Maliyeti</h2>
+                <h2>4. Bantlama Maliyeti</h2>
                 <p>Kesilen parçaların bantlama ölçülerini eski mantıkla ayrı girin.</p>
             </div>
             <button type="button" class="soft" onclick="addBantlama()">+ Bantlama Satırı Ekle</button>
@@ -72,7 +104,7 @@
             <table class="bant-table">
                 <thead>
                     <tr>
-                        <th>Açıklama</th><th>Parça En</th><th>Parça Boy</th><th>Parça Adedi</th><th>Bant Metre Fiyatı</th><th>Bant Kenarları</th><th>Toplam Metre</th><th>Toplam</th>
+                        <th>Açıklama</th><th>Parça En</th><th>Parça Boy</th><th>Parça Adedi</th><th>Bant Metre Fiyatı</th><th>Bant Kenarları</th><th>Toplam Metre</th><th>Toplam</th><th>İşlem</th>
                     </tr>
                 </thead>
                 <tbody id="bantlamaRows">
@@ -90,6 +122,7 @@
                             </td>
                             <td>@Model.Bantlamalar[i].ToplamMetre.ToString("N2")</td>
                             <td>@Model.Bantlamalar[i].ToplamMaliyet.ToString("N2")</td>
+                            <td><button type="button" class="delete-row" onclick="removeRow(this, 'bantlama')">Sil</button></td>
                         </tr>
                     }
                 </tbody>
@@ -99,14 +132,14 @@
     <section class="box">
         <div class="title-row">
             <div>
-                <h2>4. Plaka Maliyeti (Arkalık)</h2>
+                <h2>5. Plaka Maliyeti (Arkalık)</h2>
                 <p>Arkalık ölçülerini ve farklı plaka tiplerini burada girin.</p>
             </div>
             <button type="button" class="soft" onclick="addArkalik()">+ Arkalık Satırı Ekle</button>
         </div>
         <div class="scroll">
             <table class="small-table">
-                <thead><tr><th>Açıklama</th><th>Plaka En</th><th>Plaka Boy</th><th>Plaka Fiyatı</th><th>Parça En</th><th>Parça Boy</th><th>Parça Adedi</th><th>Toplam</th></tr></thead>
+                <thead><tr><th>Açıklama</th><th>Plaka En</th><th>Plaka Boy</th><th>Plaka Fiyatı</th><th>Parça En</th><th>Parça Boy</th><th>Parça Adedi</th><th>Toplam</th><th>İşlem</th></tr></thead>
                 <tbody id="arkalikRows">
                     @for (var i = 0; i < Model.Arkaliklar.Count; i++)
                     {
@@ -119,6 +152,7 @@
                             <td><input asp-for="Arkaliklar[i].ParcaBoyCm" type="number" step="0.01" /></td>
                             <td><input asp-for="Arkaliklar[i].ParcaAdedi" type="number" step="0.01" /></td>
                             <td>@Model.Arkaliklar[i].ToplamMaliyet.ToString("N2")</td>
+                            <td><button type="button" class="delete-row" onclick="removeRow(this, 'arkalik')">Sil</button></td>
                         </tr>
                     }
                 </tbody>
@@ -129,14 +163,14 @@
     <section class="box">
         <div class="title-row">
             <div>
-                <h2>5. Ek Malzemeler</h2>
+                <h2>6. Ek Malzemeler</h2>
                 <p>Vida, menteşe, ray, kulp gibi ürünleri ihtiyaç oldukça artırın.</p>
             </div>
             <button type="button" class="soft" onclick="addMalzeme()">+ Malzeme Satırı Ekle</button>
         </div>
         <div class="scroll">
             <table class="material-table">
-                <thead><tr><th>Stok Ürünü</th><th>1 Ürün İçin Kullanım</th><th>Birim Maliyet</th><th>Toplam Kullanım</th><th>Toplam Maliyet</th></tr></thead>
+                <thead><tr><th>Stok Ürünü</th><th>1 Ürün İçin Kullanım</th><th>Birim Maliyet</th><th>Toplam Kullanım</th><th>Toplam Maliyet</th><th>İşlem</th></tr></thead>
                 <tbody id="malzemeRows">
                     @for (var i = 0; i < Model.Malzemeler.Count; i++)
                     {
@@ -154,6 +188,7 @@
                             <td><input asp-for="Malzemeler[i].BirimMaliyet" type="number" step="0.01" /></td>
                             <td>@Model.Malzemeler[i].ToplamKullanimMiktari.ToString("N2")</td>
                             <td>@Model.Malzemeler[i].ToplamMaliyet.ToString("N2")</td>
+                            <td><button type="button" class="delete-row" onclick="removeRow(this, 'malzeme')">Sil</button></td>
                         </tr>
                     }
                 </tbody>
@@ -169,7 +204,7 @@
 </form>
 
 <section class="box result">
-    <h2>6. Sonuç</h2>
+    <h2>7. Sonuç</h2>
     @if (!Model.HesaplandiMi)
     {
         <div>Bilgileri girip maliyeti hesaplayın.</div>
@@ -198,19 +233,204 @@
 <style>
     .alert{padding:10px 12px;border-radius:10px;margin-bottom:12px}.error{color:#b42318;background:#fef2f2;border:1px solid #fecaca}.ok{color:#166534;background:#f0fdf4;border:1px solid #bbf7d0}
     .box{border:1px solid #444;border-radius:10px;padding:18px;margin-bottom:16px;background:#f8fafc}.box h2{margin:0 0 12px;color:#0f2747;font-size:28px;font-weight:800}.box p{margin:0;color:#475569}
-    .title-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.grid{display:grid;gap:12px}.two{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+    .title-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.grid{display:grid;gap:12px}.two{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}.recipe-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:14px}.common-values{padding-top:12px;border-top:1px solid #dbe4ee}
     label{font-weight:700;color:#0f172a}input,select{width:100%;min-height:40px;padding:8px 10px;border:1px solid #dbe4ee;border-radius:10px;background:white;font-size:15px}input[type=checkbox]{width:auto;min-height:auto}
-    .scroll{width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse}.plaka-table,.small-table{min-width:850px}.bant-table{min-width:980px}.material-table{min-width:860px}th{text-align:left;border-bottom:1px solid #64748b;padding:8px;color:#1e293b;white-space:nowrap}td{border-bottom:1px solid #e2e8f0;padding:8px;vertical-align:top;min-width:95px}td:first-child{min-width:150px}.checks{min-width:150px}.checks label{display:block;font-weight:500;margin-bottom:6px;white-space:nowrap}
-    .soft,.primary,.danger{border:none;border-radius:12px;padding:11px 14px;font-weight:800;cursor:pointer}.soft{background:#eef2ff;color:#312e81;border:1px solid #c7d2fe}.primary{background:#4f46e5;color:white}.danger{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.stock-check{display:block;margin-top:14px}
+    .scroll{width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse}.plaka-table,.small-table{min-width:950px}.bant-table{min-width:1080px}.material-table{min-width:940px}th{text-align:left;border-bottom:1px solid #64748b;padding:8px;color:#1e293b;white-space:nowrap}td{border-bottom:1px solid #e2e8f0;padding:8px;vertical-align:top;min-width:95px}td:first-child{min-width:150px}.checks{min-width:150px}.checks label{display:block;font-weight:500;margin-bottom:6px;white-space:nowrap}
+    .soft,.primary,.danger,.delete-row{border:none;border-radius:12px;padding:11px 14px;font-weight:800;cursor:pointer}.soft{background:#eef2ff;color:#312e81;border:1px solid #c7d2fe}.primary{background:#4f46e5;color:white}.danger,.delete-row{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.stock-check{display:block;margin-top:14px}
     .result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.result-grid div{border:1px solid #dbe4ee;background:white;border-radius:10px;padding:12px}.result-grid span{display:block;margin-top:8px;font-size:22px;font-weight:800;color:#312e81}
-    @@media(max-width:768px){.title-row{flex-direction:column}.soft,.primary,.danger{width:100%}.box h2{font-size:23px}}
+    @@media(max-width:768px){.title-row{flex-direction:column}.soft,.primary,.danger,.delete-row{width:100%}.box h2{font-size:23px}}
 </style>
 
 <script>
-    function input(name,type,ph){var x=document.createElement('input');x.name=name;x.type=type||'number';x.step='0.01';if(ph)x.placeholder=ph;return x;}
+    var recipes = {
+        singleUpper: { name: 'Tek Kapaklı Üst Dolap', width: 30, height: 72, depth: 33, hasShelf: true, doorCount: 1 },
+        doubleUpper: { name: 'Çift Kapaklı Üst Dolap', width: 60, height: 72, depth: 33, hasShelf: true, doorCount: 2 },
+        singleSink: { name: 'Tek Kapaklı Eviye Dolabı', width: 30, height: 72, depth: 33, hasShelf: false, doorCount: 1 },
+        doubleSink: { name: 'Çift Kapaklı Eviye Dolabı', width: 60, height: 72, depth: 33, hasShelf: false, doorCount: 2 }
+    };
+
+    function numberValue(id) {
+        var value = parseFloat((document.getElementById(id).value || '').replace(',', '.'));
+        return isNaN(value) ? 0 : value;
+    }
+
+    function formatNumber(value) {
+        var rounded = Math.round(value * 100) / 100;
+        return String(rounded);
+    }
+
+    function input(name,type,ph,value){
+        var x=document.createElement('input');
+        x.name=name;x.type=type||'number';x.step='0.01';
+        if(ph)x.placeholder=ph;
+        if(value !== undefined)x.value=formatNumber(value);
+        return x;
+    }
+
     function cell(c){var td=document.createElement('td');if(typeof c==='string')td.innerText=c;else td.appendChild(c);return td;}
-    function addPlaka(){var i=document.querySelectorAll('[data-plaka-row]').length;var r=document.createElement('tr');r.setAttribute('data-plaka-row','');r.appendChild(cell(input('Plakalar['+i+'].Aciklama','text','Örn: Raf')));['PlakaEnCm','PlakaBoyCm','PlakaFiyati','ParcaEnCm','ParcaBoyCm','ParcaAdedi'].forEach(function(n){r.appendChild(cell(input('Plakalar['+i+'].'+n)));});r.appendChild(cell('0,00'));document.getElementById('plakaRows').appendChild(r);}
-    function addBantlama(){var i=document.querySelectorAll('[data-bantlama-row]').length;var r=document.createElement('tr');r.setAttribute('data-bantlama-row','');r.appendChild(cell(input('Bantlamalar['+i+'].Aciklama','text','Örn: Kapak bant')));['ParcaEnCm','ParcaBoyCm','ParcaAdedi','BantMetreFiyati'].forEach(function(n){r.appendChild(cell(input('Bantlamalar['+i+'].'+n)));});var c=document.createElement('td');c.className='checks';c.innerHTML='<label><input type="hidden" name="Bantlamalar['+i+'].BantUstAlt" value="false"><input name="Bantlamalar['+i+'].BantUstAlt" type="checkbox" value="true" checked> Üst/Alt</label><label><input type="hidden" name="Bantlamalar['+i+'].BantSagSol" value="false"><input name="Bantlamalar['+i+'].BantSagSol" type="checkbox" value="true" checked> Sağ/Sol</label>';r.appendChild(c);r.appendChild(cell('0,00'));r.appendChild(cell('0,00'));document.getElementById('bantlamaRows').appendChild(r);}
-    function addArkalik(){var i=document.querySelectorAll('[data-arkalik-row]').length;var r=document.createElement('tr');r.setAttribute('data-arkalik-row','');r.appendChild(cell(input('Arkaliklar['+i+'].Aciklama','text','Örn: Arkalık')));['PlakaEnCm','PlakaBoyCm','PlakaFiyati','ParcaEnCm','ParcaBoyCm','ParcaAdedi'].forEach(function(n){r.appendChild(cell(input('Arkaliklar['+i+'].'+n)));});r.appendChild(cell('0,00'));document.getElementById('arkalikRows').appendChild(r);}
-    function addMalzeme(){var i=document.querySelectorAll('[data-malzeme-row]').length;var r=document.createElement('tr');r.setAttribute('data-malzeme-row','');var s=document.createElement('select');s.name='Malzemeler['+i+'].StokUrunId';s.innerHTML=document.getElementById('stokOptions').innerHTML;r.appendChild(cell(s));r.appendChild(cell(input('Malzemeler['+i+'].BirParcaKullanimMiktari')));r.appendChild(cell(input('Malzemeler['+i+'].BirimMaliyet')));r.appendChild(cell('0,00'));r.appendChild(cell('0,00'));document.getElementById('malzemeRows').appendChild(r);}
+
+    function removeRow(button, group) {
+        var row = button.closest('tr');
+        if (row) row.remove();
+        renumberRows(group);
+    }
+
+    function clearRows(id) {
+        document.getElementById(id).innerHTML = '';
+    }
+
+    function rowsHaveValues(selector) {
+        return Array.prototype.some.call(document.querySelectorAll(selector + ' input, ' + selector + ' select'), function (field) {
+            if (field.type === 'hidden' || field.type === 'checkbox') return false;
+            return String(field.value || '').trim() !== '' && String(field.value || '').trim() !== '0';
+        });
+    }
+
+    function renumberRows(group) {
+        var selector = group === 'plaka' ? '[data-plaka-row]' : group === 'bantlama' ? '[data-bantlama-row]' : group === 'arkalik' ? '[data-arkalik-row]' : '[data-malzeme-row]';
+        document.querySelectorAll(selector).forEach(function(row, index) {
+            row.querySelectorAll('[name]').forEach(function(field) {
+                field.name = field.name.replace(/\[\d+\]/, '[' + index + ']');
+            });
+            row.querySelectorAll('[id]').forEach(function(field) {
+                field.id = field.id.replace(/_\d+__/, '_' + index + '__');
+            });
+        });
+    }
+
+    function addPlaka(data){
+        data = data || {};
+        var i=document.querySelectorAll('[data-plaka-row]').length;
+        var r=document.createElement('tr');r.setAttribute('data-plaka-row','');
+        if (data.partKey) r.setAttribute('data-recipe-part', data.partKey);
+        r.appendChild(cell(input('Plakalar['+i+'].Aciklama','text','Örn: Raf', data.aciklama)));
+        ['PlakaEnCm','PlakaBoyCm','PlakaFiyati','ParcaEnCm','ParcaBoyCm','ParcaAdedi'].forEach(function(n){
+            r.appendChild(cell(input('Plakalar['+i+'].'+n, 'number', null, data[n])));
+        });
+        r.appendChild(cell('0,00'));
+        r.appendChild(cell(actionButton('plaka')));
+        document.getElementById('plakaRows').appendChild(r);
+    }
+
+    function actionButton(group) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'delete-row';
+        button.innerText = 'Sil';
+        button.onclick = function () { removeRow(button, group); };
+        return button;
+    }
+
+    function addBantlama(data){
+        data = data || {};
+        var i=document.querySelectorAll('[data-bantlama-row]').length;
+        var r=document.createElement('tr');r.setAttribute('data-bantlama-row','');
+        if (data.partKey) r.setAttribute('data-recipe-part', data.partKey);
+        r.appendChild(cell(input('Bantlamalar['+i+'].Aciklama','text','Örn: Kapak bant', data.aciklama)));
+        ['ParcaEnCm','ParcaBoyCm','ParcaAdedi','BantMetreFiyati'].forEach(function(n){
+            r.appendChild(cell(input('Bantlamalar['+i+'].'+n, 'number', null, data[n])));
+        });
+        var c=document.createElement('td');c.className='checks';
+        var ustAlt = data.BantUstAlt !== undefined ? data.BantUstAlt : true;
+        var sagSol = data.BantSagSol !== undefined ? data.BantSagSol : true;
+        c.innerHTML='<label><input type="hidden" name="Bantlamalar['+i+'].BantUstAlt" value="false"><input name="Bantlamalar['+i+'].BantUstAlt" type="checkbox" value="true" '+(ustAlt ? 'checked' : '')+'> Üst/Alt</label><label><input type="hidden" name="Bantlamalar['+i+'].BantSagSol" value="false"><input name="Bantlamalar['+i+'].BantSagSol" type="checkbox" value="true" '+(sagSol ? 'checked' : '')+'> Sağ/Sol</label>';
+        r.appendChild(c);r.appendChild(cell('0,00'));r.appendChild(cell('0,00'));r.appendChild(cell(actionButton('bantlama')));
+        document.getElementById('bantlamaRows').appendChild(r);
+    }
+
+    function addArkalik(data){
+        data = data || {};
+        var i=document.querySelectorAll('[data-arkalik-row]').length;
+        var r=document.createElement('tr');r.setAttribute('data-arkalik-row','');
+        r.appendChild(cell(input('Arkaliklar['+i+'].Aciklama','text','Örn: Arkalık', data.aciklama)));
+        ['PlakaEnCm','PlakaBoyCm','PlakaFiyati','ParcaEnCm','ParcaBoyCm','ParcaAdedi'].forEach(function(n){
+            r.appendChild(cell(input('Arkaliklar['+i+'].'+n, 'number', null, data[n])));
+        });
+        r.appendChild(cell('0,00'));r.appendChild(cell(actionButton('arkalik')));
+        document.getElementById('arkalikRows').appendChild(r);
+    }
+
+    function addMalzeme(){
+        var i=document.querySelectorAll('[data-malzeme-row]').length;
+        var r=document.createElement('tr');r.setAttribute('data-malzeme-row','');
+        var s=document.createElement('select');s.name='Malzemeler['+i+'].StokUrunId';s.innerHTML=document.getElementById('stokOptions').innerHTML;
+        r.appendChild(cell(s));r.appendChild(cell(input('Malzemeler['+i+'].BirParcaKullanimMiktari')));r.appendChild(cell(input('Malzemeler['+i+'].BirimMaliyet')));r.appendChild(cell('0,00'));r.appendChild(cell('0,00'));r.appendChild(cell(actionButton('malzeme')));
+        document.getElementById('malzemeRows').appendChild(r);
+    }
+
+    function currentCommonValues() {
+        var firstPlaka = document.querySelector('[data-plaka-row]');
+        var firstBant = document.querySelector('[data-bantlama-row]');
+        return {
+            plakaEn: numberValue('commonPlakaEn') || getRowNumber(firstPlaka, 'PlakaEnCm'),
+            plakaBoy: numberValue('commonPlakaBoy') || getRowNumber(firstPlaka, 'PlakaBoyCm'),
+            plakaFiyati: numberValue('commonPlakaFiyati') || getRowNumber(firstPlaka, 'PlakaFiyati'),
+            bantFiyati: numberValue('commonBantFiyati') || getRowNumber(firstBant, 'BantMetreFiyati')
+        };
+    }
+
+    function getRowNumber(row, field) {
+        if (!row) return 0;
+        var input = row.querySelector('[name$=".' + field + '"]');
+        if (!input) return 0;
+        var value = parseFloat((input.value || '').replace(',', '.'));
+        return isNaN(value) ? 0 : value;
+    }
+
+    function applyRecipe() {
+        var key = document.getElementById('recipeType').value;
+        var recipe = recipes[key];
+        if (!recipe) {
+            alert('Lütfen bir dolap reçetesi seçin.');
+            return;
+        }
+
+        var hasExistingRows = rowsHaveValues('#plakaRows') || rowsHaveValues('#bantlamaRows') || rowsHaveValues('#arkalikRows');
+        if (hasExistingRows && !confirm('Mevcut plaka, bantlama ve arkalık satırları reçete ile değiştirilsin mi?')) {
+            return;
+        }
+
+        var width = numberValue('recipeWidth');
+        var height = numberValue('recipeHeight');
+        var depth = numberValue('recipeDepth');
+        var thickness = numberValue('recipeThickness') || 1.8;
+        if (width <= 0 || height <= 0 || depth <= 0 || thickness <= 0) {
+            alert('Reçete ölçülerini sıfırdan büyük girin.');
+            return;
+        }
+
+        var common = currentCommonValues();
+        clearRows('plakaRows');
+        clearRows('bantlamaRows');
+        clearRows('arkalikRows');
+
+        var bodyWidth = width - (thickness * 2);
+        var altUstDepth = depth - 1;
+        var shelfDepth = depth - 2;
+        var doorWidth = recipe.doorCount === 2 ? (width - 0.6) / 2 : width - 0.3;
+        var doorHeight = height - 0.3;
+
+        addPlaka({ partKey: 'altust', aciklama: 'Alt/Üst', PlakaEnCm: common.plakaEn, PlakaBoyCm: common.plakaBoy, PlakaFiyati: common.plakaFiyati, ParcaEnCm: bodyWidth, ParcaBoyCm: altUstDepth, ParcaAdedi: 2 });
+        if (recipe.hasShelf) {
+            addPlaka({ partKey: 'raf', aciklama: 'Raf', PlakaEnCm: common.plakaEn, PlakaBoyCm: common.plakaBoy, PlakaFiyati: common.plakaFiyati, ParcaEnCm: bodyWidth, ParcaBoyCm: shelfDepth, ParcaAdedi: 1 });
+        }
+        addPlaka({ partKey: 'dikme', aciklama: 'Dikme', PlakaEnCm: common.plakaEn, PlakaBoyCm: common.plakaBoy, PlakaFiyati: common.plakaFiyati, ParcaEnCm: height, ParcaBoyCm: depth, ParcaAdedi: 2 });
+        addPlaka({ partKey: 'kapak', aciklama: 'Kapak', PlakaEnCm: common.plakaEn, PlakaBoyCm: common.plakaBoy, PlakaFiyati: common.plakaFiyati, ParcaEnCm: doorHeight, ParcaBoyCm: doorWidth, ParcaAdedi: recipe.doorCount });
+
+        addBantlama({ partKey: 'altust', aciklama: 'Alt/Üst bant', ParcaEnCm: bodyWidth / 2, ParcaBoyCm: altUstDepth, ParcaAdedi: 2, BantMetreFiyati: common.bantFiyati, BantUstAlt: true, BantSagSol: false });
+        if (recipe.hasShelf) {
+            addBantlama({ partKey: 'raf', aciklama: 'Raf bant', ParcaEnCm: bodyWidth / 2, ParcaBoyCm: shelfDepth, ParcaAdedi: 1, BantMetreFiyati: common.bantFiyati, BantUstAlt: true, BantSagSol: false });
+        }
+        addBantlama({ partKey: 'dikme', aciklama: 'Dikme bant', ParcaEnCm: height / 2, ParcaBoyCm: depth, ParcaAdedi: 2, BantMetreFiyati: common.bantFiyati, BantUstAlt: true, BantSagSol: false });
+        addBantlama({ partKey: 'kapak', aciklama: 'Kapak bant', ParcaEnCm: doorHeight, ParcaBoyCm: doorWidth, ParcaAdedi: recipe.doorCount, BantMetreFiyati: common.bantFiyati, BantUstAlt: true, BantSagSol: true });
+    }
+
+    document.getElementById('recipeType').addEventListener('change', function() {
+        var recipe = recipes[this.value];
+        if (!recipe) return;
+        document.getElementById('recipeWidth').value = formatNumber(recipe.width);
+        document.getElementById('recipeHeight').value = formatNumber(recipe.height);
+        document.getElementById('recipeDepth').value = formatNumber(recipe.depth);
+        document.getElementById('recipeThickness').value = '1.8';
+    });
 </script>
