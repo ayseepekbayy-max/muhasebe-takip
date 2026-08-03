@@ -45,12 +45,27 @@ public class OdemeBildirimService : IOdemeBildirimService
             .ThenBy(x => x.OdemeAdi)
             .ToListAsync(cancellationToken);
 
-        return planlar
+        var odemeBildirimleri = planlar
             .Where(x => !gizlenenOdemeIds.Contains(x.Id))
             .Select(x => SatiraDonustur(x, bugun))
+            .ToList();
+
+        var cekler = await _db.Cekler
+            .AsNoTracking()
+            .Where(x => x.FirmaId == firmaId &&
+                        !x.OdendiMi &&
+                        x.Tarih.Date <= ucGunSonra)
+            .ToListAsync(cancellationToken);
+
+        var cekBildirimleri = cekler
+            .Select(x => CekSatirinaDonustur(x, bugun))
+            .ToList();
+
+        return odemeBildirimleri
+            .Concat(cekBildirimleri)
             .OrderBy(x => x.Oncelik)
             .ThenBy(x => x.SonOdemeTarihi)
-            .ThenBy(x => x.OdemeAdi)
+            .ThenBy(x => x.CekId ?? x.OdemePlaniId)
             .ToList();
     }
 
@@ -113,9 +128,40 @@ public class OdemeBildirimService : IOdemeBildirimService
         return new OdemeBildirimSatiri
         {
             OdemePlaniId = odeme.Id,
+            KaynakTuru = "Ödeme",
             OdemeAdi = odeme.OdemeAdi,
+            Detay = $"{odeme.AylikOdemeTutari:N2} TL - {sonOdemeTarihi:dd.MM.yyyy}",
+            Url = $"/Odemeler/Detay/{odeme.Id}",
             Tutar = odeme.AylikOdemeTutari,
             SonOdemeTarihi = sonOdemeTarihi,
+            KalanGun = kalanGun,
+            Oncelik = kalanGun < 0 ? 0 : kalanGun + 1,
+            Durum = DurumMetni(kalanGun),
+            RenkSinifi = RenkSinifi(kalanGun),
+            GunBilgisi = GunBilgisi(kalanGun)
+        };
+    }
+
+    private static OdemeBildirimSatiri CekSatirinaDonustur(Cek cek, DateTime bugun)
+    {
+        var vadeTarihi = OdemePlanlamaService.ToUtcDate(cek.Tarih);
+        var kalanGun = (vadeTarihi - bugun).Days;
+        var mesaj = kalanGun switch
+        {
+            < 0 => cek.Tip == CekTipi.Alinacak ? $"Çek tahsilatı {Math.Abs(kalanGun)} gün gecikti" : $"Çek ödemesi {Math.Abs(kalanGun)} gün gecikti",
+            0 => cek.Tip == CekTipi.Alinacak ? "Çek tahsilatı bugün" : "Çek ödemesi bugün",
+            _ => cek.Tip == CekTipi.Alinacak ? $"Çek tahsilatına {kalanGun} gün kaldı" : $"Çek ödemesine {kalanGun} gün kaldı"
+        };
+
+        return new OdemeBildirimSatiri
+        {
+            CekId = cek.Id,
+            KaynakTuru = "Çek",
+            OdemeAdi = mesaj,
+            Detay = $"{cek.No} - {(cek.Tip == CekTipi.Alinacak ? "Alınan" : "Verilen")} - {cek.Tutar:N2} TL - {vadeTarihi:dd.MM.yyyy}",
+            Url = $"/Cekler/Detay/{cek.Id}",
+            Tutar = cek.Tutar,
+            SonOdemeTarihi = vadeTarihi,
             KalanGun = kalanGun,
             Oncelik = kalanGun < 0 ? 0 : kalanGun + 1,
             Durum = DurumMetni(kalanGun),

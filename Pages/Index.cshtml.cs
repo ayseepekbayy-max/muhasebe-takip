@@ -152,24 +152,6 @@ public class IndexModel : PageModel
             });
         }
 
-        var cekler = await _db.Cekler
-            .AsNoTracking()
-            .Where(x => x.FirmaId == firmaId && x.Tarih >= bugun && x.Tarih <= yediGunSonra)
-            .OrderBy(x => x.Tarih)
-            .Take(5)
-            .ToListAsync();
-
-        foreach (var cek in cekler)
-        {
-            Bildirimler.Add(new BildirimSatiri
-            {
-                Tur = cek.Tip == CekTipi.Alinacak ? "Alınacak Çek" : "Ödenecek Çek",
-                Baslik = string.IsNullOrWhiteSpace(cek.No) ? "Çek" : cek.No,
-                Aciklama = $"{cek.Tarih:dd.MM.yyyy} - {cek.Tutar:N2}",
-                Url = "/Cekler"
-            });
-        }
-
         var kritikStoklar = await _db.StokUrunler
             .AsNoTracking()
             .Where(x => x.FirmaId == firmaId && x.AktifMi)

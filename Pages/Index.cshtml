@@ -38,15 +38,15 @@
     <section id="odeme-bildirimleri" class="dashboard-panel payment-notifications-panel">
         <div class="panel-title-row">
             <div>
-                <h2>Ödeme Bildirimleri</h2>
-                <p>Geciken ve yaklaşan ödeme planları</p>
+                <h2>Ödeme ve Çek Bildirimleri</h2>
+                <p>Geciken ve yaklaşan ödeme planları ile çek vadeleri</p>
             </div>
             <a class="panel-link" href="/Odemeler">Tümünü Gör</a>
         </div>
 
         @if (Model.OdemeBildirimleri.Count == 0)
         {
-            <div class="empty-state">Bugün için ödeme bildirimi yok.</div>
+            <div class="empty-state">Bugün için ödeme veya çek bildirimi yok.</div>
         }
         else
         {
@@ -54,16 +54,20 @@
                 @foreach (var bildirim in Model.OdemeBildirimleri)
                 {
                     <article class="payment-notification-item @bildirim.RenkSinifi">
-                        <a href="/Odemeler/Detay/@bildirim.OdemePlaniId" class="payment-notification-link">
+                        <a href="@bildirim.Url" class="payment-notification-link">
                             <span class="payment-notification-status">@bildirim.Durum</span>
+                            <span class="badge bg-secondary">@bildirim.KaynakTuru</span>
                             <strong>@bildirim.OdemeAdi</strong>
-                            <span>@bildirim.Tutar.ToString("N2") TL</span>
-                            <small>Son ödeme: @bildirim.SonOdemeTarihi.ToString("dd.MM.yyyy") · @bildirim.GunBilgisi</small>
+                            <span>@bildirim.Detay</span>
+                            <small>Vade: @bildirim.SonOdemeTarihi.ToString("dd.MM.yyyy") · @bildirim.GunBilgisi</small>
                         </a>
-                        <form method="post" asp-page-handler="OdemeBildirimiBugunGizle" class="payment-notification-hide">
-                            <input type="hidden" name="odemeId" value="@bildirim.OdemePlaniId" />
-                            <button type="submit" class="btn btn-outline-secondary btn-sm">Bugün gösterme</button>
-                        </form>
+                        @if (bildirim.CekId == null)
+                        {
+                            <form method="post" asp-page-handler="OdemeBildirimiBugunGizle" class="payment-notification-hide">
+                                <input type="hidden" name="odemeId" value="@bildirim.OdemePlaniId" />
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Bugün gösterme</button>
+                            </form>
+                        }
                     </article>
                 }
             </div>

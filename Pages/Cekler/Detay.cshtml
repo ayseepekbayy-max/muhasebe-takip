@@ -1,0 +1,28 @@
+@page "/Cekler/Detay/{id:int}"
+@model MuhasebeTakip2.App.Pages.Cekler.DetayModel
+@using MuhasebeTakip2.App.Models
+@{
+    ViewData["Title"] = "Çek Detayı";
+    var alinacak = Model.Cek.Tip == CekTipi.Alinacak;
+    var gun = (Model.Cek.Tarih.Date - DateTime.UtcNow.Date).Days;
+    var rozet = Model.Cek.OdendiMi ? "bg-success" : gun < 0 ? "bg-danger" : gun == 0 ? "bg-warning text-dark" : "bg-warning-subtle text-dark";
+}
+
+<h1>Çek Detayı</h1>
+@if (TempData["Basari"] != null) { <div class="alert alert-success">@TempData["Basari"]</div> }
+@if (TempData["Hata"] != null) { <div class="alert alert-danger">@TempData["Hata"]</div> }
+
+<div class="card" style="max-width:760px;"><div class="card-body">
+    <dl class="row mb-0">
+        <dt class="col-sm-4">Çek Numarası</dt><dd class="col-sm-8">@Model.Cek.No</dd>
+        <dt class="col-sm-4">Tür</dt><dd class="col-sm-8">@(alinacak ? "Alınan" : "Verilen")</dd>
+        <dt class="col-sm-4">Vade Tarihi</dt><dd class="col-sm-8">@Model.Cek.Tarih.ToString("dd.MM.yyyy")</dd>
+        <dt class="col-sm-4">Tutar</dt><dd class="col-sm-8">@Model.Cek.Tutar.ToString("N2") TL</dd>
+        <dt class="col-sm-4">Açıklama</dt><dd class="col-sm-8">@Model.Cek.Aciklama</dd>
+        <dt class="col-sm-4">Durum</dt><dd class="col-sm-8"><span class="badge @rozet">@(alinacak ? (Model.Cek.OdendiMi ? "Tahsil Edildi" : "Tahsil Edilmedi") : (Model.Cek.OdendiMi ? "Ödendi" : "Ödenmedi"))</span></dd>
+        <dt class="col-sm-4">İşlem Tarihi</dt><dd class="col-sm-8">@(Model.Cek.OdemeTarihi?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</dd>
+    </dl>
+    @if (!string.IsNullOrWhiteSpace(Model.Cek.ResimYolu)) { <a href="@Model.Cek.ResimYolu" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm mt-3">Çek Görselini Aç</a> }
+    <form method="post" asp-page-handler="DurumDegistir" class="d-inline"><input type="hidden" name="id" value="@Model.Cek.Id" /><input type="hidden" name="odendiMi" value="@(!Model.Cek.OdendiMi ? "true" : "false")" /><button type="submit" class="btn btn-success btn-sm mt-3">@(alinacak ? (Model.Cek.OdendiMi ? "Tahsil Edilmedi Olarak İşaretle" : "Tahsil Edildi") : (Model.Cek.OdendiMi ? "Ödenmedi Olarak İşaretle" : "Ödeme Yapıldı"))</button></form>
+    <a asp-page="/Cekler/Index" class="btn btn-outline-dark btn-sm mt-3">Listeye Dön</a>
+</div></div>

@@ -26,6 +26,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ConversationMemoryService>();
 builder.Services.AddScoped<IIslemGecmisiService, IslemGecmisiService>();
 builder.Services.AddScoped<IOdemeBildirimService, OdemeBildirimService>();
+builder.Services.AddScoped<ICekDurumService, CekDurumService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {

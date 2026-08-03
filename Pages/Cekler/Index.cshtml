@@ -1,7 +1,17 @@
 @page "/Cekler"
 @model MuhasebeTakip2.App.Pages.Cekler.IndexModel
+@using MuhasebeTakip2.App.Models
 
 <h1>Çekler</h1>
+
+@if (TempData["Basari"] != null)
+{
+    <div class="alert alert-success">@TempData["Basari"]</div>
+}
+@if (TempData["Hata"] != null)
+{
+    <div class="alert alert-danger">@TempData["Hata"]</div>
+}
 
 @if (!string.IsNullOrWhiteSpace(Model.Mesaj))
 {
@@ -59,21 +69,23 @@
 </div>
 
 <h3>Alınacak Çekler</h3>
-<table style="width:100%; border-collapse:collapse; margin-bottom:24px;">
+<div class="table-responsive"><table style="width:100%; border-collapse:collapse; margin-bottom:24px;">
     <thead>
         <tr>
             <th style="padding:8px;">No</th>
-            <th style="padding:8px;">Tarih</th>
+            <th style="padding:8px;">Vade Tarihi</th>
             <th style="padding:8px;">Tutar</th>
             <th style="padding:8px;">Açıklama</th>
             <th style="padding:8px;">Görsel</th>
+            <th style="padding:8px;">Durum</th>
+            <th style="padding:8px;">Tahsilat Tarihi</th>
             <th style="padding:8px;">İşlem</th>
         </tr>
     </thead>
     <tbody>
         @if (Model.Alinacaklar.Count == 0)
         {
-            <tr><td colspan="6" style="padding:8px;">Kayıt yok.</td></tr>
+            <tr><td colspan="8" style="padding:8px;">Kayıt yok.</td></tr>
         }
         else
         {
@@ -93,6 +105,16 @@
                         }
                     </td>
                     <td style="padding:8px;">
+                        @{ var gun = (c.Tarih.Date - DateTime.UtcNow.Date).Days; }
+                        <span class="badge @(c.OdendiMi ? "bg-success" : gun < 0 ? "bg-danger" : gun == 0 ? "bg-warning text-dark" : "bg-warning-subtle text-dark")">@(c.OdendiMi ? "Tahsil Edildi" : "Tahsil Edilmedi")</span>
+                    </td>
+                    <td style="padding:8px;">@(c.OdemeTarihi?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
+                    <td style="padding:8px; white-space:nowrap;">
+                        <a class="btn btn-outline-secondary btn-sm" asp-page="/Cekler/Detay" asp-route-id="@c.Id">Detay</a>
+                        <form method="post" asp-page-handler="DurumDegistir" style="display:inline;">
+                            <input type="hidden" name="id" value="@c.Id" /><input type="hidden" name="odendiMi" value="@(!c.OdendiMi ? "true" : "false")" />
+                            <button type="submit" class="btn btn-outline-success btn-sm">@(c.OdendiMi ? "Tahsil Edilmedi Olarak İşaretle" : "Tahsil Edildi")</button>
+                        </form>
                         <form method="post" asp-page-handler="Sil" style="display:inline;" onsubmit="return confirm('Kayıt silinsin mi?');">
                             <input type="hidden" name="id" value="@c.Id" />
                             <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
@@ -102,24 +124,26 @@
             }
         }
     </tbody>
-</table>
+</table></div>
 
 <h3>Ödenecek Çekler</h3>
-<table style="width:100%; border-collapse:collapse;">
+<div class="table-responsive"><table style="width:100%; border-collapse:collapse;">
     <thead>
         <tr>
             <th style="padding:8px;">No</th>
-            <th style="padding:8px;">Tarih</th>
+            <th style="padding:8px;">Vade Tarihi</th>
             <th style="padding:8px;">Tutar</th>
             <th style="padding:8px;">Açıklama</th>
             <th style="padding:8px;">Görsel</th>
+            <th style="padding:8px;">Durum</th>
+            <th style="padding:8px;">Ödeme Tarihi</th>
             <th style="padding:8px;">İşlem</th>
         </tr>
     </thead>
     <tbody>
         @if (Model.Odenecekler.Count == 0)
         {
-            <tr><td colspan="6" style="padding:8px;">Kayıt yok.</td></tr>
+            <tr><td colspan="8" style="padding:8px;">Kayıt yok.</td></tr>
         }
         else
         {
@@ -139,6 +163,16 @@
                         }
                     </td>
                     <td style="padding:8px;">
+                        @{ var gun = (c.Tarih.Date - DateTime.UtcNow.Date).Days; }
+                        <span class="badge @(c.OdendiMi ? "bg-success" : gun < 0 ? "bg-danger" : gun == 0 ? "bg-warning text-dark" : "bg-warning-subtle text-dark")">@(c.OdendiMi ? "Ödendi" : "Ödenmedi")</span>
+                    </td>
+                    <td style="padding:8px;">@(c.OdemeTarihi?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
+                    <td style="padding:8px; white-space:nowrap;">
+                        <a class="btn btn-outline-secondary btn-sm" asp-page="/Cekler/Detay" asp-route-id="@c.Id">Detay</a>
+                        <form method="post" asp-page-handler="DurumDegistir" style="display:inline;">
+                            <input type="hidden" name="id" value="@c.Id" /><input type="hidden" name="odendiMi" value="@(!c.OdendiMi ? "true" : "false")" />
+                            <button type="submit" class="btn btn-outline-success btn-sm">@(c.OdendiMi ? "Ödenmedi Olarak İşaretle" : "Ödeme Yapıldı")</button>
+                        </form>
                         <form method="post" asp-page-handler="Sil" style="display:inline;" onsubmit="return confirm('Kayıt silinsin mi?');">
                             <input type="hidden" name="id" value="@c.Id" />
                             <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
@@ -148,4 +182,4 @@
             }
         }
     </tbody>
-</table>
+</table></div>

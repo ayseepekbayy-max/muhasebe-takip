@@ -31,4 +31,8 @@ public class Cek
     public string? ResimYolu { get; set; }
 
     public DateTime OlusturmaTarihi { get; set; } = DateTime.UtcNow;
+
+    public bool OdendiMi { get; set; }
+
+    public DateTime? OdemeTarihi { get; set; }
 }

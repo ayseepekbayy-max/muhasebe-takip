@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Cekler;
 
@@ -10,11 +11,13 @@ public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
     private readonly IWebHostEnvironment _env;
+    private readonly ICekDurumService _cekDurumService;
 
-    public IndexModel(AppDbContext db, IWebHostEnvironment env)
+    public IndexModel(AppDbContext db, IWebHostEnvironment env, ICekDurumService cekDurumService)
     {
         _db = db;
         _env = env;
+        _cekDurumService = cekDurumService;
     }
 
     public List<Cek> Alinacaklar { get; set; } = new();
@@ -179,6 +182,17 @@ public class IndexModel : PageModel
             await YukleAsync(firmaId.Value);
             return Page();
         }
+    }
+
+    public async Task<IActionResult> OnPostDurumDegistirAsync(int id, bool odendiMi)
+    {
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null)
+            return RedirectToPage("/Login");
+
+        var sonuc = await _cekDurumService.DurumDegistirAsync(firmaId.Value, id, odendiMi);
+        TempData[sonuc.Basarili ? "Basari" : "Hata"] = sonuc.Mesaj;
+        return RedirectToPage();
     }
 
     private async Task YukleAsync(int firmaId)
