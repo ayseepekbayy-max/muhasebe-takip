@@ -5,3 +5,12 @@ obj/
 .vscode/
 *.user
 *.suo
+.env
+.env.*
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+*.db
+*.db-shm
+*.db-wal
+*.db.backup_*

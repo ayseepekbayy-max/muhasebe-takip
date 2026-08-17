@@ -7,6 +7,14 @@ obj/
 *.db-wal
 *.db.backup_*
 
+# Local environment and secret configuration
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+
 # User-specific IDE files
 .vs/
 *.user

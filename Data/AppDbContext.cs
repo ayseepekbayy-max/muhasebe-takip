@@ -9,6 +9,10 @@ public class AppDbContext : DbContext
     {
     }
 
+    // Request-scoped, server-side tenant established by the /api/ai middleware.
+    // This is runtime context only; it is not part of the EF model.
+    public int? AuthenticatedAiFirmaId { get; set; }
+
     public DbSet<Firma> Firmalar { get; set; } = default!;
     public DbSet<Kullanici> Kullanicilar { get; set; } = default!;
     public DbSet<CariKart> CariKartlar { get; set; } = default!;

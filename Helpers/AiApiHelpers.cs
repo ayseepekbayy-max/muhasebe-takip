@@ -227,7 +227,10 @@ public static class AiApiHelpers
         };
     }
 
-    public static async Task<CalisanAvansToplamResponse> GetMusteriBorcAsync(AppDbContext db, string? musteriAdi)
+    public static async Task<CalisanAvansToplamResponse> GetMusteriBorcAsync(
+        AppDbContext db,
+        string? musteriAdi,
+        int firmaId)
     {
         if (string.IsNullOrWhiteSpace(musteriAdi))
         {
@@ -242,7 +245,8 @@ public static class AiApiHelpers
 
         var liste = await db.KasaHareketleri
             .Include(x => x.CariKart)
-            .Where(x => x.CariKartId != null &&
+            .Where(x => x.FirmaId == firmaId &&
+                        x.CariKartId != null &&
                         x.CariKart != null &&
                         x.CariKart.Tip == CariTip.Alici)
             .ToListAsync();

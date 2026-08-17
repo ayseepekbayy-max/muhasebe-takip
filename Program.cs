@@ -33,10 +33,41 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     var cs = builder.Configuration.GetConnectionString("Default");
 
     if (string.IsNullOrWhiteSpace(cs))
-        throw new Exception("ConnectionStrings:Default bulunamadı.");
+        throw new InvalidOperationException(
+            builder.Environment.IsProduction()
+                ? "Production veritabanı yapılandırması eksik. ConnectionStrings__Default environment variable tanımlanmalıdır."
+                : "ConnectionStrings:Default yapılandırması bulunamadı.");
 
-    if (cs.Contains("Host=", StringComparison.OrdinalIgnoreCase) &&
-        cs.Contains("Database=", StringComparison.OrdinalIgnoreCase))
+    var postgreSqlConnection =
+        cs.Contains("Host=", StringComparison.OrdinalIgnoreCase) &&
+        cs.Contains("Database=", StringComparison.OrdinalIgnoreCase);
+
+    if (builder.Environment.IsProduction())
+    {
+        Npgsql.NpgsqlConnectionStringBuilder productionConnection;
+
+        try
+        {
+            productionConnection = new Npgsql.NpgsqlConnectionStringBuilder(cs);
+        }
+        catch (ArgumentException)
+        {
+            throw new InvalidOperationException(
+                "Production ortamında geçerli bir PostgreSQL connection string gereklidir.");
+        }
+
+        if (string.IsNullOrWhiteSpace(productionConnection.Host) ||
+            string.IsNullOrWhiteSpace(productionConnection.Database) ||
+            string.IsNullOrWhiteSpace(productionConnection.Username) ||
+            string.IsNullOrWhiteSpace(productionConnection.Password))
+        {
+            throw new InvalidOperationException(
+                "Production PostgreSQL yapılandırması gerekli bağlantı alanlarını içermiyor.");
+        }
+
+        options.UseNpgsql(cs);
+    }
+    else if (postgreSqlConnection)
     {
         options.UseNpgsql(cs);
     }
@@ -239,8 +270,44 @@ app.Use(async (context, next) =>
     }
 
     // API istekleri için özel hata yakalama
-    if (path.StartsWith("/api"))
+    if (path.StartsWith("/api/ai"))
     {
+        var kullaniciId = context.Session.GetInt32("KullaniciId");
+        var sessionFirmaId = context.Session.GetInt32("FirmaId");
+
+        if (kullaniciId is null or <= 0 || sessionFirmaId is null or <= 0)
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                success = false,
+                message = "Geçerli bir kullanıcı oturumu gerekli."
+            });
+            return;
+        }
+
+        var db = context.RequestServices.GetRequiredService<AppDbContext>();
+        var kullaniciDogrulandi = await db.Kullanicilar
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.Id == kullaniciId.Value &&
+                x.FirmaId == sessionFirmaId.Value &&
+                x.Firma != null &&
+                x.Firma.AktifMi);
+
+        if (!kullaniciDogrulandi)
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                success = false,
+                message = "Kullanıcı veya firma oturumu geçerli değil."
+            });
+            return;
+        }
+
+        db.AuthenticatedAiFirmaId = sessionFirmaId.Value;
+
         try
         {
             await next();
@@ -708,7 +775,8 @@ app.MapPost("/api/ai/son-kasa-hareketleri", async (AppDbContext db, CalisanAvans
 
 app.MapPost("/api/ai/musteri-borc", async (AppDbContext db, CalisanAvansToplamRequest req) =>
 {
-    var result = await AiApiHelpers.GetMusteriBorcAsync(db, req.CalisanAdi);
+    var firmaId = await GetAiFirmaIdAsync(db, req.FirmaId);
+    var result = await AiApiHelpers.GetMusteriBorcAsync(db, req.CalisanAdi, firmaId.Value);
     return Results.Json(result);
 });
 
@@ -1352,6 +1420,7 @@ app.MapPost("/api/ai/maas-odeme-dagilim", async (AppDbContext db, CalisanAvansAp
 
 app.MapPost("/api/ai/maas-odeme-tarihleri", async (AppDbContext db, CalisanAvansApiRequest request) =>
 {
+    var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
     int year = request.Year ?? DateTime.Now.Year;
     int month = request.Month ?? DateTime.Now.Month;
 
@@ -1360,7 +1429,8 @@ app.MapPost("/api/ai/maas-odeme-tarihleri", async (AppDbContext db, CalisanAvans
 
     var liste = await db.CalisanAvanslari
         .Include(x => x.Calisan)
-        .Where(x => x.Tip == CalisanHareketTipi.MaasOdeme &&
+        .Where(x => x.FirmaId == firmaId &&
+                    x.Tip == CalisanHareketTipi.MaasOdeme &&
                     x.Tarih.Year == year &&
                     x.Tarih.Month == month)
         .OrderByDescending(x => x.Tarih)
@@ -2704,18 +2774,15 @@ static async Task<IResult> GetCalisanPuantajOzetiAsync(AppDbContext db, CalisanA
     }
 }
 
-static async Task<int?> GetAiFirmaIdAsync(AppDbContext db, int? requestFirmaId)
+static Task<int?> GetAiFirmaIdAsync(AppDbContext db, int? ignoredRequestFirmaId)
 {
-    if (requestFirmaId.HasValue)
-    {
-        var firmaVarMi = await db.Firmalar
-            .AnyAsync(x => x.Id == requestFirmaId.Value && x.AktifMi);
+    _ = ignoredRequestFirmaId;
 
-        if (firmaVarMi)
-            return requestFirmaId.Value;
-    }
+    var firmaId = db.AuthenticatedAiFirmaId;
+    if (firmaId is null or <= 0)
+        throw new UnauthorizedAccessException("AI API tenant doğrulaması bulunamadı.");
 
-    return -1;
+    return Task.FromResult<int?>(firmaId.Value);
 }
 
 public class CalisanAvansApiRequest
