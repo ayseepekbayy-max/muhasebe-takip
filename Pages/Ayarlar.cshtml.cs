@@ -167,8 +167,8 @@ public class AyarlarModel : PageModel
                 return Page();
             }
 
-            var mevcutSifreDogru = PasswordHelper.Verify(MevcutSifre, kullanici.Sifre) || kullanici.Sifre == MevcutSifre;
-            if (!mevcutSifreDogru)
+            var mevcutSifreKontrolu = PasswordHelper.Verify(kullanici, MevcutSifre, kullanici.Sifre);
+            if (!mevcutSifreKontrolu.Succeeded)
             {
                 Hata = "Mevcut şifre yanlış.";
                 await BilgileriYukle(firmaId.Value, kullaniciId.Value);
@@ -182,7 +182,7 @@ public class AyarlarModel : PageModel
                 return Page();
             }
 
-            kullanici.Sifre = PasswordHelper.Hash(YeniSifre);
+            kullanici.Sifre = PasswordHelper.Hash(kullanici, YeniSifre);
         }
 
         await _db.SaveChangesAsync();

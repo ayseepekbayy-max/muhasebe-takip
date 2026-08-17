@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Helpers;
+using MuhasebeTakip2.App.Models;
 using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages;
@@ -46,16 +47,8 @@ public class LoginModel : PageModel
             return Page();
         }
 
-        bool sifreDogru = PasswordHelper.Verify(Sifre, kullanici.Sifre);
-
-        if (!sifreDogru && kullanici.Sifre == Sifre)
-        {
-            kullanici.Sifre = PasswordHelper.Hash(Sifre);
-            await _db.SaveChangesAsync();
-            sifreDogru = true;
-        }
-
-        if (!sifreDogru)
+        var sifreKontrolu = PasswordHelper.Verify(kullanici, Sifre, kullanici.Sifre);
+        if (!sifreKontrolu.Succeeded)
         {
             Hata = "Kullanıcı adı veya şifre yanlış.";
             return Page();
@@ -68,6 +61,9 @@ public class LoginModel : PageModel
                 Hata = "Bu firma hesabı pasif durumda.";
                 return Page();
             }
+
+            if (sifreKontrolu.RehashNeeded)
+                await TryRehashPasswordAsync(kullanici, Sifre);
 
             HttpContext.Session.Clear();
 
@@ -88,6 +84,23 @@ public class LoginModel : PageModel
             HttpContext.Session.SetString("MenuMaliyet", firma.MenuMaliyet ? "1" : "0");
             HttpContext.Session.SetString("MenuCekler", firma.MenuCekler ? "1" : "0");
                     return RedirectToPage("/Index");
+    }
+
+    private async Task TryRehashPasswordAsync(Kullanici kullanici, string verifiedPassword)
+    {
+        var eskiSifre = kullanici.Sifre;
+        kullanici.Sifre = PasswordHelper.Hash(kullanici, verifiedPassword);
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch
+        {
+            // Rehash yazılamazsa doğrulanmış kullanıcının girişini engelleme ve eski kaydı koru.
+            kullanici.Sifre = eskiSifre;
+            _db.Entry(kullanici).Property(x => x.Sifre).IsModified = false;
+        }
     }
 
     public async Task<IActionResult> OnPostDemoAsync()

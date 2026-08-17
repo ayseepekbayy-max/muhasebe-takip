@@ -111,10 +111,10 @@ public class RegisterModel : PageModel
             {
                 KullaniciAdi = KullaniciAdi,
                 Email = Email,
-                Sifre = PasswordHelper.Hash(Sifre),
                 FirmaId = firma.Id,
                 Rol = "Kullanici"
             };
+            kullanici.Sifre = PasswordHelper.Hash(kullanici, Sifre);
 
             _db.Kullanicilar.Add(kullanici);
             await _db.SaveChangesAsync();

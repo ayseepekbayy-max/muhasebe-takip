@@ -91,7 +91,7 @@ public class SifreSifirlaModel : PageModel
             return Page();
         }
 
-        kullanici.Sifre = PasswordHelper.Hash(YeniSifre);
+        kullanici.Sifre = PasswordHelper.Hash(kullanici, YeniSifre);
         kullanici.SifreSifirlamaKodu = null;
         kullanici.SifreSifirlamaKodGecerlilik = null;
 

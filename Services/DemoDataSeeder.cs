@@ -42,18 +42,18 @@ public static class DemoDataSeeder
                 {
                     KullaniciAdi = DemoUserName,
                     Email = DemoEmail,
-                    Sifre = PasswordHelper.Hash(DemoPassword),
                     FirmaId = firma.Id,
                     Firma = firma,
                     Rol = "Demo"
                 };
+                kullanici.Sifre = PasswordHelper.Hash(kullanici, DemoPassword);
 
                 db.Kullanicilar.Add(kullanici);
                 await db.SaveChangesAsync();
             }
             else
             {
-                kullanici.Sifre = PasswordHelper.Hash(DemoPassword);
+                kullanici.Sifre = PasswordHelper.Hash(kullanici, DemoPassword);
                 kullanici.Rol = "Demo";
                 kullanici.Firma.AktifMi = true;
                 kullanici.Firma.FirmaAdi = "Nova Mobilya ve Tasarım Ltd. Şti.";
