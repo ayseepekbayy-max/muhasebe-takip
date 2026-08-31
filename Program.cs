@@ -28,27 +28,24 @@ builder.Services.AddScoped<IIslemGecmisiService, IslemGecmisiService>();
 builder.Services.AddScoped<IOdemeBildirimService, OdemeBildirimService>();
 builder.Services.AddScoped<ICekDurumService, CekDurumService>();
 
-builder.Services.AddDbContext<AppDbContext>(options =>
+var databaseProvider = builder.Configuration["Database:Provider"]?.Trim();
+var databaseConnectionString = builder.Configuration.GetConnectionString("Default");
+
+if (string.IsNullOrWhiteSpace(databaseConnectionString))
+    throw new InvalidOperationException(
+        builder.Environment.IsProduction()
+            ? "Production veritabanı yapılandırması eksik. ConnectionStrings__Default environment variable tanımlanmalıdır."
+            : "ConnectionStrings:Default yapılandırması bulunamadı.");
+
+if (databaseProvider?.Equals("PostgreSql", StringComparison.OrdinalIgnoreCase) == true)
 {
-    var cs = builder.Configuration.GetConnectionString("Default");
-
-    if (string.IsNullOrWhiteSpace(cs))
-        throw new InvalidOperationException(
-            builder.Environment.IsProduction()
-                ? "Production veritabanı yapılandırması eksik. ConnectionStrings__Default environment variable tanımlanmalıdır."
-                : "ConnectionStrings:Default yapılandırması bulunamadı.");
-
-    var postgreSqlConnection =
-        cs.Contains("Host=", StringComparison.OrdinalIgnoreCase) &&
-        cs.Contains("Database=", StringComparison.OrdinalIgnoreCase);
-
     if (builder.Environment.IsProduction())
     {
         Npgsql.NpgsqlConnectionStringBuilder productionConnection;
 
         try
         {
-            productionConnection = new Npgsql.NpgsqlConnectionStringBuilder(cs);
+            productionConnection = new Npgsql.NpgsqlConnectionStringBuilder(databaseConnectionString);
         }
         catch (ArgumentException)
         {
@@ -64,18 +61,24 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             throw new InvalidOperationException(
                 "Production PostgreSQL yapılandırması gerekli bağlantı alanlarını içermiyor.");
         }
+    }
 
-        options.UseNpgsql(cs);
-    }
-    else if (postgreSqlConnection)
-    {
-        options.UseNpgsql(cs);
-    }
-    else
-    {
-        options.UseSqlite(cs);
-    }
-});
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseNpgsql(databaseConnectionString));
+}
+else if (databaseProvider?.Equals("Sqlite", StringComparison.OrdinalIgnoreCase) == true)
+{
+    builder.Services.AddDbContext<SqliteAppDbContext>(options =>
+        options.UseSqlite(databaseConnectionString));
+
+    builder.Services.AddScoped<AppDbContext>(serviceProvider =>
+        serviceProvider.GetRequiredService<SqliteAppDbContext>());
+}
+else
+{
+    throw new InvalidOperationException(
+        "Database:Provider yapılandırması 'Sqlite' veya 'PostgreSql' olmalıdır.");
+}
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.PostConfigure<EmailSettings>(settings =>
@@ -97,7 +100,7 @@ builder.Services.AddScoped<EmailService>();
 var app = builder.Build();
 
 // Veritabanını migration ile güncelle
-if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Database:AutoMigrate"))
+if (builder.Configuration.GetValue<bool>("Database:AutoMigrate"))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -137,7 +140,7 @@ if (builder.Configuration.GetValue<bool>("Maintenance:AttachLegacyDataToFirstFir
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var firma = db.Firmalar.FirstOrDefault();
-
+ 
     if (firma != null)
     {
         var baglanacakVeriVarMi =

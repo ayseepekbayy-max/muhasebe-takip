@@ -22,6 +22,132 @@
     --success: #16a34a;
 }
 
+/* Yönetici notları: üst menüdeki küçük, bildirimlerden bağımsız açılır panel. */
+.yonetici-notlari {
+    position: relative;
+}
+
+.yonetici-notlari-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    padding-inline: 8px;
+}
+
+.yonetici-notlari-toggle svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.yonetici-notlari-panel {
+    width: min(320px, calc(100vw - 24px));
+    padding: 14px;
+    border: 1px solid #dfe5ec;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, .16);
+}
+
+.yonetici-notlari-baslik {
+    margin-bottom: 10px;
+    color: #1f2937;
+    font-size: .95rem;
+    font-weight: 700;
+}
+
+.yonetici-notu-form textarea {
+    width: 100%;
+    min-height: 72px;
+    resize: vertical;
+    padding: 8px 10px;
+    border: 1px solid #cfd7e3;
+    border-radius: 8px;
+    color: #1f2937;
+    font: inherit;
+    font-size: .88rem;
+}
+
+.yonetici-notu-form textarea:focus {
+    border-color: #6b8afd;
+    outline: 2px solid rgba(59, 93, 231, .12);
+}
+
+.yonetici-notu-form-alt,
+.yonetici-notu-alt {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.yonetici-notu-form-alt small,
+.yonetici-notu-alt {
+    color: #6b7280;
+    font-size: .72rem;
+}
+
+.yonetici-notlari-mesaj {
+    min-height: 18px;
+    margin: 5px 0;
+    color: #26734d;
+    font-size: .76rem;
+}
+
+.yonetici-notlari-mesaj.hata {
+    color: #b42318;
+}
+
+.yonetici-notlari-liste {
+    display: grid;
+    gap: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.yonetici-notu-kart {
+    padding: 9px 10px;
+    border: 1px solid #e5e9ef;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.yonetici-notu-icerik {
+    margin-bottom: 7px;
+    color: #263244;
+    font-size: .84rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.yonetici-notu-sil {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #a13b36;
+    font-size: .72rem;
+}
+
+.yonetici-notu-sil:hover {
+    color: #7f1d1d;
+    text-decoration: underline;
+}
+
+.yonetici-notlari-bos {
+    padding: 12px 4px;
+    color: #7b8492;
+    font-size: .82rem;
+    text-align: center;
+}
+
+@media (max-width: 991.98px) {
+    .yonetici-notlari-panel {
+        right: auto;
+        left: 0;
+    }
+}
+
 html {
     font-size: 14px;
     position: relative;

@@ -5,7 +5,7 @@ namespace MuhasebeTakip2.App.Data;
 
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    public AppDbContext(DbContextOptions options) : base(options)
     {
     }
 
@@ -37,6 +37,7 @@ public class AppDbContext : DbContext
     public DbSet<OdemeHareketi> OdemeHareketleri { get; set; } = default!;
     public DbSet<OdemeBildirimGecmisi> OdemeBildirimGecmisleri { get; set; } = default!;
     public DbSet<OdemeBildirimGizleme> OdemeBildirimGizlemeleri { get; set; } = default!;
+    public DbSet<YoneticiNotu> YoneticiNotlari { get; set; } = default!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -138,6 +139,22 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.OdemePlaniId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<YoneticiNotu>(entity =>
+        {
+            entity.HasIndex(x => new { x.FirmaId, x.SonKullanmaTarihi });
+            entity.Property(x => x.NotMetni).HasMaxLength(500).IsRequired();
+
+            entity.HasOne(x => x.Firma)
+                .WithMany()
+                .HasForeignKey(x => x.FirmaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.Kullanici)
+                .WithMany()
+                .HasForeignKey(x => x.KullaniciId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
     }
