@@ -22,7 +22,7 @@
     --success: #16a34a;
 }
 
-/* Yönetici notları: üst menüdeki küçük, bildirimlerden bağımsız açılır panel. */
+/* Yönetici notları: üst menü ikonundan açılan, bildirimlerden bağımsız ekran. */
 .yonetici-notlari {
     position: relative;
 }
@@ -41,31 +41,116 @@
     fill: currentColor;
 }
 
-.yonetici-notlari-panel {
-    width: min(320px, calc(100vw - 24px));
-    padding: 14px;
-    border: 1px solid #dfe5ec;
-    border-radius: 12px;
-    box-shadow: 0 12px 32px rgba(15, 23, 42, .16);
+.yonetici-notlari-ekran {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
 }
 
-.yonetici-notlari-baslik {
-    margin-bottom: 10px;
+.yonetici-notlari-ekran[hidden] {
+    display: none;
+}
+
+.yonetici-notlari-arka-plan {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: rgba(15, 23, 42, .58);
+    cursor: default;
+}
+
+.yonetici-notlari-panel {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    width: min(680px, 100%);
+    max-height: calc(100dvh - 48px);
+    overflow: hidden;
+    border: 1px solid #dfe5ec;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 24px 64px rgba(15, 23, 42, .28);
+}
+
+.yonetici-notlari-panel-baslik {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    border-bottom: 1px solid #e5e9ef;
+}
+
+.yonetici-notlari-panel-baslik h2 {
+    margin: 0;
     color: #1f2937;
-    font-size: .95rem;
-    font-weight: 700;
+    font-size: 1.15rem;
+    font-weight: 750;
+}
+
+.yonetici-notlari-panel-baslik p {
+    margin: 3px 0 0;
+    color: #6b7280;
+    font-size: .8rem;
+}
+
+.yonetici-notlari-kapat {
+    display: inline-flex;
+    flex: 0 0 36px;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid #dfe5ec;
+    border-radius: 9px;
+    background: #ffffff;
+    color: #475569;
+    font-size: 1.45rem;
+    line-height: 1;
+}
+
+.yonetici-notlari-kapat:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.yonetici-notlari-panel-icerik {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+    padding: 18px 20px 20px;
+}
+
+.yonetici-notu-label {
+    display: block;
+    margin-bottom: 6px;
+    color: #334155;
+    font-size: .82rem;
+    font-weight: 650;
 }
 
 .yonetici-notu-form textarea {
     width: 100%;
-    min-height: 72px;
+    min-height: 96px;
+    max-height: 180px;
     resize: vertical;
-    padding: 8px 10px;
+    padding: 10px 12px;
     border: 1px solid #cfd7e3;
     border-radius: 8px;
     color: #1f2937;
     font: inherit;
-    font-size: .88rem;
+    font-size: .9rem;
 }
 
 .yonetici-notu-form textarea:focus {
@@ -84,7 +169,7 @@
 .yonetici-notu-form-alt small,
 .yonetici-notu-alt {
     color: #6b7280;
-    font-size: .72rem;
+    font-size: .76rem;
 }
 
 .yonetici-notlari-mesaj {
@@ -100,38 +185,47 @@
 
 .yonetici-notlari-liste {
     display: grid;
+    flex: 1 1 auto;
+    align-content: start;
+    min-height: 0;
     gap: 8px;
-    max-height: 280px;
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .yonetici-notu-kart {
-    padding: 9px 10px;
+    min-width: 0;
+    padding: 11px 12px;
     border: 1px solid #e5e9ef;
     border-radius: 8px;
     background: #f8fafc;
 }
 
 .yonetici-notu-icerik {
-    margin-bottom: 7px;
+    max-width: 100%;
+    margin-bottom: 9px;
     color: #263244;
-    font-size: .84rem;
-    line-height: 1.35;
+    font-size: .88rem;
+    line-height: 1.45;
     overflow-wrap: anywhere;
+    word-break: break-word;
     white-space: pre-wrap;
 }
 
 .yonetici-notu-sil {
-    padding: 0;
-    border: 0;
-    background: transparent;
+    flex: 0 0 auto;
+    min-width: 42px;
+    padding: 5px 8px;
+    border: 1px solid #efc8c5;
+    border-radius: 7px;
+    background: #fff7f6;
     color: #a13b36;
-    font-size: .72rem;
+    font-size: .76rem;
 }
 
 .yonetici-notu-sil:hover {
+    background: #fef2f2;
     color: #7f1d1d;
-    text-decoration: underline;
 }
 
 .yonetici-notlari-bos {
@@ -141,10 +235,44 @@
     text-align: center;
 }
 
-@media (max-width: 991.98px) {
+body.yonetici-notlari-acik {
+    overflow: hidden;
+}
+
+body.yonetici-notlari-acik .firmova-float {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+@media (max-width: 575.98px) {
+    .yonetici-notlari-ekran {
+        align-items: stretch;
+        padding: 0;
+    }
+
     .yonetici-notlari-panel {
-        right: auto;
-        left: 0;
+        width: 100%;
+        max-height: none;
+        min-height: 100dvh;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .yonetici-notlari-panel-baslik {
+        padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
+    }
+
+    .yonetici-notlari-panel-icerik {
+        padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
+    }
+
+    .yonetici-notu-alt {
+        align-items: flex-end;
+    }
+
+    .yonetici-notu-alt span {
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 }
 

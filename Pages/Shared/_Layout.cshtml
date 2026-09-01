@@ -130,30 +130,13 @@
                         <div class="app-top-actions">
                             @if (rol == "superadmin" || rol == "admin")
                             {
-                                <div class="dropdown yonetici-notlari" data-bs-auto-close="outside">
-                                    <button class="app-top-btn yonetici-notlari-toggle" type="button" data-bs-toggle="dropdown"
+                                <div class="yonetici-notlari">
+                                    <button id="yonetici-notlari-ac" class="app-top-btn yonetici-notlari-toggle" type="button"
                                             aria-expanded="false" title="Yönetici notları" aria-label="Yönetici notlarını aç">
                                         <svg viewBox="0 0 24 24" aria-hidden="true">
                                             <path d="M4 3h11a2 2 0 0 1 2 2v5l-2 2V5H6v14h9v-3l2-2v5a2 2 0 0 1-2 2H4V3Zm15.7 6.3a1 1 0 0 1 0 1.4l-6.8 6.8-2.4.5.5-2.4 6.8-6.8a1 1 0 0 1 1.4 0l.5.5Z" />
                                         </svg>
                                     </button>
-                                    <div class="dropdown-menu dropdown-menu-end yonetici-notlari-panel">
-                                        <div class="yonetici-notlari-baslik">Yönetici Notları</div>
-                                        <form id="yonetici-notu-form" class="yonetici-notu-form">
-                                            @Html.AntiForgeryToken()
-                                            <label for="yonetici-notu-metni" class="visually-hidden">Yeni Not</label>
-                                            <textarea id="yonetici-notu-metni" name="notMetni" maxlength="500" rows="3"
-                                                      placeholder="Yeni Not" required></textarea>
-                                            <div class="yonetici-notu-form-alt">
-                                                <small><span id="yonetici-notu-karakter">0</span>/500</small>
-                                                <button type="submit" class="btn btn-sm btn-primary">Ekle</button>
-                                            </div>
-                                        </form>
-                                        <div id="yonetici-notlari-mesaj" class="yonetici-notlari-mesaj" role="status"></div>
-                                        <div id="yonetici-notlari-liste" class="yonetici-notlari-liste">
-                                            <div class="yonetici-notlari-bos">Notlar yükleniyor…</div>
-                                        </div>
-                                    </div>
                                 </div>
                             }
                             @if (odemeBildirimSayisi > 0)
@@ -190,6 +173,40 @@
         }
     }
 
+    @if (!loginSayfasiMi && (rol == "superadmin" || rol == "admin"))
+    {
+        <div id="yonetici-notlari-ekran" class="yonetici-notlari-ekran" hidden aria-hidden="true">
+            <button type="button" class="yonetici-notlari-arka-plan" data-yonetici-notlari-kapat
+                    aria-label="Yönetici notlarını kapat"></button>
+            <section class="yonetici-notlari-panel" role="dialog" aria-modal="true" aria-labelledby="yonetici-notlari-baslik">
+                <header class="yonetici-notlari-panel-baslik">
+                    <div>
+                        <h2 id="yonetici-notlari-baslik">Yönetici Notları</h2>
+                        <p>İki saat boyunca aktif kalan kısa notlarınız.</p>
+                    </div>
+                    <button type="button" class="yonetici-notlari-kapat" data-yonetici-notlari-kapat
+                            aria-label="Yönetici notlarını kapat">×</button>
+                </header>
+                <div class="yonetici-notlari-panel-icerik">
+                    <form id="yonetici-notu-form" class="yonetici-notu-form">
+                        @Html.AntiForgeryToken()
+                        <label for="yonetici-notu-metni" class="yonetici-notu-label">Yeni Not</label>
+                        <textarea id="yonetici-notu-metni" name="notMetni" maxlength="500" rows="4"
+                                  placeholder="Notunuzu yazın" required></textarea>
+                        <div class="yonetici-notu-form-alt">
+                            <small><span id="yonetici-notu-karakter">0</span>/500</small>
+                            <button type="submit" class="btn btn-sm btn-primary">Ekle</button>
+                        </div>
+                    </form>
+                    <div id="yonetici-notlari-mesaj" class="yonetici-notlari-mesaj" role="status"></div>
+                    <div id="yonetici-notlari-liste" class="yonetici-notlari-liste">
+                        <div class="yonetici-notlari-bos">Notlar yükleniyor…</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    }
+
     <div class="@(loginSayfasiMi ? "" : "container-fluid app-main-container")" style="@(loginSayfasiMi ? "width:100%; max-width:none; padding:0; margin:0;" : "")">
         <main role="main" class="pb-4">
             @RenderBody()
@@ -214,8 +231,9 @@
     {
         <script>
             (() => {
-                const kapsayici = document.querySelector(".yonetici-notlari");
-                if (!kapsayici) return;
+                const ac = document.getElementById("yonetici-notlari-ac");
+                const ekran = document.getElementById("yonetici-notlari-ekran");
+                if (!ac || !ekran) return;
 
                 const form = document.getElementById("yonetici-notu-form");
                 const metin = document.getElementById("yonetici-notu-metni");
@@ -223,6 +241,23 @@
                 const liste = document.getElementById("yonetici-notlari-liste");
                 const mesaj = document.getElementById("yonetici-notlari-mesaj");
                 const token = form.querySelector('input[name="__RequestVerificationToken"]').value;
+
+                const ekraniKapat = () => {
+                    ekran.hidden = true;
+                    ekran.setAttribute("aria-hidden", "true");
+                    ac.setAttribute("aria-expanded", "false");
+                    document.body.classList.remove("yonetici-notlari-acik");
+                    ac.focus();
+                };
+
+                const ekraniAc = async () => {
+                    ekran.hidden = false;
+                    ekran.setAttribute("aria-hidden", "false");
+                    ac.setAttribute("aria-expanded", "true");
+                    document.body.classList.add("yonetici-notlari-acik");
+                    await notlariYukle();
+                    metin.focus();
+                };
 
                 const mesajGoster = (deger, hata = false) => {
                     mesaj.textContent = deger || "";
@@ -289,7 +324,12 @@
                     }
                 };
 
-                kapsayici.addEventListener("shown.bs.dropdown", notlariYukle);
+                ac.addEventListener("click", ekraniAc);
+                ekran.querySelectorAll("[data-yonetici-notlari-kapat]").forEach(dugme =>
+                    dugme.addEventListener("click", ekraniKapat));
+                document.addEventListener("keydown", olay => {
+                    if (olay.key === "Escape" && !ekran.hidden) ekraniKapat();
+                });
                 metin.addEventListener("input", () => karakter.textContent = metin.value.length);
 
                 form.addEventListener("submit", async olay => {
@@ -336,7 +376,7 @@
                 });
 
                 window.setInterval(() => {
-                    if (!kapsayici.querySelector(".dropdown-menu.show")) return;
+                    if (ekran.hidden) return;
                     liste.querySelectorAll(".yonetici-notu-kart").forEach(kart => {
                         if (new Date(kart.dataset.sonKullanmaTarihi).getTime() <= Date.now()) kart.remove();
                     });
