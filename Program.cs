@@ -11,6 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<NovaReplyService>();
+builder.Services.AddScoped<PrivateAccessService>();
 
 builder.Services.AddSession(options =>
 {
@@ -233,6 +234,23 @@ app.UseSession();
 
 app.Use(async (context, next) =>
 {
+    // Keep this session domain outside all ERP page and API handlers.
+    var accessPath = context.Request.Path.Value?.TrimEnd('/') ?? "";
+    var isPanel = string.Equals(accessPath, "/Panel", StringComparison.OrdinalIgnoreCase);
+    var isLogin = string.Equals(accessPath, "/Login", StringComparison.OrdinalIgnoreCase);
+    if (context.Session.GetString("PrivateMode") == "1" && !isPanel && !isLogin)
+    {
+        context.Response.Redirect("/Panel");
+        return;
+    }
+
+    // Panel performs its own session validation for every supported handler.
+    if (isPanel)
+    {
+        await next();
+        return;
+    }
+
     var path = context.Request.Path.Value?.ToLower() ?? "";
     var demoMode = context.Session.GetString("DemoMode") == "1";
     var readOnlyMethod =

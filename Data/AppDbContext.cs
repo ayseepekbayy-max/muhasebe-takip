@@ -38,10 +38,18 @@ public class AppDbContext : DbContext
     public DbSet<OdemeBildirimGecmisi> OdemeBildirimGecmisleri { get; set; } = default!;
     public DbSet<OdemeBildirimGizleme> OdemeBildirimGizlemeleri { get; set; } = default!;
     public DbSet<YoneticiNotu> YoneticiNotlari { get; set; } = default!;
+    public DbSet<PrivateMessage> PrivateMessages { get; set; } = default!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<PrivateMessage>(entity =>
+        {
+            entity.HasIndex(x => x.CreatedAtUtc);
+            entity.ToTable("PrivateMessages", table =>
+                table.HasCheckConstraint("CK_PrivateMessages_SenderPerson", "\"SenderPerson\" IN (1, 2)"));
+        });
 
         modelBuilder.Entity<Kullanici>(entity =>
         {

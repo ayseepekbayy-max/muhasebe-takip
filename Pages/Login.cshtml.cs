@@ -12,9 +12,12 @@ public class LoginModel : PageModel
 {
     private readonly AppDbContext _db;
 
-    public LoginModel(AppDbContext db)
+    private readonly PrivateAccessService _privateAccess;
+
+    public LoginModel(AppDbContext db, PrivateAccessService privateAccess)
     {
         _db = db;
+        _privateAccess = privateAccess;
     }
 
     [BindProperty]
@@ -32,6 +35,22 @@ public class LoginModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
+        var privateResult = _privateAccess.Authenticate(KullaniciAdi, Sifre);
+        if (privateResult.IsPrivateUsername)
+        {
+            if (privateResult.Person is null)
+            {
+                Hata = "Kullanıcı adı veya şifre hatalı.";
+                return Page();
+            }
+
+            HttpContext.Session.Clear();
+            HttpContext.Session.SetString("PrivateMode", "1");
+            HttpContext.Session.SetString("PrivatePerson", privateResult.Person.Number);
+            HttpContext.Session.SetString("PrivatePersonName", privateResult.Person.Name);
+            return RedirectToPage("/Panel");
+        }
+
         KullaniciAdi = (KullaniciAdi ?? "").Trim();
         Sifre = (Sifre ?? "").Trim();
 
