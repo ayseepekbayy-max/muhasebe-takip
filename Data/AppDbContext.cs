@@ -39,10 +39,18 @@ public class AppDbContext : DbContext
     public DbSet<OdemeBildirimGizleme> OdemeBildirimGizlemeleri { get; set; } = default!;
     public DbSet<YoneticiNotu> YoneticiNotlari { get; set; } = default!;
     public DbSet<PrivateMessage> PrivateMessages { get; set; } = default!;
+    public DbSet<PrivatePresence> PrivatePresences { get; set; } = default!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<PrivatePresence>(entity =>
+        {
+            entity.HasIndex(x => x.PersonNumber).IsUnique();
+            entity.ToTable("PrivatePresence", table =>
+                table.HasCheckConstraint("CK_PrivatePresence_PersonNumber", "\"PersonNumber\" IN (1, 2)"));
+        });
 
         modelBuilder.Entity<PrivateMessage>(entity =>
         {
