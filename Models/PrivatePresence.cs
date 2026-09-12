@@ -9,5 +9,6 @@ public sealed class PrivatePresence
     public int PersonNumber { get; set; }
     public DateTime LastSeenAtUtc { get; set; }
     public DateTime? MessagesClearedAtUtc { get; set; }
+    public DateTime? TypingUpdatedAtUtc { get; set; }
     public bool ShowLastSeen { get; set; } = true;
 }

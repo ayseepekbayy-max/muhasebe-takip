@@ -23,6 +23,7 @@
         .message-actions summary::-webkit-details-marker { display: none; }
         .message-actions summary:focus-visible { outline: 3px solid #5679b9; }
         .delete-message { display: block; margin: 4px 0 0 auto; padding: 6px 10px; font-size: 13px; color: #9a3434; }
+        .typing-indicator { width: fit-content; margin: 0 auto 12px 0; padding: 7px 12px; border-radius: 12px; background: #eef1f4; color: #68778b; font-size: 12px; }
         .content { white-space: pre-wrap; }
         time { display: block; margin-top: 5px; text-align: right; color: #58677d; font-size: 11px; }
         .composer { display: flex; gap: 12px; padding: 16px; border-top: 1px solid #e3e7ee; align-items: end; }
@@ -55,7 +56,7 @@
     </style>
 </head>
 <body>
-    <main data-server-now="@Model.ServerNowUtc.ToString("O")" data-hide-url="@Url.Page("/Panel", "Hide")" data-hide-selected-url="@Url.Page("/Panel", "HideSelected")" data-clear-mine-url="@Url.Page("/Panel", "ClearMine")" data-delete-selected-url="@Url.Page("/Panel", "DeleteSelected")" data-delete-all-url="@Url.Page("/Panel", "DeleteAll")" data-settings-url="@Url.Page("/Panel", "Settings")" data-delete-url="@Url.Page("/Panel", "Delete")" data-person="@Model.CurrentPerson" data-messages-url="@Url.Page("/Panel", "Messages")" data-login-url="@Url.Page("/Login")">
+    <main data-typing-url="@Url.Page("/Panel", "Typing")" data-server-now="@Model.ServerNowUtc.ToString("O")" data-hide-url="@Url.Page("/Panel", "Hide")" data-hide-selected-url="@Url.Page("/Panel", "HideSelected")" data-clear-mine-url="@Url.Page("/Panel", "ClearMine")" data-delete-selected-url="@Url.Page("/Panel", "DeleteSelected")" data-delete-all-url="@Url.Page("/Panel", "DeleteAll")" data-settings-url="@Url.Page("/Panel", "Settings")" data-delete-url="@Url.Page("/Panel", "Delete")" data-person="@Model.CurrentPerson" data-messages-url="@Url.Page("/Panel", "Messages")" data-login-url="@Url.Page("/Login")">
         <header>
             <div class="header-left">
                 <div>
@@ -96,6 +97,7 @@
                     <time datetime="@message.CreatedAtUtc.ToString("O")">@message.CreatedAtUtc.ToString("HH:mm")</time>
                 </article>
             }
+            <div id="typing-indicator" class="typing-indicator" role="status" hidden>yazıyor...</div>
         </section>
         <form id="send-form" class="composer" method="post" asp-page="/Panel" asp-page-handler="Send">
             <div class="field">
@@ -137,7 +139,8 @@
             const sendStatus = document.getElementById('send-status');
             const pollStatus = document.getElementById('poll-status');
             const person = Number(root.dataset.person);
-            const nodes = new Map([...list.children].map(node => [Number(node.dataset.id), node]));
+            const nodes = new Map([...list.querySelectorAll('article[data-id]')].map(node => [Number(node.dataset.id), node]));
+            const typingIndicator = document.getElementById('typing-indicator');
             const clock = new Intl.DateTimeFormat('tr-TR', { hour: '2-digit', minute: '2-digit' });
             let sending = false;
             let stopped = false;
@@ -207,6 +210,53 @@
                 const body = new FormData();
                 body.append('__RequestVerificationToken', form.querySelector('[name="__RequestVerificationToken"]').value);
                 return body;
+            }
+            let typingQueue = Promise.resolve();
+            let typingActive = false;
+            let lastTypingSent = -Infinity;
+            let typingIdleTimer;
+            let typingHeartbeatTimer;
+            let peerTypingTimer;
+            function sendTyping(active) {
+                typingActive = active;
+                lastTypingSent = performance.now();
+                typingQueue = typingQueue.catch(() => {}).then(async () => {
+                    if (stopped) return;
+                    const body = actionBody();
+                    body.append('typing', String(active));
+                    try {
+                        await fetch(root.dataset.typingUrl, {
+                            method: 'POST', body, credentials: 'same-origin', cache: 'no-store',
+                            redirect: 'error', keepalive: true, signal: AbortSignal.timeout(4000)
+                        });
+                    } catch { /* Best effort: the server expires stale typing automatically. */ }
+                });
+            }
+            function stopTyping() {
+                clearTimeout(typingIdleTimer);
+                clearTimeout(typingHeartbeatTimer);
+                if (typingActive) sendTyping(false);
+            }
+            entry.addEventListener('input', () => {
+                clearTimeout(typingIdleTimer);
+                clearTimeout(typingHeartbeatTimer);
+                if (!entry.value.trim() || sending || document.hidden) { stopTyping(); return; }
+                const delay = Math.max(0, 2000 - (performance.now() - lastTypingSent));
+                if (delay === 0) sendTyping(true);
+                else typingHeartbeatTimer = setTimeout(() => sendTyping(true), delay);
+                typingIdleTimer = setTimeout(stopTyping, 3000);
+            });
+            form.addEventListener('submit', stopTyping);
+            document.querySelector('header form').addEventListener('submit', stopTyping);
+            window.addEventListener('pagehide', stopTyping);
+            document.addEventListener('visibilitychange', () => { if (document.hidden) stopTyping(); });
+            function updateTyping(active, remainingMs) {
+                clearTimeout(peerTypingTimer);
+                const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+                const wasHidden = typingIndicator.hidden;
+                typingIndicator.hidden = !active || remainingMs <= 0;
+                if (wasHidden && !typingIndicator.hidden && nearBottom) list.scrollTop = list.scrollHeight;
+                if (!typingIndicator.hidden) peerTypingTimer = setTimeout(() => { typingIndicator.hidden = true; }, remainingMs);
             }
             async function postControl(url, body) {
                 const response = await fetch(url, { method: 'POST', body, credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
@@ -380,6 +430,7 @@
             async function loadMessages() {
                 if (stopped || document.hidden) return;
                 try {
+                    const pollStarted = performance.now();
                     const response = await fetch(root.dataset.messagesUrl, { cache: 'no-store', credentials: 'same-origin', redirect: 'error' });
                     if (response.status === 401 || response.status === 403) {
                         stopped = true;
@@ -392,6 +443,7 @@
                     updateMessages(payload.messages);
                     ownShowLastSeen = payload.presence.showLastSeen;
                     updateLastSeen(payload.presence.otherLastSeenAtUtc);
+                    updateTyping(payload.presence.otherTyping, Math.max(0, payload.presence.otherTypingRemainingMs - (performance.now() - pollStarted)));
                     pollStatus.textContent = '';
                 } catch {
                     pollStatus.textContent = 'Mesajlar yenilenemedi. Yeniden denenecek.';

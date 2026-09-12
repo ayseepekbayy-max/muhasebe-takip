@@ -18,6 +18,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
     public bool ShowLastSeen { get; private set; } = true;
     public DateTime? OtherLastSeenAtUtc { get; private set; }
 
+    public int OtherTypingRemainingMs { get; private set; }
     public DateTime ServerNowUtc => DateTime.UtcNow;
 
     private bool HasAccess => HttpContext.Session.GetString("PrivateMode") == "1" &&
@@ -43,7 +44,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
 
         var messages = await LoadMessagesAsync();
         await LoadPresenceAsync();
-        return new JsonResult(new { serverNowUtc = ServerNowUtc, presence = new { showLastSeen = ShowLastSeen, otherLastSeenAtUtc = OtherLastSeenAtUtc }, messages = messages.Select(message => new
+        return new JsonResult(new { serverNowUtc = ServerNowUtc, presence = new { showLastSeen = ShowLastSeen, otherLastSeenAtUtc = OtherLastSeenAtUtc, otherTyping = OtherTypingRemainingMs > 0, otherTypingRemainingMs = OtherTypingRemainingMs }, messages = messages.Select(message => new
         {
             id = message.Id,
             senderPerson = message.SenderPerson,
@@ -199,6 +200,24 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         return new JsonResult(new { showLastSeen = showLastSeen.Value });
     }
 
+    public async Task<IActionResult> OnPostTypingAsync([FromForm] bool? typing)
+    {
+        if (!HasAccess)
+            return Unauthorized();
+        if (typing is null)
+            return BadRequest();
+
+        var person = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2;
+        var now = DateTime.UtcNow;
+        DateTime? updatedAt = typing.Value ? now : null;
+        // Null means stopped; a timestamp expires after five seconds without a heartbeat.
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "PrivatePresence" ("PersonNumber", "LastSeenAtUtc", "ShowLastSeen", "TypingUpdatedAtUtc")
+            VALUES ({person}, {now}, {true}, {updatedAt})
+            ON CONFLICT ("PersonNumber") DO UPDATE SET "TypingUpdatedAtUtc" = EXCLUDED."TypingUpdatedAtUtc"
+            """, HttpContext.RequestAborted);
+        return new JsonResult(new { success = true });
+    }
     private async Task LoadPresenceAsync()
     {
         var person = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2;
@@ -222,6 +241,9 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         }
         ShowLastSeen = own.ShowLastSeen;
         var other = presences.SingleOrDefault(presence => presence.PersonNumber != person);
+        // Typing is independent of last-seen privacy; expose only its short remaining lifetime.
+        OtherTypingRemainingMs = other?.TypingUpdatedAtUtc is DateTime typedAt
+            ? (int)Math.Clamp((typedAt.AddSeconds(5) - now).TotalMilliseconds, 0, 5000) : 0;
         // A hidden timestamp must never be included in HTML or JSON.
         OtherLastSeenAtUtc = other is { ShowLastSeen: true }
             ? DateTime.SpecifyKind(other.LastSeenAtUtc, DateTimeKind.Utc) : null;
