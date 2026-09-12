@@ -11,6 +11,7 @@ namespace MuhasebeTakip2.App.Pages;
 public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext db) : PageModel
 {
     public string OtherPersonName { get; private set; } = "";
+    public string CurrentPersonName { get; private set; } = "";
     public int CurrentPerson { get; private set; }
     public List<PrivateMessage> Messages { get; private set; } = new();
 
@@ -24,6 +25,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
 
         CurrentPerson = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2;
         OtherPersonName = privateAccess.GetOtherPersonName(HttpContext.Session.GetString("PrivatePerson")!);
+        CurrentPersonName = HttpContext.Session.GetString("PrivatePersonName") ?? "";
         Messages = await LoadMessagesAsync();
         return Page();
     }
