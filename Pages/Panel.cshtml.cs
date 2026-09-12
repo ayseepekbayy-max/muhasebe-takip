@@ -70,6 +70,25 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         return new JsonResult(new { success = true });
     }
 
+    public async Task<IActionResult> OnPostDeleteAsync([FromForm] int id)
+    {
+        if (!HasAccess)
+            return Unauthorized();
+
+        var person = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2;
+        var message = await db.PrivateMessages.AsNoTracking()
+            .SingleOrDefaultAsync(message => message.Id == id, HttpContext.RequestAborted);
+        if (message is null)
+            return NotFound();
+        if (message.SenderPerson != person)
+            return StatusCode(StatusCodes.Status403Forbidden);
+
+        var deleted = await db.PrivateMessages
+            .Where(message => message.Id == id && message.SenderPerson == person)
+            .ExecuteDeleteAsync(HttpContext.RequestAborted);
+        return deleted == 0 ? NotFound() : new JsonResult(new { success = true });
+    }
+
     private async Task<List<PrivateMessage>> LoadMessagesAsync()
     {
         var recent = await db.PrivateMessages.AsNoTracking()

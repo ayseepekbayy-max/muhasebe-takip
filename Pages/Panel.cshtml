@@ -14,11 +14,15 @@
         body { margin: 0; background: #f3f5f8; color: #172238; font-family: system-ui, sans-serif; }
         main { max-width: 860px; height: 100dvh; margin: auto; display: flex; flex-direction: column; background: white; }
         header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px; border-bottom: 1px solid #e3e7ee; }
-        h1 { margin: 0; font-size: 20px; }
-        header p { margin: 6px 0 0; color: #58677d; overflow-wrap: anywhere; }
+        .avatar { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: #e0eee8; font-weight: 600; overflow-wrap: anywhere; text-align: center; }
         .messages { flex: 1; min-height: 0; overflow-y: auto; padding: 20px; background: #f5f7f9; }
         .message { width: fit-content; max-width: 85%; margin: 0 auto 12px 0; padding: 10px 14px; background: white; border: 1px solid #e3e7ee; border-radius: 12px; overflow-wrap: anywhere; }
         .message.own { margin-left: auto; margin-right: 0; background: #e0eee8; border-color: #cfe1d8; }
+        .message-actions { margin-bottom: 4px; text-align: right; }
+        .message-actions summary { display: inline-block; cursor: pointer; padding: 0 8px; border-radius: 6px; list-style: none; font-size: 20px; }
+        .message-actions summary::-webkit-details-marker { display: none; }
+        .message-actions summary:focus-visible { outline: 3px solid #5679b9; }
+        .delete-message { display: block; margin: 4px 0 0 auto; padding: 6px 10px; font-size: 13px; color: #9a3434; }
         .content { white-space: pre-wrap; }
         time { display: block; margin-top: 5px; text-align: right; color: #58677d; font-size: 11px; }
         .composer { display: flex; gap: 12px; padding: 16px; border-top: 1px solid #e3e7ee; align-items: end; }
@@ -32,13 +36,9 @@
     </style>
 </head>
 <body>
-    <main data-person="@Model.CurrentPerson" data-messages-url="@Url.Page("/Panel", "Messages")" data-login-url="@Url.Page("/Login")">
+    <main data-delete-url="@Url.Page("/Panel", "Delete")" data-person="@Model.CurrentPerson" data-messages-url="@Url.Page("/Panel", "Messages")" data-login-url="@Url.Page("/Login")">
         <header>
-            <div>
-                <h1>Firmova ERP</h1>
-                <p>@Model.OtherPersonName ile sohbet</p>
-                <p>Sen: @Model.CurrentPersonName</p>
-            </div>
+            <div class="avatar">@Model.OtherPersonName</div>
             <form method="post" asp-page="/Panel" asp-page-handler="Logout">
                 <button type="submit">Çıkış</button>
             </form>
@@ -47,6 +47,13 @@
             @foreach (var message in Model.Messages)
             {
                 <article class="message @(message.SenderPerson == Model.CurrentPerson ? "own" : "")" data-id="@message.Id">
+                    @if (message.SenderPerson == Model.CurrentPerson)
+                    {
+                        <details class="message-actions">
+                            <summary aria-label="Mesaj seçenekleri">⋮</summary>
+                            <button type="button" class="delete-message">Mesajı sil</button>
+                        </details>
+                    }
                     <div class="content">@message.Content</div>
                     <time datetime="@message.CreatedAtUtc.ToString("O")">@message.CreatedAtUtc.ToString("HH:mm")</time>
                 </article>
@@ -78,6 +85,49 @@
             let stopped = false;
             let refreshQueue = Promise.resolve();
 
+            function createDeleteMenu() {
+                const menu = document.createElement('details');
+                menu.className = 'message-actions';
+                const toggle = document.createElement('summary');
+                toggle.setAttribute('aria-label', 'Mesaj seçenekleri');
+                toggle.textContent = '⋮';
+                const action = document.createElement('button');
+                action.type = 'button';
+                action.className = 'delete-message';
+                action.textContent = 'Mesajı sil';
+                menu.append(toggle, action);
+                return menu;
+            }
+            list.addEventListener('click', async event => {
+                const action = event.target.closest('.delete-message');
+                if (!action || action.disabled || !list.contains(action)) return;
+                if (!confirm('Bu mesaj silinsin mi?')) return;
+                const message = action.closest('.message');
+                const body = new FormData();
+                body.append('id', message.dataset.id);
+                body.append('__RequestVerificationToken', form.querySelector('[name="__RequestVerificationToken"]').value);
+                action.disabled = true;
+                sendStatus.textContent = '';
+                try {
+                    const response = await fetch(root.dataset.deleteUrl, { method: 'POST', body, credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
+                    if (response.status === 401) {
+                        stopped = true;
+                        location.assign(root.dataset.loginUrl);
+                        return;
+                    }
+                    if (response.status === 403) {
+                        sendStatus.textContent = 'Bu mesajı silme yetkiniz yok.';
+                        return;
+                    }
+                    if (!response.ok && response.status !== 404) throw new Error('request');
+                    await refresh();
+                } catch {
+                    sendStatus.textContent = 'Mesaj silinemedi. Lütfen tekrar deneyin.';
+                } finally {
+                    action.disabled = false;
+                }
+            });
+
             function setTime(time, value) {
                 const date = new Date(value);
                 time.dateTime = value;
@@ -108,6 +158,7 @@
                         content.textContent = message.content;
                         const time = document.createElement('time');
                         setTime(time, message.createdAtUtc);
+                        if (message.senderPerson === person) node.append(createDeleteMenu());
                         node.append(content, time);
                         nodes.set(message.id, node);
                         changed = true;
