@@ -18,6 +18,8 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
     public bool ShowLastSeen { get; private set; } = true;
     public DateTime? OtherLastSeenAtUtc { get; private set; }
 
+    public DateTime ServerNowUtc => DateTime.UtcNow;
+
     private bool HasAccess => HttpContext.Session.GetString("PrivateMode") == "1" &&
         HttpContext.Session.GetString("PrivatePerson") is "1" or "2";
 
@@ -41,7 +43,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
 
         var messages = await LoadMessagesAsync();
         await LoadPresenceAsync();
-        return new JsonResult(new { presence = new { showLastSeen = ShowLastSeen, otherLastSeenAtUtc = OtherLastSeenAtUtc }, messages = messages.Select(message => new
+        return new JsonResult(new { serverNowUtc = ServerNowUtc, presence = new { showLastSeen = ShowLastSeen, otherLastSeenAtUtc = OtherLastSeenAtUtc }, messages = messages.Select(message => new
         {
             id = message.Id,
             senderPerson = message.SenderPerson,
@@ -125,7 +127,57 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         if (!confirmed)
             return BadRequest();
 
+        await using var transaction = await db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
         await db.PrivateMessages.ExecuteDeleteAsync(HttpContext.RequestAborted);
+        await db.PrivatePresences.ExecuteUpdateAsync(update => update.SetProperty(presence => presence.MessagesClearedAtUtc, (DateTime?)null), HttpContext.RequestAborted);
+        await transaction.CommitAsync(HttpContext.RequestAborted);
+        return new JsonResult(new { success = true });
+    }
+
+    public Task<IActionResult> OnPostHideAsync([FromForm] int id) => HideMessagesAsync(new[] { id });
+
+    public Task<IActionResult> OnPostHideSelectedAsync([FromForm] int[]? ids) => HideMessagesAsync(ids);
+
+    private async Task<IActionResult> HideMessagesAsync(int[]? ids)
+    {
+        if (!HasAccess)
+            return Unauthorized();
+        if (ids is null || ids.Length is 0 or > 200 || ids.Any(id => id <= 0))
+            return BadRequest();
+
+        var person = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2;
+        var selectedIds = ids.Distinct().ToArray();
+        await using var transaction = await db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
+        var found = await db.PrivateMessages.CountAsync(message => selectedIds.Contains(message.Id), HttpContext.RequestAborted);
+        if (found != selectedIds.Length)
+            return NotFound();
+
+        var now = DateTime.UtcNow;
+        foreach (var id in selectedIds)
+        {
+            // Server-derived person, parameterized values, and a unique key make repeats idempotent.
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO "PrivateMessageHidden" ("PersonNumber", "PrivateMessageId", "HiddenAtUtc")
+                SELECT {person}, "Id", {now} FROM "PrivateMessages" WHERE "Id" = {id}
+                ON CONFLICT ("PersonNumber", "PrivateMessageId") DO NOTHING
+                """, HttpContext.RequestAborted);
+        }
+        await transaction.CommitAsync(HttpContext.RequestAborted);
+        return new JsonResult(new { success = true });
+    }
+
+    public async Task<IActionResult> OnPostClearMineAsync()
+    {
+        if (!HasAccess)
+            return Unauthorized();
+
+        var person = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2;
+        var now = DateTime.UtcNow;
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO "PrivatePresence" ("PersonNumber", "LastSeenAtUtc", "ShowLastSeen", "MessagesClearedAtUtc")
+            VALUES ({person}, {now}, {true}, {now})
+            ON CONFLICT ("PersonNumber") DO UPDATE SET "MessagesClearedAtUtc" = EXCLUDED."MessagesClearedAtUtc"
+            """, HttpContext.RequestAborted);
         return new JsonResult(new { success = true });
     }
 
@@ -177,7 +229,12 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
 
     private async Task<List<PrivateMessage>> LoadMessagesAsync()
     {
+        var person = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2;
+        var clearedAt = await db.PrivatePresences.Where(presence => presence.PersonNumber == person)
+            .Select(presence => presence.MessagesClearedAtUtc).SingleOrDefaultAsync(HttpContext.RequestAborted);
         var recent = await db.PrivateMessages.AsNoTracking()
+            .Where(message => (!clearedAt.HasValue || message.CreatedAtUtc > clearedAt.Value) &&
+                !db.PrivateMessageHiddens.Any(hidden => hidden.PersonNumber == person && hidden.PrivateMessageId == message.Id))
             .OrderByDescending(message => message.CreatedAtUtc)
             .ThenByDescending(message => message.Id)
             .Take(200)

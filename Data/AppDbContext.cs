@@ -40,10 +40,20 @@ public class AppDbContext : DbContext
     public DbSet<YoneticiNotu> YoneticiNotlari { get; set; } = default!;
     public DbSet<PrivateMessage> PrivateMessages { get; set; } = default!;
     public DbSet<PrivatePresence> PrivatePresences { get; set; } = default!;
+    public DbSet<PrivateMessageHidden> PrivateMessageHiddens { get; set; } = default!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<PrivateMessageHidden>(entity =>
+        {
+            entity.HasIndex(x => new { x.PersonNumber, x.PrivateMessageId }).IsUnique();
+            entity.HasOne<PrivateMessage>().WithMany().HasForeignKey(x => x.PrivateMessageId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.ToTable("PrivateMessageHidden", table =>
+                table.HasCheckConstraint("CK_PrivateMessageHidden_PersonNumber", "\"PersonNumber\" IN (1, 2)"));
+        });
 
         modelBuilder.Entity<PrivatePresence>(entity =>
         {

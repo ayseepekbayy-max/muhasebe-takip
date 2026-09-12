@@ -55,7 +55,7 @@
     </style>
 </head>
 <body>
-    <main data-delete-selected-url="@Url.Page("/Panel", "DeleteSelected")" data-delete-all-url="@Url.Page("/Panel", "DeleteAll")" data-settings-url="@Url.Page("/Panel", "Settings")" data-delete-url="@Url.Page("/Panel", "Delete")" data-person="@Model.CurrentPerson" data-messages-url="@Url.Page("/Panel", "Messages")" data-login-url="@Url.Page("/Login")">
+    <main data-server-now="@Model.ServerNowUtc.ToString("O")" data-hide-url="@Url.Page("/Panel", "Hide")" data-hide-selected-url="@Url.Page("/Panel", "HideSelected")" data-clear-mine-url="@Url.Page("/Panel", "ClearMine")" data-delete-selected-url="@Url.Page("/Panel", "DeleteSelected")" data-delete-all-url="@Url.Page("/Panel", "DeleteAll")" data-settings-url="@Url.Page("/Panel", "Settings")" data-delete-url="@Url.Page("/Panel", "Delete")" data-person="@Model.CurrentPerson" data-messages-url="@Url.Page("/Panel", "Messages")" data-login-url="@Url.Page("/Login")">
         <header>
             <div class="header-left">
                 <div>
@@ -66,7 +66,7 @@
                     <summary aria-label="Sohbet seçenekleri">⋮</summary>
                     <div class="menu-items">
                         <button id="select-messages" type="button">Mesajları seç</button>
-                        <button id="delete-all" type="button">Tüm sohbeti sil</button>
+                        <button id="delete-all" type="button">Sohbet geçmişini temizle</button>
                         <button id="open-settings" type="button">Ayarlar</button>
                     </div>
                 </details>
@@ -77,20 +77,21 @@
         </header>
         <div id="selection-bar" class="selection-bar" hidden>
             <span id="selection-count">0 mesaj seçildi</span>
-            <button id="delete-selected" type="button" hidden>Seçilenleri sil</button>
+            <button id="hide-selected" type="button" hidden>Kendimden sil</button><button id="delete-selected" type="button" hidden>Herkesten sil</button>
             <button id="cancel-selection" type="button">İptal</button>
         </div>
         <section id="messages" class="messages" aria-label="Mesajlar" tabindex="0">
             @foreach (var message in Model.Messages)
             {
                 <article class="message @(message.SenderPerson == Model.CurrentPerson ? "own" : "")" data-id="@message.Id">
-                    @if (message.SenderPerson == Model.CurrentPerson)
-                    {
-                        <details class="message-actions">
-                            <summary aria-label="Mesaj seçenekleri">⋮</summary>
-                            <button type="button" class="delete-message">Mesajı sil</button>
-                        </details>
-                    }
+                    <details class="message-actions">
+                        <summary aria-label="Mesaj seçenekleri">⋮</summary>
+                        <button type="button" class="delete-message" data-mode="mine">Kendimden sil</button>
+                        @if (message.SenderPerson == Model.CurrentPerson)
+                        {
+                            <button type="button" class="delete-message" data-mode="everyone">Herkesten sil</button>
+                        }
+                    </details>
                     <div class="content">@message.Content</div>
                     <time datetime="@message.CreatedAtUtc.ToString("O")">@message.CreatedAtUtc.ToString("HH:mm")</time>
                 </article>
@@ -106,6 +107,12 @@
         <p id="send-status" class="status" role="status"></p>
         <p id="poll-status" class="status" role="status"></p>
     </main>
+    <dialog id="history-dialog" aria-labelledby="history-title">
+        <h2 id="history-title">Sohbet geçmişini temizle</h2>
+        <button id="clear-mine" type="button">Kendimden sil</button>
+        <button id="clear-everyone" type="button">Herkesten sil</button>
+        <button id="close-history" type="button">İptal</button>
+    </dialog>
     <dialog id="settings-dialog" aria-labelledby="settings-title">
         <h2 id="settings-title">Ayarlar</h2>
         <form id="settings-form" method="post" asp-page="/Panel" asp-page-handler="Settings">
@@ -139,6 +146,9 @@
             const menu = document.getElementById('header-menu');
             const selectionBar = document.getElementById('selection-bar');
             const selectionCount = document.getElementById('selection-count');
+            const hideSelected = document.getElementById('hide-selected');
+            const historyDialog = document.getElementById('history-dialog');
+            let serverOffset = Date.parse(root.dataset.serverNow) - Date.now();
             const deleteSelected = document.getElementById('delete-selected');
             const deleteAll = document.getElementById('delete-all');
             const settings = document.getElementById('settings-dialog');
@@ -158,7 +168,6 @@
                 if (event.key === 'Escape' && menu.open) { closeMenu(); menu.querySelector('summary').focus(); }
             });
             function addSelectionCheckbox(node) {
-                if (!node.classList.contains('own')) return;
                 const label = document.createElement('label');
                 label.className = 'message-select';
                 label.hidden = !selecting;
@@ -173,7 +182,9 @@
                 selectionBar.hidden = !selecting;
                 selectionCount.textContent = selected.size + ' mesaj seçildi';
                 deleteSelected.hidden = selected.size === 0;
-                deleteSelected.disabled = bulkBusy;
+                hideSelected.hidden = selected.size === 0;
+                hideSelected.disabled = bulkBusy;
+                deleteSelected.disabled = bulkBusy || [...selected].some(id => !nodes.get(id)?.classList.contains('own'));
                 for (const [id, node] of nodes) {
                     const label = node.querySelector('.message-select');
                     if (label) { label.hidden = !selecting; label.querySelector('input').checked = selected.has(id); }
@@ -188,7 +199,6 @@
             list.addEventListener('change', event => {
                 if (!selecting || !event.target.matches('.message-select input')) return;
                 const node = event.target.closest('.message');
-                if (!node.classList.contains('own')) return;
                 const id = Number(node.dataset.id);
                 if (event.target.checked) selected.add(id); else selected.delete(id);
                 updateSelection();
@@ -215,15 +225,36 @@
                 catch (error) { sendStatus.textContent = error.message; }
                 finally { bulkBusy = false; await refresh(); updateSelection(); }
             });
-            deleteAll.addEventListener('click', async () => {
-                closeMenu();
-                if (bulkBusy || !confirm('Tüm sohbet iki taraf için kalıcı olarak silinecek. Bu işlem geri alınamaz.')) return;
-                bulkBusy = true; deleteAll.disabled = true; sendStatus.textContent = '';
-                const body = actionBody(); body.append('confirmed', 'true');
-                try { await postControl(root.dataset.deleteAllUrl, body); cancelSelection(); }
+            hideSelected.addEventListener('click', async () => {
+                if (bulkBusy || selected.size === 0 || !confirm('Seçilen mesajlar yalnızca sizden silinsin mi?')) return;
+                bulkBusy = true; updateSelection(); sendStatus.textContent = '';
+                const body = actionBody();
+                for (const id of selected) body.append('ids', id);
+                try { await postControl(root.dataset.hideSelectedUrl, body); cancelSelection(); }
                 catch (error) { sendStatus.textContent = error.message; }
-                finally { bulkBusy = false; deleteAll.disabled = false; await refresh(); updateSelection(); }
+                finally { bulkBusy = false; await refresh(); updateSelection(); }
             });
+            deleteAll.addEventListener('click', () => { closeMenu(); historyDialog.showModal(); });
+            document.getElementById('close-history').addEventListener('click', () => historyDialog.close());
+            async function clearHistory(everyone) {
+                if (bulkBusy) return;
+                if (everyone && !confirm('Tüm sohbet geçmişi iki taraf için kalıcı olarak silinecek. Bu işlem geri alınamaz.')) return;
+                bulkBusy = true; sendStatus.textContent = '';
+                historyDialog.querySelectorAll('button').forEach(button => button.disabled = true);
+                const body = actionBody();
+                if (everyone) body.append('confirmed', 'true');
+                try {
+                    await postControl(everyone ? root.dataset.deleteAllUrl : root.dataset.clearMineUrl, body);
+                    cancelSelection(); historyDialog.close();
+                } catch (error) { sendStatus.textContent = error.message; }
+                finally {
+                    bulkBusy = false;
+                    historyDialog.querySelectorAll('button').forEach(button => button.disabled = false);
+                    await refresh(); updateSelection();
+                }
+            }
+            document.getElementById('clear-mine').addEventListener('click', () => clearHistory(false));
+            document.getElementById('clear-everyone').addEventListener('click', () => clearHistory(true));
             document.getElementById('open-settings').addEventListener('click', () => {
                 closeMenu(); showLastSeen.checked = ownShowLastSeen; settingsStatus.textContent = ''; settings.showModal();
             });
@@ -249,28 +280,33 @@
                 lastSeen.textContent = '';
                 if (!value) return;
                 const date = new Date(value);
-                const day = date.toDateString() === new Date().toDateString() ? 'bugün' : date.toLocaleDateString('tr-TR');
+                const now = new Date(Date.now() + serverOffset);
+                if (now - date <= 45000) { lastSeen.textContent = 'Çevrimiçi'; return; }
+                const day = date.toDateString() === now.toDateString() ? 'bugün' : date.toLocaleDateString('tr-TR');
                 lastSeen.textContent = 'Son görülme ' + day + ' ' + clock.format(date);
             }
             updateLastSeen(lastSeen.dataset.at);
-
-            function createDeleteMenu() {
+            function createDeleteMenu(isOwn) {
                 const menu = document.createElement('details');
                 menu.className = 'message-actions';
                 const toggle = document.createElement('summary');
                 toggle.setAttribute('aria-label', 'Mesaj seçenekleri');
                 toggle.textContent = '⋮';
-                const action = document.createElement('button');
-                action.type = 'button';
-                action.className = 'delete-message';
-                action.textContent = 'Mesajı sil';
-                menu.append(toggle, action);
+                menu.append(toggle);
+                for (const mode of isOwn ? ['mine', 'everyone'] : ['mine']) {
+                    const action = document.createElement('button');
+                    action.type = 'button';
+                    action.className = 'delete-message';
+                    action.dataset.mode = mode;
+                    action.textContent = mode === 'mine' ? 'Kendimden sil' : 'Herkesten sil';
+                    menu.append(action);
+                }
                 return menu;
             }
             list.addEventListener('click', async event => {
                 const action = event.target.closest('.delete-message');
                 if (!action || action.disabled || !list.contains(action)) return;
-                if (!confirm('Bu mesaj silinsin mi?')) return;
+                if (!confirm(action.dataset.mode === 'mine' ? 'Bu mesaj yalnızca sizden silinsin mi?' : 'Bu mesaj herkesten kalıcı olarak silinsin mi?')) return;
                 const message = action.closest('.message');
                 const body = new FormData();
                 body.append('id', message.dataset.id);
@@ -278,7 +314,7 @@
                 action.disabled = true;
                 sendStatus.textContent = '';
                 try {
-                    const response = await fetch(root.dataset.deleteUrl, { method: 'POST', body, credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
+                    const response = await fetch(action.dataset.mode === 'mine' ? root.dataset.hideUrl : root.dataset.deleteUrl, { method: 'POST', body, credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
                     if (response.status === 401) {
                         stopped = true;
                         location.assign(root.dataset.loginUrl);
@@ -327,7 +363,7 @@
                         content.textContent = message.content;
                         const time = document.createElement('time');
                         setTime(time, message.createdAtUtc);
-                        if (message.senderPerson === person) node.append(createDeleteMenu());
+                        node.append(createDeleteMenu(message.senderPerson === person));
                         node.append(content, time);
                         addSelectionCheckbox(node);
                         nodes.set(message.id, node);
@@ -342,7 +378,7 @@
             }
 
             async function loadMessages() {
-                if (stopped) return;
+                if (stopped || document.hidden) return;
                 try {
                     const response = await fetch(root.dataset.messagesUrl, { cache: 'no-store', credentials: 'same-origin', redirect: 'error' });
                     if (response.status === 401 || response.status === 403) {
@@ -352,6 +388,7 @@
                     }
                     if (!response.ok) throw new Error('request');
                     const payload = await response.json();
+                    serverOffset = Date.parse(payload.serverNowUtc) - Date.now();
                     updateMessages(payload.messages);
                     ownShowLastSeen = payload.presence.showLastSeen;
                     updateLastSeen(payload.presence.otherLastSeenAtUtc);
