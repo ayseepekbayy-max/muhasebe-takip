@@ -1,6 +1,7 @@
 @page "/Cekler/Detay/{id:int}"
 @model MuhasebeTakip2.App.Pages.Cekler.DetayModel
 @using MuhasebeTakip2.App.Models
+@using System.Globalization
 @{
     ViewData["Title"] = "Çek Detayı";
     var alinacak = Model.Cek.Tip == CekTipi.Alinacak;
@@ -17,7 +18,7 @@
         <dt class="col-sm-4">Çek Numarası</dt><dd class="col-sm-8">@Model.Cek.No</dd>
         <dt class="col-sm-4">Tür</dt><dd class="col-sm-8">@(alinacak ? "Alınan" : "Verilen")</dd>
         <dt class="col-sm-4">Vade Tarihi</dt><dd class="col-sm-8">@Model.Cek.Tarih.ToString("dd.MM.yyyy")</dd>
-        <dt class="col-sm-4">Tutar</dt><dd class="col-sm-8">@Model.Cek.Tutar.ToString("N2") TL</dd>
+        <dt class="col-sm-4 text-end">Tutar</dt><dd class="col-sm-8 text-end text-nowrap">@Model.Cek.Tutar.ToString("N2", CultureInfo.GetCultureInfo("tr-TR"))&nbsp;₺</dd>
         <dt class="col-sm-4">Açıklama</dt><dd class="col-sm-8">@Model.Cek.Aciklama</dd>
         <dt class="col-sm-4">Durum</dt><dd class="col-sm-8"><span class="badge @rozet">@(alinacak ? (Model.Cek.OdendiMi ? "Tahsil Edildi" : "Tahsil Edilmedi") : (Model.Cek.OdendiMi ? "Ödendi" : "Ödenmedi"))</span></dd>
         <dt class="col-sm-4">İşlem Tarihi</dt><dd class="col-sm-8">@(Model.Cek.OdemeTarihi?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</dd>

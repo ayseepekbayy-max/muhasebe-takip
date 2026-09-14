@@ -1,7 +1,25 @@
 @page "/Cekler"
 @model MuhasebeTakip2.App.Pages.Cekler.IndexModel
 @using MuhasebeTakip2.App.Models
+@using System.Globalization
 
+<style>
+    .cek-list-table th, .cek-list-table td { padding: 10px 8px !important; vertical-align: middle; text-align: left; }
+    .cek-list-table tbody tr { border-bottom: 1px solid #e2e8f0; }
+    .cek-list-table .cek-amount { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .cek-list-table .cek-date { white-space: nowrap; }
+    @@media (max-width: 768px) {
+        .cek-list-table, .cek-list-table tbody { display: block; width: 100%; }
+        .cek-list-table thead { display: none; }
+        .cek-list-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 6px 0; }
+        .cek-list-table td { display: block; grid-column: 1 / -1; min-width: 0; overflow-wrap: anywhere; padding: 6px 4px !important; }
+        .cek-list-table td::before { content: attr(data-label); display: block; font-size: 12px; color: #64748b; font-weight: 600; margin-bottom: 3px; }
+        .cek-list-table .cek-date { grid-column: 1; grid-row: 1; }
+        .cek-list-table .cek-amount { grid-column: 2; grid-row: 1; font-size: 13px; }
+        .cek-list-table .cek-actions { white-space: normal !important; }
+        .cek-list-table .cek-actions .btn { max-width: 100%; white-space: normal; margin: 2px 0; }
+    }
+</style>
 <h1>Çekler</h1>
 
 @if (TempData["Basari"] != null)
@@ -69,12 +87,12 @@
 </div>
 
 <h3>Alınacak Çekler</h3>
-<div class="table-responsive"><table style="width:100%; border-collapse:collapse; margin-bottom:24px;">
+<div class="table-responsive"><table class="cek-list-table" style="width:100%; border-collapse:collapse; margin-bottom:24px;">
     <thead>
         <tr>
             <th style="padding:8px;">No</th>
             <th style="padding:8px;">Vade Tarihi</th>
-            <th style="padding:8px;">Tutar</th>
+            <th class="cek-amount" style="padding:8px;">Tutar</th>
             <th style="padding:8px;">Açıklama</th>
             <th style="padding:8px;">Görsel</th>
             <th style="padding:8px;">Durum</th>
@@ -92,11 +110,11 @@
             @foreach (var c in Model.Alinacaklar)
             {
                 <tr>
-                    <td style="padding:8px;">@c.No</td>
-                    <td style="padding:8px;">@c.Tarih.ToString("dd.MM.yyyy")</td>
-                    <td style="padding:8px;">@c.Tutar</td>
-                    <td style="padding:8px;">@c.Aciklama</td>
-                    <td style="padding:8px;">
+                    <td data-label="No" style="padding:8px;">@c.No</td>
+                    <td class="cek-date" data-label="Vade Tarihi" style="padding:8px;">@c.Tarih.ToString("dd.MM.yyyy")</td>
+                    <td class="cek-amount" data-label="Tutar" style="padding:8px;">@c.Tutar.ToString("N2", CultureInfo.GetCultureInfo("tr-TR"))&nbsp;₺</td>
+                    <td data-label="Açıklama" style="padding:8px;">@c.Aciklama</td>
+                    <td data-label="Görsel" style="padding:8px;">
                         @if (!string.IsNullOrWhiteSpace(c.ResimYolu))
                         {
                             <a href="@c.ResimYolu" target="_blank">
@@ -108,8 +126,8 @@
                         @{ var gun = (c.Tarih.Date - DateTime.UtcNow.Date).Days; }
                         <span class="badge @(c.OdendiMi ? "bg-success" : gun < 0 ? "bg-danger" : gun == 0 ? "bg-warning text-dark" : "bg-warning-subtle text-dark")">@(c.OdendiMi ? "Tahsil Edildi" : "Tahsil Edilmedi")</span>
                     </td>
-                    <td style="padding:8px;">@(c.OdemeTarihi?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
-                    <td style="padding:8px; white-space:nowrap;">
+                    <td data-label="İşlem Tarihi" style="padding:8px;">@(c.OdemeTarihi?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
+                    <td class="cek-actions" data-label="İşlem" style="padding:8px; white-space:nowrap;">
                         <a class="btn btn-outline-secondary btn-sm" asp-page="/Cekler/Detay" asp-route-id="@c.Id">Detay</a>
                         <form method="post" asp-page-handler="DurumDegistir" style="display:inline;">
                             <input type="hidden" name="id" value="@c.Id" /><input type="hidden" name="odendiMi" value="@(!c.OdendiMi ? "true" : "false")" />
@@ -127,12 +145,12 @@
 </table></div>
 
 <h3>Ödenecek Çekler</h3>
-<div class="table-responsive"><table style="width:100%; border-collapse:collapse;">
+<div class="table-responsive"><table class="cek-list-table" style="width:100%; border-collapse:collapse;">
     <thead>
         <tr>
             <th style="padding:8px;">No</th>
             <th style="padding:8px;">Vade Tarihi</th>
-            <th style="padding:8px;">Tutar</th>
+            <th class="cek-amount" style="padding:8px;">Tutar</th>
             <th style="padding:8px;">Açıklama</th>
             <th style="padding:8px;">Görsel</th>
             <th style="padding:8px;">Durum</th>
@@ -150,11 +168,11 @@
             @foreach (var c in Model.Odenecekler)
             {
                 <tr>
-                    <td style="padding:8px;">@c.No</td>
-                    <td style="padding:8px;">@c.Tarih.ToString("dd.MM.yyyy")</td>
-                    <td style="padding:8px;">@c.Tutar</td>
-                    <td style="padding:8px;">@c.Aciklama</td>
-                    <td style="padding:8px;">
+                    <td data-label="No" style="padding:8px;">@c.No</td>
+                    <td class="cek-date" data-label="Vade Tarihi" style="padding:8px;">@c.Tarih.ToString("dd.MM.yyyy")</td>
+                    <td class="cek-amount" data-label="Tutar" style="padding:8px;">@c.Tutar.ToString("N2", CultureInfo.GetCultureInfo("tr-TR"))&nbsp;₺</td>
+                    <td data-label="Açıklama" style="padding:8px;">@c.Aciklama</td>
+                    <td data-label="Görsel" style="padding:8px;">
                         @if (!string.IsNullOrWhiteSpace(c.ResimYolu))
                         {
                             <a href="@c.ResimYolu" target="_blank">
@@ -166,8 +184,8 @@
                         @{ var gun = (c.Tarih.Date - DateTime.UtcNow.Date).Days; }
                         <span class="badge @(c.OdendiMi ? "bg-success" : gun < 0 ? "bg-danger" : gun == 0 ? "bg-warning text-dark" : "bg-warning-subtle text-dark")">@(c.OdendiMi ? "Ödendi" : "Ödenmedi")</span>
                     </td>
-                    <td style="padding:8px;">@(c.OdemeTarihi?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
-                    <td style="padding:8px; white-space:nowrap;">
+                    <td data-label="İşlem Tarihi" style="padding:8px;">@(c.OdemeTarihi?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
+                    <td class="cek-actions" data-label="İşlem" style="padding:8px; white-space:nowrap;">
                         <a class="btn btn-outline-secondary btn-sm" asp-page="/Cekler/Detay" asp-route-id="@c.Id">Detay</a>
                         <form method="post" asp-page-handler="DurumDegistir" style="display:inline;">
                             <input type="hidden" name="id" value="@c.Id" /><input type="hidden" name="odendiMi" value="@(!c.OdendiMi ? "true" : "false")" />
