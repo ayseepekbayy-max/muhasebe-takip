@@ -128,6 +128,9 @@
                         </form>
 
                         <div class="app-top-actions">
+                            @if (rol == "superadmin" || rol == "admin" || odemeBildirimSayisi > 0)
+                            {
+                                <div class="app-mobile-quick-actions">
                             @if (rol == "superadmin" || rol == "admin")
                             {
                                 <div class="yonetici-notlari">
@@ -135,13 +138,15 @@
                                             aria-expanded="false" title="Yönetici notları" aria-label="Yönetici notlarını aç">
                                         <svg viewBox="0 0 24 24" aria-hidden="true">
                                             <path d="M4 3h11a2 2 0 0 1 2 2v5l-2 2V5H6v14h9v-3l2-2v5a2 2 0 0 1-2 2H4V3Zm15.7 6.3a1 1 0 0 1 0 1.4l-6.8 6.8-2.4.5.5-2.4 6.8-6.8a1 1 0 0 1 1.4 0l.5.5Z" />
-                                        </svg>
+                                        </svg><span class="app-mobile-notes-label">Notlar</span>
                                     </button>
                                 </div>
                             }
                             @if (odemeBildirimSayisi > 0)
                             {
-                                <a class="app-top-btn" href="/#odeme-bildirimleri" title="Yaklaşan veya geciken ödeme ve çekler">Bildirim <span class="badge bg-danger">@odemeBildirimSayisi</span></a>
+                                <a class="app-top-btn app-notifications-button" href="/#odeme-bildirimleri" title="Yaklaşan veya geciken ödeme ve çekler">Bildirim <span class="badge bg-danger">@odemeBildirimSayisi</span></a>
+                            }
+                                </div>
                             }
                             @if (!string.IsNullOrWhiteSpace(kullaniciAdi))
                             {

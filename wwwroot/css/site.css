@@ -3786,6 +3786,9 @@ a.app-top-btn {
         min-width: 0;
     }
 }
+.app-mobile-quick-actions { display: contents; }
+.app-mobile-notes-label { display: none; }
+
 /* SIMPLIFIED NAV GROUPS */
 .app-navbar .app-nav-collapse {
     gap: 14px !important;
@@ -3870,6 +3873,30 @@ a.app-top-btn {
 }
 
 @media (max-width: 991.98px) {
+    .app-navbar .app-mobile-quick-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .app-mobile-quick-actions .app-notifications-button { order: 0; }
+    .app-mobile-quick-actions .yonetici-notlari { order: 1; min-width: 0; }
+    .app-mobile-quick-actions > :only-child { grid-column: 1 / -1; }
+    .app-mobile-quick-actions .app-mobile-notes-label { display: inline; }
+
+    .app-navbar .app-mobile-quick-actions .app-top-btn {
+        height: 40px;
+        min-width: 0;
+        padding: 6px 8px;
+        gap: 6px;
+        white-space: nowrap;
+        font-size: 13px;
+    }
+
+    .app-mobile-quick-actions .badge,
+    .app-mobile-quick-actions svg { flex-shrink: 0; }
+
     .app-navbar .app-nav-list {
         flex-direction: column !important;
         align-items: stretch !important;
