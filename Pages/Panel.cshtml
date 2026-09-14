@@ -23,6 +23,7 @@
         .message-actions summary::-webkit-details-marker { display: none; }
         .message-actions summary:focus-visible { outline: 3px solid #5679b9; }
         .delete-message { display: block; margin: 4px 0 0 auto; padding: 6px 10px; font-size: 13px; color: #9a3434; }
+        .date-separator { display: table; margin: 8px auto 16px; padding: 5px 12px; border-radius: 10px; background: #e9edf1; color: #68778b; font-size: 12px; text-align: center; }
         .typing-indicator { width: fit-content; margin: 0 auto 12px 0; padding: 7px 12px; border-radius: 12px; background: #eef1f4; color: #68778b; font-size: 12px; }
         .content { white-space: pre-wrap; }
         time { display: block; margin-top: 5px; text-align: right; color: #58677d; font-size: 11px; }
@@ -389,19 +390,63 @@
                 time.textContent = clock.format(date);
                 time.title = date.toLocaleString('tr-TR');
             }
+            const dateSeparators = new Map();
+            function localDay(date) {
+                return date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+            }
+            function dateLabel(date, now) {
+                if (localDay(date) === localDay(now)) return 'Bugün';
+                const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+                if (localDay(date) === localDay(yesterday)) return 'Dün';
+                return String(date.getDate()).padStart(2, '0') + '.' +
+                    String(date.getMonth() + 1).padStart(2, '0') + '.' + date.getFullYear();
+            }
+            function arrangeDateGroups(messageNodes) {
+                const now = new Date();
+                const days = new Set();
+                const ordered = [];
+                let changed = false;
+                for (const node of messageNodes) {
+                    const date = new Date(node.querySelector('time').dateTime);
+                    const day = localDay(date);
+                    if (!days.has(day)) {
+                        days.add(day);
+                        let separator = dateSeparators.get(day);
+                        if (!separator) {
+                            separator = document.createElement('div');
+                            separator.className = 'date-separator';
+                            dateSeparators.set(day, separator);
+                        }
+                        const label = dateLabel(date, now);
+                        if (separator.textContent !== label) { separator.textContent = label; changed = true; }
+                        ordered.push(separator);
+                    }
+                    ordered.push(node);
+                }
+                for (const [day, separator] of dateSeparators) {
+                    if (!days.has(day)) { separator.remove(); dateSeparators.delete(day); changed = true; }
+                }
+                ordered.push(typingIndicator);
+                let position = list.firstElementChild;
+                for (const node of ordered) {
+                    if (node !== position) { list.insertBefore(node, position); changed = true; }
+                    position = node.nextElementSibling;
+                }
+                return changed;
+            }
             list.querySelectorAll('time').forEach(time => setTime(time, time.dateTime));
+            arrangeDateGroups([...nodes.values()]);
             list.scrollTop = list.scrollHeight;
 
             function updateMessages(messages) {
                 const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
-                const anchor = [...list.children].find(node => node.offsetTop + node.offsetHeight > list.scrollTop + list.offsetTop);
+                const anchor = [...list.querySelectorAll('article[data-id]')].find(node => node.offsetTop + node.offsetHeight > list.scrollTop + list.offsetTop);
                 const anchorTop = anchor?.getBoundingClientRect().top;
                 const keep = new Set(messages.map(message => message.id));
                 let changed = false;
                 for (const [id, node] of nodes) {
                     if (!keep.has(id)) { node.remove(); nodes.delete(id); changed = true; }
                 }
-                let position = list.firstElementChild;
                 for (const message of messages) {
                     let node = nodes.get(message.id);
                     if (!node) {
@@ -419,9 +464,8 @@
                         nodes.set(message.id, node);
                         changed = true;
                     }
-                    if (node !== position) { list.insertBefore(node, position); changed = true; }
-                    position = node.nextElementSibling;
                 }
+                changed = arrangeDateGroups(messages.map(message => nodes.get(message.id))) || changed;
                 updateSelection();
                 if (changed && nearBottom) list.scrollTop = list.scrollHeight;
                 else if (changed && anchor?.isConnected) list.scrollTop += anchor.getBoundingClientRect().top - anchorTop;
