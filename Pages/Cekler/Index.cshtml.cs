@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +34,9 @@ public class IndexModel : PageModel
     [BindProperty]
     public IFormFile? CekResmi { get; set; }
 
+    [BindProperty]
+    public string TutarGirisi { get; set; } = "";
+
     public string Mesaj { get; set; } = "";
     public string Hata { get; set; } = "";
 
@@ -50,6 +55,20 @@ public class IndexModel : PageModel
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
         if (firmaId == null)
             return RedirectToPage("/Login");
+
+        var tutarMetni = (TutarGirisi ?? "").Trim();
+        // Validate grouping before parsing: NumberStyles.Number alone accepts malformed groups.
+        if (tutarMetni.Length > 64 ||
+            !Regex.IsMatch(tutarMetni, @"\A(?:[0-9]+|[0-9]{1,3}(?:\.[0-9]{3})+)(?:,[0-9]{1,2})?\z") ||
+            !decimal.TryParse(tutarMetni, NumberStyles.Number, CultureInfo.GetCultureInfo("tr-TR"), out var tutar) ||
+            tutar <= 0)
+        {
+            Hata = "Geçerli bir tutar girin. Örnek: 105.000,50";
+            ModelState.AddModelError(nameof(TutarGirisi), Hata);
+            await YukleAsync(firmaId.Value);
+            return Page();
+        }
+        YeniCek.Tutar = tutar;
 
         YeniCek.No = (YeniCek.No ?? "").Trim();
         YeniCek.Aciklama = (YeniCek.Aciklama ?? "").Trim();

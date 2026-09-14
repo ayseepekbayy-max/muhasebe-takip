@@ -58,7 +58,8 @@
 
             <div>
                 <label><b>Tutar</b></label><br />
-                <input asp-for="YeniCek.Tutar" style="width:100%; padding:8px;" />
+                <input asp-for="TutarGirisi" type="text" inputmode="decimal" required pattern="(?:[0-9]+|[0-9]{1,3}(?:\.[0-9]{3})+)(?:,[0-9]{1,2})?" title="Örnek: 105.000,50" style="width:100%; padding:8px;" />
+                <span asp-validation-for="TutarGirisi" class="text-danger"></span>
             </div>
 
             <div>
