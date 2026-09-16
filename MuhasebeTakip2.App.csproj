@@ -21,6 +21,8 @@
     <PackageReference Include="PdfPig" Version="0.1.14" />
   </ItemGroup>
 <ItemGroup>
+  <Content Remove="App_Data\PrivateMedia\**\*" />
+  <None Remove="App_Data\PrivateMedia\**\*" />
   <Compile Remove="FirmovaAI\**\*.cs" />
   <Content Remove="FirmovaAI\**\*" />
   <EmbeddedResource Remove="FirmovaAI\**\*" />

@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<NovaReplyService>();
 builder.Services.AddScoped<PrivateAccessService>();
+builder.Services.AddSingleton<PrivateMediaStore>();
 
 builder.Services.AddSession(options =>
 {

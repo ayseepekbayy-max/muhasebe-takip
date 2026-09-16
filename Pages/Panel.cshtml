@@ -54,10 +54,18 @@
         .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
         .settings-status { font-size: 13px; color: #9a3434; }
         .status { min-height: 1.4em; margin: 0; padding: 0 16px 8px; color: #9a3434; font-size: 13px; }
+        .media-tools { display:flex; gap:6px; flex-wrap:wrap; }
+        .media-tools button { padding:10px; min-width:44px; min-height:44px; }
+        .message audio { width: min(280px, 60vw); }
+        .media-preview { padding: 0 16px 8px; }
+        .media-preview audio { max-width:100%; }
+        #photo-dialog { width:min(900px,96vw); padding:12px; text-align:center; }
+        #photo-dialog img { display:block; max-width:100%; max-height:75dvh; margin:12px auto 0; object-fit:contain; }
+        @@media(max-width:540px) { .composer { flex-wrap:wrap; gap:8px; padding:12px; } .composer .field { flex-basis:100%; } header { padding:12px; } .messages { padding:12px; } #send-button { margin-left:auto; } }
     </style>
 </head>
 <body>
-    <main data-typing-url="@Url.Page("/Panel", "Typing")" data-server-now="@Model.ServerNowUtc.ToString("O")" data-hide-url="@Url.Page("/Panel", "Hide")" data-hide-selected-url="@Url.Page("/Panel", "HideSelected")" data-clear-mine-url="@Url.Page("/Panel", "ClearMine")" data-delete-selected-url="@Url.Page("/Panel", "DeleteSelected")" data-delete-all-url="@Url.Page("/Panel", "DeleteAll")" data-settings-url="@Url.Page("/Panel", "Settings")" data-delete-url="@Url.Page("/Panel", "Delete")" data-person="@Model.CurrentPerson" data-messages-url="@Url.Page("/Panel", "Messages")" data-login-url="@Url.Page("/Login")">
+    <main data-media-url="@Url.Page("/Panel", "Media")" data-photo-url="@Url.Page("/Panel", "Photo")" data-audio-url="@Url.Page("/Panel", "Audio")" data-typing-url="@Url.Page("/Panel", "Typing")" data-server-now="@Model.ServerNowUtc.ToString("O")" data-hide-url="@Url.Page("/Panel", "Hide")" data-hide-selected-url="@Url.Page("/Panel", "HideSelected")" data-clear-mine-url="@Url.Page("/Panel", "ClearMine")" data-delete-selected-url="@Url.Page("/Panel", "DeleteSelected")" data-delete-all-url="@Url.Page("/Panel", "DeleteAll")" data-settings-url="@Url.Page("/Panel", "Settings")" data-delete-url="@Url.Page("/Panel", "Delete")" data-person="@Model.CurrentPerson" data-messages-url="@Url.Page("/Panel", "Messages")" data-login-url="@Url.Page("/Login")">
         <header>
             <div class="header-left">
                 <div>
@@ -94,7 +102,7 @@
                             <button type="button" class="delete-message" data-mode="everyone">Herkesten sil</button>
                         }
                     </details>
-                    <div class="content">@message.Content</div>
+                    <div class="content" data-duration="@message.DurationSeconds" data-kind="@((int)message.Kind)" data-viewed="@(message.ViewedAtUtc.HasValue ? "true" : "false")">@(message.Kind == MuhasebeTakip2.App.Models.PrivateMessageKind.Text ? message.Content : message.Kind == MuhasebeTakip2.App.Models.PrivateMessageKind.Audio ? "Sesli mesaj" : "Tek görüntülemelik fotoğraf")</div>
                     <time datetime="@message.CreatedAtUtc.ToString("O")">@message.CreatedAtUtc.ToString("HH:mm")</time>
                 </article>
             }
@@ -105,11 +113,27 @@
                 <label for="entry">Mesaj</label>
                 <textarea id="entry" name="content" maxlength="4000" required placeholder="Mesajınızı yazın" autocomplete="off"></textarea>
             </div>
+            <div class="media-tools">
+                <button id="photo-pick" type="button" aria-label="Fotoğraf gönder" title="Tek görüntülemelik fotoğraf">📷</button>
+                <button id="record-audio" type="button" aria-label="Ses kaydı başlat" title="Ses kaydı">🎙</button>
+                <input id="photo-file" type="file" accept="image/jpeg,image/png" hidden />
+            </div>
             <button id="send-button" type="submit">Gönder</button>
         </form>
+        <div id="media-preview" class="media-preview" hidden>
+            <span id="media-label" role="status"></span>
+            <audio id="audio-preview" controls hidden></audio>
+            <button id="media-send" type="button">Gönder</button>
+            <button id="media-cancel" type="button">İptal</button>
+        </div>
         <p id="send-status" class="status" role="status"></p>
         <p id="poll-status" class="status" role="status"></p>
     </main>
+    <dialog id="photo-dialog" aria-label="Tek görüntülemelik fotoğraf">
+        <button id="photo-close" type="button">Kapat</button>
+        <p>Kapatıldıktan sonra tekrar açılamaz.</p>
+        <img id="single-photo" alt="Tek görüntülemelik fotoğraf" draggable="false" />
+    </dialog>
     <dialog id="history-dialog" aria-labelledby="history-title">
         <h2 id="history-title">Sohbet geçmişini temizle</h2>
         <button id="clear-mine" type="button">Kendimden sil</button>
@@ -438,6 +462,34 @@
             arrangeDateGroups([...nodes.values()]);
             list.scrollTop = list.scrollHeight;
 
+            function renderMedia(node, message) {
+                const content = node.querySelector('.content');
+                const state = message.kind + ':' + message.viewed;
+                if (content.dataset.mediaState === state) return;
+                content.dataset.mediaState = state;
+                if (!message.kind) { content.textContent = message.content; return; }
+                content.replaceChildren();
+                if (message.kind === 1) {
+                    const audio = document.createElement('audio');
+                    audio.controls = true; audio.preload = 'metadata';
+                    audio.setAttribute('controlsList', 'nodownload');
+                    audio.src = root.dataset.audioUrl + '&id=' + message.id;
+                    audio.addEventListener('error', () => { audio.title = 'Ses yüklenemedi. Oturumunuzu ve bağlantınızı kontrol edin.'; });
+                    content.append(audio);
+                    const duration = document.createElement("div"); duration.textContent = "Süre: " + (message.durationSeconds || 0) + " sn"; content.append(duration);
+                } else if (message.viewed) content.textContent = 'Fotoğraf görüntülendi';
+                else if (message.senderPerson === person) content.textContent = 'Tek görüntülemelik fotoğraf gönderildi';
+                else {
+                    const open = document.createElement('button');
+                    open.type = 'button'; open.textContent = 'Fotoğrafı görüntüle';
+                    open.addEventListener('click', () => openPhoto(message.id, open));
+                    content.append(open);
+                }
+            }
+            for (const [id, node] of nodes) {
+                const content = node.querySelector('.content');
+                renderMedia(node, { id, durationSeconds: Number(content.dataset.duration), kind: Number(content.dataset.kind), viewed: content.dataset.viewed === 'true', senderPerson: node.classList.contains('own') ? person : 3-person, content: content.textContent });
+            }
             function updateMessages(messages) {
                 const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
                 const anchor = [...list.querySelectorAll('article[data-id]')].find(node => node.offsetTop + node.offsetHeight > list.scrollTop + list.offsetTop);
@@ -465,6 +517,7 @@
                         changed = true;
                     }
                 }
+                for (const message of messages) renderMedia(nodes.get(message.id), message);
                 changed = arrangeDateGroups(messages.map(message => nodes.get(message.id))) || changed;
                 updateSelection();
                 if (changed && nearBottom) list.scrollTop = list.scrollHeight;
@@ -501,6 +554,99 @@
                 await refresh();
                 if (!stopped) setTimeout(poll, 2500);
             }
+            const photoDialog = document.getElementById('photo-dialog');
+            const photoImage = document.getElementById('single-photo');
+            let photoUrl, openingPhoto = false;
+            function clearPhoto() { photoImage.removeAttribute('src'); if (photoUrl) URL.revokeObjectURL(photoUrl); photoUrl = null; }
+            document.getElementById('photo-close').onclick = () => photoDialog.close();
+            photoDialog.addEventListener('close', clearPhoto);
+            photoImage.addEventListener('contextmenu', event => event.preventDefault());
+            async function openPhoto(id, control) {
+                if (openingPhoto) return;
+                openingPhoto = true; control.disabled = true; sendStatus.textContent = '';
+                try {
+                    const body = actionBody(); body.append('id', id);
+                    const response = await fetch(root.dataset.photoUrl, { method:'POST', body, credentials:'same-origin', cache:'no-store', redirect:'error' });
+                    if (!response.ok) throw new Error(response.status === 410 ? 'Fotoğraf daha önce görüntülendi veya erişilemiyor.' : 'Fotoğraf açılamadı. Oturumunuzu ve bağlantınızı kontrol edin.');
+                    clearPhoto(); photoUrl = URL.createObjectURL(await response.blob());
+                    if (document.hidden) { clearPhoto(); return; }
+                    photoImage.src = photoUrl; photoDialog.showModal();
+                } catch(error) { sendStatus.textContent = error.message; }
+                finally { openingPhoto = false; control.disabled = false; await refresh(); }
+            }
+            const photoFile = document.getElementById('photo-file');
+            const pickPhoto = document.getElementById('photo-pick');
+            const recordButton = document.getElementById('record-audio');
+            const mediaPreview = document.getElementById('media-preview');
+            const mediaLabel = document.getElementById('media-label');
+            const previewAudio = document.getElementById('audio-preview');
+            const mediaSend = document.getElementById('media-send');
+            const mediaCancel = document.getElementById('media-cancel');
+            let pendingDuration, pendingMedia, pendingKind, previewUrl, recorder, stream, recordTimer, recordStart, requestingMic = false, finishingRecording = false, mediaBusy = false, discardRecording = false;
+            function clearPending() {
+                pendingMedia = null; previewAudio.pause(); previewAudio.removeAttribute('src'); previewAudio.load();
+                if (previewUrl) URL.revokeObjectURL(previewUrl);
+                previewUrl = null; mediaPreview.hidden = true; photoFile.value = '';
+            }
+            function stopRecording() {
+                clearInterval(recordTimer);
+                if (recorder?.state === 'recording') { finishingRecording = true; recorder.stop(); }
+                stream?.getTracks().forEach(track => track.stop()); stream = null;
+                recordButton.textContent = '🎙'; recordButton.setAttribute('aria-label','Ses kaydı başlat');
+            }
+            pickPhoto.onclick = () => { if (!mediaBusy && !requestingMic && !finishingRecording && recorder?.state !== 'recording') photoFile.click(); };
+            photoFile.onchange = () => {
+                const file = photoFile.files[0]; if (!file) return;
+                if (file.size > 8*1024*1024 || !['image/jpeg','image/png'].includes(file.type)) { sendStatus.textContent = 'En fazla 8 MB JPEG veya PNG fotoğraf seçin.'; photoFile.value = ''; return; }
+                clearPending(); pendingMedia = file; pendingKind = 'photo';
+                mediaLabel.textContent = 'Tek görüntülemelik fotoğraf hazır.'; previewAudio.hidden = true; mediaPreview.hidden = false; mediaSend.disabled = false;
+            };
+            mediaCancel.onclick = () => { discardRecording = true; stopRecording(); clearPending(); };
+            recordButton.onclick = async () => {
+                if (mediaBusy || requestingMic || finishingRecording) return;
+                if (recorder?.state === 'recording') { stopRecording(); return; }
+                if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { sendStatus.textContent = 'Bu tarayıcıda ses kaydı desteklenmiyor. HTTPS üzerinden güncel bir tarayıcı kullanın.'; return; }
+                requestingMic = true; recordButton.disabled = true; clearPending(); sendStatus.textContent = '';
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({audio:true});
+                    if (document.hidden) { stream.getTracks().forEach(t => t.stop()); stream = null; return; }
+                    const type = ['audio/webm;codecs=opus','audio/mp4','audio/ogg;codecs=opus'].find(t => MediaRecorder.isTypeSupported(t));
+                    if (!type) throw new Error('unsupported');
+                    recorder = new MediaRecorder(stream, {mimeType:type});
+                    const chunks = []; let size = 0; discardRecording = false;
+                    recorder.ondataavailable = event => { if (event.data.size) { chunks.push(event.data); size += event.data.size; if (size > 16*1024*1024) { discardRecording = true; stopRecording(); sendStatus.textContent = 'Ses kaydı 16 MB sınırını aştı.'; } } };
+                    recorder.onerror = () => { discardRecording = true; stopRecording(); clearPending(); sendStatus.textContent = 'Ses kaydı tamamlanamadı.'; };
+                    recorder.onstop = () => {
+                        finishingRecording = false;
+                        if (discardRecording || size === 0) { clearPending(); return; }
+                        pendingMedia = new Blob(chunks,{type:recorder.mimeType}); pendingKind = 'audio'; pendingDuration = Math.max(1, Math.min(305, Math.round((Date.now()-recordStart)/1000)));
+                        previewUrl = URL.createObjectURL(pendingMedia); previewAudio.src = previewUrl; previewAudio.hidden = false;
+                        mediaLabel.textContent = 'Ses kaydı hazır (' + Math.round((Date.now()-recordStart)/1000) + ' sn).'; mediaPreview.hidden = false; mediaSend.disabled = false;
+                    };
+                    recorder.start(1000); recordStart = Date.now(); mediaPreview.hidden = false; previewAudio.hidden = true; mediaSend.disabled = true;
+                    recordButton.textContent = '⏹'; recordButton.setAttribute('aria-label','Ses kaydını durdur');
+                    mediaLabel.textContent = '● Kayıt devam ediyor: 0 sn';
+                    recordTimer = setInterval(() => { const seconds = Math.floor((Date.now()-recordStart)/1000); mediaLabel.textContent = '● Kayıt devam ediyor: ' + seconds + ' sn'; if (seconds >= 300) stopRecording(); }, 1000);
+                } catch(error) {
+                    stopRecording(); sendStatus.textContent = error.name === 'NotAllowedError' ? 'Mikrofon izni verilmedi. Yazılı mesaj göndermeye devam edebilirsiniz.' : 'Mikrofona erişilemedi veya kayıt biçimi desteklenmiyor.';
+                } finally { requestingMic = false; recordButton.disabled = false; }
+            };
+            mediaSend.onclick = async () => {
+                if (!pendingMedia || mediaBusy) return;
+                mediaBusy = true; mediaSend.disabled = mediaCancel.disabled = pickPhoto.disabled = recordButton.disabled = true;
+                sendStatus.textContent = '';
+                try {
+                    const body = actionBody(); body.append('kind',pendingKind); if (pendingKind === 'audio') body.append('durationSeconds',pendingDuration); body.append('file',pendingMedia,'media');
+                    const response = await fetch(root.dataset.mediaUrl,{method:'POST',body,credentials:'same-origin',cache:'no-store',redirect:'error'});
+                    if (!response.ok) { const result = await response.json().catch(() => ({})); throw new Error(result.error || 'Medya gönderilemedi. Oturumunuzu ve dosya boyutunu kontrol edin.'); }
+                    clearPending(); await refresh();
+                } catch(error) { sendStatus.textContent = error.message; }
+                finally { mediaBusy = false; mediaSend.disabled = mediaCancel.disabled = pickPhoto.disabled = recordButton.disabled = false; }
+            };
+            function releaseMedia() { discardRecording = true; stopRecording(); clearPending(); if (photoDialog.open) photoDialog.close(); clearPhoto(); }
+            window.addEventListener('pagehide',releaseMedia);
+            document.addEventListener('visibilitychange',() => { if (document.hidden) { if (photoDialog.open) photoDialog.close(); if (recorder?.state === 'recording') stopRecording(); } });
+
             function updateButton() { button.disabled = sending || !entry.value.trim(); }
             entry.addEventListener('input', updateButton);
             entry.addEventListener('keydown', event => {

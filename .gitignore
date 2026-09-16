@@ -19,3 +19,6 @@ secrets.json
 .vs/
 *.user
 *.suo
+
+# Private chat uploads
+App_Data/PrivateMedia/
