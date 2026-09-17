@@ -54,6 +54,8 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
             content = message.Content,
             kind = (int)message.Kind,
             viewed = message.ViewedAtUtc.HasValue,
+            expired = PhotoExpired(message),
+            available = message.MediaKey != null,
             durationSeconds = message.DurationSeconds,
             createdAtUtc = message.CreatedAtUtc
         }) });
@@ -134,15 +136,31 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         catch (DirectoryNotFoundException) { return NotFound(new { error = "Ses kaydı bulunamadı." }); }
     }
 
+    public static bool PhotoExpired(PrivateMessage message) =>
+        message.Kind == PrivateMessageKind.ViewOncePhoto && !message.ViewedAtUtc.HasValue &&
+        (message.ExpiredAtUtc.HasValue || message.CreatedAtUtc <= DateTime.UtcNow.AddHours(-24));
+
     public async Task<IActionResult> OnPostPhotoAsync([FromForm] int id)
     {
         if (!HasAccess) return Unauthorized();
         var person = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2;
-        var query = AccessibleMedia(id).Where(m => m.Kind == PrivateMessageKind.ViewOncePhoto && m.SenderPerson != person && m.ViewedAtUtc == null);
+        // Also prevent caching expired and missing media responses.
+        Response.OnStarting(() => {
+            Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+            Response.Headers.Pragma = "no-cache";
+            Response.Headers.Expires = "0";
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
+            Response.Headers["Referrer-Policy"] = "no-referrer";
+            return Task.CompletedTask;
+        });
+        var cutoff = DateTime.UtcNow.AddHours(-24);
+        var query = AccessibleMedia(id).Where(m => m.Kind == PrivateMessageKind.ViewOncePhoto &&
+            m.SenderPerson != person && m.ViewedAtUtc == null && m.ExpiredAtUtc == null &&
+            m.CreatedAtUtc > cutoff && m.MediaKey != null);
         // Conditional database update serializes competing requests across devices/instances.
         await using var transaction = await db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
         if (await query.ExecuteUpdateAsync(u => u.SetProperty(m => m.ViewedAtUtc, DateTime.UtcNow), HttpContext.RequestAborted) != 1)
-            return StatusCode(410, new { error = "Fotoğraf daha önce görüntülendi veya erişilemiyor." });
+            return StatusCode(410, new { error = "Fotoğraf görüntülendi, süresi doldu veya artık erişilemiyor." });
         var message = await db.PrivateMessages.AsNoTracking().SingleAsync(m => m.Id == id);
         byte[] bytes;
         try
@@ -154,7 +172,8 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         catch (FileNotFoundException) { bytes = []; }
         catch (DirectoryNotFoundException) { bytes = []; }
         await db.PrivateMessages.Where(m => m.Id == id).ExecuteUpdateAsync(u => u
-            .SetProperty(m => m.MediaKey, (string?)null).SetProperty(m => m.MediaContentType, (string?)null));
+            .SetProperty(m => m.MediaKey, (string?)null).SetProperty(m => m.MediaContentType, (string?)null)
+            .SetProperty(m => m.ViewedAtUtc, bytes.Length == 0 ? (DateTime?)null : message.ViewedAtUtc));
         await transaction.CommitAsync(CancellationToken.None);
         Response.Headers.CacheControl = "no-store";
         Response.Headers["X-Content-Type-Options"] = "nosniff";
@@ -166,6 +185,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         if (!HasAccess)
             return Unauthorized();
 
+        await using var transaction = await db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
         var person = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2;
         var message = await db.PrivateMessages.AsNoTracking()
             .SingleOrDefaultAsync(message => message.Id == id, HttpContext.RequestAborted);
@@ -178,6 +198,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
             .Where(message => message.Id == id && message.SenderPerson == person)
             .ExecuteDeleteAsync(HttpContext.RequestAborted);
         if (deleted != 0) media.Delete(message.MediaKey);
+        await transaction.CommitAsync(HttpContext.RequestAborted);
         return deleted == 0 ? NotFound() : new JsonResult(new { success = true });
     }
 
@@ -188,6 +209,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         if (ids is null || ids.Length is 0 or > 200 || ids.Any(id => id <= 0))
             return BadRequest();
 
+        await using var transaction = await db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
         var person = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2;
         var selectedIds = ids.Distinct().ToArray();
         var messages = await db.PrivateMessages.AsNoTracking()
@@ -203,6 +225,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         await db.PrivateMessages.Where(message => selectedIds.Contains(message.Id) && message.SenderPerson == person)
             .ExecuteDeleteAsync(HttpContext.RequestAborted);
         foreach (var message in messages) media.Delete(message.MediaKey);
+        await transaction.CommitAsync(HttpContext.RequestAborted);
         return new JsonResult(new { success = true });
     }
 
@@ -213,12 +236,12 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         if (!confirmed)
             return BadRequest();
 
-        await using var transaction = await db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, HttpContext.RequestAborted);
         var keys = await db.PrivateMessages.Where(m => m.MediaKey != null).Select(m => m.MediaKey).ToListAsync(HttpContext.RequestAborted);
         await db.PrivateMessages.ExecuteDeleteAsync(HttpContext.RequestAborted);
         await db.PrivatePresences.ExecuteUpdateAsync(update => update.SetProperty(presence => presence.MessagesClearedAtUtc, (DateTime?)null), HttpContext.RequestAborted);
-        await transaction.CommitAsync(HttpContext.RequestAborted);
         foreach (var key in keys) media.Delete(key);
+        await transaction.CommitAsync(HttpContext.RequestAborted);
         return new JsonResult(new { success = true });
     }
 

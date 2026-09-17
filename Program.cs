@@ -13,6 +13,7 @@ builder.Services.AddRazorPages();
 builder.Services.AddScoped<NovaReplyService>();
 builder.Services.AddScoped<PrivateAccessService>();
 builder.Services.AddSingleton<PrivateMediaStore>();
+builder.Services.AddHostedService<PrivateMediaCleanupService>();
 
 builder.Services.AddSession(options =>
 {

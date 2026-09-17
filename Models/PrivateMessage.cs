@@ -23,6 +23,7 @@ public sealed class PrivateMessage
     [MaxLength(64)] public string? MediaContentType { get; set; }
     public int? DurationSeconds { get; set; }
     public DateTime? ViewedAtUtc { get; set; }
+    public DateTime? ExpiredAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; }
 }
 public enum PrivateMessageKind { Text = 0, Audio = 1, ViewOncePhoto = 2 }

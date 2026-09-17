@@ -1,14 +1,15 @@
 namespace MuhasebeTakip2.App.Services;
 
+// Ephemeral application storage: no external volume/configuration is required.
 // No client filenames or paths are used. This directory is never served by static files.
 public sealed class PrivateMediaStore
 {
     public const int PhotoLimit = 8 * 1024 * 1024;
     public const int AudioLimit = 16 * 1024 * 1024;
     private readonly string root;
-    public PrivateMediaStore(IWebHostEnvironment environment, IConfiguration configuration)
+    public PrivateMediaStore(IWebHostEnvironment environment)
     {
-        root = Path.GetFullPath(configuration["PrivateMedia:StoragePath"] ?? Path.Combine(environment.ContentRootPath, "App_Data", "PrivateMedia"));
+        root = Path.GetFullPath(Path.Combine(environment.ContentRootPath, "App_Data", "PrivateMedia"));
         var web = Path.GetFullPath(environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot"));
         if (root.Equals(web, StringComparison.OrdinalIgnoreCase) || root.StartsWith(web + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Özel medya wwwroot altında saklanamaz.");
@@ -27,7 +28,12 @@ public sealed class PrivateMediaStore
         return key;
     }
     public Task<byte[]> ReadAsync(string key, CancellationToken token) => File.ReadAllBytesAsync(Resolve(key), token);
-    public void Delete(string? key) { if (key is not null) File.Delete(Resolve(key)); }
+    public void Delete(string? key)
+    {
+        if (key is null) return;
+        try { File.Delete(Resolve(key)); }
+        catch (DirectoryNotFoundException) { /* The ephemeral directory was already lost on restart/deploy. */ }
+    }
 
     public static string? Detect(byte[] bytes, bool photo)
     {
