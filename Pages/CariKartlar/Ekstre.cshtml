@@ -14,6 +14,16 @@
             <p>Fatura, tahsilat, ödeme ve işlem geçmişini tek ekranda inceleyin.</p>
         </div>
         <div class="app-page-actions">
+            @if (Model.Cari?.Tip.AliciMi() == true)
+            {
+                <a class="btn btn-outline-success" asp-page="/Faturalar/Index" asp-route-cariId="@Model.Cari.Id" asp-route-tip="@FaturaTipi.Satis" asp-fragment="yeniFatura">Satış Ekle</a>
+                <a class="btn btn-outline-success" asp-page="/Kasa/HareketEkle" asp-route-cariId="@Model.Cari.Id" asp-route-tip="@HareketTipi.Giris">Tahsilat</a>
+            }
+            @if (Model.Cari?.Tip.SaticiMi() == true)
+            {
+                <a class="btn btn-outline-warning" asp-page="/Faturalar/Index" asp-route-cariId="@Model.Cari.Id" asp-route-tip="@FaturaTipi.Alis" asp-fragment="yeniFatura">Alış Ekle</a>
+                <a class="btn btn-outline-warning" asp-page="/Kasa/HareketEkle" asp-route-cariId="@Model.Cari.Id" asp-route-tip="@HareketTipi.Cikis">Ödeme</a>
+            }
             <button type="button" class="btn btn-primary" onclick="window.print()">PDF / Yazdır</button>
             <a class="btn btn-outline-dark" asp-page="/CariKartlar/Index">Cari Kartlar</a>
         </div>
@@ -46,7 +56,7 @@
     <section class="cari-info-strip">
         <div>
             <span>Cari Tipi</span>
-            <strong>@(Model.Cari?.Tip == CariTip.Alici ? "Alıcı" : "Satıcı")</strong>
+            <strong>@Model.Cari?.Tip.Metin()</strong>
         </div>
         <div>
             <span>Telefon</span>

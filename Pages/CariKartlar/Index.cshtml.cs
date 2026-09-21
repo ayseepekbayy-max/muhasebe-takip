@@ -251,7 +251,7 @@ public class IndexModel : PageModel
         foreach (var cari in cariler)
         {
             ws.Cell(row, 1).Value = cari.Unvan;
-            ws.Cell(row, 2).Value = cari.Tip == CariTip.Alici ? "Alıcı" : "Satıcı";
+            ws.Cell(row, 2).Value = cari.Tip.Metin();
             ws.Cell(row, 3).Value = cari.Telefon ?? "";
             ws.Cell(row, 4).Value = cari.VergiNo ?? "";
             ws.Cell(row, 5).Value = cari.ToplamTahsilat;
@@ -291,8 +291,8 @@ public class IndexModel : PageModel
             .Select(grup => new
             {
                 Toplam = grup.Count(),
-                Alici = grup.Count(x => x.Tip == CariTip.Alici),
-                Satici = grup.Count(x => x.Tip == CariTip.Satici)
+                Alici = grup.Count(x => x.Tip == CariTip.Alici || x.Tip == CariTip.HerIkisi),
+                Satici = grup.Count(x => x.Tip == CariTip.Satici || x.Tip == CariTip.HerIkisi)
             })
             .FirstOrDefaultAsync();
 
@@ -311,7 +311,21 @@ public class IndexModel : PageModel
             })
             .FirstOrDefaultAsync();
 
-        ToplamBakiye = (kasaOzeti?.Tahsilat ?? 0) - (kasaOzeti?.Odeme ?? 0);
+        var faturaOzeti = await _db.Faturalar
+            .AsNoTracking()
+            .Where(x => x.FirmaId == firmaId && x.AktifMi && x.Durum != FaturaDurumu.Iptal)
+            .GroupBy(_ => 1)
+            .Select(grup => new
+            {
+                Satis = grup.Where(x => x.Tip == FaturaTipi.Satis).Sum(x => (decimal?)x.GenelToplam) ?? 0,
+                Alis = grup.Where(x => x.Tip == FaturaTipi.Alis).Sum(x => (decimal?)x.GenelToplam) ?? 0
+            })
+            .FirstOrDefaultAsync();
+
+        ToplamBakiye = (faturaOzeti?.Satis ?? 0)
+            + (kasaOzeti?.Odeme ?? 0)
+            - (faturaOzeti?.Alis ?? 0)
+            - (kasaOzeti?.Tahsilat ?? 0);
 
         Cariler = await CariOzetSorgusu(firmaId)
             .OrderByDescending(x => x.Id)
@@ -330,8 +344,12 @@ public class IndexModel : PageModel
             sorgu = sorgu.Where(x => x.Unvan.Contains(unvan));
         }
 
-        if (TipFiltre.HasValue)
-            sorgu = sorgu.Where(x => x.Tip == TipFiltre.Value);
+        if (TipFiltre == CariTip.Alici)
+            sorgu = sorgu.Where(x => x.Tip == CariTip.Alici || x.Tip == CariTip.HerIkisi);
+        else if (TipFiltre == CariTip.Satici)
+            sorgu = sorgu.Where(x => x.Tip == CariTip.Satici || x.Tip == CariTip.HerIkisi);
+        else if (TipFiltre == CariTip.HerIkisi)
+            sorgu = sorgu.Where(x => x.Tip == CariTip.HerIkisi);
 
         if (!string.IsNullOrWhiteSpace(IletisimAra))
         {
@@ -354,10 +372,18 @@ public class IndexModel : PageModel
             ToplamOdeme = _db.KasaHareketleri
                 .Where(x => x.FirmaId == firmaId && x.CariKartId == cari.Id && x.Tip == HareketTipi.Cikis)
                 .Sum(x => (decimal?)x.Tutar) ?? 0,
+            ToplamSatis = _db.Faturalar
+                .Where(x => x.FirmaId == firmaId && x.AktifMi && x.CariKartId == cari.Id &&
+                    x.Tip == FaturaTipi.Satis && x.Durum != FaturaDurumu.Iptal)
+                .Sum(x => (decimal?)x.GenelToplam) ?? 0,
+            ToplamAlis = _db.Faturalar
+                .Where(x => x.FirmaId == firmaId && x.AktifMi && x.CariKartId == cari.Id &&
+                    x.Tip == FaturaTipi.Alis && x.Durum != FaturaDurumu.Iptal)
+                .Sum(x => (decimal?)x.GenelToplam) ?? 0,
             FaturaSayisi = _db.Faturalar
-                .Count(x => x.FirmaId == firmaId && x.CariKartId == cari.Id),
+                .Count(x => x.FirmaId == firmaId && x.AktifMi && x.CariKartId == cari.Id),
             ToplamFaturaTutari = _db.Faturalar
-                .Where(x => x.FirmaId == firmaId && x.CariKartId == cari.Id && x.Durum != FaturaDurumu.Iptal)
+                .Where(x => x.FirmaId == firmaId && x.AktifMi && x.CariKartId == cari.Id && x.Durum != FaturaDurumu.Iptal)
                 .Sum(x => (decimal?)x.GenelToplam) ?? 0
         });
     }
@@ -374,6 +400,9 @@ public class IndexModel : PageModel
         public string? VergiNo { get; set; }
         public decimal ToplamTahsilat { get; set; }
         public decimal ToplamOdeme { get; set; }
+        public decimal ToplamSatis { get; set; }
+        public decimal ToplamAlis { get; set; }
+        public decimal Bakiye => ToplamSatis + ToplamOdeme - ToplamAlis - ToplamTahsilat;
         public int FaturaSayisi { get; set; }
         public decimal ToplamFaturaTutari { get; set; }
     }

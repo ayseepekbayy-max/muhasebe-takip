@@ -50,7 +50,7 @@
         <article class="metric-card metric-card-negative"><span>Bekleyen Ödeme</span><strong>@Model.BekleyenOdeme.ToString("N2")</strong></article>
     </section>
 
-    <section class="app-form-panel">
+    <section class="app-form-panel" id="yeniFatura">
         <div class="panel-title-row">
             <div>
                 <h2>Yeni Fatura</h2>
@@ -64,7 +64,7 @@
                     <option value="0">Cari seçin</option>
                     @foreach (var cari in Model.Cariler)
                     {
-                        <option value="@cari.Id">@cari.Unvan (@(cari.Tip == CariTip.Alici ? "Alıcı" : "Satıcı"))</option>
+                        <option value="@cari.Id">@cari.Unvan (@cari.Tip.Metin())</option>
                     }
                 </select>
             </div>

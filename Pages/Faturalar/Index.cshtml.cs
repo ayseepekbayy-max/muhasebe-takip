@@ -42,6 +42,12 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string? FiltreFaturaNo { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public int? CariId { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public FaturaTipi? Tip { get; set; }
+
     [BindProperty]
     public FaturaForm Yeni { get; set; } = new();
 
@@ -58,6 +64,13 @@ public class IndexModel : PageModel
             return RedirectToPage("/Login");
 
         await VerileriYukleAsync(firmaId.Value);
+
+        if (CariId.HasValue && Cariler.Any(x => x.Id == CariId.Value))
+            Yeni.CariKartId = CariId.Value;
+
+        if (Tip.HasValue && Enum.IsDefined(Tip.Value))
+            Yeni.Tip = Tip.Value;
+
         return Page();
     }
 
@@ -73,9 +86,15 @@ public class IndexModel : PageModel
         if (Yeni.CariKartId <= 0)
             ModelState.AddModelError("", "Cari seçimi zorunludur.");
 
-        var cariVarMi = await _db.CariKartlar.AnyAsync(x => x.Id == Yeni.CariKartId && x.FirmaId == firmaId.Value && x.AktifMi);
-        if (!cariVarMi)
+        var secilenCari = await _db.CariKartlar
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == Yeni.CariKartId && x.FirmaId == firmaId.Value && x.AktifMi);
+        if (secilenCari == null)
             ModelState.AddModelError("", "Seçilen cari bulunamadı.");
+        else if (Yeni.Tip == FaturaTipi.Satis && !secilenCari.Tip.AliciMi())
+            ModelState.AddModelError("", "Satış yalnızca alıcı veya alıcı-satıcı türündeki cariye eklenebilir.");
+        else if (Yeni.Tip == FaturaTipi.Alis && !secilenCari.Tip.SaticiMi())
+            ModelState.AddModelError("", "Alış yalnızca satıcı veya alıcı-satıcı türündeki cariye eklenebilir.");
 
         var doluKalemler = TemizKalemler(Yeni.Kalemler);
         KalemleriDogrula(doluKalemler);

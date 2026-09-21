@@ -43,7 +43,7 @@
                     <option value="0">Cari seçin</option>
                     @foreach (var cari in Model.Cariler)
                     {
-                        <option value="@cari.Id">@cari.Unvan (@(cari.Tip == CariTip.Alici ? "Alıcı" : "Satıcı"))</option>
+                        <option value="@cari.Id">@cari.Unvan (@cari.Tip.Metin())</option>
                     }
                 </select>
             </div>

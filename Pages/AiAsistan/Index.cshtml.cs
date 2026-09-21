@@ -1849,7 +1849,7 @@ if (
         var cariMusteriAdlari = await _db.CariKartlar
             .Where(x =>
                 x.FirmaId == firmaId &&
-                x.Tip == CariTip.Alici)
+                (x.Tip == CariTip.Alici || x.Tip == CariTip.HerIkisi))
             .Select(x => x.Ad)
             .ToListAsync();
 
@@ -1930,7 +1930,7 @@ if (
         var cariMusteriAdlari = await _db.CariKartlar
             .Where(x =>
                 x.FirmaId == firmaId &&
-                x.Tip == CariTip.Alici)
+                (x.Tip == CariTip.Alici || x.Tip == CariTip.HerIkisi))
             .Select(x => x.Ad)
             .ToListAsync();
 
@@ -1944,7 +1944,7 @@ if (
         var cariAliciSayisi = await _db.CariKartlar
             .CountAsync(x =>
                 x.FirmaId == firmaId &&
-                x.Tip == CariTip.Alici);
+                (x.Tip == CariTip.Alici || x.Tip == CariTip.HerIkisi));
 
         var isYapilanMusteriSayisi = await _db.MusteriIsler
             .Where(x =>
@@ -2003,7 +2003,7 @@ if (
     var alicilar = await _db.CariKartlar
         .Where(x =>
             x.FirmaId == firmaId &&
-            x.Tip == CariTip.Alici)
+            (x.Tip == CariTip.Alici || x.Tip == CariTip.HerIkisi))
         .OrderBy(x => x.Unvan)
         .ToListAsync();
 
@@ -2113,7 +2113,7 @@ if (
     var cariMusteriAdlariGenel = await _db.CariKartlar
         .Where(x =>
             x.FirmaId == firmaId &&
-            x.Tip == CariTip.Alici)
+            (x.Tip == CariTip.Alici || x.Tip == CariTip.HerIkisi))
         .Select(x => x.Ad)
         .ToListAsync();
 
@@ -2401,12 +2401,12 @@ if (
     var cariAlici = await _db.CariKartlar
         .CountAsync(x =>
             x.FirmaId == firmaId &&
-            x.Tip == CariTip.Alici);
+            (x.Tip == CariTip.Alici || x.Tip == CariTip.HerIkisi));
 
     var cariSatici = await _db.CariKartlar
         .CountAsync(x =>
             x.FirmaId == firmaId &&
-            x.Tip == CariTip.Satici);
+            (x.Tip == CariTip.Satici || x.Tip == CariTip.HerIkisi));
 
     var calisanSayisi = await _db.Calisanlar
         .CountAsync(x => x.FirmaId == firmaId);
@@ -2466,18 +2466,21 @@ if (
             var alici = await _db.CariKartlar
                 .CountAsync(x =>
                     x.FirmaId == firmaId &&
-                    x.Tip == CariTip.Alici);
+                    (x.Tip == CariTip.Alici || x.Tip == CariTip.HerIkisi));
 
             var satici = await _db.CariKartlar
                 .CountAsync(x =>
                     x.FirmaId == firmaId &&
-                    x.Tip == CariTip.Satici);
+                    (x.Tip == CariTip.Satici || x.Tip == CariTip.HerIkisi));
+
+            var toplamCari = await _db.CariKartlar
+                .CountAsync(x => x.FirmaId == firmaId);
 
             return
                 $"Cari analiz:\n\n" +
                 $"- Alıcı sayısı: {alici}\n" +
                 $"- Satıcı sayısı: {satici}\n" +
-                $"- Toplam cari: {alici + satici}";
+                $"- Toplam cari: {toplamCari}";
         }
 
         // CARİ

@@ -135,7 +135,8 @@ public static class AiApiHelpers
     {
         var sonuc = await db.KasaHareketleri
             .Include(x => x.CariKart)
-            .Where(x => x.FirmaId == firmaId && x.CariKartId != null && x.CariKart != null && x.CariKart.Tip == CariTip.Alici)
+            .Where(x => x.FirmaId == firmaId && x.CariKartId != null && x.CariKart != null &&
+                (x.CariKart.Tip == CariTip.Alici || x.CariKart.Tip == CariTip.HerIkisi))
             .GroupBy(x => new { x.CariKartId, x.CariKart!.Unvan, x.CariKart.Ad })
             .Select(g => new
             {
@@ -161,7 +162,8 @@ public static class AiApiHelpers
     {
         var sonuc = await db.KasaHareketleri
             .Include(x => x.CariKart)
-            .Where(x => x.FirmaId == firmaId && x.CariKartId != null && x.CariKart != null && x.CariKart.Tip == CariTip.Satici)
+            .Where(x => x.FirmaId == firmaId && x.CariKartId != null && x.CariKart != null &&
+                (x.CariKart.Tip == CariTip.Satici || x.CariKart.Tip == CariTip.HerIkisi))
             .GroupBy(x => new { x.CariKartId, x.CariKart!.Unvan, x.CariKart.Ad })
             .Select(g => new
             {
@@ -189,7 +191,7 @@ public static class AiApiHelpers
             .Include(x => x.CariKart)
             .Where(x => x.FirmaId == firmaId &&
                         x.CariKartId != null && x.CariKart != null &&
-                        x.CariKart.Tip == CariTip.Alici &&
+                        (x.CariKart.Tip == CariTip.Alici || x.CariKart.Tip == CariTip.HerIkisi) &&
                         x.Tip == HareketTipi.Giris)
             .AsQueryable();
 
@@ -211,7 +213,7 @@ public static class AiApiHelpers
             .Include(x => x.CariKart)
             .Where(x => x.FirmaId == firmaId &&
                         x.CariKartId != null && x.CariKart != null &&
-                        x.CariKart.Tip == CariTip.Satici &&
+                        (x.CariKart.Tip == CariTip.Satici || x.CariKart.Tip == CariTip.HerIkisi) &&
                         x.Tip == HareketTipi.Cikis)
             .AsQueryable();
 
@@ -248,7 +250,7 @@ public static class AiApiHelpers
             .Where(x => x.FirmaId == firmaId &&
                         x.CariKartId != null &&
                         x.CariKart != null &&
-                        x.CariKart.Tip == CariTip.Alici)
+                        (x.CariKart.Tip == CariTip.Alici || x.CariKart.Tip == CariTip.HerIkisi))
             .ToListAsync();
 
         var bulunanCari = liste
