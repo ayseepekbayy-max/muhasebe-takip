@@ -40,14 +40,12 @@ public class LoginModel : PageModel
         {
             if (privateResult.Person is null)
             {
-                Hata = "Kullanıcı adı veya şifre hatalı.";
+                Hata = "Giriş yapılamadı. Bilgilerinizi kontrol edin veya 10 dakika sonra tekrar deneyin.";
                 return Page();
             }
 
-            HttpContext.Session.Clear();
-            HttpContext.Session.SetString("PrivateMode", "1");
-            HttpContext.Session.SetString("PrivatePerson", privateResult.Person.Number);
-            HttpContext.Session.SetString("PrivatePersonName", privateResult.Person.Name);
+            await HttpContext.RequestServices.GetRequiredService<PrivateSessionRenewal>()
+                .SignInAsync(HttpContext, privateResult.Person);
             return RedirectToPage("/Panel");
         }
 

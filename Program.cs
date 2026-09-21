@@ -12,6 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<NovaReplyService>();
 builder.Services.AddScoped<PrivateAccessService>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<PrivateLoginAttemptLimiter>();
+builder.Services.AddScoped<PrivateSessionRenewal>();
 builder.Services.AddSingleton<PrivateMediaStore>();
 builder.Services.AddHostedService<PrivateMediaCleanupService>();
 

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace MuhasebeTakip2.App.Services;
 
-public sealed class PrivateAccessService(IConfiguration configuration)
+public sealed class PrivateAccessService(IConfiguration configuration, PrivateLoginAttemptLimiter attempts)
 {
     private readonly PasswordHasher<PrivatePerson> _hasher = new();
 
@@ -13,6 +13,11 @@ public sealed class PrivateAccessService(IConfiguration configuration)
             !string.Equals(username?.Trim(), configuredUsername, StringComparison.OrdinalIgnoreCase))
             return new(false, null);
 
+        return attempts.Authenticate(() => VerifyConfiguredPassword(password));
+    }
+
+    private PrivateAccessResult VerifyConfiguredPassword(string? password)
+    {
         // A configured name is reserved even if the remaining configuration is incomplete.
         var hash1 = configuration["FIRMOVA_PRIVATE_PASSWORD_HASH_1"];
         var hash2 = configuration["FIRMOVA_PRIVATE_PASSWORD_HASH_2"];
