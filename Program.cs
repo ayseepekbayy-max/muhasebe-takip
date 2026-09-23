@@ -892,7 +892,8 @@ app.MapPost("/api/ai/alici-sayisi", async (AppDbContext db, CalisanAvansApiReque
 {
 
     var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
-    var count = await db.CariKartlar.Where(x => x.Tip == CariTip.Alici && x.FirmaId == firmaId).CountAsync();
+    var count = await db.CariKartlar.Where(x =>
+        (x.Tip == CariTip.Alici || x.Tip == CariTip.HerIkisi) && x.FirmaId == firmaId).CountAsync();
     return Results.Json(new { success = true, message = $"Toplam alıcı sayısı: {count}" });
 });
 
@@ -900,7 +901,8 @@ app.MapPost("/api/ai/satici-sayisi", async (AppDbContext db, CalisanAvansApiRequ
 {
 
     var firmaId = await GetAiFirmaIdAsync(db, request.FirmaId);
-    var count = await db.CariKartlar.Where(x => x.Tip == CariTip.Satici && x.FirmaId == firmaId).CountAsync();
+    var count = await db.CariKartlar.Where(x =>
+        (x.Tip == CariTip.Satici || x.Tip == CariTip.HerIkisi) && x.FirmaId == firmaId).CountAsync();
     return Results.Json(new { success = true, message = $"Toplam satıcı sayısı: {count}" });
 });
 

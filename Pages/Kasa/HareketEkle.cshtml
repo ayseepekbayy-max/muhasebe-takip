@@ -2,7 +2,14 @@
 @using MuhasebeTakip2.App.Models
 @model MuhasebeTakip2.App.Pages.Kasa.HareketEkleModel
 
-<h1>Kasa Hareket Ekle</h1>
+<div class="app-page">
+<section class="app-page-header">
+  <div>
+    <span class="app-page-eyebrow">Cari / Kasa</span>
+    <h1>Tahsilat veya Ödeme Ekle</h1>
+    <p>Hareketi isterseniz açık bir faturaya bağlayın; fatura bakiyesi ve kasa birlikte güncellensin.</p>
+  </div>
+</section>
 
 @if (!ViewData.ModelState.IsValid)
 {
@@ -14,7 +21,7 @@
   </div>
 }
 
-<form method="post" style="max-width:420px;">
+<form method="post" class="app-form-panel" style="max-width:720px;">
   <div style="margin-bottom:10px;">
     <label><b>Tarih</b></label><br />
     <input asp-for="Hareket.Tarih" type="date" style="width:100%; padding:8px;" />
@@ -23,8 +30,8 @@
   <div style="margin-bottom:10px;">
     <label><b>Tip</b></label><br />
     <select asp-for="Hareket.Tip" style="width:100%; padding:8px;">
-      <option value="@((int)HareketTipi.Giris)">Giriş</option>
-      <option value="@((int)HareketTipi.Cikis)">Çıkış</option>
+      <option value="@((int)HareketTipi.Giris)">Tahsilat (Kasa Girişi)</option>
+      <option value="@((int)HareketTipi.Cikis)">Ödeme (Kasa Çıkışı)</option>
     </select>
   </div>
 
@@ -34,6 +41,15 @@
             asp-items="Model.CariSecenekleri"
             style="width:100%; padding:8px;">
     </select>
+  </div>
+
+  <div style="margin-bottom:10px;">
+    <label><b>Bağlı Fatura</b></label><br />
+    <select asp-for="Hareket.FaturaId"
+            asp-items="Model.FaturaSecenekleri"
+            style="width:100%; padding:8px;">
+    </select>
+    <small>Fatura seçmezseniz hareket yalnızca genel cari hesabına ve kasaya işlenir.</small>
   </div>
 
   <div style="margin-bottom:10px;">
@@ -47,5 +63,13 @@
   </div>
 
   <button type="submit" style="padding:10px 14px;">Kaydet</button>
-  <a href="/" style="margin-left:10px;">İptal</a>
+  @if (Model.Hareket.CariKartId.HasValue)
+  {
+    <a asp-page="/CariKartlar/Detay/Index" asp-route-id="@Model.Hareket.CariKartId.Value" style="margin-left:10px;">İptal</a>
+  }
+  else
+  {
+    <a asp-page="/Kasa/Hareketler" style="margin-left:10px;">İptal</a>
+  }
 </form>
+</div>

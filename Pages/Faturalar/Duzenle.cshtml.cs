@@ -85,9 +85,15 @@ public class DuzenleModel : PageModel
         if (Fatura.CariKartId <= 0)
             ModelState.AddModelError("", "Cari seçimi zorunludur.");
 
-        var cariVarMi = await _db.CariKartlar.AnyAsync(x => x.Id == Fatura.CariKartId && x.FirmaId == firmaId.Value && x.AktifMi);
-        if (!cariVarMi)
+        var secilenCari = await _db.CariKartlar
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == Fatura.CariKartId && x.FirmaId == firmaId.Value && x.AktifMi);
+        if (secilenCari == null)
             ModelState.AddModelError("", "Seçilen cari bulunamadı.");
+        else if (Fatura.Tip == FaturaTipi.Satis && !secilenCari.Tip.AliciMi())
+            ModelState.AddModelError("", "Satış yalnızca alıcı veya alıcı-satıcı türündeki cariye bağlanabilir.");
+        else if (Fatura.Tip == FaturaTipi.Alis && !secilenCari.Tip.SaticiMi())
+            ModelState.AddModelError("", "Alış yalnızca satıcı veya alıcı-satıcı türündeki cariye bağlanabilir.");
 
         var doluKalemler = TemizKalemler(Fatura.Kalemler ?? new List<FaturaKalemForm>());
         KalemleriDogrula(doluKalemler);

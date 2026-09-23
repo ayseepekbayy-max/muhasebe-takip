@@ -22,7 +22,9 @@ public class IndexModel : PageModel
     public List<KasaHareket> Hareketler { get; set; } = new();
     public decimal ToplamGiris { get; set; }
     public decimal ToplamCikis { get; set; }
-    public decimal Bakiye => ToplamGiris - ToplamCikis;
+    public decimal ToplamSatis { get; set; }
+    public decimal ToplamAlis { get; set; }
+    public decimal Bakiye => ToplamSatis + ToplamCikis - ToplamAlis - ToplamGiris;
 
     [BindProperty]
     public decimal Tutar { get; set; }
@@ -110,5 +112,17 @@ public class IndexModel : PageModel
             .AsNoTracking()
             .Where(x => x.FirmaId == firmaId && x.CariKartId == id && x.Tip == HareketTipi.Cikis)
             .SumAsync(x => (decimal?)x.Tutar) ?? 0;
+
+        ToplamSatis = await _db.Faturalar
+            .AsNoTracking()
+            .Where(x => x.FirmaId == firmaId && x.AktifMi && x.CariKartId == id &&
+                x.Tip == FaturaTipi.Satis && x.Durum != FaturaDurumu.Iptal)
+            .SumAsync(x => (decimal?)x.GenelToplam) ?? 0;
+
+        ToplamAlis = await _db.Faturalar
+            .AsNoTracking()
+            .Where(x => x.FirmaId == firmaId && x.AktifMi && x.CariKartId == id &&
+                x.Tip == FaturaTipi.Alis && x.Durum != FaturaDurumu.Iptal)
+            .SumAsync(x => (decimal?)x.GenelToplam) ?? 0;
     }
 }

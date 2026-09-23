@@ -3,7 +3,25 @@ namespace MuhasebeTakip2.App.Models;
 public enum CariTip
 {
     Alici = 1,
-    Satici = 2
+    Satici = 2,
+    HerIkisi = 3
+}
+
+public static class CariTipExtensions
+{
+    public static bool AliciMi(this CariTip tip) =>
+        tip is CariTip.Alici or CariTip.HerIkisi;
+
+    public static bool SaticiMi(this CariTip tip) =>
+        tip is CariTip.Satici or CariTip.HerIkisi;
+
+    public static string Metin(this CariTip tip) => tip switch
+    {
+        CariTip.Alici => "Alıcı",
+        CariTip.Satici => "Satıcı",
+        CariTip.HerIkisi => "Alıcı ve Satıcı",
+        _ => "Cari"
+    };
 }
 
 public class CariKart

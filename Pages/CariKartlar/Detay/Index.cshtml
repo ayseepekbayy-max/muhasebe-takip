@@ -10,10 +10,19 @@
         <div>
             <span class="app-page-eyebrow">Cari Detay</span>
             <h1>@Model.Cari?.Unvan</h1>
-            <p>@(Model.Cari?.Tip == CariTip.Alici ? "Alıcı" : "Satıcı") · @(string.IsNullOrWhiteSpace(Model.Cari?.Telefon) ? "Telefon yok" : Model.Cari.Telefon)</p>
+            <p>@Model.Cari?.Tip.Metin() · @(string.IsNullOrWhiteSpace(Model.Cari?.Telefon) ? "Telefon yok" : Model.Cari.Telefon)</p>
         </div>
         <div class="app-page-actions">
-            <a class="btn btn-primary" asp-page="/Kasa/HareketEkle" asp-route-cariId="@Model.Cari?.Id">Kasa Hareketi Ekle</a>
+            @if (Model.Cari?.Tip.AliciMi() == true)
+            {
+                <a class="btn btn-outline-success" asp-page="/Faturalar/Index" asp-route-cariId="@Model.Cari.Id" asp-route-tip="@FaturaTipi.Satis" asp-fragment="yeniFatura">Satış Ekle</a>
+                <a class="btn btn-outline-success" asp-page="/Kasa/HareketEkle" asp-route-cariId="@Model.Cari.Id" asp-route-tip="@HareketTipi.Giris">Tahsilat</a>
+            }
+            @if (Model.Cari?.Tip.SaticiMi() == true)
+            {
+                <a class="btn btn-outline-warning" asp-page="/Faturalar/Index" asp-route-cariId="@Model.Cari.Id" asp-route-tip="@FaturaTipi.Alis" asp-fragment="yeniFatura">Alış Ekle</a>
+                <a class="btn btn-outline-warning" asp-page="/Kasa/HareketEkle" asp-route-cariId="@Model.Cari.Id" asp-route-tip="@HareketTipi.Cikis">Ödeme</a>
+            }
             <a class="btn btn-outline-dark" asp-page="/CariKartlar/Ekstre" asp-route-id="@Model.Cari?.Id">Tam Ekstre</a>
             <a class="btn btn-outline-dark" asp-page="/CariKartlar/Index">Cari Kartlar</a>
         </div>
@@ -23,8 +32,20 @@
     {
         <div class="app-alert app-alert-danger" asp-validation-summary="All"></div>
     }
+    @if (TempData["Basari"] != null)
+    {
+        <div class="app-alert app-alert-success">@TempData["Basari"]</div>
+    }
 
     <section class="metric-grid">
+        <article class="metric-card">
+            <span>Toplam Satış</span>
+            <strong>@Model.ToplamSatis.ToString("N2") ₺</strong>
+        </article>
+        <article class="metric-card">
+            <span>Toplam Alış</span>
+            <strong>@Model.ToplamAlis.ToString("N2") ₺</strong>
+        </article>
         <article class="metric-card metric-card-positive">
             <span>Toplam Tahsilat</span>
             <strong>@Model.ToplamGiris.ToString("N2") ₺</strong>
@@ -34,7 +55,7 @@
             <strong>@Model.ToplamCikis.ToString("N2") ₺</strong>
         </article>
         <article class="metric-card">
-            <span>Kasa Bakiyesi</span>
+            <span>Cari Bakiye</span>
             <strong>@Model.Bakiye.ToString("N2") ₺</strong>
         </article>
     </section>

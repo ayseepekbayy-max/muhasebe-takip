@@ -87,6 +87,7 @@
                     <option value="">Tümü</option>
                     <option value="@((int)CariTip.Alici)">Alıcı</option>
                     <option value="@((int)CariTip.Satici)">Satıcı</option>
+                    <option value="@((int)CariTip.HerIkisi)">Alıcı ve Satıcı</option>
                 </select>
             </div>
             <div class="form-field">
@@ -122,6 +123,7 @@
                     <select asp-for="DuzenlenenCari.Tip">
                         <option value="@((int)CariTip.Alici)">Alıcı</option>
                         <option value="@((int)CariTip.Satici)">Satıcı</option>
+                        <option value="@((int)CariTip.HerIkisi)">Alıcı ve Satıcı</option>
                     </select>
                 </div>
                 <div class="form-field">
@@ -156,11 +158,11 @@
             <div class="cari-card-list">
                 @foreach (var cari in Model.Cariler)
                 {
-                    var cariBakiye = cari.ToplamTahsilat - cari.ToplamOdeme;
+                    var cariBakiye = cari.Bakiye;
                     <article class="cari-list-card">
                         <div class="cari-card-identity">
-                            <span class="status-pill @(cari.Tip == CariTip.Alici ? "status-pill-income" : "status-pill-pending")">
-                                @(cari.Tip == CariTip.Alici ? "Alıcı" : "Satıcı")
+                            <span class="status-pill @(cari.Tip.AliciMi() ? "status-pill-income" : "status-pill-pending")">
+                                @cari.Tip.Metin()
                             </span>
                             <div>
                                 <h3>@cari.Unvan</h3>
@@ -182,7 +184,7 @@
                                 <strong class="amount-expense">@cari.ToplamOdeme.ToString("N2") ₺</strong>
                             </div>
                             <div>
-                                <span>Net Bakiye</span>
+                                <span>Cari Bakiye</span>
                                 <strong class="@(cariBakiye < 0 ? "amount-expense" : "amount-income")">@cariBakiye.ToString("N2") ₺</strong>
                             </div>
                             <div>
@@ -192,7 +194,18 @@
                         </div>
 
                         <div class="cari-card-actions">
+                            <a class="btn btn-outline-primary btn-sm" asp-page="/CariKartlar/Detay/Index" asp-route-id="@cari.Id">Detay</a>
                             <a class="btn btn-primary btn-sm" asp-page="/CariKartlar/Ekstre" asp-route-id="@cari.Id">Ekstre</a>
+                            @if (cari.Tip.AliciMi())
+                            {
+                                <a class="btn btn-outline-success btn-sm" asp-page="/Faturalar/Index" asp-route-cariId="@cari.Id" asp-route-tip="@FaturaTipi.Satis" asp-fragment="yeniFatura">Satış Ekle</a>
+                                <a class="btn btn-outline-success btn-sm" asp-page="/Kasa/HareketEkle" asp-route-cariId="@cari.Id" asp-route-tip="@HareketTipi.Giris">Tahsilat</a>
+                            }
+                            @if (cari.Tip.SaticiMi())
+                            {
+                                <a class="btn btn-outline-warning btn-sm" asp-page="/Faturalar/Index" asp-route-cariId="@cari.Id" asp-route-tip="@FaturaTipi.Alis" asp-fragment="yeniFatura">Alış Ekle</a>
+                                <a class="btn btn-outline-warning btn-sm" asp-page="/Kasa/HareketEkle" asp-route-cariId="@cari.Id" asp-route-tip="@HareketTipi.Cikis">Ödeme</a>
+                            }
                             <a class="btn btn-outline-dark btn-sm"
                                asp-page="/CariKartlar/Index"
                                asp-route-DuzenleId="@cari.Id"
@@ -235,6 +248,7 @@
                             <select asp-for="YeniCari.Tip">
                                 <option value="@((int)CariTip.Alici)">Alıcı</option>
                                 <option value="@((int)CariTip.Satici)">Satıcı</option>
+                                <option value="@((int)CariTip.HerIkisi)">Alıcı ve Satıcı</option>
                             </select>
                         </div>
                         <div class="form-field">

@@ -183,7 +183,7 @@ public class ExcelIceAktarModel : PageModel
             var netBakiye = kalanTahsilat - kalanOdeme;
 
             ws.Cell(row, 1).Value = item.Unvan;
-            ws.Cell(row, 2).Value = item.Tip == CariTip.Alici ? "Alıcı" : "Satıcı";
+            ws.Cell(row, 2).Value = item.Tip.Metin();
             ws.Cell(row, 3).Value = item.Telefon ?? "";
             ws.Cell(row, 4).Value = item.VergiNo ?? "";
             ws.Cell(row, 5).Value = satis;
@@ -301,7 +301,11 @@ public class ExcelIceAktarModel : PageModel
                 continue;
 
             var tipText = ws.Cell(row, 2).GetString().Trim().ToLower();
-            var tip = tipText.Contains("sat") ? CariTip.Satici : CariTip.Alici;
+            var tip = tipText.Contains("alıcı") && tipText.Contains("satıcı")
+                ? CariTip.HerIkisi
+                : tipText.Contains("sat")
+                    ? CariTip.Satici
+                    : CariTip.Alici;
 
             _db.CariKartlar.Add(new CariKart
             {
