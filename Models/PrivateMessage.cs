@@ -9,6 +9,10 @@ public sealed class PrivateMessage
 
     public int Id { get; set; }
 
+    public int? ReplyToMessageId { get; set; }
+    // Retained when the foreign key is cleared after deleting the original message.
+    public bool IsReply { get; set; }
+
     [Range(1, 2)]
     public int SenderPerson { get; set; }
 

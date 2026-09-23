@@ -83,6 +83,15 @@
         .view-photo strong { font-size: 14px; font-weight: 600; }
         .view-photo small { color: #657a70; font-size: 12px; }
         .photo-state { padding: 8px 2px; font-size: 14px; color: #52685d; }
+        .reply-action { display: block; margin: 4px 0 0 auto; padding: 6px 10px; font-size: 13px; color: #315e4d; min-height: 44px; }
+        .reply-quote { display: block; width: 100%; min-width: 0; margin: 4px 0 8px; padding: 8px 10px; border: 0; border-left: 3px solid #557968; border-radius: 6px; background: #55796812; text-align: left; }
+        .reply-quote:disabled { opacity: 1; color: #68778b; }
+        .reply-sender { display: block; font-size: 12px; font-weight: 600; color: #315e4d; overflow-wrap: anywhere; }
+        .reply-excerpt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; white-space: pre-wrap; font-size: 13px; line-height: 1.4; }
+        .reply-preview { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid #e3e7ee; background: #f1f5f4; flex-shrink: 0; }
+        .reply-preview > div { flex: 1; min-width: 0; border-left: 3px solid #557968; padding-left: 10px; }
+        #reply-cancel { flex: 0 0 44px; width: 44px; height: 44px; padding: 8px; }
+        .message.reply-highlight { outline: 3px solid #8ab8a2; outline-offset: -2px; }
         #photo-dialog { width: min(960px,100vw); height: min(900px,100dvh); max-width: 100vw; max-height: 100dvh; margin: auto; padding: 16px; background: #101a1d; color: #f4f7f6; border: 0; border-radius: 12px; }
         #photo-dialog[open] { display: flex; flex-direction: column; gap: 12px; }
         #photo-dialog::backdrop { background: #071013f2; }
@@ -121,21 +130,33 @@
         <section id="messages" class="messages" aria-label="Mesajlar" tabindex="0">
             @foreach (var message in Model.Messages)
             {
-                <article class="message @(message.SenderPerson == Model.CurrentPerson ? "own" : "")" data-id="@message.Id">
+                <article class="message @(message.SenderPerson == Model.CurrentPerson ? "own" : "")" data-id="@message.Id" data-sender-name="@message.SenderName" data-preview="@MuhasebeTakip2.App.Pages.PanelModel.PreviewText(message)">
                     <details class="message-actions">
                         <summary aria-label="Mesaj seçenekleri">⋮</summary>
+                        <button type="button" class="reply-action">Yanıtla</button>
                         <button type="button" class="delete-message" data-mode="mine">Kendimden sil</button>
                         @if (message.SenderPerson == Model.CurrentPerson)
                         {
                             <button type="button" class="delete-message" data-mode="everyone">Herkesten sil</button>
                         }
                     </details>
+                    @if (Model.ReplyPreviews.TryGetValue(message.Id, out var reply))
+                    {
+                        <button type="button" class="reply-quote" data-reply-id="@reply.Id" disabled="@(!reply.Id.HasValue)" aria-label="Yanıtlanan mesaj">
+                            <span class="reply-sender">@reply.SenderName</span>
+                            <span class="reply-excerpt">@reply.Text</span>
+                        </button>
+                    }
                     <div class="content" data-expired="@(MuhasebeTakip2.App.Pages.PanelModel.PhotoExpired(message) ? "true" : "false")" data-available="@(message.MediaKey != null ? "true" : "false")" data-duration="@message.DurationSeconds" data-kind="@((int)message.Kind)" data-viewed="@(message.ViewedAtUtc.HasValue ? "true" : "false")">@(message.Kind == MuhasebeTakip2.App.Models.PrivateMessageKind.Text ? message.Content : message.Kind == MuhasebeTakip2.App.Models.PrivateMessageKind.Audio ? "Sesli mesaj" : "Tek görüntülemelik fotoğraf")</div>
                     <time datetime="@message.CreatedAtUtc.ToString("O")">@message.CreatedAtUtc.ToString("HH:mm")</time>
                 </article>
             }
             <div id="typing-indicator" class="typing-indicator" role="status" hidden>yazıyor...</div>
         </section>
+        <div id="reply-preview" class="reply-preview" hidden>
+            <div role="status"><span id="reply-sender" class="reply-sender"></span><span id="reply-text" class="reply-excerpt"></span></div>
+            <button id="reply-cancel" type="button" aria-label="Yanıtlamayı iptal et">✕</button>
+        </div>
         <form id="send-form" class="composer" method="post" asp-page="/Panel" asp-page-handler="Send">
             <button id="photo-pick" class="icon-button" type="button" aria-label="Fotoğraf ekle" title="Fotoğraf ekle">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
@@ -204,6 +225,55 @@
             const pollStatus = document.getElementById('poll-status');
             const person = Number(root.dataset.person);
             const nodes = new Map([...list.querySelectorAll('article[data-id]')].map(node => [Number(node.dataset.id), node]));
+            const replyPreview = document.getElementById('reply-preview');
+            const replySender = document.getElementById('reply-sender');
+            const replyText = document.getElementById('reply-text');
+            let replyToId = null, highlightTimer;
+            function clearReply() {
+                replyToId = null; replyPreview.hidden = true;
+                replySender.textContent = ''; replyText.textContent = '';
+            }
+            document.getElementById('reply-cancel').onclick = clearReply;
+            function appendReply(body) { if (replyToId !== null) body.append('replyToMessageId', String(replyToId)); }
+            function messagePreview(message) {
+                if (message.kind === 1) return '🎤 Sesli mesaj';
+                if (message.kind === 2) return '📷 Fotoğraf';
+                return message.content.length > 160 ? message.content.slice(0,160) + '…' : message.content;
+            }
+            function renderReply(node, reply) {
+                let quote = node.querySelector('.reply-quote');
+                if (!reply) { quote?.remove(); return; }
+                if (!quote) {
+                    quote = document.createElement('button'); quote.type = 'button'; quote.className = 'reply-quote';
+                    quote.setAttribute('aria-label','Yanıtlanan mesaj');
+                    const sender = document.createElement('span'); sender.className = 'reply-sender';
+                    const text = document.createElement('span'); text.className = 'reply-excerpt';
+                    quote.append(sender,text); node.insertBefore(quote,node.querySelector('.content'));
+                }
+                quote.dataset.replyId = reply.id || ''; quote.disabled = !reply.id;
+                quote.querySelector('.reply-sender').textContent = reply.senderName || '';
+                quote.querySelector('.reply-excerpt').textContent = reply.text;
+            }
+            list.addEventListener('click', event => {
+                const action = event.target.closest('.reply-action');
+                if (action && list.contains(action)) {
+                    const node = action.closest('article[data-id]');
+                    replyToId = Number(node.dataset.id);
+                    replySender.textContent = node.dataset.senderName; replyText.textContent = node.dataset.preview;
+                    replyPreview.hidden = false; action.closest('details').open = false;
+                    if (!form.hidden) entry.focus();
+                    return;
+                }
+                const quote = event.target.closest('.reply-quote');
+                if (!quote || quote.disabled || !list.contains(quote)) return;
+                const original = nodes.get(Number(quote.dataset.replyId));
+                if (!original) { sendStatus.textContent = 'Orijinal mesaj bu görünümde yüklü değil.'; return; }
+                list.querySelectorAll('.reply-highlight').forEach(node => node.classList.remove('reply-highlight'));
+                clearTimeout(highlightTimer);
+                original.scrollIntoView({block:'center',behavior:'smooth'});
+                original.classList.add('reply-highlight');
+                highlightTimer = setTimeout(() => original.classList.remove('reply-highlight'),1800);
+            });
             const typingIndicator = document.getElementById('typing-indicator');
             const clock = new Intl.DateTimeFormat('tr-TR', { hour: '2-digit', minute: '2-digit' });
             let sending = false;
@@ -407,6 +477,7 @@
                 toggle.setAttribute('aria-label', 'Mesaj seçenekleri');
                 toggle.textContent = '⋮';
                 menu.append(toggle);
+                const reply = document.createElement('button'); reply.type = 'button'; reply.className = 'reply-action'; reply.textContent = 'Yanıtla'; menu.append(reply);
                 for (const mode of isOwn ? ['mine', 'everyone'] : ['mine']) {
                     const action = document.createElement('button');
                     action.type = 'button';
@@ -569,7 +640,12 @@
                         changed = true;
                     }
                 }
-                for (const message of messages) renderMedia(nodes.get(message.id), message);
+                for (const message of messages) {
+                    const node = nodes.get(message.id);
+                    node.dataset.senderName = message.senderName; node.dataset.preview = messagePreview(message);
+                    renderMedia(node, message); renderReply(node, message.reply);
+                }
+                if (replyToId !== null && !nodes.has(replyToId)) clearReply();
                 changed = arrangeDateGroups(messages.map(message => nodes.get(message.id))) || changed;
                 updateSelection();
                 if (changed && nearBottom) list.scrollTop = list.scrollHeight;
@@ -706,9 +782,10 @@
                 sendStatus.textContent = '';
                 try {
                     const body = actionBody(); body.append('kind',pendingKind); if (pendingKind === 'audio') body.append('durationSeconds',pendingDuration); body.append('file',pendingMedia,'media');
+                    appendReply(body);
                     const response = await fetch(root.dataset.mediaUrl,{method:'POST',body,credentials:'same-origin',cache:'no-store',redirect:'error'});
                     if (!response.ok) { const result = await response.json().catch(() => ({})); throw new Error(result.error || 'Medya gönderilemedi. Oturumunuzu ve dosya boyutunu kontrol edin.'); }
-                    clearPending(); await refresh();
+                    clearPending(); clearReply(); await refresh();
                 } catch(error) { sendStatus.textContent = error.message; }
                 finally { mediaBusy = false; mediaSend.disabled = mediaCancel.disabled = pickPhoto.disabled = recordButton.disabled = false; }
             };
@@ -734,6 +811,7 @@
                 event.preventDefault();
                 if (sending || !entry.value.trim()) return;
                 const body = new FormData(form);
+                appendReply(body);
                 sending = true;
                 entry.disabled = true;
                 updateButton();
@@ -746,7 +824,7 @@
                         return;
                     }
                     if (!response.ok) throw new Error('request');
-                    entry.value = '';
+                    entry.value = ''; clearReply();
                     await refresh();
                 } catch {
                     sendStatus.textContent = 'Gönderim doğrulanamadı. Tekrar denemeden önce mesaj listesini kontrol edin.';

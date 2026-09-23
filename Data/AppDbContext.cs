@@ -65,6 +65,8 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<PrivateMessage>(entity =>
         {
             entity.HasIndex(x => x.CreatedAtUtc);
+            entity.HasOne<PrivateMessage>().WithMany().HasForeignKey(x => x.ReplyToMessageId)
+                .OnDelete(DeleteBehavior.SetNull);
             entity.ToTable("PrivateMessages", table =>
                 table.HasCheckConstraint("CK_PrivateMessages_SenderPerson", "\"SenderPerson\" IN (1, 2)"));
         });

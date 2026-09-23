@@ -16,6 +16,15 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
     public string CurrentPersonName { get; private set; } = "";
     public int CurrentPerson { get; private set; }
     public List<PrivateMessage> Messages { get; private set; } = new();
+    public Dictionary<int, ReplyPreview> ReplyPreviews { get; private set; } = new();
+    public sealed record ReplyPreview(int? Id, string? SenderName, string Text);
+
+    public static string PreviewText(PrivateMessage message) => message.Kind switch
+    {
+        PrivateMessageKind.Audio => "🎤 Sesli mesaj",
+        PrivateMessageKind.ViewOncePhoto => "📷 Fotoğraf",
+        _ => message.Content.Length > 160 ? message.Content[..160] + "…" : message.Content
+    };
 
     public bool ShowLastSeen { get; private set; } = true;
     public DateTime? OtherLastSeenAtUtc { get; private set; }
@@ -35,6 +44,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         OtherPersonName = privateAccess.GetOtherPersonName(HttpContext.Session.GetString("PrivatePerson")!);
         CurrentPersonName = HttpContext.Session.GetString("PrivatePersonName") ?? "";
         Messages = await LoadMessagesAsync();
+        await LoadReplyPreviewsAsync(Messages);
         await LoadPresenceAsync();
         return Page();
     }
@@ -45,6 +55,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
             return Unauthorized();
 
         var messages = await LoadMessagesAsync();
+        await LoadReplyPreviewsAsync(messages);
         await LoadPresenceAsync();
         return new JsonResult(new { serverNowUtc = ServerNowUtc, presence = new { showLastSeen = ShowLastSeen, otherLastSeenAtUtc = OtherLastSeenAtUtc, otherTyping = OtherTypingRemainingMs > 0, otherTypingRemainingMs = OtherTypingRemainingMs }, messages = messages.Select(message => new
         {
@@ -52,6 +63,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
             senderPerson = message.SenderPerson,
             senderName = message.SenderName,
             content = message.Content,
+            reply = ReplyPreviews.GetValueOrDefault(message.Id),
             kind = (int)message.Kind,
             viewed = message.ViewedAtUtc.HasValue,
             expired = PhotoExpired(message),
@@ -61,7 +73,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         }) });
     }
 
-    public async Task<IActionResult> OnPostSendAsync([FromForm] string? content)
+    public async Task<IActionResult> OnPostSendAsync([FromForm] string? content, [FromForm] int? replyToMessageId)
     {
         if (!HasAccess)
             return Unauthorized();
@@ -69,6 +81,8 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         var senderName = HttpContext.Session.GetString("PrivatePersonName");
         if (string.IsNullOrWhiteSpace(senderName) || senderName.Length > PrivateMessage.MaxSenderNameLength)
             return Unauthorized();
+
+        if (!ModelState.IsValid || !await CanReplyAsync(replyToMessageId)) return InvalidReply();
 
         content = content?.Trim();
         if (string.IsNullOrEmpty(content) || content.Length > PrivateMessage.MaxContentLength)
@@ -79,17 +93,20 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
             SenderPerson = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2,
             SenderName = senderName,
             Content = content,
+            ReplyToMessageId = replyToMessageId, IsReply = replyToMessageId.HasValue,
             CreatedAtUtc = DateTime.UtcNow
         });
-        await db.SaveChangesAsync(HttpContext.RequestAborted);
+        try { await db.SaveChangesAsync(HttpContext.RequestAborted); }
+        catch (DbUpdateException ex) when (replyToMessageId.HasValue && IsMissingReply(ex)) { return InvalidReply(); }
         return new JsonResult(new { success = true });
     }
 
-    public async Task<IActionResult> OnPostMediaAsync(IFormFile? file, [FromForm] string? kind, [FromForm] int? durationSeconds)
+    public async Task<IActionResult> OnPostMediaAsync(IFormFile? file, [FromForm] string? kind, [FromForm] int? durationSeconds, [FromForm] int? replyToMessageId)
     {
         if (!HasAccess) return Unauthorized();
         var name = HttpContext.Session.GetString("PrivatePersonName");
         if (string.IsNullOrWhiteSpace(name) || name.Length > PrivateMessage.MaxSenderNameLength) return Unauthorized();
+        if (!ModelState.IsValid || !await CanReplyAsync(replyToMessageId)) return InvalidReply();
         if (kind is not ("photo" or "audio")) return BadRequest();
         var photo = kind == "photo";
         if (!photo && (durationSeconds is null or < 1 or > 305)) return BadRequest(new { error = "Ses kaydı süresi geçersiz (en fazla 5 dakika)." });
@@ -107,21 +124,50 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
             db.PrivateMessages.Add(new PrivateMessage {
                 SenderPerson = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2,
                 SenderName = name, Content = "", CreatedAtUtc = DateTime.UtcNow,
+                ReplyToMessageId = replyToMessageId, IsReply = replyToMessageId.HasValue,
                 Kind = photo ? PrivateMessageKind.ViewOncePhoto : PrivateMessageKind.Audio,
                 MediaKey = key, MediaContentType = type, DurationSeconds = photo ? null : durationSeconds
             });
             await db.SaveChangesAsync(HttpContext.RequestAborted);
         }
+        catch (DbUpdateException ex) when (replyToMessageId.HasValue && IsMissingReply(ex)) { media.Delete(key); return InvalidReply(); }
         catch { media.Delete(key); throw; }
         return new JsonResult(new { success = true });
     }
 
-    private IQueryable<PrivateMessage> AccessibleMedia(int id)
+    private IQueryable<PrivateMessage> VisibleMessages()
     {
         var person = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2;
-        return db.PrivateMessages.Where(m => m.Id == id &&
+        return db.PrivateMessages.Where(m =>
             !db.PrivateMessageHiddens.Any(h => h.PersonNumber == person && h.PrivateMessageId == m.Id) &&
             !db.PrivatePresences.Any(p => p.PersonNumber == person && p.MessagesClearedAtUtc.HasValue && m.CreatedAtUtc <= p.MessagesClearedAtUtc.Value));
+    }
+
+    private IQueryable<PrivateMessage> AccessibleMedia(int id) => VisibleMessages().Where(m => m.Id == id);
+
+    private async Task<bool> CanReplyAsync(int? id) => id is null ||
+        (id > 0 && await VisibleMessages().AnyAsync(m => m.Id == id, HttpContext.RequestAborted));
+
+    private BadRequestObjectResult InvalidReply() => BadRequest(new { error = "Yanıtlanacak mesaj kullanılamıyor." });
+
+    // A concurrent delete can win between validation and insertion. Do not expose DB details.
+    private static bool IsMissingReply(DbUpdateException error) => error.InnerException is
+        Npgsql.PostgresException { SqlState: "23503" } or
+        Microsoft.Data.Sqlite.SqliteException { SqliteExtendedErrorCode: 787 };
+
+    private async Task LoadReplyPreviewsAsync(List<PrivateMessage> messages)
+    {
+        var ids = messages.Where(m => m.IsReply && m.ReplyToMessageId.HasValue)
+            .Select(m => m.ReplyToMessageId!.Value).Distinct().ToArray();
+        // Fetch only visible text/identity, never media keys or duplicated attachments.
+        var originals = await VisibleMessages().AsNoTracking().Where(m => ids.Contains(m.Id))
+            .Select(m => new PrivateMessage { Id = m.Id, SenderName = m.SenderName, Kind = m.Kind,
+                Content = m.Kind == PrivateMessageKind.Text ? m.Content.Substring(0, Math.Min(m.Content.Length, 161)) : "" })
+            .ToDictionaryAsync(m => m.Id, HttpContext.RequestAborted);
+        ReplyPreviews = messages.Where(m => m.IsReply).ToDictionary(m => m.Id, m =>
+            m.ReplyToMessageId is not int id ? new ReplyPreview(null, null, "Silinmiş mesaj") :
+            originals.TryGetValue(id, out var original) ? new ReplyPreview(id, original.SenderName, PreviewText(original)) :
+            new ReplyPreview(null, null, "Mesaj kullanılamıyor"));
     }
 
     public async Task<IActionResult> OnGetAudioAsync(int id)
