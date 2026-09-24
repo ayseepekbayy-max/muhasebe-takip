@@ -92,6 +92,21 @@
         .reply-preview > div { flex: 1; min-width: 0; border-left: 3px solid #557968; padding-left: 10px; }
         #reply-cancel { flex: 0 0 44px; width: 44px; height: 44px; padding: 8px; }
         .message.reply-highlight { outline: 3px solid #8ab8a2; outline-offset: -2px; }
+        .touch-menu { position: fixed; z-index: 10; width: max-content; max-width: calc(100vw - 16px); padding: 6px; border: 1px solid #c7d0df; border-radius: 12px; background: white; box-shadow: 0 6px 24px #17223826; }
+        .touch-menu button { display: block; width: 100%; min-height: 44px; border: 0; text-align: left; font-size: 14px; }
+        .touch-menu button[data-action="everyone"] { color: #9a3434; }
+        @@media(max-width:768px) {
+            .message-actions { display: none; }
+            .messages { overflow-x: hidden; }
+            .message { position: relative; transition: transform 160ms ease-out; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+            .message input, .message textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+            .message.gesture-moving { transition: none; }
+            .message.gesture-selected { outline: 2px solid #8ab8a2; outline-offset: -2px; }
+            .message.gesture-moving::after { content: '↩'; position: absolute; left: -34px; top: calc(50% - 14px); width: 28px; height: 28px; border-radius: 50%; background: #e0eee8; color: #315e4d; text-align: center; line-height: 28px; opacity: .45; pointer-events: none; }
+            .message.own.gesture-moving::after { left: auto; right: -34px; }
+            .message.gesture-ready::after { opacity: 1; background: #b9d9c9; }
+        }
+        @@media(prefers-reduced-motion:reduce) { .message { transition: none; } }
         #photo-dialog { width: min(960px,100vw); height: min(900px,100dvh); max-width: 100vw; max-height: 100dvh; margin: auto; padding: 16px; background: #101a1d; color: #f4f7f6; border: 0; border-radius: 12px; }
         #photo-dialog[open] { display: flex; flex-direction: column; gap: 12px; }
         #photo-dialog::backdrop { background: #071013f2; }
@@ -254,14 +269,20 @@
                 quote.querySelector('.reply-sender').textContent = reply.senderName || '';
                 quote.querySelector('.reply-excerpt').textContent = reply.text;
             }
+            function prepareReply(node) {
+                if (!node || !list.contains(node)) return;
+                replyToId = Number(node.dataset.id);
+                replySender.textContent = node.dataset.senderName; replyText.textContent = node.dataset.preview;
+                replyPreview.hidden = false;
+                const actions = node.querySelector('details');
+                if (actions) actions.open = false;
+                if (!form.hidden) entry.focus();
+            }
             list.addEventListener('click', event => {
                 const action = event.target.closest('.reply-action');
                 if (action && list.contains(action)) {
                     const node = action.closest('article[data-id]');
-                    replyToId = Number(node.dataset.id);
-                    replySender.textContent = node.dataset.senderName; replyText.textContent = node.dataset.preview;
-                    replyPreview.hidden = false; action.closest('details').open = false;
-                    if (!form.hidden) entry.focus();
+                    prepareReply(node);
                     return;
                 }
                 const quote = event.target.closest('.reply-quote');
@@ -517,6 +538,124 @@
                     action.disabled = false;
                 }
             });
+
+            // Mobile gestures reuse the same reply function and existing Hide/Delete controls.
+            const mobileMessages = window.matchMedia('(max-width: 768px)');
+            const touchMenu = document.createElement('div');
+            touchMenu.className = 'touch-menu'; touchMenu.hidden = true;
+            touchMenu.setAttribute('role', 'group'); touchMenu.setAttribute('aria-label', 'Mesaj işlemleri');
+            document.body.append(touchMenu);
+            let gesture = null, menuMessage = null, blockedTap = null;
+            function closeTouchMenu() {
+                menuMessage?.classList.remove('gesture-selected');
+                menuMessage = null; touchMenu.hidden = true;
+            }
+            function resetGesture() {
+                if (!gesture) return;
+                clearTimeout(gesture.timer);
+                gesture.node.style.transform = '';
+                gesture.node.classList.remove('gesture-moving', 'gesture-ready');
+                gesture = null;
+            }
+            function blockGestureTap(node) { blockedTap = { node, until: Date.now() + 900 }; }
+            function openTouchMenu(node) {
+                closeTouchMenu();
+                if (!list.contains(node)) return;
+                menuMessage = node; node.classList.add('gesture-selected');
+                touchMenu.replaceChildren();
+                for (const [action, text] of [['reply', '↩ Yanıtla'], ['mine', '🗑 Benden Sil'], ...(node.classList.contains('own') ? [['everyone', '🗑 Herkesten Sil']] : [])]) {
+                    const button = document.createElement('button'); button.type = 'button';
+                    button.dataset.action = action; button.textContent = text; touchMenu.append(button);
+                }
+                touchMenu.hidden = false;
+                const viewport = window.visualViewport;
+                const left = viewport?.offsetLeft || 0, top = viewport?.offsetTop || 0;
+                const width = viewport?.width || window.innerWidth, height = viewport?.height || window.innerHeight;
+                touchMenu.style.maxWidth = Math.max(0, width - 16) + 'px';
+                touchMenu.style.maxHeight = Math.max(0, height - 16) + 'px'; touchMenu.style.overflowY = 'auto';
+                const rect = node.getBoundingClientRect(), box = touchMenu.getBoundingClientRect();
+                touchMenu.style.left = Math.max(left + 8, Math.min(rect.left, left + width - box.width - 8)) + 'px';
+                const above = rect.top - box.height - 8;
+                touchMenu.style.top = Math.max(top + 8, Math.min(above >= top + 8 ? above : rect.bottom + 8, top + height - box.height - 8)) + 'px';
+            }
+            touchMenu.addEventListener('click', event => {
+                const button = event.target.closest('button[data-action]'), node = menuMessage;
+                if (!button || !node) return;
+                const action = button.dataset.action;
+                closeTouchMenu(); blockedTap = null;
+                if (!list.contains(node)) return;
+                if (action === 'reply') prepareReply(node);
+                else if (action === 'mine' || action === 'everyone' && node.classList.contains('own')) {
+                    // Keep the existing confirmation, CSRF POST and server ownership check.
+                    node.querySelector('.delete-message[data-mode="' + action + '"]')?.click();
+                }
+            });
+            list.addEventListener('touchstart', event => {
+                resetGesture(); closeTouchMenu(); blockedTap = null;
+                if (!mobileMessages.matches || selecting || event.touches.length !== 1) return;
+                const node = event.target.closest('article[data-id]');
+                // Photo buttons allow gestures, but normal taps still use their existing handler.
+                if (!node || event.target.closest('audio, a, input, textarea, select, summary, .reply-quote, .message-actions, button:not(.view-photo)')) return;
+                const touch = event.touches[0];
+                const bounds = node.getBoundingClientRect(), container = list.getBoundingClientRect();
+                const direction = node.classList.contains('own') ? -1 : 1;
+                const room = direction < 0 ? bounds.left - container.left - 4 : container.right - bounds.right - 4;
+                gesture = { node, id: touch.identifier, x: touch.clientX, y: touch.clientY, direction, room: Math.max(0, Math.min(80, room)), distance: 0, axis: null, held: false };
+                const current = gesture;
+                current.timer = setTimeout(() => {
+                    if (gesture !== current || !list.contains(node)) return;
+                    current.held = true; blockGestureTap(node); openTouchMenu(node);
+                }, 520);
+            }, { passive: true });
+            list.addEventListener('touchmove', event => {
+                if (!gesture) return;
+                if (event.touches.length !== 1) { resetGesture(); closeTouchMenu(); return; }
+                const touch = Array.from(event.touches).find(t => t.identifier === gesture.id);
+                if (!touch) return;
+                const dx = touch.clientX - gesture.x, dy = touch.clientY - gesture.y;
+                if (Math.max(Math.abs(dx), Math.abs(dy)) < 10) return;
+                clearTimeout(gesture.timer);
+                if (gesture.held) { closeTouchMenu(); resetGesture(); return; }
+                if (!gesture.axis) {
+                    if (Math.abs(dy) >= Math.abs(dx)) { resetGesture(); return; }
+                    if (Math.abs(dx) < Math.abs(dy) * 1.4) return;
+                    gesture.axis = 'x';
+                }
+                blockGestureTap(gesture.node);
+                if (event.cancelable) event.preventDefault();
+                gesture.distance = Math.max(0, Math.min(80, dx * gesture.direction));
+                gesture.node.style.transform = 'translateX(' + Math.min(gesture.distance, gesture.room) * gesture.direction + 'px)';
+                gesture.node.classList.add('gesture-moving');
+                gesture.node.classList.toggle('gesture-ready', gesture.distance >= 64);
+            }, { passive: false });
+            list.addEventListener('touchend', () => {
+                if (!gesture) return;
+                const { node, distance, held } = gesture;
+                if (held || distance > 0) blockGestureTap(node);
+                resetGesture();
+                if (!held && distance >= 64) prepareReply(node);
+            }, { passive: true });
+            list.addEventListener('touchcancel', () => { resetGesture(); closeTouchMenu(); }, { passive: true });
+            list.addEventListener('click', event => {
+                if (blockedTap && Date.now() < blockedTap.until && blockedTap.node.contains(event.target)) {
+                    event.preventDefault(); event.stopImmediatePropagation(); blockedTap = null;
+                }
+            }, true);
+            list.addEventListener('contextmenu', event => {
+                if (mobileMessages.matches && event.target.closest('.message') && !event.target.closest('audio, a, input, textarea, select')) event.preventDefault();
+            });
+            document.addEventListener('pointerdown', event => { if (!touchMenu.contains(event.target)) closeTouchMenu(); }, { passive: true });
+            document.addEventListener('keydown', event => { if (event.key === 'Escape') { resetGesture(); closeTouchMenu(); } });
+            list.addEventListener('scroll', () => { resetGesture(); closeTouchMenu(); }, { passive: true });
+            const dismissTouch = () => { resetGesture(); closeTouchMenu(); };
+            window.addEventListener('resize', dismissTouch);
+            window.visualViewport?.addEventListener('resize', dismissTouch);
+            window.visualViewport?.addEventListener('scroll', dismissTouch);
+            mobileMessages.addEventListener('change', dismissTouch);
+            new MutationObserver(() => {
+                if (menuMessage && !list.contains(menuMessage)) closeTouchMenu();
+                if (gesture && !list.contains(gesture.node)) resetGesture();
+            }).observe(list, { childList: true });
 
             function setTime(time, value) {
                 const date = new Date(value);
