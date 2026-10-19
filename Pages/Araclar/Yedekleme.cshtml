@@ -9,7 +9,7 @@
         <div>
             <span class="app-page-eyebrow">Araçlar</span>
             <h1>Yedekleme / Geri Yükleme</h1>
-            <p>Cari, stok, fatura, kasa ve çek verilerinizi JSON yedek dosyası olarak saklayın.</p>
+            <p>Muhasebe kayıtlarını, arşivleri ve bağlı belgeleri tek ZIP dosyasında saklayın.</p>
         </div>
         <div class="app-page-actions">
             <a class="btn btn-primary" href="/Araclar/Yedekleme?handler=Indir">Yedek İndir</a>
@@ -26,14 +26,16 @@
     }
 
     <section class="app-form-panel">
-        <div class="panel-title-row"><div><h2>Güvenli Geri Yükleme</h2><p>Mevcut kayıtlar silinmez. Aynı görünen kayıtlar tekrar eklenmez.</p></div></div>
+        <div class="panel-title-row"><div><h2>Güvenli Geri Yükleme</h2><p>Mevcut kayıtlar silinmez. Tam ZIP yedeği yalnızca boş muhasebe alanına yüklenir; mevcut kayıt varsa işlem durur. Eski JSON dosyaları eksik kapsam uyarısıyla desteklenir.</p></div></div>
+        <p>Tam yedek: cari, fatura ve kalemleri, kasa, çek görselleri, stok hareketleri, personel ve maaş/avans/puantaj, müşteri işleri/masrafları, maliyetler, ödeme planları ve hareketleri, işlem geçmişi ve ek belgeler. Arşivlenmiş kayıtlar dahildir.</p>
+        <p>Giriş hesapları, şifreler, firma ayarları ve sohbet dahil değildir. Kullanıcıya bağlı geçmiş için hedef firmada aynı kullanıcı adı ve e-posta ile hesap bulunmalıdır. Yedek en fazla 100 MB, tek belge en fazla 25 MB olabilir.</p>
         <form method="post" asp-page-handler="GeriYukle" enctype="multipart/form-data" class="app-form-grid">
             <div class="form-field form-field-wide">
                 <label asp-for="YedekDosyasi">Yedek Dosyası</label>
-                <input asp-for="YedekDosyasi" type="file" accept=".json" />
+                <input asp-for="YedekDosyasi" type="file" accept=".zip,.json" />
             </div>
             <div class="form-actions-row">
-                <button type="submit" class="btn btn-outline-primary" onclick="return confirm('Yedek dosyasındaki eksik kayıtlar eklenecek. Mevcut kayıtlar silinmez. Devam edilsin mi?');">Geri Yükle</button>
+                <button type="submit" class="btn btn-outline-primary" onclick="return confirm('Seçilen yedek geri yüklenecek. Mevcut kayıtlar silinmez. Devam edilsin mi?');">Geri Yükle</button>
             </div>
         </form>
     </section>

@@ -4,16 +4,24 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Araclar;
 
+[RequestSizeLimit(AccountingBackupService.MaxPackageBytes + 1024 * 1024)]
+[RequestFormLimits(MultipartBodyLengthLimit = AccountingBackupService.MaxPackageBytes)]
 public class YedeklemeModel : PageModel
 {
     private readonly AppDbContext _db;
 
-    public YedeklemeModel(AppDbContext db)
+    private readonly AccountingBackupService _backup;
+    private readonly ILogger<YedeklemeModel> _logger;
+
+    public YedeklemeModel(AppDbContext db, IWebHostEnvironment environment, ILogger<YedeklemeModel> logger)
     {
         _db = db;
+        _backup = new AccountingBackupService(db, environment);
+        _logger = logger;
     }
 
     [BindProperty]
@@ -36,64 +44,18 @@ public class YedeklemeModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        var cariler = await _db.CariKartlar
-            .Where(x => x.FirmaId == firmaId.Value && x.AktifMi)
-            .OrderBy(x => x.Unvan)
-            .Select(x => new CariYedek(x.Unvan, x.Ad, x.Telefon, x.VergiNo, x.Tip, x.OlusturmaTarihi))
-            .ToListAsync();
-
-        var stoklar = await _db.StokUrunler
-            .Where(x => x.FirmaId == firmaId.Value && x.AktifMi)
-            .OrderBy(x => x.Ad)
-            .Select(x => new StokYedek(x.Ad, x.Kod, x.Birim))
-            .ToListAsync();
-
-        var faturalar = await _db.Faturalar
-            .Include(x => x.CariKart)
-            .Include(x => x.Kalemler)
-            .Where(x => x.FirmaId == firmaId.Value && x.AktifMi)
-            .OrderBy(x => x.Tarih)
-            .Select(x => new FaturaYedek(
-                x.FaturaNo,
-                x.CariKart != null ? x.CariKart.Unvan : null,
-                x.Tip,
-                x.Tarih,
-                x.VadeTarihi,
-                x.AraToplam,
-                x.KdvToplam,
-                x.GenelToplam,
-                x.OdenenToplam,
-                x.Aciklama,
-                x.Kalemler.Select(k => new FaturaKalemYedek(k.Aciklama, k.Miktar, k.BirimFiyat, k.KdvOrani, k.AraToplam, k.KdvTutar, k.GenelToplam)).ToList(),
-                x.Durum))
-            .ToListAsync();
-
-        var kasa = await _db.KasaHareketleri
-            .Include(x => x.CariKart)
-            .Where(x => x.FirmaId == firmaId.Value)
-            .OrderBy(x => x.Tarih)
-            .Select(x => new KasaYedek(x.Tarih, x.Tip, x.Tutar, x.Aciklama, x.CariKart != null ? x.CariKart.Unvan : null))
-            .ToListAsync();
-
-        var cekler = await _db.Cekler
-            .Where(x => x.FirmaId == firmaId.Value)
-            .OrderBy(x => x.Tarih)
-            .Select(x => new CekYedek(x.No, x.Tarih, x.Tutar, x.Aciklama, x.Tip))
-            .ToListAsync();
-
-        var paket = new YedekPaketi
+        try
         {
-            OlusturmaTarihi = DateTime.UtcNow,
-            Cariler = cariler,
-            Stoklar = stoklar,
-            Faturalar = faturalar,
-            KasaHareketleri = kasa,
-            Cekler = cekler
-        };
-
-        var json = JsonSerializer.Serialize(paket, new JsonSerializerOptions { WriteIndented = true });
-        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-        return File(bytes, "application/json", $"firmova_yedek_{DateTime.Now:yyyyMMdd_HHmmss}.json");
+            var bytes = await _backup.ExportAsync(firmaId.Value, HttpContext.RequestAborted);
+            return File(bytes, "application/zip", $"firmova_tam_yedek_{DateTime.Now:yyyyMMdd_HHmmss}.zip");
+        }
+        catch (AccountingBackupService.BackupException ex) { Hata = ex.Message; }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Firma {FirmaId} yedeği oluşturulamadı.", firmaId);
+            Hata = "Yedek oluşturulamadı. Eksik belge veya kayıt bağlantılarını kontrol edin; eksiksiz yedek dosyası üretilemedi.";
+        }
+        return Page();
     }
 
     public async Task<IActionResult> OnPostGeriYukleAsync()
@@ -110,7 +72,27 @@ public class YedeklemeModel : PageModel
 
         try
         {
-            using var stream = YedekDosyasi.OpenReadStream();
+            if (YedekDosyasi.Length > AccountingBackupService.MaxPackageBytes)
+                throw new AccountingBackupService.BackupException("Yedek dosyası en fazla 100 MB olabilir.");
+            await using var source = YedekDosyasi.OpenReadStream();
+            using var stream = new MemoryStream();
+            await AccountingBackupService.CopyLimitedAsync(source, stream, AccountingBackupService.MaxPackageBytes, HttpContext.RequestAborted);
+            stream.Position = 0;
+            if (stream.Length >= 4 && stream.GetBuffer()[0] == (byte)'P' && stream.GetBuffer()[1] == (byte)'K')
+            {
+                var result = await _backup.RestoreAsync(stream, firmaId.Value, HttpContext.RequestAborted);
+                Mesaj = $"Tam yedek geri yüklendi: {result.Records} kayıt, {result.Files} belge. " + string.Join(" ", result.Warnings);
+                return Page();
+            }
+            if (stream.Length > AccountingBackupService.MaxManifestBytes)
+                throw new AccountingBackupService.BackupException("Eski JSON yedek dosyası 32 MB sınırını aşıyor.");
+            using (var document = await JsonDocument.ParseAsync(stream))
+            {
+                var names = document.RootElement.EnumerateObject().Select(x => x.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                if (!new[] { "OlusturmaTarihi", "Cariler", "Stoklar", "Faturalar", "KasaHareketleri", "Cekler" }.All(names.Contains))
+                    throw new AccountingBackupService.BackupException("Desteklenen eski yedek alanları bulunamadı.");
+            }
+            stream.Position = 0;
             var paket = await JsonSerializer.DeserializeAsync<YedekPaketi>(stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (paket == null)
             {
@@ -118,6 +100,11 @@ public class YedeklemeModel : PageModel
                 return Page();
             }
 
+            if (paket.Cariler == null || paket.Stoklar == null || paket.Faturalar == null || paket.KasaHareketleri == null || paket.Cekler == null ||
+                paket.Cariler.GroupBy(x => x.Unvan).Any(g => g.Count() > 1) ||
+                paket.Faturalar.GroupBy(x => x.FaturaNo).Any(g => g.Count() > 1))
+                throw new AccountingBackupService.BackupException("Eski yedekte boş liste veya belirsiz yinelenen kayıt var.");
+            await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             var eklenen = 0;
 
             foreach (var cari in paket.Cariler)
@@ -174,9 +161,8 @@ public class YedeklemeModel : PageModel
                 if (varMi)
                     continue;
 
-                var cariId = string.IsNullOrWhiteSpace(fatura.CariUnvan)
-                    ? null
-                    : await _db.CariKartlar.Where(x => x.FirmaId == firmaId.Value && x.Unvan == fatura.CariUnvan).Select(x => (int?)x.Id).FirstOrDefaultAsync();
+                var cariId = string.IsNullOrWhiteSpace(fatura.CariUnvan) ? null
+                    : await LegacyCariIdAsync(fatura.CariUnvan, firmaId.Value);
 
                 _db.Faturalar.Add(new Fatura
                 {
@@ -208,6 +194,27 @@ public class YedeklemeModel : PageModel
                 eklenen++;
             }
 
+            // Old format has no invoice IDs on cash rows: restore amounts without guessing links.
+            await _db.SaveChangesAsync();
+            var existingCash = await _db.KasaHareketleri.AsNoTracking()
+                .Where(x => x.FirmaId == firmaId.Value).ToListAsync();
+            var usedCash = new HashSet<int>();
+            foreach (var kasa in paket.KasaHareketleri)
+            {
+                var cariId = string.IsNullOrWhiteSpace(kasa.CariUnvan) ? null
+                    : await LegacyCariIdAsync(kasa.CariUnvan, firmaId.Value);
+                var tarih = DateTime.SpecifyKind(kasa.Tarih, DateTimeKind.Utc);
+                var existing = existingCash.FirstOrDefault(x => !usedCash.Contains(x.Id) && x.Tarih == tarih &&
+                    x.Tip == kasa.Tip && x.Tutar == kasa.Tutar && x.CariKartId == cariId && x.Aciklama == (kasa.Aciklama ?? ""));
+                if (existing != null) { usedCash.Add(existing.Id); continue; }
+                _db.KasaHareketleri.Add(new KasaHareket
+                {
+                    FirmaId = firmaId.Value, CariKartId = cariId, Tarih = tarih,
+                    Tip = kasa.Tip, Tutar = kasa.Tutar, Aciklama = kasa.Aciklama ?? ""
+                });
+                eklenen++;
+            }
+
             foreach (var cek in paket.Cekler)
             {
                 var varMi = await _db.Cekler.AnyAsync(x => x.FirmaId == firmaId.Value && x.No == cek.No && x.Tarih == cek.Tarih && x.Tutar == cek.Tutar);
@@ -228,14 +235,33 @@ public class YedeklemeModel : PageModel
             }
 
             await _db.SaveChangesAsync();
-            Mesaj = $"Güvenli geri yükleme tamamlandı. Eklenen ana kayıt: {eklenen}. Mevcut kayıtlar korunup tekrar eklenmedi.";
+            await transaction.CommitAsync();
+            Mesaj = $"Eski JSON yedeği yüklendi. Eklenen kayıt: {eklenen}. Mevcut kayıtlar korundu. " +
+                "Bu eski format eksik kapsamlıdır: personel, stok hareketleri, ödeme planları, maliyetler ve belge dosyaları içermez. " +
+                "Kasa hareketlerinin fatura bağlantıları eski dosyada bulunmadığından otomatik eşleştirilmedi; eski kayıtları ayrıca kontrol edin.";
+        }
+        catch (AccountingBackupService.BackupException ex)
+        {
+            _db.ChangeTracker.Clear();
+            Hata = ex.Message;
         }
         catch (Exception ex)
         {
-            Hata = $"Geri yükleme sırasında hata oluştu: {ex.Message}";
+            _db.ChangeTracker.Clear();
+            _logger.LogError(ex, "Firma {FirmaId} yedeği geri yüklenemedi.", firmaId);
+            Hata = "Yedek geri yüklenemedi. Dosya bozuk, eksik veya bu sürümle uyumsuz olabilir. Hiçbir kayıt eklenmedi.";
         }
 
         return Page();
+    }
+
+    private async Task<int?> LegacyCariIdAsync(string unvan, int firmaId)
+    {
+        var matches = await _db.CariKartlar.Where(x => x.FirmaId == firmaId && x.Unvan == unvan)
+            .Select(x => x.Id).Take(2).ToListAsync();
+        if (matches.Count != 1)
+            throw new AccountingBackupService.BackupException("Eski yedekte bir cari bağlantısı eksik veya belirsiz. İşlem geri alındı.");
+        return matches[0];
     }
 
     public class YedekPaketi
