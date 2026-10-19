@@ -1155,6 +1155,12 @@ namespace MuhasebeTakip2.App.Migrations
                     b.Property<int>("SenderPerson")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("PhotoViewHours")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("PhotoAccessExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("ViewedAtUtc")
                         .HasColumnType("timestamp with time zone");
 

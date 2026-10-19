@@ -65,6 +65,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
             content = message.Content,
             reply = ReplyPreviews.GetValueOrDefault(message.Id),
             kind = (int)message.Kind,
+            photoViewHours = message.PhotoViewHours,
             viewed = message.ViewedAtUtc.HasValue,
             expired = PhotoExpired(message),
             available = message.MediaKey != null,
@@ -101,7 +102,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         return new JsonResult(new { success = true });
     }
 
-    public async Task<IActionResult> OnPostMediaAsync(IFormFile? file, [FromForm] string? kind, [FromForm] int? durationSeconds, [FromForm] int? replyToMessageId)
+    public async Task<IActionResult> OnPostMediaAsync(IFormFile? file, [FromForm] string? kind, [FromForm] int? durationSeconds, [FromForm] int? replyToMessageId, [FromForm] int? photoViewHours = null)
     {
         if (!HasAccess) return Unauthorized();
         var name = HttpContext.Session.GetString("PrivatePersonName");
@@ -109,6 +110,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         if (!ModelState.IsValid || !await CanReplyAsync(replyToMessageId)) return InvalidReply();
         if (kind is not ("photo" or "audio")) return BadRequest();
         var photo = kind == "photo";
+        if (photo && photoViewHours is not (null or 1 or 3 or 5)) return BadRequest(new { error = "Fotoğraf süresi geçersiz." });
         if (!photo && (durationSeconds is null or < 1 or > 305)) return BadRequest(new { error = "Ses kaydı süresi geçersiz (en fazla 5 dakika)." });
         var limit = photo ? PrivateMediaStore.PhotoLimit : PrivateMediaStore.AudioLimit;
         if (file is null || file.Length == 0 || file.Length > limit)
@@ -126,6 +128,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
                 SenderName = name, Content = "", CreatedAtUtc = DateTime.UtcNow,
                 ReplyToMessageId = replyToMessageId, IsReply = replyToMessageId.HasValue,
                 Kind = photo ? PrivateMessageKind.ViewOncePhoto : PrivateMessageKind.Audio,
+                PhotoViewHours = photo ? photoViewHours : null,
                 MediaKey = key, MediaContentType = type, DurationSeconds = photo ? null : durationSeconds
             });
             await db.SaveChangesAsync(HttpContext.RequestAborted);
@@ -183,12 +186,13 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
     }
 
     public static bool PhotoExpired(PrivateMessage message) =>
-        message.Kind == PrivateMessageKind.ViewOncePhoto && !message.ViewedAtUtc.HasValue &&
-        (message.ExpiredAtUtc.HasValue || message.CreatedAtUtc <= DateTime.UtcNow.AddHours(-24));
+        message.Kind == PrivateMessageKind.ViewOncePhoto &&
+        (message.ExpiredAtUtc.HasValue ||
+         (!message.ViewedAtUtc.HasValue && message.CreatedAtUtc <= DateTime.UtcNow.AddHours(-24)) ||
+         (message.PhotoAccessExpiresAtUtc.HasValue && message.PhotoAccessExpiresAtUtc <= DateTime.UtcNow));
 
     public async Task<IActionResult> OnPostPhotoAsync([FromForm] int id)
     {
-        if (!HasAccess) return Unauthorized();
         var person = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2;
         // Also prevent caching expired and missing media responses.
         Response.OnStarting(() => {
@@ -199,6 +203,9 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
             Response.Headers["Referrer-Policy"] = "no-referrer";
             return Task.CompletedTask;
         });
+        if (!HasAccess) return Unauthorized();
+        if (await AccessibleMedia(id).AnyAsync(m => m.Kind == PrivateMessageKind.ViewOncePhoto && m.PhotoViewHours != null))
+            return await OpenTimedPhotoAsync(id, person);
         var cutoff = DateTime.UtcNow.AddHours(-24);
         var query = AccessibleMedia(id).Where(m => m.Kind == PrivateMessageKind.ViewOncePhoto &&
             m.SenderPerson != person && m.ViewedAtUtc == null && m.ExpiredAtUtc == null &&
@@ -224,6 +231,34 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         Response.Headers.CacheControl = "no-store";
         Response.Headers["X-Content-Type-Options"] = "nosniff";
         return bytes.Length == 0 ? StatusCode(410, new { error = "Fotoğraf artık mevcut değil." }) : File(bytes, message.MediaContentType!);
+    }
+
+    private async Task<IActionResult> OpenTimedPhotoAsync(int id, int person)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
+        var now = DateTime.UtcNow;
+        var cutoff = now.AddHours(-24);
+        var eligible = AccessibleMedia(id).Where(m => m.Kind == PrivateMessageKind.ViewOncePhoto &&
+            m.SenderPerson != person && m.ExpiredAtUtc == null && m.MediaKey != null &&
+            (m.PhotoViewHours == 1 || m.PhotoViewHours == 3 || m.PhotoViewHours == 5));
+        // The row update serializes concurrent opens and cleanup; deadlines are never extended.
+        var changed = await eligible.Where(m =>
+            (m.ViewedAtUtc == null && m.CreatedAtUtc > cutoff) ||
+            (m.ViewedAtUtc != null && m.PhotoAccessExpiresAtUtc > now))
+            .ExecuteUpdateAsync(u => u
+                .SetProperty(m => m.ViewedAtUtc, m => m.ViewedAtUtc ?? now)
+                .SetProperty(m => m.PhotoAccessExpiresAtUtc, m => m.PhotoAccessExpiresAtUtc ?? now.AddHours(m.PhotoViewHours!.Value)), HttpContext.RequestAborted);
+        if (changed != 1) return StatusCode(410, new { error = "Fotoğrafın süresi doldu veya artık erişilemiyor." });
+        var message = await eligible.AsNoTracking().SingleAsync(HttpContext.RequestAborted);
+        byte[] bytes;
+        try { bytes = await media.ReadAsync(message.MediaKey!, HttpContext.RequestAborted); }
+        catch (FileNotFoundException) { return StatusCode(410); }
+        catch (DirectoryNotFoundException) { return StatusCode(410); }
+        var remaining = message.PhotoAccessExpiresAtUtc!.Value - DateTime.UtcNow;
+        if (remaining <= TimeSpan.Zero) return StatusCode(410);
+        await transaction.CommitAsync(HttpContext.RequestAborted);
+        Response.Headers["X-Photo-Remaining-Ms"] = Math.Floor(remaining.TotalMilliseconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return File(bytes, message.MediaContentType!);
     }
 
     public async Task<IActionResult> OnPostDeleteAsync([FromForm] int id)

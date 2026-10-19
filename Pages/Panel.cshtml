@@ -162,7 +162,7 @@
                             <span class="reply-excerpt">@reply.Text</span>
                         </button>
                     }
-                    <div class="content" data-expired="@(MuhasebeTakip2.App.Pages.PanelModel.PhotoExpired(message) ? "true" : "false")" data-available="@(message.MediaKey != null ? "true" : "false")" data-duration="@message.DurationSeconds" data-kind="@((int)message.Kind)" data-viewed="@(message.ViewedAtUtc.HasValue ? "true" : "false")">@(message.Kind == MuhasebeTakip2.App.Models.PrivateMessageKind.Text ? message.Content : message.Kind == MuhasebeTakip2.App.Models.PrivateMessageKind.Audio ? "Sesli mesaj" : "Tek görüntülemelik fotoğraf")</div>
+                    <div class="content" data-expired="@(MuhasebeTakip2.App.Pages.PanelModel.PhotoExpired(message) ? "true" : "false")" data-available="@(message.MediaKey != null ? "true" : "false")" data-photo-hours="@message.PhotoViewHours" data-duration="@message.DurationSeconds" data-kind="@((int)message.Kind)" data-viewed="@(message.ViewedAtUtc.HasValue ? "true" : "false")">@(message.Kind == MuhasebeTakip2.App.Models.PrivateMessageKind.Text ? message.Content : message.Kind == MuhasebeTakip2.App.Models.PrivateMessageKind.Audio ? "Sesli mesaj" : "Tek görüntülemelik fotoğraf")</div>
                     <time datetime="@message.CreatedAtUtc.ToString("O")">@message.CreatedAtUtc.ToString("HH:mm")</time>
                 </article>
             }
@@ -193,6 +193,9 @@
                 <img id="photo-preview" alt="Gönderilecek fotoğraf" draggable="false" hidden />
                 <div class="preview-details">
                     <span id="media-label" role="status"></span>
+                    <label id="photo-mode-label" hidden>Görüntüleme süresi
+                        <select id="photo-mode"><option value="">1 kez görüntüle</option><option value="1">1 saat</option><option value="3">3 saat</option><option value="5">5 saat</option></select>
+                    </label>
                     <audio id="audio-preview" aria-label="Ses kaydını dinle" controls hidden></audio>
                 </div>
             </div>
@@ -205,9 +208,9 @@
         <p id="send-status" class="status" role="status"></p>
         <p id="poll-status" class="status" role="status"></p>
     </main>
-    <dialog id="photo-dialog" aria-label="Tek görüntülemelik fotoğraf">
-        <div class="photo-toolbar"><span>Tek görüntülemelik fotoğraf</span><button id="photo-close" type="button" aria-label="Fotoğrafı kapat">✕ Kapat</button></div>
-        <img id="single-photo" alt="Tek görüntülemelik fotoğraf" draggable="false" />
+    <dialog id="photo-dialog" aria-label="Fotoğraf görüntüleyici">
+        <div class="photo-toolbar"><span id="photo-view-label">Fotoğraf</span><button id="photo-close" type="button" aria-label="Fotoğrafı kapat">✕ Kapat</button></div>
+        <img id="single-photo" alt="Özel fotoğraf" draggable="false" />
     </dialog>
     <dialog id="history-dialog" aria-labelledby="history-title">
         <h2 id="history-title">Sohbet geçmişini temizle</h2>
@@ -523,6 +526,8 @@
                     const response = await fetch(action.dataset.mode === 'mine' ? root.dataset.hideUrl : root.dataset.deleteUrl, { method: 'POST', body, credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
                     if (response.status === 401) {
                         stopped = true;
+                        if (photoDialog.open) photoDialog.close();
+                        clearPhoto();
                         location.assign(root.dataset.loginUrl);
                         return;
                     }
@@ -717,7 +722,7 @@
             }
             function renderMedia(node, message) {
                 const content = node.querySelector('.content');
-                const state = message.kind + ':' + message.viewed + ':' + message.expired + ':' + message.available;
+                const state = (message.photoViewHours || '') + ':' + message.kind + ':' + message.viewed + ':' + message.expired + ':' + message.available;
                 if (content.dataset.mediaState === state) return;
                 content.dataset.mediaState = state;
                 if (!message.kind) { content.textContent = message.content; return; }
@@ -733,16 +738,16 @@
                     audio.addEventListener('error', () => { audio.title = 'Ses yüklenemedi. Oturumunuzu ve bağlantınızı kontrol edin.'; });
                     content.append(audio);
                     const duration = document.createElement("span"); duration.className = "audio-duration"; duration.textContent = formatDuration(message.durationSeconds); duration.setAttribute("aria-label", "Ses süresi " + formatDuration(message.durationSeconds)); content.append(duration);
-                } else if (message.viewed) { content.classList.add('photo-state'); content.textContent = '✓ Fotoğraf görüntülendi'; }
+                } else if (message.viewed && !message.photoViewHours) { content.classList.add('photo-state'); content.textContent = '✓ Fotoğraf görüntülendi'; }
                 else if (message.expired) content.textContent = 'Fotoğrafın süresi doldu';
                 else if (!message.available) content.textContent = 'Fotoğraf artık mevcut değil';
-                else if (message.senderPerson === person) content.textContent = 'Tek görüntülemelik fotoğraf gönderildi';
+                else if (message.senderPerson === person) content.textContent = message.photoViewHours ? message.photoViewHours + ' saatlik fotoğraf gönderildi' : 'Tek görüntülemelik fotoğraf gönderildi';
                 else {
                     const open = document.createElement('button');
                     open.type = 'button'; open.className = 'view-photo'; open.setAttribute('aria-label', 'Fotoğrafı görüntüle');
                     const symbol = document.createElement('span'); symbol.className = 'photo-symbol'; symbol.textContent = '◉'; symbol.setAttribute('aria-hidden', 'true');
-                    const title = document.createElement('strong'); title.textContent = 'Tek görüntülemelik fotoğraf';
-                    const hint = document.createElement('small'); hint.textContent = 'Görüntülemek için dokun';
+                    const title = document.createElement('strong'); title.textContent = message.photoViewHours ? message.photoViewHours + ' saatlik fotoğraf' : 'Tek görüntülemelik fotoğraf';
+                    const hint = document.createElement('small'); hint.textContent = message.photoViewHours && !message.viewed ? 'Süre ilk açılışta başlar' : 'Görüntülemek için dokun';
                     open.append(symbol, title, hint);
                     open.addEventListener('click', () => openPhoto(message.id, open));
                     content.append(open);
@@ -750,7 +755,7 @@
             }
             for (const [id, node] of nodes) {
                 const content = node.querySelector('.content');
-                renderMedia(node, { id, durationSeconds: Number(content.dataset.duration), kind: Number(content.dataset.kind), viewed: content.dataset.viewed === 'true', expired: content.dataset.expired === 'true', available: content.dataset.available === 'true', senderPerson: node.classList.contains('own') ? person : 3-person, content: content.textContent });
+                renderMedia(node, { id, photoViewHours: Number(content.dataset.photoHours), durationSeconds: Number(content.dataset.duration), kind: Number(content.dataset.kind), viewed: content.dataset.viewed === 'true', expired: content.dataset.expired === 'true', available: content.dataset.available === 'true', senderPerson: node.classList.contains('own') ? person : 3-person, content: content.textContent });
             }
             function updateMessages(messages) {
                 const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
@@ -798,6 +803,8 @@
                     const response = await fetch(root.dataset.messagesUrl, { cache: 'no-store', credentials: 'same-origin', redirect: 'error' });
                     if (response.status === 401 || response.status === 403) {
                         stopped = true;
+                        if (photoDialog.open) photoDialog.close();
+                        clearPhoto();
                         location.assign(root.dataset.loginUrl);
                         return;
                     }
@@ -823,22 +830,30 @@
             }
             const photoDialog = document.getElementById('photo-dialog');
             const photoImage = document.getElementById('single-photo');
-            let photoUrl, openingPhoto = false;
-            function clearPhoto() { photoImage.removeAttribute('src'); if (photoUrl) URL.revokeObjectURL(photoUrl); photoUrl = null; }
+            let photoUrl, photoExpiryTimer, openingPhoto = false;
+            function clearPhoto() { clearTimeout(photoExpiryTimer); photoImage.removeAttribute('src'); if (photoUrl) URL.revokeObjectURL(photoUrl); photoUrl = null; }
             document.getElementById('photo-close').onclick = () => photoDialog.close();
             photoDialog.addEventListener('close', clearPhoto);
             photoImage.addEventListener('load', () => { if (photoUrl) URL.revokeObjectURL(photoUrl); photoUrl = null; });
-            photoImage.addEventListener('error', () => { clearPhoto(); photoDialog.close(); sendStatus.textContent = 'Fotoğraf gösterilemedi; tek görüntüleme hakkı kullanıldı.'; });
+            photoImage.addEventListener('error', () => { clearPhoto(); photoDialog.close(); sendStatus.textContent = 'Fotoğraf gösterilemedi.'; });
             photoImage.addEventListener('contextmenu', event => event.preventDefault());
             async function openPhoto(id, control) {
                 if (openingPhoto) return;
                 openingPhoto = true; control.disabled = true; sendStatus.textContent = '';
                 try {
                     const body = actionBody(); body.append('id', id);
+                    const requestStarted = performance.now();
                     const response = await fetch(root.dataset.photoUrl, { method:'POST', body, credentials:'same-origin', cache:'no-store', redirect:'error' });
                     if (!response.ok) throw new Error(response.status === 410 ? 'Fotoğraf görüntülendi, süresi doldu veya artık erişilemiyor.' : 'Fotoğraf açılamadı. Oturumunuzu ve bağlantınızı kontrol edin.');
                     clearPhoto(); photoUrl = URL.createObjectURL(await response.blob());
                     if (document.hidden) { clearPhoto(); return; }
+                    const remainingHeader = response.headers.get('X-Photo-Remaining-Ms');
+                    if (remainingHeader !== null) {
+                        const remaining = Number(remainingHeader) - (performance.now() - requestStarted);
+                        if (!Number.isFinite(remaining) || remaining <= 0) { clearPhoto(); return; }
+                        photoExpiryTimer = setTimeout(() => { clearPhoto(); if (photoDialog.open) photoDialog.close(); sendStatus.textContent = 'Fotoğrafın süresi doldu'; refresh(); }, remaining);
+                    }
+                    document.getElementById('photo-view-label').textContent = remainingHeader === null ? 'Tek görüntülemelik fotoğraf' : 'Süreli fotoğraf';
                     photoImage.src = photoUrl; photoDialog.showModal();
                 } catch(error) { sendStatus.textContent = error.message; }
                 finally { openingPhoto = false; control.disabled = false; await refresh(); }
@@ -856,6 +871,7 @@
             let photoPreviewUrl;
             function showMediaPreview(mode) {
                 mediaPreview.dataset.mode = mode;
+                document.getElementById('photo-mode-label').hidden = mode !== 'photo';
                 mediaPreview.hidden = false; form.hidden = true;
                 recordStop.hidden = mode !== 'recording'; recordStop.disabled = false;
                 mediaSend.hidden = mode === 'recording';
@@ -864,7 +880,7 @@
             recordStop.onclick = () => { recordStop.disabled = true; stopRecording(); };
             let pendingDuration, pendingMedia, pendingKind, previewUrl, recorder, stream, recordTimer, recordStart, requestingMic = false, finishingRecording = false, mediaBusy = false, discardRecording = false;
             function clearPending() {
-                pendingMedia = null; previewAudio.pause(); previewAudio.removeAttribute('src'); previewAudio.load();
+                pendingMedia = null; document.getElementById('photo-mode').value = ''; previewAudio.pause(); previewAudio.removeAttribute('src'); previewAudio.load();
                 if (previewUrl) URL.revokeObjectURL(previewUrl);
                 previewUrl = null; mediaPreview.hidden = true; photoFile.value = '';
                 photoPreview.removeAttribute('src'); photoPreview.hidden = true;
@@ -883,7 +899,7 @@
                 if (file.size > 8*1024*1024 || !['image/jpeg','image/png'].includes(file.type)) { sendStatus.textContent = 'En fazla 8 MB JPEG veya PNG fotoğraf seçin.'; photoFile.value = ''; return; }
                 clearPending(); pendingMedia = file; pendingKind = 'photo';
                 photoPreviewUrl = URL.createObjectURL(file); photoPreview.src = photoPreviewUrl; photoPreview.hidden = false;
-                mediaLabel.textContent = 'Tek görüntülemelik'; previewAudio.hidden = true; showMediaPreview('photo'); mediaSend.disabled = false;
+                mediaLabel.textContent = 'Saatlik seçeneklerde süre alıcının ilk açılışında başlar.'; previewAudio.hidden = true; showMediaPreview('photo'); mediaSend.disabled = false;
             };
             mediaCancel.onclick = () => { discardRecording = true; stopRecording(); clearPending(); };
             recordButton.onclick = async () => {
@@ -920,7 +936,7 @@
                 mediaBusy = true; mediaSend.disabled = mediaCancel.disabled = pickPhoto.disabled = recordButton.disabled = true;
                 sendStatus.textContent = '';
                 try {
-                    const body = actionBody(); body.append('kind',pendingKind); if (pendingKind === 'audio') body.append('durationSeconds',pendingDuration); body.append('file',pendingMedia,'media');
+                    const body = actionBody(); body.append('kind',pendingKind); if (pendingKind === 'photo' && document.getElementById('photo-mode').value) body.append('photoViewHours',document.getElementById('photo-mode').value); if (pendingKind === 'audio') body.append('durationSeconds',pendingDuration); body.append('file',pendingMedia,'media');
                     appendReply(body);
                     const response = await fetch(root.dataset.mediaUrl,{method:'POST',body,credentials:'same-origin',cache:'no-store',redirect:'error'});
                     if (!response.ok) { const result = await response.json().catch(() => ({})); throw new Error(result.error || 'Medya gönderilemedi. Oturumunuzu ve dosya boyutunu kontrol edin.'); }
@@ -959,6 +975,8 @@
                     const response = await fetch(form.action, { method: 'POST', body, credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
                     if (response.status === 401 || response.status === 403) {
                         stopped = true;
+                        if (photoDialog.open) photoDialog.close();
+                        clearPhoto();
                         location.assign(root.dataset.loginUrl);
                         return;
                     }

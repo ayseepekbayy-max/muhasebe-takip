@@ -39,7 +39,7 @@ public sealed class PrivateMediaCleanupService(
             // Bounded batches; failures are retried on the next sweep, not in a tight loop.
             var ids = await db.PrivateMessages.AsNoTracking()
                 .Where(m => m.Id > lastId && m.Kind == PrivateMessageKind.ViewOncePhoto &&
-                    m.ViewedAtUtc == null && m.CreatedAtUtc <= cutoff &&
+                    ((m.ViewedAtUtc == null && m.CreatedAtUtc <= cutoff) || m.PhotoAccessExpiresAtUtc <= now) &&
                     (m.ExpiredAtUtc == null || m.MediaKey != null))
                 .OrderBy(m => m.Id).Select(m => m.Id).Take(100).ToListAsync(token);
             if (ids.Count == 0) return;
@@ -52,8 +52,8 @@ public sealed class PrivateMediaCleanupService(
                     await using var transaction = await db.Database.BeginTransactionAsync(token);
                     // Competes on the same row lock as viewing: only one operation wins.
                     var changed = await db.PrivateMessages.Where(m => m.Id == id &&
-                        m.Kind == PrivateMessageKind.ViewOncePhoto && m.ViewedAtUtc == null &&
-                        m.CreatedAtUtc <= cutoff && (m.ExpiredAtUtc == null || m.MediaKey != null))
+                        m.Kind == PrivateMessageKind.ViewOncePhoto &&
+                        ((m.ViewedAtUtc == null && m.CreatedAtUtc <= cutoff) || m.PhotoAccessExpiresAtUtc <= now) && (m.ExpiredAtUtc == null || m.MediaKey != null))
                         .ExecuteUpdateAsync(u => u.SetProperty(m => m.ExpiredAtUtc, m => m.ExpiredAtUtc ?? now), token);
                     if (changed == 0) continue;
                     var key = await db.PrivateMessages.Where(m => m.Id == id).Select(m => m.MediaKey).SingleAsync(token);

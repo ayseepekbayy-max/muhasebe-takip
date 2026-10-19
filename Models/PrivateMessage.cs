@@ -26,6 +26,9 @@ public sealed class PrivateMessage
     [MaxLength(32)] public string? MediaKey { get; set; }
     [MaxLength(64)] public string? MediaContentType { get; set; }
     public int? DurationSeconds { get; set; }
+    // Null retains the legacy view-once behavior.
+    public int? PhotoViewHours { get; set; }
+    public DateTime? PhotoAccessExpiresAtUtc { get; set; }
     public DateTime? ViewedAtUtc { get; set; }
     public DateTime? ExpiredAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; }

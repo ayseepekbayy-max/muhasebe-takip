@@ -24,6 +24,9 @@
   <Content Remove="App_Data\PrivateMedia\**\*" />
   <None Remove="App_Data\PrivateMedia\**\*" />
   <Compile Remove="FirmovaAI\**\*.cs" />
+  <Compile Remove="Tests\**\*.cs" />
+  <Content Remove="Tests\**\*" />
+  <None Remove="Tests\**\*" />
   <Content Remove="FirmovaAI\**\*" />
   <EmbeddedResource Remove="FirmovaAI\**\*" />
   <None Remove="FirmovaAI\**\*" />
