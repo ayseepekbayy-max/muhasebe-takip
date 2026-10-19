@@ -94,7 +94,7 @@ public class DetayModel : PageModel
 
         if (DurumForm.Durum == FaturaDurumu.Odendi)
         {
-            if (DurumForm.KasaHareketiOlustur && kalan > 0)
+            if (kalan > 0)
             {
                 var islemAdi = fatura.Tip == FaturaTipi.Satis ? "Tahsilat" : "Ödeme";
                 kasaHareketi = new KasaHareket
@@ -238,7 +238,6 @@ public class DetayModel : PageModel
     public class DurumGuncelleForm
     {
         public FaturaDurumu Durum { get; set; } = FaturaDurumu.Bekliyor;
-        public bool KasaHareketiOlustur { get; set; }
         public DateTime Tarih { get; set; } = DateTime.UtcNow.Date;
     }
 }

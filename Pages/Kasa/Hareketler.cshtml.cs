@@ -66,13 +66,36 @@ public class HareketlerModel : PageModel
             return Page();
         }
 
-        await _islemGecmisi.KaydetAsync(
-            "Kasa",
-            "Silme",
-            $"Kasa hareketi silindi (ID: {h.Id}).",
-            eskiDeger: KasaDegeri(h));
+        Fatura? bagliFatura = null;
+        object? eskiFaturaDegeri = null;
+        if (h.FaturaId.HasValue)
+        {
+            bagliFatura = await _db.Faturalar.FirstOrDefaultAsync(x =>
+                x.Id == h.FaturaId.Value && x.FirmaId == firmaId.Value);
+            var hata = bagliFatura == null
+                ? "Hareketin bağlı olduğu fatura bulunamadı."
+                : FaturaOdemeTutarliligi.Dogrula(bagliFatura, h, 0, h.Tip, h.CariKartId);
+            if (hata != null)
+            {
+                Hata = hata;
+                await OnGetAsync();
+                return Page();
+            }
+            eskiFaturaDegeri = IslemGecmisiSnapshots.Fatura(bagliFatura!);
+            FaturaOdemeTutarliligi.Uygula(bagliFatura!, h.Tutar, 0);
+        }
+
         _db.KasaHareketleri.Remove(h);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithAuditAsync(async () =>
+        {
+            await _islemGecmisi.KaydetAsync(
+                "Kasa", "Silme", $"Kasa hareketi silindi (ID: {h.Id}).",
+                eskiDeger: KasaDegeri(h));
+            if (bagliFatura != null)
+                await _islemGecmisi.KaydetAsync(
+                    "Faturalar", "Ödeme Düzeltme", $"{bagliFatura.FaturaNo} faturasının ödemesi kasa hareketi silindiği için güncellendi.",
+                    eskiFaturaDegeri, IslemGecmisiSnapshots.Fatura(bagliFatura));
+        }, anaKaydiOnceKaydet: false);
 
         Mesaj = "Kasa hareketi silindi.";
         return RedirectToPage();

@@ -82,6 +82,11 @@ public class DuzenleModel : PageModel
         OdenenToplam = fatura.OdenenToplam;
         MevcutDurum = fatura.Durum;
 
+        var bagliOdemeVar = fatura.OdenenToplam > 0 || await _db.KasaHareketleri
+            .AnyAsync(x => x.FirmaId == firmaId.Value && x.FaturaId == fatura.Id);
+        if (bagliOdemeVar && (Fatura.CariKartId != fatura.CariKartId || Fatura.Tip != fatura.Tip))
+            ModelState.AddModelError("", "Ödeme hareketi bulunan faturanın carisi veya alış/satış türü değiştirilemez. Önce bağlı ödeme hareketlerini düzeltin.");
+
         if (Fatura.CariKartId <= 0)
             ModelState.AddModelError("", "Cari seçimi zorunludur.");
 

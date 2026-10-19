@@ -91,6 +91,28 @@ public class HareketDuzenleModel : PageModel
         if (dbHareket == null)
             return NotFound();
 
+        Fatura? bagliFatura = null;
+        object? eskiFaturaDegeri = null;
+        if (dbHareket.FaturaId.HasValue)
+        {
+            bagliFatura = await _db.Faturalar.FirstOrDefaultAsync(x =>
+                x.Id == dbHareket.FaturaId.Value && x.FirmaId == firmaId.Value);
+            if (bagliFatura == null)
+            {
+                Hata = "Hareketin bağlı olduğu fatura bulunamadı.";
+                return Page();
+            }
+            var hata = FaturaOdemeTutarliligi.Dogrula(bagliFatura, dbHareket,
+                Hareket.Tutar, Hareket.Tip, Hareket.CariKartId);
+            if (hata != null)
+            {
+                Hata = hata;
+                return Page();
+            }
+            eskiFaturaDegeri = IslemGecmisiSnapshots.Fatura(bagliFatura);
+            FaturaOdemeTutarliligi.Uygula(bagliFatura, dbHareket.Tutar, Hareket.Tutar);
+        }
+
         var eskiDeger = KasaDegeri(dbHareket);
 
         var secilenTarih = Hareket.Tarih.Date;
@@ -101,13 +123,16 @@ public class HareketDuzenleModel : PageModel
         dbHareket.Aciklama = Hareket.Aciklama;
         dbHareket.CariKartId = Hareket.CariKartId;
 
-        await _islemGecmisi.KaydetAsync(
-            "Kasa",
-            "Düzenleme",
-            $"Kasa hareketi güncellendi (ID: {dbHareket.Id}).",
-            eskiDeger,
-            KasaDegeri(dbHareket));
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithAuditAsync(async () =>
+        {
+            await _islemGecmisi.KaydetAsync(
+                "Kasa", "Düzenleme", $"Kasa hareketi güncellendi (ID: {dbHareket.Id}).",
+                eskiDeger, KasaDegeri(dbHareket));
+            if (bagliFatura != null)
+                await _islemGecmisi.KaydetAsync(
+                    "Faturalar", "Ödeme Düzeltme", $"{bagliFatura.FaturaNo} faturasının ödemesi kasa hareketiyle güncellendi.",
+                    eskiFaturaDegeri, IslemGecmisiSnapshots.Fatura(bagliFatura));
+        }, anaKaydiOnceKaydet: false);
         Mesaj = "Kasa hareketi güncellendi.";
 
         return RedirectToPage("/Kasa/Hareketler");

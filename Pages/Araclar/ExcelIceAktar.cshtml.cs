@@ -178,8 +178,8 @@ public class ExcelIceAktarModel : PageModel
             var alis = fatura?.Alis ?? 0;
             var tahsilat = kasa?.Tahsilat ?? 0;
             var odeme = kasa?.Odeme ?? 0;
-            var kalanTahsilat = Math.Max(0, satis - tahsilat);
-            var kalanOdeme = Math.Max(0, alis - odeme);
+            var kalanTahsilat = satis - tahsilat;
+            var kalanOdeme = alis - odeme;
             var netBakiye = kalanTahsilat - kalanOdeme;
 
             ws.Cell(row, 1).Value = item.Unvan;
