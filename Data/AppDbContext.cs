@@ -16,6 +16,8 @@ public class AppDbContext : DbContext
     public DbSet<Firma> Firmalar { get; set; } = default!;
     public DbSet<Kullanici> Kullanicilar { get; set; } = default!;
     public DbSet<CariKart> CariKartlar { get; set; } = default!;
+    public DbSet<KasaHesap> KasaHesaplar { get; set; } = default!;
+    public DbSet<KasaTransfer> KasaTransferler { get; set; } = default!;
     public DbSet<KasaHareket> KasaHareketleri { get; set; } = default!;
     public DbSet<Fatura> Faturalar { get; set; } = default!;
     public DbSet<FaturaKalem> FaturaKalemleri { get; set; } = default!;
@@ -86,6 +88,37 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.FirmaId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<KasaHesap>(entity =>
+        {
+            entity.HasAlternateKey(x => new { x.Id, x.FirmaId });
+            entity.HasIndex(x => new { x.FirmaId, x.Ad }).IsUnique();
+            entity.Property(x => x.AcilisBakiyesi).HasPrecision(18, 2);
+            entity.HasOne(x => x.Firma).WithMany().HasForeignKey(x => x.FirmaId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<KasaHareket>(entity =>
+        {
+            entity.HasOne(x => x.KasaHesap).WithMany()
+                .HasForeignKey(x => new { x.KasaHesapId, x.FirmaId })
+                .HasPrincipalKey(x => new { x.Id, x.FirmaId }).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<KasaTransfer>(entity =>
+        {
+            entity.Property(x => x.Tutar).HasPrecision(18, 2);
+            entity.HasIndex(x => new { x.FirmaId, x.Tarih });
+            entity.HasOne(x => x.Firma).WithMany().HasForeignKey(x => x.FirmaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.KaynakHesap).WithMany()
+                .HasForeignKey(x => new { x.KaynakHesapId, x.FirmaId })
+                .HasPrincipalKey(x => new { x.Id, x.FirmaId }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.HedefHesap).WithMany()
+                .HasForeignKey(x => new { x.HedefHesapId, x.FirmaId })
+                .HasPrincipalKey(x => new { x.Id, x.FirmaId }).OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable("KasaTransferler", table =>
+            {
+                table.HasCheckConstraint("CK_KasaTransfer_Tutar", "\"Tutar\" > 0");
+                table.HasCheckConstraint("CK_KasaTransfer_Hesaplar", "\"KaynakHesapId\" <> \"HedefHesapId\"");
+            });
         });
 
         modelBuilder.Entity<Fatura>(entity =>

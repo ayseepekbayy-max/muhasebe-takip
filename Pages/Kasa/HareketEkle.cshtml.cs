@@ -22,6 +22,8 @@ public class HareketEkleModel : PageModel
         _islemGecmisi = islemGecmisi;
     }
 
+    public List<SelectListItem> HesapSecenekleri { get; set; } = new();
+
     public List<SelectListItem> CariSecenekleri { get; set; } = new();
     public List<SelectListItem> FaturaSecenekleri { get; set; } = new();
 
@@ -68,6 +70,12 @@ public class HareketEkleModel : PageModel
 
         await YukleCariSecenekleriAsync(firmaId.Value);
         await YukleFaturaSecenekleriAsync(firmaId.Value, Hareket.CariKartId);
+
+        if (!await KasaHesapService.GecerliMiAsync(_db, firmaId.Value, Hareket.KasaHesapId) || !Enum.IsDefined(Hareket.Tip))
+        {
+            ModelState.AddModelError("", KasaHesapService.SecimHatasi);
+            return Page();
+        }
 
         try
         {
@@ -228,11 +236,13 @@ public class HareketEkleModel : PageModel
         hareket.Tutar,
         hareket.Aciklama,
         hareket.CariKartId,
-        hareket.FaturaId
+        hareket.FaturaId,
+        hareket.KasaHesapId
     };
 
     private async Task YukleCariSecenekleriAsync(int firmaId)
     {
+        HesapSecenekleri = await KasaHesapService.SeceneklerAsync(_db, firmaId);
         CariSecenekleri = await _db.CariKartlar
             .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .OrderBy(x => x.Unvan)

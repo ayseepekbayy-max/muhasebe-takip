@@ -187,6 +187,7 @@
                                         <form method="post" asp-page-handler="Odeme" class="invoice-payment-form">
                                             <input type="hidden" asp-for="Odeme.FaturaId" value="@fatura.Id" />
                                             <input asp-for="Odeme.Tutar" type="number" step="0.01" min="0" max="@fatura.KalanTutar" placeholder="Tutar" />
+                                            <select asp-for="Odeme.KasaHesapId" asp-items="Model.HesapSecenekleri" aria-label="Ödemenin hesabı" required></select>
                                             <input asp-for="Odeme.Tarih" type="date" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" />
                                             <button type="submit" class="btn btn-outline-primary btn-sm">@(satisMi ? "Tahsil Et" : "Öde")</button>
                                         </form>

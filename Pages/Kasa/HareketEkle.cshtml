@@ -23,6 +23,11 @@
 
 <form method="post" class="app-form-panel" style="max-width:720px;">
   <div style="margin-bottom:10px;">
+    <label asp-for="Hareket.KasaHesapId"><b>Nakit Kasa / Banka Hesabı</b></label><br />
+    <select asp-for="Hareket.KasaHesapId" asp-items="Model.HesapSecenekleri" required style="width:100%; padding:8px;"></select>
+    <a asp-page="/Kasa/Hesaplar">Hesapları yönet</a>
+  </div>
+  <div style="margin-bottom:10px;">
     <label><b>Tarih</b></label><br />
     <input asp-for="Hareket.Tarih" type="date" style="width:100%; padding:8px;" />
   </div>

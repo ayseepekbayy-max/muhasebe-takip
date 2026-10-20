@@ -21,6 +21,8 @@ public class HareketDuzenleModel : PageModel
         _islemGecmisi = islemGecmisi;
     }
 
+    public List<SelectListItem> HesapSecenekleri { get; set; } = new();
+
     public List<SelectListItem> CariSecenekleri { get; set; } = new();
 
     [BindProperty]
@@ -55,6 +57,12 @@ public class HareketDuzenleModel : PageModel
             return RedirectToPage("/Login");
 
         await YukleCariSecenekleriAsync(firmaId.Value);
+
+        if (!await KasaHesapService.GecerliMiAsync(_db, firmaId.Value, Hareket.KasaHesapId))
+        {
+            Hata = KasaHesapService.SecimHatasi;
+            return Page();
+        }
 
         if (Hareket.Tutar <= 0)
         {
@@ -118,6 +126,7 @@ public class HareketDuzenleModel : PageModel
         var secilenTarih = Hareket.Tarih.Date;
         dbHareket.Tarih = DateTime.SpecifyKind(secilenTarih, DateTimeKind.Utc);
 
+        dbHareket.KasaHesapId = Hareket.KasaHesapId;
         dbHareket.Tip = Hareket.Tip;
         dbHareket.Tutar = Hareket.Tutar;
         dbHareket.Aciklama = Hareket.Aciklama;
@@ -146,11 +155,13 @@ public class HareketDuzenleModel : PageModel
         hareket.Tutar,
         hareket.Aciklama,
         hareket.CariKartId,
-        hareket.FaturaId
+        hareket.FaturaId,
+        hareket.KasaHesapId
     };
 
     private async Task YukleCariSecenekleriAsync(int firmaId)
     {
+        HesapSecenekleri = await KasaHesapService.SeceneklerAsync(_db, firmaId);
         CariSecenekleri = await _db.CariKartlar
             .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .OrderBy(x => x.Unvan)

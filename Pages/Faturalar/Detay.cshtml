@@ -49,6 +49,11 @@
                 </select>
             </div>
             <div class="form-field">
+                <label asp-for="DurumForm.KasaHesapId">Ödemenin Hesabı</label>
+                <select asp-for="DurumForm.KasaHesapId" asp-items="Model.HesapSecenekleri"></select>
+                <small>Ödendi seçilip para hareketi oluşturulurken hesap seçimi zorunludur.</small>
+            </div>
+            <div class="form-field">
                 <label asp-for="DurumForm.Tarih">Kasa Tarihi</label>
                 <input asp-for="DurumForm.Tarih" type="date" />
             </div>

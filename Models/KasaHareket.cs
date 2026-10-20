@@ -14,6 +14,10 @@ public class KasaHareket
 
     public Firma? Firma { get; set; }
 
+    public int? KasaHesapId { get; set; }
+
+    public KasaHesap? KasaHesap { get; set; }
+
     public DateTime Tarih { get; set; } = DateTime.Now;
 
     public HareketTipi Tip { get; set; }

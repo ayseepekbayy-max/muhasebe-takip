@@ -270,8 +270,9 @@ public class ExcelIceAktarModel : PageModel
         ws.Cell(1, 3).Value = "Tutar";
         ws.Cell(1, 4).Value = "Cari";
         ws.Cell(1, 5).Value = "Açıklama";
+        ws.Cell(1, 6).Value = "Nakit Kasa / Banka Hesabı";
 
-        var liste = await _db.KasaHareketleri.Include(x => x.CariKart).Where(x => x.FirmaId == firmaId).OrderByDescending(x => x.Tarih).ToListAsync();
+        var liste = await _db.KasaHareketleri.Include(x => x.CariKart).Include(x => x.KasaHesap).Where(x => x.FirmaId == firmaId).OrderByDescending(x => x.Tarih).ToListAsync();
         var row = 2;
         foreach (var item in liste)
         {
@@ -280,6 +281,7 @@ public class ExcelIceAktarModel : PageModel
             ws.Cell(row, 3).Value = item.Tutar;
             ws.Cell(row, 4).Value = item.CariKart?.Unvan ?? "";
             ws.Cell(row, 5).Value = item.Aciklama;
+            ws.Cell(row, 6).Value = item.KasaHesap?.Ad ?? "Hesap atanmamış (eski kayıt)";
             row++;
         }
         StilUygula(ws);

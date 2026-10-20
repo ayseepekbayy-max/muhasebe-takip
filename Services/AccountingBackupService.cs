@@ -24,7 +24,7 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
     public sealed class Package
     {
         public string Format { get; set; } = "FirmovaAccountingBackup";
-        public int Version { get; set; } = 3;
+        public int Version { get; set; } = 4;
         public Guid BackupId { get; set; } = Guid.NewGuid();
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
         public string CompanyName { get; set; } = "";
@@ -70,7 +70,7 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
     // Parents precede children, including relationships not declared as EF foreign keys.
     private Table[] Tables() =>
     [
-        TableFor<CariKart>(), TableFor<StokUrun>(), TableFor<Calisan>(), TableFor<Musteri>(),
+        TableFor<KasaHesap>(), TableFor<KasaTransfer>(), TableFor<CariKart>(), TableFor<StokUrun>(), TableFor<Calisan>(), TableFor<Musteri>(),
         TableFor<Cek>(), TableFor<FaturaNumaraAyari>(), TableFor<OdemePlani>(), TableFor<MaliyetKaydi>(),
         TableFor<Fatura>(), TableFor<MusteriIs>(), TableFor<CalisanAvans>(),
         TableFor<CalisanPuantaj>(), TableFor<CalisanMaasArsiv>(), TableFor<StokHareket>(),
@@ -80,6 +80,7 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
     ];
     private static readonly Dictionary<string, string> Links = new()
     {
+        ["KasaHesapId"] = nameof(KasaHesap), ["KaynakHesapId"] = nameof(KasaHesap), ["HedefHesapId"] = nameof(KasaHesap),
         ["CariKartId"] = nameof(CariKart), ["StokUrunId"] = nameof(StokUrun),
         ["CalisanId"] = nameof(Calisan), ["MusteriId"] = nameof(Musteri),
         ["MusteriIsId"] = nameof(MusteriIs), ["FaturaId"] = nameof(Fatura),
@@ -189,10 +190,25 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
         package.Warnings.Add(warning);
     }
 
+    private static void NormalizeLegacyAccounts(Package package)
+    {
+        if (package.Version is not (2 or 3)) return;
+        if (package.Tables == null || package.Tables.Count != 23 || package.Tables.ContainsKey(nameof(KasaHesap)) ||
+            package.Tables.ContainsKey(nameof(KasaTransfer)) || !package.Tables.TryGetValue(nameof(KasaHareket), out var movements) || movements == null)
+            throw new BackupException("Eski yedeğin hesap kapsamı geçersiz.");
+        foreach (var row in movements)
+        {
+            if (row.ContainsKey("KasaHesapId")) throw new BackupException("Eski yedekte beklenmeyen hesap alanı var.");
+            row["KasaHesapId"] = JsonSerializer.SerializeToElement<int?>(null);
+        }
+        package.Tables[nameof(KasaHesap)] = [];
+        package.Tables[nameof(KasaTransfer)] = [];
+    }
+
     private void Validate(Package package)
     {
         var tables = Tables();
-        if (package.Format != "FirmovaAccountingBackup" || package.Version is not (2 or 3) || package.BackupId == Guid.Empty ||
+        if (package.Format != "FirmovaAccountingBackup" || package.Version is not (2 or 3 or 4) || package.BackupId == Guid.Empty ||
             package.Tables == null || package.Users == null || package.Documents == null || package.Warnings == null || package.UnresolvedSalaryEmployees == null ||
             (package.Version == 2 && package.UnresolvedSalaryEmployees.Count > 0) ||
             package.Tables.Count != tables.Length || tables.Any(t => !package.Tables.ContainsKey(t.Type.Name)) ||
@@ -292,6 +308,7 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
         manifestBytes.Position = 0;
         var package = await JsonSerializer.DeserializeAsync<Package>(manifestBytes, JsonOptions, ct)
             ?? throw new BackupException("Yedek okunamadı.");
+        NormalizeLegacyAccounts(package);
         Validate(package);
         var expected = package.Documents.Select(x => x.Entry).Append("manifest.json").ToHashSet(StringComparer.Ordinal);
         if (package.Version >= 3 && package.Warnings.Count > 0) expected.Add("UYARILAR.txt");
@@ -390,6 +407,8 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
             await transaction.CommitAsync(ct);
             committed = true;
             var warnings = package.Warnings.ToList();
+            if (package.Version < 4 && package.Tables[nameof(KasaHareket)].Count > 0)
+                warnings.Add("Eski sürüm yedeğindeki kasa hareketleri hesap atanmadan korundu. Hesap bakiyelerinden ayrı gösterilir; hareket düzenleyerek hesap seçebilirsiniz.");
             if (package.Users.Any(x => !userMap.ContainsKey(x.Id)))
                 warnings.Add("Hedefte eşleşmeyen eski kullanıcıların isteğe bağlı hesap bağlantıları boş bırakıldı; kayıtlı kullanıcı adları korundu.");
             return new RestoreResult(records, package.Documents.Count, warnings);

@@ -50,6 +50,7 @@ public static class IslemGecmisiSnapshots
         x.Tutar,
         x.Aciklama,
         x.CariKartId,
+        x.KasaHesapId,
         x.FaturaId
     };
 

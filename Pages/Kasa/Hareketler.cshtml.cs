@@ -22,6 +22,8 @@ public class HareketlerModel : PageModel
         _islemGecmisi = islemGecmisi;
     }
 
+    [BindProperty(SupportsGet = true)] public int? HesapId { get; set; }
+    public List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> HesapSecenekleri { get; set; } = new();
     public List<KasaHareket> Hareketler { get; set; } = new();
 
     public string Hata { get; set; } = "";
@@ -33,9 +35,11 @@ public class HareketlerModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
+        HesapSecenekleri = await _db.KasaHesaplar.AsNoTracking().Where(x => x.FirmaId == firmaId).OrderBy(x => x.Ad)
+            .Select(x => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem(x.Ad, x.Id.ToString())).ToListAsync();
         Hareketler = await _db.KasaHareketleri
-            .Include(x => x.CariKart)
-            .Where(x => x.FirmaId == firmaId)
+            .Include(x => x.CariKart).Include(x => x.KasaHesap)
+            .Where(x => x.FirmaId == firmaId && (!HesapId.HasValue || (HesapId == 0 ? x.KasaHesapId == null : x.KasaHesapId == HesapId)))
             .OrderByDescending(x => x.Tarih)
             .ThenByDescending(x => x.Id)
             .ToListAsync();
@@ -109,7 +113,8 @@ public class HareketlerModel : PageModel
         hareket.Tutar,
         hareket.Aciklama,
         hareket.CariKartId,
-        hareket.FaturaId
+        hareket.FaturaId,
+        hareket.KasaHesapId
     };
 
     public async Task<IActionResult> OnPostDisaAktarAsync()
@@ -119,8 +124,8 @@ public class HareketlerModel : PageModel
             return RedirectToPage("/Login");
 
         var hareketler = await _db.KasaHareketleri
-            .Include(x => x.CariKart)
-            .Where(x => x.FirmaId == firmaId)
+            .Include(x => x.CariKart).Include(x => x.KasaHesap)
+            .Where(x => x.FirmaId == firmaId && (!HesapId.HasValue || (HesapId == 0 ? x.KasaHesapId == null : x.KasaHesapId == HesapId)))
             .OrderByDescending(x => x.Tarih)
             .ThenByDescending(x => x.Id)
             .ToListAsync();
@@ -133,8 +138,9 @@ public class HareketlerModel : PageModel
         ws.Cell(1, 3).Value = "Tutar";
         ws.Cell(1, 4).Value = "Cari";
         ws.Cell(1, 5).Value = "Açıklama";
+        ws.Cell(1, 6).Value = "Nakit Kasa / Banka Hesabı";
 
-        var headerRange = ws.Range(1, 1, 1, 5);
+        var headerRange = ws.Range(1, 1, 1, 6);
         headerRange.Style.Font.Bold = true;
         headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
         headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
@@ -155,6 +161,7 @@ public class HareketlerModel : PageModel
 
             ws.Cell(row, 4).Value = h.CariKart?.Unvan ?? "";
             ws.Cell(row, 5).Value = h.Aciklama ?? "";
+            ws.Cell(row, 6).Value = h.KasaHesap?.Ad ?? "Hesap atanmamış (eski kayıt)";
 
             row++;
         }
@@ -163,7 +170,7 @@ public class HareketlerModel : PageModel
 
         if (row > 2)
         {
-            var dataRange = ws.Range(1, 1, row - 1, 5);
+            var dataRange = ws.Range(1, 1, row - 1, 6);
             dataRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             dataRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
             dataRange.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
