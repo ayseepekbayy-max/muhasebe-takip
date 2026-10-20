@@ -16,6 +16,10 @@
         </div>
     </section>
 
+    @if (!string.IsNullOrWhiteSpace(Model.Uyari))
+    {
+        <div class="app-alert app-alert-warning" role="status">@Model.Uyari</div>
+    }
     @if (!string.IsNullOrWhiteSpace(Model.Hata))
     {
         <div class="app-alert app-alert-danger">@Model.Hata</div>

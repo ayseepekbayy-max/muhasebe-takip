@@ -29,13 +29,19 @@ public class YedeklemeModel : PageModel
 
     public string Mesaj { get; set; } = "";
     public string Hata { get; set; } = "";
+    public string Uyari { get; private set; } = "";
     public IReadOnlyList<AccountingBackupService.LinkIssue> BaglantiHatalari { get; private set; } = [];
 
-    public IActionResult OnGet()
+    public async Task<IActionResult> OnGetAsync()
     {
-        if (HttpContext.Session.GetInt32("FirmaId") == null)
-            return RedirectToPage("/Login");
-
+        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        if (firmaId == null) return RedirectToPage("/Login");
+        var unresolvedCount = await _db.CalisanMaasArsivleri.CountAsync(x => x.FirmaId == firmaId.Value &&
+            !_db.Calisanlar.Any(c => c.FirmaId == firmaId.Value && c.Id == x.CalisanId));
+        if (unresolvedCount > 0)
+            Uyari = $"{unresolvedCount} maaş arşivi kaydının çalışan bağlantısı çözümlenemiyor. " +
+                "Bu kayıtlar tutar ve tarihleriyle yedeklenecek; geri yüklemede başka çalışana bağlanmayacak. " +
+                "Ayrıntılar ZIP içindeki UYARILAR.txt dosyasında ve yedek kayıtlarında belirtilecek. Mevcut veriler değiştirilmez.";
         return Page();
     }
 

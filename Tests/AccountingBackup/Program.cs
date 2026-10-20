@@ -188,24 +188,72 @@ try
     legacy.KasaHareketleri = [new(DateTime.UtcNow.Date,HareketTipi.Giris,1,"bad","Missing Cari")];
     var badLegacy=Page(JsonSerializer.SerializeToUtf8Bytes(legacy)); await badLegacy.OnPostGeriYukleAsync();
     Check(badLegacy.Hata.Length > 0 && !await db.CariKartlar.AnyAsync(x=>x.FirmaId==legacyTarget.Id && x.Unvan=="Rollback Cari"), "Legacy rollback preserves all-or-nothing behavior");
-    // Diagnose orphan salary links without guessing the owner or changing the source records.
+    // Preserve two historical salary records, including a reference to an employee outside
+    // the source company. Neither resolve foreign data nor manufacture an employee.
     var salary = await db.CalisanMaasArsivleri.SingleAsync(x=>x.FirmaId==source.Id);
     var originalEmployeeId = salary.CalisanId;
     salary.CalisanId = 987654;
+    var foreignEmployee = new Calisan { Id=54321, FirmaId=empty.Id, AdSoyad="PRIVATE_FOREIGN_EMPLOYEE", Ad="private" };
+    var secondSalary = new CalisanMaasArsiv { FirmaId=source.Id, CalisanId=54321,
+        ToplamMaas=1000.22m, ToplamAvans=300.11m, KalanMaas=700.11m,
+        DonemBaslangic=new DateTime(2026,8,1,0,0,0,DateTimeKind.Utc), DonemBitis=new DateTime(2026,8,31,0,0,0,DateTimeKind.Utc),
+        OdemeTarihi=new DateTime(2026,9,5,12,30,0,DateTimeKind.Utc), Aciklama="Original historical description" };
+    db.AddRange(foreignEmployee,secondSalary); await db.SaveChangesAsync();
+    var orphanTarget = new Firma { FirmaAdi="Historical salary restore" };
+    var orphanAgain = new Firma { FirmaAdi="Historical salary roundtrip" };
+    var version2Target = new Firma { FirmaAdi="Version 2 compatibility" };
+    db.AddRange(orphanTarget,orphanAgain,version2Target); await db.SaveChangesAsync();
+    foreach (var f in new[]{orphanTarget,orphanAgain,version2Target})
+        db.Add(new Kullanici { FirmaId=f.Id,KullaniciAdi=user.KullaniciAdi,Email=user.Email });
     await db.SaveChangesAsync();
+    var orphanBytes = await service.ExportAsync(source.Id);
+    var orphanPackage = Read(orphanBytes);
+    Check(orphanPackage.Version==3 && orphanPackage.UnresolvedSalaryEmployees.Count==2, "Versioned explicit unresolved salary references");
+    Check(orphanPackage.Tables["CalisanMaasArsiv"].Count==2 && orphanPackage.Tables["Calisan"].Count==1, "All salary records kept; no employee fabricated");
+    Check(!JsonSerializer.Serialize(orphanPackage).Contains("PRIVATE_FOREIGN_EMPLOYEE"), "No foreign employee data included");
+    using (var z=new ZipArchive(new MemoryStream(orphanBytes),ZipArchiveMode.Read))
+    using (var reader=new StreamReader(z.GetEntry("UYARILAR.txt")!.Open()))
+        Check((await reader.ReadToEndAsync()).Contains("2 kayıt"), "ZIP contains human-readable historical salary warning");
     var diagnosisHttp = new DefaultHttpContext { Session = new TestSession() };
-    diagnosisHttp.Session.SetInt32("FirmaId", source.Id);
-    var diagnosisPage = new YedeklemeModel(db, env, NullLogger<YedeklemeModel>.Instance)
-        { PageContext = new PageContext { HttpContext = diagnosisHttp } };
-    await diagnosisPage.OnGetIndirAsync();
-    Check(diagnosisPage.BaglantiHatalari.Count == 1, "Export reports structured orphan link");
-    var issue = diagnosisPage.BaglantiHatalari.Single();
-    Check(issue.RecordType == "Maaş arşivi" && issue.RecordId == salary.Id && issue.Field == "CalisanId" &&
-        issue.RelatedType == "Çalışan" && issue.RelatedId == 987654, "Diagnosis identifies exact own record and missing reference");
-    Check(diagnosisPage.Hata.Contains("kesinleştirmez") && !diagnosisPage.Hata.Contains("DO_NOT_EXPORT"), "No unsupported cross-company claim or external record data");
-    Check((await db.CalisanMaasArsivleri.AsNoTracking().SingleAsync(x=>x.Id==salary.Id)).CalisanId==987654,
-        "Read-only diagnosis never repairs source data");
-    salary.CalisanId = originalEmployeeId; await db.SaveChangesAsync();
+    diagnosisHttp.Session.SetInt32("FirmaId",source.Id);
+    var salaryPage=new YedeklemeModel(db,env,NullLogger<YedeklemeModel>.Instance)
+        { PageContext=new PageContext { HttpContext=diagnosisHttp } };
+    await salaryPage.OnGetAsync();
+    Check(salaryPage.Uyari.Contains("2 maaş"), "Page warns before downloading unresolved salary backup");
+    Check((await db.CalisanMaasArsivleri.AsNoTracking().SingleAsync(x=>x.Id==salary.Id)).CalisanId==987654 &&
+        (await db.CalisanMaasArsivleri.AsNoTracking().SingleAsync(x=>x.Id==secondSalary.Id)).CalisanId==54321,
+        "Export leaves original live-style records untouched");
+    // Deliberately allocate the SAME number as the first missing source employee.
+    await db.Database.ExecuteSqlRawAsync("UPDATE sqlite_sequence SET seq=987653 WHERE name='Calisanlar'");
+    var historicalRestore=await service.RestoreAsync(new MemoryStream(orphanBytes),orphanTarget.Id);
+    Check(historicalRestore.Warnings.Any(x=>x.Contains("2 kayıt")), "Restore explicitly warns about unresolved history");
+    var realEmployee=await db.Calisanlar.SingleAsync(x=>x.FirmaId==orphanTarget.Id);
+    Check(realEmployee.Id==987654, "Fixture reproduces source/destination employee ID collision");
+    var restoredSalaries=await db.CalisanMaasArsivleri.AsNoTracking().Where(x=>x.FirmaId==orphanTarget.Id).OrderBy(x=>x.ToplamMaas).ToListAsync();
+    Check(restoredSalaries.Count==2 && restoredSalaries.All(x=>x.CalisanId<=0 && x.CalisanId!=realEmployee.Id),
+        "Neither salary attaches to an existing or newly generated real employee");
+    var restoredHistorical=restoredSalaries.Single(x=>x.ToplamMaas==1000.22m);
+    Check(restoredHistorical.ToplamAvans==secondSalary.ToplamAvans && restoredHistorical.KalanMaas==secondSalary.KalanMaas &&
+        restoredHistorical.DonemBaslangic==secondSalary.DonemBaslangic && restoredHistorical.DonemBitis==secondSalary.DonemBitis &&
+        restoredHistorical.OdemeTarihi==secondSalary.OdemeTarihi && restoredHistorical.Aciklama==secondSalary.Aciklama,
+        "Exact money, dates, periods and original description preserved");
+    Check(restoredSalaries.Select(x=>x.CalisanId).Order().SequenceEqual(new[]{-987654,-54321}.Order()), "Original employee numbers retained as non-linking historical references");
+    var reexportedHistory=await service.ExportAsync(orphanTarget.Id);
+    Check(Read(reexportedHistory).UnresolvedSalaryEmployees.Count==2, "Unresolved status survives re-export");
+    await service.RestoreAsync(new MemoryStream(reexportedHistory),orphanAgain.Id);
+    Check((await db.CalisanMaasArsivleri.Where(x=>x.FirmaId==orphanAgain.Id).Select(x=>x.CalisanId).ToListAsync()).Order()
+        .SequenceEqual(restoredSalaries.Select(x=>x.CalisanId).Order()), "Historical references remain stable across repeated backup/restore");
+    await Rejected(Change(orphanBytes,p=>p.Version=2),missingUserTarget.Id,"Old readers must not accept version 3 unresolved semantics");
+    await Rejected(Change(orphanBytes,p=>p.UnresolvedSalaryEmployees.Clear()),missingUserTarget.Id,"Missing unresolved declarations rejected");
+    await Rejected(Change(bytes,p=>p.UnresolvedSalaryEmployees.Add(new(((CalisanMaasArsiv)seeded["CalisanMaasArsiv"]).Id,originalEmployeeId))),
+        missingUserTarget.Id,"Resolved employees cannot be falsely declared unresolved");
+    var compatibility=await service.RestoreAsync(new MemoryStream(Change(bytes,p=>p.Version=2)),version2Target.Id);
+    Check(compatibility.Records==24, "Valid previous version 2 ZIP remains supported");
+    // Restore source fixture for the remaining generic diagnostic and missing-file checks.
+    var sourceSalary=await db.CalisanMaasArsivleri.SingleAsync(x=>x.Id==salary.Id);
+    sourceSalary.CalisanId=originalEmployeeId;
+    var extraSalary=await db.CalisanMaasArsivleri.SingleAsync(x=>x.Id==secondSalary.Id);
+    db.Remove(extraSalary); await db.SaveChangesAsync();
     var manyBrokenLinks = Change(bytes, p =>
     {
         for (var i=0;i<21;i++)

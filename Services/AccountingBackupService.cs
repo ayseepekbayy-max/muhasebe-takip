@@ -24,7 +24,7 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
     public sealed class Package
     {
         public string Format { get; set; } = "FirmovaAccountingBackup";
-        public int Version { get; set; } = 2;
+        public int Version { get; set; } = 3;
         public Guid BackupId { get; set; } = Guid.NewGuid();
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
         public string CompanyName { get; set; } = "";
@@ -32,7 +32,9 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
         public List<UserReference> Users { get; set; } = new();
         public List<Document> Documents { get; set; } = new();
         public List<string> Warnings { get; set; } = new();
+        public List<UnresolvedSalaryEmployee> UnresolvedSalaryEmployees { get; set; } = new();
     }
+    public sealed record UnresolvedSalaryEmployee(int SalaryRecordId, int SourceEmployeeId);
     public sealed record UserReference(int Id, string Username, string Email);
     public sealed record Document(string Table, int RowId, string Property, string Entry, long Length, string Sha256);
     public sealed record RestoreResult(int Records, int Files, IReadOnlyList<string> Warnings);
@@ -110,6 +112,11 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
             .Where(HasValue).Select(x => x.GetInt32()).Distinct();
         foreach (var id in referencedUsers)
             if (package.Users.All(x => x.Id != id)) package.Users.Add(new UserReference(id, "", ""));
+        var employeeIds = package.Tables[nameof(Calisan)].Select(Id).ToHashSet();
+        package.UnresolvedSalaryEmployees = package.Tables[nameof(CalisanMaasArsiv)]
+            .Where(row => !employeeIds.Contains(row["CalisanId"].GetInt32()))
+            .Select(row => new UnresolvedSalaryEmployee(Id(row), row["CalisanId"].GetInt32())).ToList();
+        AddSalaryWarning(package);
         Validate(package);
         using var output = new MemoryStream();
         long expanded = 0;
@@ -139,6 +146,11 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
                 package.Documents.Add(new Document(table, Id(row), property, entryName, data.LongLength,
                     Convert.ToHexString(SHA256.HashData(data))));
             }
+            if (package.Warnings.Count > 0)
+            {
+                await using var warningsStream = zip.CreateEntry("UYARILAR.txt", CompressionLevel.Fastest).Open();
+                await warningsStream.WriteAsync(System.Text.Encoding.UTF8.GetBytes(string.Join(Environment.NewLine, package.Warnings)), ct);
+            }
             var manifest = JsonSerializer.SerializeToUtf8Bytes(package, JsonOptions);
             if (manifest.LongLength > MaxManifestBytes) throw new BackupException("Yedek kayıtları 32 MB sınırını aşıyor.");
             await using var manifestStream = zip.CreateEntry("manifest.json", CompressionLevel.Fastest).Open();
@@ -165,17 +177,40 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
         return result;
     }
 
+    private static void AddSalaryWarning(Package package)
+    {
+        if (package.UnresolvedSalaryEmployees.Count == 0) return;
+        const string prefix = "Çalışan bağlantısı çözümlenemeyen maaş arşivi:";
+        var warning = $"{prefix} {package.UnresolvedSalaryEmployees.Count} kayıt. " +
+            "Tutarlar, dönemler, ödeme tarihleri ve açıklamalar korunmuştur. " +
+            "Geri yüklemede bu kayıtlar gerçek bir çalışana bağlanmaz; eski çalışan numaraları ayrı başvurular olarak saklanır. " +
+            "Çalışanların adları veya silinme nedenleri tahmin edilmemiştir.";
+        package.Warnings.RemoveAll(x => x.StartsWith(prefix, StringComparison.Ordinal));
+        package.Warnings.Add(warning);
+    }
+
     private void Validate(Package package)
     {
         var tables = Tables();
-        if (package.Format != "FirmovaAccountingBackup" || package.Version != 2 || package.BackupId == Guid.Empty ||
-            package.Tables == null || package.Users == null || package.Documents == null || package.Warnings == null ||
+        if (package.Format != "FirmovaAccountingBackup" || package.Version is not (2 or 3) || package.BackupId == Guid.Empty ||
+            package.Tables == null || package.Users == null || package.Documents == null || package.Warnings == null || package.UnresolvedSalaryEmployees == null ||
+            (package.Version == 2 && package.UnresolvedSalaryEmployees.Count > 0) ||
             package.Tables.Count != tables.Length || tables.Any(t => !package.Tables.ContainsKey(t.Type.Name)) ||
             package.Tables.Values.Any(x => x == null) || package.Tables.Values.Sum(x => (long)x.Count) > MaxRows)
             throw new BackupException("Yedek biçimi, sürümü veya kapsamı geçersiz.");
         var ids = package.Tables.ToDictionary(x => x.Key, x => x.Value.Select(Id).ToHashSet());
         if (package.Users.Any(x => x == null || x.Id <= 0) || package.Users.Select(x => x.Id).Distinct().Count() != package.Users.Count)
             throw new BackupException("Yedekteki kullanıcı başvuruları geçersiz.");
+        var unresolved = package.UnresolvedSalaryEmployees;
+        if (unresolved.Any(x => x == null || x.SourceEmployeeId == int.MinValue) ||
+            unresolved.Select(x => x.SalaryRecordId).Distinct().Count() != unresolved.Count)
+            throw new BackupException("Çözümlenemeyen maaş bağlantıları geçersiz.");
+        var salaryRows = package.Tables[nameof(CalisanMaasArsiv)].ToDictionary(Id);
+        foreach (var reference in unresolved)
+            if (!salaryRows.TryGetValue(reference.SalaryRecordId, out var salary) ||
+                salary["CalisanId"].GetInt32() != reference.SourceEmployeeId || ids[nameof(Calisan)].Contains(reference.SourceEmployeeId))
+                throw new BackupException("Çözümlenemeyen maaş bağlantıları kayıtlarla eşleşmiyor.");
+        var unresolvedRows = unresolved.Select(x => x.SalaryRecordId).ToHashSet();
         var userIds = package.Users.Select(x => x.Id).ToHashSet();
         var linkIssues = new List<LinkIssue>();
         var issueCount = 0;
@@ -204,7 +239,10 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
                     if (value is string text && property.GetMaxLength() is int max && text.Length > max)
                         throw new BackupException("Yedekte bir metin alanı izin verilen uzunluğu aşıyor.");
                     if (HasValue(json) && Links.TryGetValue(property.Name, out var parent) && !ids[parent].Contains(json.GetInt32()))
-                        MissingLink(table.Type.Name, Id(row), property.Name, parent, json.GetInt32());
+                    {
+                        var historicalSalary = table.Type == typeof(CalisanMaasArsiv) && property.Name == "CalisanId" && unresolvedRows.Contains(Id(row));
+                        if (!historicalSalary) MissingLink(table.Type.Name, Id(row), property.Name, parent, json.GetInt32());
+                    }
                     if (HasValue(json) && UserProperties.Contains(property.Name) && !userIds.Contains(json.GetInt32()))
                         MissingLink(table.Type.Name, Id(row), property.Name, nameof(Kullanici), json.GetInt32());
                 }
@@ -243,7 +281,7 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
         await CopyLimitedAsync(input, buffer, MaxPackageBytes, ct);
         buffer.Position = 0;
         using var zip = new ZipArchive(buffer, ZipArchiveMode.Read, true);
-        if (zip.Entries.Count > MaxRows + 1 || zip.Entries.Sum(x => x.Length) > MaxExpandedBytes + MaxManifestBytes ||
+        if (zip.Entries.Count > MaxRows + 2 || zip.Entries.Sum(x => x.Length) > MaxExpandedBytes + MaxManifestBytes ||
             zip.Entries.Select(x => x.FullName).Distinct(StringComparer.Ordinal).Count() != zip.Entries.Count)
             throw new BackupException("Yedek paketi boyutu veya dosya listesi geçersiz.");
         var manifest = zip.GetEntry("manifest.json") ?? throw new BackupException("Yedek içeriği bulunamadı.");
@@ -256,6 +294,7 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
             ?? throw new BackupException("Yedek okunamadı.");
         Validate(package);
         var expected = package.Documents.Select(x => x.Entry).Append("manifest.json").ToHashSet(StringComparer.Ordinal);
+        if (package.Version >= 3 && package.Warnings.Count > 0) expected.Add("UYARILAR.txt");
         if (zip.Entries.Count != expected.Count || zip.Entries.Any(x => !expected.Contains(x.FullName)))
             throw new BackupException("Yedekte eksik veya beklenmeyen dosya var.");
         foreach (var row in package.Tables[nameof(EkDosya)])
@@ -266,6 +305,9 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
                 !package.Documents.Any(x => x.Table == nameof(Cek) && x.RowId == Id(row)))
                 throw new BackupException("Yedekte bir çek görseli eksik.");
 
+        // Recompute the warning from validated references; never rely on supplied warning text.
+        AddSalaryWarning(package);
+        var unresolvedSalaryIds = package.UnresolvedSalaryEmployees.Select(x => x.SalaryRecordId).ToHashSet();
         var restoreId = Guid.NewGuid().ToString("N");
         var stage = Path.Combine(environment.ContentRootPath, "App_Data", "RestoreStaging", restoreId);
         var final = Path.Combine(environment.WebRootPath, "uploads", "yedek", restoreId);
@@ -317,7 +359,13 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
                         object? value = json.Deserialize(property.ClrType, JsonOptions);
                         if (property.Name == "FirmaId") value = firmaId;
                         else if (HasValue(json) && Links.TryGetValue(property.Name, out var parent))
-                            value = maps[parent][json.GetInt32()];
+                        {
+                            // Normal employee IDs are strictly positive. A nonpositive historical reference
+                            // cannot accidentally bind to a newly generated employee with the same old ID.
+                            value = table.Type == typeof(CalisanMaasArsiv) && property.Name == "CalisanId" && unresolvedSalaryIds.Contains(Id(row))
+                                ? -Math.Abs(json.GetInt32())
+                                : maps[parent][json.GetInt32()];
+                        }
                         else if (HasValue(json) && UserProperties.Contains(property.Name))
                         {
                             if (userMap.TryGetValue(json.GetInt32(), out var userId)) value = userId;

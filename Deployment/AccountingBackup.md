@@ -1,16 +1,22 @@
-# Accounting backup, version 2
+# Accounting backup, version 3
 
 The backup page exports a ZIP containing `manifest.json` and SHA-256 verified documents. It includes all company-owned rows in 23 accounting tables, including archived rows, invoice lines, cash, checks, stock movements, employees, advances, attendance, salary archives, customer jobs and expenses, costs, payment schedules/history, notification history, manager notes, audit history, and invoice numbering. Credentials, company settings and private chat are excluded. User references contain only source IDs, usernames and email addresses, never passwords or reset codes.
 
 ## Restore behavior
 
-- Version 2 restores only into an active company with no existing accounting rows. It never clears or merges populated accounting data. This also prevents duplicate imports.
+- Version 3 (and supported version 2) restores only into an active company with no existing accounting rows. It never clears or merges populated accounting data. This also prevents duplicate imports.
 - All imported primary keys are regenerated. Company IDs are always set from the authenticated session. Cross-record IDs are remapped, including salary archive employee references not declared as EF relationships.
 - Existing target users are matched by username AND email within the target company. Required unmatched user references block the whole restore. Optional references to missing/deleted users become null with a warning; stored historical usernames are retained. No accounts are created or modified.
 - Documents are first staged outside the public directory, length/hash checked, and moved to a new generated upload directory before the database transaction commits. On failure, database inserts are rolled back and staged/restored files are removed. Existing documents are never overwritten. The upload URLs use the application's current document storage; changing its access controls is a separate step.
 - A serializable database transaction protects the export snapshot and restore. It includes all accounting reads/writes. Database and filesystem are not a distributed transaction: a process crash before the database commit may leave an unreferenced generated directory, but no committed record points to files that have not yet been moved.
 - Limits: 100 MiB ZIP, 32 MiB manifest, 25 MiB per document, 300 MiB expanded documents, 250,000 records. Export fails explicitly if a referenced document is missing, unsupported, or outside approved uploads. It never labels such a package complete.
 - Allowed document extensions match current uploads: PDF, PNG, JPG/JPEG, WEBP, XLS/XLSX and DOCX. Archive entries are never extracted using supplied paths. Generated filenames, a strict table allowlist, exact scalar schemas, unique record/file IDs and relationship validation are enforced.
+
+## Historical salary records with unresolved employee references
+
+Version 3 explicitly declares each unresolved salary employee reference in `UnresolvedSalaryEmployees` (source salary row ID and original source employee reference). The source salary row remains unchanged in the package and live database. Such backups include a readable `UYARILAR.txt`; the page warns before downloading and restore returns a warning. Only `CalisanMaasArsiv.CalisanId` can use this exception, and only when the referenced employee is absent from the company's exported employee list. No foreign employee is queried or included, and no employee is fabricated.
+
+On restore the historical employee reference is stored as `-abs(source reference)` (zero remains zero). Valid employee keys are strictly positive, so a new employee receiving the same positive ID can never acquire these salary records accidentally. Financial amounts, period/payment dates and the original description remain unchanged. The reserved nonpositive reference and its unresolved declaration survive re-export/restore; absolute value retains the old employee number. No schema migration is needed, and live source records are never rewritten. Version 2 packages remain supported with their original strict relationship validation; version 2 packages declaring these new exceptions are rejected. All other dangling links still fail with diagnostics.
 
 ## Legacy JSON
 
