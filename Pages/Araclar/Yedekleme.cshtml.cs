@@ -29,6 +29,7 @@ public class YedeklemeModel : PageModel
 
     public string Mesaj { get; set; } = "";
     public string Hata { get; set; } = "";
+    public IReadOnlyList<AccountingBackupService.LinkIssue> BaglantiHatalari { get; private set; } = [];
 
     public IActionResult OnGet()
     {
@@ -49,7 +50,11 @@ public class YedeklemeModel : PageModel
             var bytes = await _backup.ExportAsync(firmaId.Value, HttpContext.RequestAborted);
             return File(bytes, "application/zip", $"firmova_tam_yedek_{DateTime.Now:yyyyMMdd_HHmmss}.zip");
         }
-        catch (AccountingBackupService.BackupException ex) { Hata = ex.Message; }
+        catch (AccountingBackupService.BackupException ex)
+        {
+            Hata = ex.Message;
+            BaglantiHatalari = ex.LinkIssues;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Firma {FirmaId} yedeği oluşturulamadı.", firmaId);
@@ -244,6 +249,7 @@ public class YedeklemeModel : PageModel
         {
             _db.ChangeTracker.Clear();
             Hata = ex.Message;
+            BaglantiHatalari = ex.LinkIssues;
         }
         catch (Exception ex)
         {

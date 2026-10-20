@@ -188,6 +188,41 @@ try
     legacy.KasaHareketleri = [new(DateTime.UtcNow.Date,HareketTipi.Giris,1,"bad","Missing Cari")];
     var badLegacy=Page(JsonSerializer.SerializeToUtf8Bytes(legacy)); await badLegacy.OnPostGeriYukleAsync();
     Check(badLegacy.Hata.Length > 0 && !await db.CariKartlar.AnyAsync(x=>x.FirmaId==legacyTarget.Id && x.Unvan=="Rollback Cari"), "Legacy rollback preserves all-or-nothing behavior");
+    // Diagnose orphan salary links without guessing the owner or changing the source records.
+    var salary = await db.CalisanMaasArsivleri.SingleAsync(x=>x.FirmaId==source.Id);
+    var originalEmployeeId = salary.CalisanId;
+    salary.CalisanId = 987654;
+    await db.SaveChangesAsync();
+    var diagnosisHttp = new DefaultHttpContext { Session = new TestSession() };
+    diagnosisHttp.Session.SetInt32("FirmaId", source.Id);
+    var diagnosisPage = new YedeklemeModel(db, env, NullLogger<YedeklemeModel>.Instance)
+        { PageContext = new PageContext { HttpContext = diagnosisHttp } };
+    await diagnosisPage.OnGetIndirAsync();
+    Check(diagnosisPage.BaglantiHatalari.Count == 1, "Export reports structured orphan link");
+    var issue = diagnosisPage.BaglantiHatalari.Single();
+    Check(issue.RecordType == "Maaş arşivi" && issue.RecordId == salary.Id && issue.Field == "CalisanId" &&
+        issue.RelatedType == "Çalışan" && issue.RelatedId == 987654, "Diagnosis identifies exact own record and missing reference");
+    Check(diagnosisPage.Hata.Contains("kesinleştirmez") && !diagnosisPage.Hata.Contains("DO_NOT_EXPORT"), "No unsupported cross-company claim or external record data");
+    Check((await db.CalisanMaasArsivleri.AsNoTracking().SingleAsync(x=>x.Id==salary.Id)).CalisanId==987654,
+        "Read-only diagnosis never repairs source data");
+    salary.CalisanId = originalEmployeeId; await db.SaveChangesAsync();
+    var manyBrokenLinks = Change(bytes, p =>
+    {
+        for (var i=0;i<21;i++)
+        {
+            var row = new Dictionary<string,JsonElement>(p.Tables["KasaHareket"][0]);
+            row["Id"]=JsonSerializer.SerializeToElement(100000+i);
+            row["FaturaId"]=JsonSerializer.SerializeToElement(900000+i);
+            p.Tables["KasaHareket"].Add(row);
+        }
+    });
+    try { await service.RestoreAsync(new MemoryStream(manyBrokenLinks),missingUserTarget.Id); throw new Exception("Broken links accepted"); }
+    catch (AccountingBackupService.BackupException ex)
+    {
+        Check(ex.LinkIssues.Count==20 && ex.Message.Contains("21 sorun"), "Bounded diagnostics retain total count");
+        Check(ex.LinkIssues.All(x=>x.RecordType=="Kasa hareketi" && x.Field=="FaturaId"), "All listed diagnostics use known schema labels");
+    }
+    Check(!await db.KasaHareketleri.AnyAsync(x=>x.FirmaId==missingUserTarget.Id), "Restore diagnostics stop before any writes");
     // Missing source documents must not produce a supposedly complete backup.
     File.Delete(Path.Combine(env.WebRootPath,"uploads/faturalar/fixture.pdf"));
     try { await service.ExportAsync(source.Id); throw new Exception("Missing document accepted"); }

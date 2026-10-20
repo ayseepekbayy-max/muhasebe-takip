@@ -36,7 +36,24 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
     public sealed record UserReference(int Id, string Username, string Email);
     public sealed record Document(string Table, int RowId, string Property, string Entry, long Length, string Sha256);
     public sealed record RestoreResult(int Records, int Files, IReadOnlyList<string> Warnings);
-    public sealed class BackupException(string message) : Exception(message);
+    public sealed record LinkIssue(string RecordType, int RecordId, string Field, string RelatedType, int RelatedId);
+    public sealed class BackupException(string message, IReadOnlyList<LinkIssue>? linkIssues = null) : Exception(message)
+    {
+        public IReadOnlyList<LinkIssue> LinkIssues { get; } = linkIssues ?? [];
+    }
+    private static string RecordLabel(string name) => name switch
+    {
+        nameof(CariKart) => "Cari kart", nameof(StokUrun) => "Stok ürünü", nameof(Calisan) => "Çalışan",
+        nameof(Musteri) => "Müşteri", nameof(Fatura) => "Fatura", nameof(FaturaKalem) => "Fatura kalemi",
+        nameof(MusteriIs) => "Müşteri işi", nameof(MusteriMasraf) => "Müşteri masrafı",
+        nameof(CalisanAvans) => "Çalışan avansı/ödemesi", nameof(CalisanPuantaj) => "Puantaj",
+        nameof(CalisanMaasArsiv) => "Maaş arşivi", nameof(StokHareket) => "Stok hareketi",
+        nameof(KasaHareket) => "Kasa hareketi", nameof(EkDosya) => "Ek belge",
+        nameof(OdemePlani) => "Ödeme planı", nameof(OdemeHareketi) => "Ödeme hareketi",
+        nameof(OdemeBildirimGecmisi) => "Ödeme bildirim geçmişi", nameof(OdemeBildirimGizleme) => "Bildirim gizleme",
+        nameof(YoneticiNotu) => "Yönetici notu", nameof(IslemGecmisi) => "İşlem geçmişi", nameof(Kullanici) => "Kullanıcı",
+        _ => name
+    };
     private sealed record Table(Type Type, Func<int, CancellationToken, Task<List<object>>> Load);
 
     private Table TableFor<T>() where T : class => new(typeof(T), async (firmaId, ct) =>
@@ -160,6 +177,14 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
         if (package.Users.Any(x => x == null || x.Id <= 0) || package.Users.Select(x => x.Id).Distinct().Count() != package.Users.Count)
             throw new BackupException("Yedekteki kullanıcı başvuruları geçersiz.");
         var userIds = package.Users.Select(x => x.Id).ToHashSet();
+        var linkIssues = new List<LinkIssue>();
+        var issueCount = 0;
+        void MissingLink(string table, int id, string field, string parent, int parentId)
+        {
+            issueCount++;
+            if (linkIssues.Count < 20)
+                linkIssues.Add(new LinkIssue(RecordLabel(table), id, field, RecordLabel(parent), parentId));
+        }
         foreach (var table in tables)
         {
             var rows = package.Tables[table.Type.Name];
@@ -179,12 +204,16 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
                     if (value is string text && property.GetMaxLength() is int max && text.Length > max)
                         throw new BackupException("Yedekte bir metin alanı izin verilen uzunluğu aşıyor.");
                     if (HasValue(json) && Links.TryGetValue(property.Name, out var parent) && !ids[parent].Contains(json.GetInt32()))
-                        throw new BackupException("Yedekte eksik veya firma dışına ait kayıt bağlantısı var.");
+                        MissingLink(table.Type.Name, Id(row), property.Name, parent, json.GetInt32());
                     if (HasValue(json) && UserProperties.Contains(property.Name) && !userIds.Contains(json.GetInt32()))
-                        throw new BackupException("Yedekte eksik kullanıcı bağlantısı var.");
+                        MissingLink(table.Type.Name, Id(row), property.Name, nameof(Kullanici), json.GetInt32());
                 }
             }
         }
+        if (issueCount > 0)
+            throw new BackupException($"Yedek bağlantı kontrolünde {issueCount} sorun bulundu. İlk {linkIssues.Count} bağlantı aşağıda gösteriliyor. " +
+                "Bağlı kayıtlar bu firmanın yedek kapsamındaki listesinde bulunamadı; silinmiş, eksik veya firma bilgisi uyumsuz olabilir. " +
+                "Bu kontrol kayıtların başka bir firmaya ait olduğunu kesinleştirmez. Hiçbir kayıt değiştirilmedi.", linkIssues);
         var documents = package.Documents;
         if (documents.Select(x => x.Entry).Distinct(StringComparer.Ordinal).Count() != documents.Count ||
             documents.Select(x => (x.Table, x.RowId, x.Property)).Distinct().Count() != documents.Count)

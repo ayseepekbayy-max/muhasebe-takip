@@ -20,6 +20,24 @@
     {
         <div class="app-alert app-alert-danger">@Model.Hata</div>
     }
+    @if (Model.BaglantiHatalari.Count > 0)
+    {
+        <section class="app-form-panel">
+            <h2>Kontrol edilmesi gereken bağlantılar</h2>
+            <p>Bu liste sorunlu bağlantıları gösterir; otomatik düzeltme veya silme yapılmaz.</p>
+            <div style="overflow-x:auto">
+                <table class="table">
+                    <thead><tr><th>Kayıt türü</th><th>Kayıt no</th><th>Bağlantı alanı</th><th>Bulunamayan bağlı kayıt türü</th><th>Bağlı kayıt no</th></tr></thead>
+                    <tbody>
+                    @foreach (var sorun in Model.BaglantiHatalari)
+                    {
+                        <tr><td>@sorun.RecordType</td><td>@sorun.RecordId</td><td>@sorun.Field</td><td>@sorun.RelatedType</td><td>@sorun.RelatedId</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
     @if (!string.IsNullOrWhiteSpace(Model.Mesaj))
     {
         <div class="app-alert app-alert-success">@Model.Mesaj</div>
