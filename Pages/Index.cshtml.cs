@@ -211,7 +211,8 @@ public class IndexModel : PageModel
             BugunCikis = kasaOzeti?.BugunCikis ?? 0;
             BuAyGiris = kasaOzeti?.BuAyGiris ?? 0;
             BuAyCikis = kasaOzeti?.BuAyCikis ?? 0;
-            KasaBakiye = (kasaOzeti?.ToplamGiris ?? 0) - (kasaOzeti?.ToplamCikis ?? 0);
+            KasaBakiye = (kasaOzeti?.ToplamGiris ?? 0) - (kasaOzeti?.ToplamCikis ?? 0)
+                + (await _db.KasaHesaplar.Where(x => x.FirmaId == firmaId).SumAsync(x => (decimal?)x.AcilisBakiyesi) ?? 0);
 
             var faturaOzeti = await _db.Faturalar
                 .AsNoTracking()

@@ -3,6 +3,7 @@
 @model MuhasebeTakip2.App.Pages.Kasa.HareketDuzenleModel
 
 <h1>Hareket Düzenle</h1>
+@if (!string.IsNullOrWhiteSpace(Model.Hata)) { <div class="app-alert app-alert-danger">@Model.Hata</div> }
 
 @if (!ViewData.ModelState.IsValid)
 {
@@ -17,6 +18,11 @@
 <form method="post">
   <input type="hidden" asp-for="Hareket.Id" />
 
+  <div style="margin-bottom:10px;">
+    <label asp-for="Hareket.KasaHesapId"><b>Nakit Kasa / Banka Hesabı</b></label><br />
+    <select asp-for="Hareket.KasaHesapId" asp-items="Model.HesapSecenekleri" required style="width:100%; padding:8px;"></select>
+    <a asp-page="/Kasa/Hesaplar">Hesapları yönet</a>
+  </div>
   <div style="margin-bottom:10px;">
     <label><b>Tarih</b></label><br />
     <input asp-for="Hareket.Tarih" type="date" />

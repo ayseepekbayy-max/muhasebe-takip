@@ -14,6 +14,7 @@
         </div>
 
         <div class="dashboard-hero-actions">
+            <a class="dashboard-action" asp-page="/Kasa/Hesaplar">Nakit Kasa / Banka Hesapları</a>
             <a class="dashboard-action dashboard-action-primary" href="/Kasa/HareketEkle">Kasa Hareketi Ekle</a>
             <a class="dashboard-action" href="/Raporlar">Raporları Aç</a>
         </div>
@@ -158,7 +159,7 @@
                 </div>
 
                 <div class="balance-card">
-                    <span>Güncel Kasa Bakiye</span>
+                    <span>Nakit + Banka Bakiyesi</span>
                     <strong class="dashboard-card-balance">@Model.KasaBakiye.ToString("N2") TL</strong>
                 </div>
 

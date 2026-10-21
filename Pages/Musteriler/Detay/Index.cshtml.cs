@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Musteriler.Detay;
 
@@ -15,6 +16,8 @@ public class IndexModel : PageModel
         _db = db;
     }
 
+    [BindProperty] public int? KasaHesapId { get; set; }
+    public List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> HesapSecenekleri { get; set; } = new();
     public Musteri? Musteri { get; set; }
     public List<MusteriIs> Isler { get; set; } = new();
 
@@ -79,6 +82,11 @@ public class IndexModel : PageModel
             return Page();
         }
 
+        if (YeniIsGelir > 0 && !await KasaHesapService.GecerliMiAsync(_db, firmaId.Value, KasaHesapId))
+        {
+            Hata = KasaHesapService.SecimHatasi;
+            return Page();
+        }
         if (YeniIsGelir < 0)
         {
             Hata = "Gelir 0'dan küçük olamaz.";
@@ -113,6 +121,7 @@ if (YeniIsGelir > 0)
     Tarih = kayitTarihi,
     Tip = HareketTipi.Giris,
     Tutar = YeniIsGelir,
+    KasaHesapId = KasaHesapId,
     Aciklama = $"Müşteri tahsilatı - {musteriAdi} - {YeniIsAdi}"
 };
 
@@ -280,6 +289,7 @@ return RedirectToPage(new { id });
 
     private async Task YukleAsync(int id, int firmaId)
     {
+        HesapSecenekleri = await KasaHesapService.SeceneklerAsync(_db, firmaId);
         Musteri = await _db.Musteriler
             .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi);
 

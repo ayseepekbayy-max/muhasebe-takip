@@ -17,8 +17,9 @@
         </div>
 
         <div class="app-page-actions">
+            <a class="btn btn-outline-primary" asp-page="/Kasa/Hesaplar">Kasa / Banka Hesapları</a>
             <a class="btn btn-primary" href="/Kasa/HareketEkle">Hareket Ekle</a>
-            <form method="post" asp-page-handler="DisaAktar">
+            <form method="post" asp-page-handler="DisaAktar"><input type="hidden" name="HesapId" value="@Model.HesapId"/>
                 <button type="submit" class="btn btn-outline-success">Excel İndir</button>
             </form>
             <a class="btn btn-outline-dark" href="/">Kasa Özeti</a>
@@ -52,6 +53,7 @@
         </article>
     </section>
 
+    <form method="get" class="app-filter-bar"><div class="form-field"><label asp-for="HesapId">Hesaba Göre Filtrele</label><select asp-for="HesapId" asp-items="Model.HesapSecenekleri"><option value="">Tüm hesaplar</option><option value="0">Hesap atanmamış eski kayıtlar</option></select></div><button class="btn btn-outline-primary">Uygula</button></form>
     <section class="app-filter-bar">
         <div class="form-field">
             <label for="kasaSearch">Hareket ara</label>
@@ -83,6 +85,7 @@
                         <th>Tarih</th>
                         <th>Tip</th>
                         <th>Tutar</th>
+                        <th>Hesap</th>
                         <th>Cari</th>
                         <th>Açıklama</th>
                         <th>İşlem</th>
@@ -93,7 +96,7 @@
                     @if (Model.Hareketler.Count == 0)
                     {
                         <tr>
-                            <td colspan="6" class="empty-row">Henüz hareket yok.</td>
+                            <td colspan="7" class="empty-row">Henüz hareket yok.</td>
                         </tr>
                     }
                     else
@@ -117,6 +120,7 @@
                                     @h.Tutar.ToString("N2")
                                 </td>
 
+                                <td>@(h.KasaHesap?.Ad ?? "Hesap atanmamış (eski kayıt)")</td>
                                 <td>@(h.CariKart?.Unvan ?? "-")</td>
 
                                 <td>@(string.IsNullOrWhiteSpace(h.Aciklama) ? "-" : h.Aciklama)</td>

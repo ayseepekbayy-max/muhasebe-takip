@@ -34,12 +34,12 @@ try
     var targetUser = new Kullanici { FirmaId = target.Id, KullaniciAdi = user.KullaniciAdi, Email = user.Email, Sifre = "other" };
     db.AddRange(user, targetUser); await db.SaveChangesAsync();
     // One complete row in every explicitly supported table, plus two identical cash rows.
-    Type[] types = [typeof(CariKart), typeof(StokUrun), typeof(Calisan), typeof(Musteri), typeof(Cek), typeof(FaturaNumaraAyari),
+    Type[] types = [typeof(KasaHesap), typeof(KasaTransfer), typeof(CariKart), typeof(StokUrun), typeof(Calisan), typeof(Musteri), typeof(Cek), typeof(FaturaNumaraAyari),
         typeof(OdemePlani), typeof(MaliyetKaydi), typeof(Fatura), typeof(MusteriIs), typeof(CalisanAvans), typeof(CalisanPuantaj),
         typeof(CalisanMaasArsiv), typeof(StokHareket), typeof(FaturaKalem), typeof(MusteriMasraf), typeof(KasaHareket),
         typeof(EkDosya), typeof(OdemeHareketi), typeof(OdemeBildirimGecmisi), typeof(OdemeBildirimGizleme), typeof(YoneticiNotu), typeof(IslemGecmisi)];
     var seeded = new Dictionary<string, object>();
-    var links = new Dictionary<string, string> { ["CariKartId"]="CariKart", ["StokUrunId"]="StokUrun", ["CalisanId"]="Calisan", ["MusteriId"]="Musteri",
+    var links = new Dictionary<string, string> { ["KasaHesapId"]="KasaHesap", ["KaynakHesapId"]="KasaHesap", ["HedefHesapId"]="KasaHesap", ["CariKartId"]="CariKart", ["StokUrunId"]="StokUrun", ["CalisanId"]="Calisan", ["MusteriId"]="Musteri",
         ["MusteriIsId"]="MusteriIs", ["FaturaId"]="Fatura", ["OdemePlaniId"]="OdemePlani" };
     foreach (var type in types)
     {
@@ -55,6 +55,11 @@ try
             else if (property.ClrType == typeof(string)) value = "test";
             else if (property.ClrType.IsEnum) value = Enum.ToObject(property.ClrType, 1);
             property.PropertyInfo.SetValue(entity, value);
+        }
+        if (entity is KasaTransfer transferFixture)
+        {
+            var destination = new KasaHesap { FirmaId=source.Id, Ad="Transfer destination" };
+            db.Add(destination); await db.SaveChangesAsync(); transferFixture.HedefHesapId=destination.Id;
         }
         // Include archived cards and employees instead of filtering them out.
         type.GetProperty("AktifMi")?.SetValue(entity, false);
@@ -98,12 +103,12 @@ try
     }
     var package = Read(bytes);
     var manifestText = JsonSerializer.Serialize(package);
-    Check(package.Tables.Count == 23 && package.Tables.Values.Sum(x=>x.Count) == 24, "All 23 tables and duplicate cash included");
+    Check(package.Tables.Count == 25 && package.Tables.Values.Sum(x=>x.Count) == 27, "All 25 tables and duplicate cash included");
     Check(!manifestText.Contains("NEVER_EXPORT") && !manifestText.Contains("DO_NOT_EXPORT") && !manifestText.Contains("Sifre"), "Tenant isolation and no secrets/chat");
     Check(package.Documents.Count == 2, "Both attachment and check image packaged");
     Check(package.Tables["CariKart"][0]["AktifMi"].GetBoolean() == false, "Archived cards included");
     var result = await service.RestoreAsync(new MemoryStream(bytes), target.Id);
-    Check(result.Records == 24 && result.Files == 2, "Full restore counts");
+    Check(result.Records == 27 && result.Files == 2, "Full restore counts");
     db.ChangeTracker.Clear();
     var restoredInvoice = await db.Faturalar.SingleAsync(x=>x.FirmaId==target.Id);
     var restoredCari = await db.CariKartlar.SingleAsync(x=>x.FirmaId==target.Id);
@@ -115,6 +120,12 @@ try
     Check((await db.OdemeBildirimGecmisleri.SingleAsync(x=>x.FirmaId==target.Id)).KullaniciId == targetUser.Id, "User reference mapped within target firm");
     var restoredFile = await db.EkDosyalar.SingleAsync(x=>x.FirmaId==target.Id);
     Check(await File.ReadAllTextAsync(Path.Combine(env.WebRootPath, restoredFile.DosyaYolu.TrimStart('/'))) == "PDF fixture bytes", "Attachment bytes restored");
+    var restoredAccounts=await db.KasaHesaplar.Where(x=>x.FirmaId==target.Id).ToListAsync();
+    var restoredTransfer=await db.KasaTransferler.SingleAsync(x=>x.FirmaId==target.Id);
+    Check(restoredAccounts.Count==2 && restoredAccounts.Any(x=>x.Id==restoredTransfer.KaynakHesapId) &&
+        restoredAccounts.Any(x=>x.Id==restoredTransfer.HedefHesapId), "Account and transfer references remapped");
+    Check(restoredCash.Count(x=>x.KasaHesapId!=null)==1 && restoredAccounts.Any(a=>a.Id==restoredCash.Single(x=>x.KasaHesapId!=null).KasaHesapId),
+        "Assigned and legacy unassigned cash both preserved");
     var again = Read(await service.ExportAsync(target.Id));
     foreach (var table in package.Tables)
     {
@@ -208,7 +219,7 @@ try
     await db.SaveChangesAsync();
     var orphanBytes = await service.ExportAsync(source.Id);
     var orphanPackage = Read(orphanBytes);
-    Check(orphanPackage.Version==3 && orphanPackage.UnresolvedSalaryEmployees.Count==2, "Versioned explicit unresolved salary references");
+    Check(orphanPackage.Version==4 && orphanPackage.UnresolvedSalaryEmployees.Count==2, "Versioned explicit unresolved salary references");
     Check(orphanPackage.Tables["CalisanMaasArsiv"].Count==2 && orphanPackage.Tables["Calisan"].Count==1, "All salary records kept; no employee fabricated");
     Check(!JsonSerializer.Serialize(orphanPackage).Contains("PRIVATE_FOREIGN_EMPLOYEE"), "No foreign employee data included");
     using (var z=new ZipArchive(new MemoryStream(orphanBytes),ZipArchiveMode.Read))
@@ -247,8 +258,12 @@ try
     await Rejected(Change(orphanBytes,p=>p.UnresolvedSalaryEmployees.Clear()),missingUserTarget.Id,"Missing unresolved declarations rejected");
     await Rejected(Change(bytes,p=>p.UnresolvedSalaryEmployees.Add(new(((CalisanMaasArsiv)seeded["CalisanMaasArsiv"]).Id,originalEmployeeId))),
         missingUserTarget.Id,"Resolved employees cannot be falsely declared unresolved");
-    var compatibility=await service.RestoreAsync(new MemoryStream(Change(bytes,p=>p.Version=2)),version2Target.Id);
-    Check(compatibility.Records==24, "Valid previous version 2 ZIP remains supported");
+    var compatibility=await service.RestoreAsync(new MemoryStream(Change(bytes,p=>
+    {
+        p.Version=2; p.Tables.Remove("KasaHesap"); p.Tables.Remove("KasaTransfer");
+        foreach(var row in p.Tables["KasaHareket"]) row.Remove("KasaHesapId");
+    })),version2Target.Id);
+    Check(compatibility.Records==24 && compatibility.Warnings.Any(x=>x.Contains("hesap atanmadan")), "Valid previous version 2 ZIP remains supported");
     // Restore source fixture for the remaining generic diagnostic and missing-file checks.
     var sourceSalary=await db.CalisanMaasArsivleri.SingleAsync(x=>x.Id==salary.Id);
     sourceSalary.CalisanId=originalEmployeeId;
@@ -275,7 +290,21 @@ try
     File.Delete(Path.Combine(env.WebRootPath,"uploads/faturalar/fixture.pdf"));
     try { await service.ExportAsync(source.Id); throw new Exception("Missing document accepted"); }
     catch (Exception ex) when (ex is AccountingBackupService.BackupException or FileNotFoundException) { checks++; }
-    Console.WriteLine($"PASS: {checks} backup checks across 23 tables, file integrity, tenant isolation, rollback, and legacy restore.");
+    if(args.Length==1)
+    {
+        var providedBytes=await File.ReadAllBytesAsync(args[0]);
+        var provided=Read(providedBytes);
+        var providedTarget=new Firma { FirmaAdi="Isolated uploaded backup check" }; db.Add(providedTarget); await db.SaveChangesAsync();
+        foreach(var u in provided.Users.Where(x=>!string.IsNullOrWhiteSpace(x.Username)))
+            db.Add(new Kullanici { FirmaId=providedTarget.Id,KullaniciAdi=u.Username,Email=u.Email });
+        await db.SaveChangesAsync();
+        var providedResult=await service.RestoreAsync(new MemoryStream(providedBytes),providedTarget.Id);
+        Check(providedResult.Records==provided.Tables.Values.Sum(x=>x.Count), "Uploaded backup restores all original rows without modification");
+        Check((await db.CalisanMaasArsivleri.Where(x=>x.FirmaId==providedTarget.Id && x.CalisanId<=0).CountAsync())==provided.UnresolvedSalaryEmployees.Count,
+            "Uploaded backup preserves unresolved salary records");
+        Console.WriteLine($"Uploaded backup: {providedResult.Records} records restored in isolated temporary database.");
+    }
+    Console.WriteLine($"PASS: {checks} backup checks across 25 tables, file integrity, tenant isolation, rollback, and legacy restore.");
 }
 finally { await db.Database.CloseConnectionAsync(); Directory.Delete(root, true); }
 

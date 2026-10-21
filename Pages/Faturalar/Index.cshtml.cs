@@ -19,6 +19,8 @@ public class IndexModel : PageModel
         _islemGecmisi = islemGecmisi;
     }
 
+    public List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> HesapSecenekleri { get; set; } = new();
+
     public List<Fatura> Faturalar { get; set; } = new();
     public List<CariKart> Cariler { get; set; } = new();
 
@@ -161,6 +163,12 @@ public class IndexModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
+        if (!await KasaHesapService.GecerliMiAsync(_db, firmaId.Value, Odeme.KasaHesapId))
+        {
+            TempData["Hata"] = KasaHesapService.SecimHatasi;
+            return RedirectToPage();
+        }
+
         if (Odeme.FaturaId <= 0 || Odeme.Tutar <= 0)
         {
             TempData["Hata"] = "Ödeme/tahsilat tutarı sıfırdan büyük olmalıdır.";
@@ -206,6 +214,7 @@ public class IndexModel : PageModel
             CariKartId = fatura.CariKartId,
             FaturaId = fatura.Id,
             Tarih = ToUtcDate(Odeme.Tarih),
+            KasaHesapId = Odeme.KasaHesapId,
             Tip = kasaTipi,
             Tutar = islenecekTutar,
             Aciklama = $"{islemAdi} - {fatura.FaturaNo} - {fatura.CariKart?.Unvan}"
@@ -284,6 +293,7 @@ public class IndexModel : PageModel
 
     private async Task VerileriYukleAsync(int firmaId)
     {
+        HesapSecenekleri = await KasaHesapService.SeceneklerAsync(_db, firmaId);
         Cariler = await _db.CariKartlar
             .Where(x => x.FirmaId == firmaId && x.AktifMi)
             .OrderBy(x => x.Unvan)
@@ -541,6 +551,7 @@ public class IndexModel : PageModel
 
     public class OdemeForm
     {
+        public int? KasaHesapId { get; set; }
         public int FaturaId { get; set; }
         public decimal Tutar { get; set; }
         public DateTime Tarih { get; set; } = DateTime.UtcNow.Date;

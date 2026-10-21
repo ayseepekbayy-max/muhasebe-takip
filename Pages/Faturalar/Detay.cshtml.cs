@@ -24,6 +24,8 @@ public class DetayModel : PageModel
         _islemGecmisi = islemGecmisi;
     }
 
+    public List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> HesapSecenekleri { get; set; } = new();
+
     public Fatura? Fatura { get; set; }
     public Firma? Firma { get; set; }
     public List<KasaHareket> Hareketler { get; set; } = new();
@@ -87,6 +89,13 @@ public class DetayModel : PageModel
             return RedirectToPage(new { id });
         }
 
+        if (DurumForm.Durum == FaturaDurumu.Odendi && fatura.KalanTutar > 0 &&
+            !await KasaHesapService.GecerliMiAsync(_db, firmaId.Value, DurumForm.KasaHesapId))
+        {
+            TempData["Hata"] = KasaHesapService.SecimHatasi;
+            return RedirectToPage(new { id });
+        }
+
         var eskiDeger = IslemGecmisiSnapshots.Fatura(fatura);
         var eskiDurum = fatura.Durum;
         var kalan = Math.Max(0, fatura.GenelToplam - fatura.OdenenToplam);
@@ -100,6 +109,7 @@ public class DetayModel : PageModel
                 kasaHareketi = new KasaHareket
                 {
                     FirmaId = firmaId.Value,
+                    KasaHesapId = DurumForm.KasaHesapId,
                     CariKartId = fatura.CariKartId,
                     FaturaId = fatura.Id,
                     Tarih = IndexModel.ToUtcDate(DurumForm.Tarih),
@@ -208,6 +218,7 @@ public class DetayModel : PageModel
 
     private async Task YukleAsync(int id, int firmaId)
     {
+        HesapSecenekleri = await KasaHesapService.SeceneklerAsync(_db, firmaId);
         Firma = await _db.Firmalar.FirstOrDefaultAsync(x => x.Id == firmaId);
         Fatura = await _db.Faturalar
             .Include(x => x.CariKart)
@@ -237,6 +248,7 @@ public class DetayModel : PageModel
 
     public class DurumGuncelleForm
     {
+        public int? KasaHesapId { get; set; }
         public FaturaDurumu Durum { get; set; } = FaturaDurumu.Bekliyor;
         public DateTime Tarih { get; set; } = DateTime.UtcNow.Date;
     }

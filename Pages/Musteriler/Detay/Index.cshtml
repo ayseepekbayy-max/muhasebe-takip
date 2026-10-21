@@ -66,6 +66,7 @@ else
             <h3 style="margin-top:0;">Yeni İş Ekle</h3>
 
             <form method="post" asp-page-handler="IsEkle">
+                <div><label asp-for="KasaHesapId">Tahsilatın Hesabı (gelir girilirse zorunlu)</label><select asp-for="KasaHesapId" asp-items="Model.HesapSecenekleri"></select></div>
                 <div style="margin-bottom:10px;">
                     <label><b>Tarih</b></label><br />
                     <input asp-for="YeniIsTarih" type="date" style="width:100%; padding:8px;" />

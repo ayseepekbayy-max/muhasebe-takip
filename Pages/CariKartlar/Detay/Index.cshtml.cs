@@ -26,6 +26,8 @@ public class IndexModel : PageModel
     public decimal ToplamAlis { get; set; }
     public decimal Bakiye => ToplamSatis + ToplamCikis - ToplamAlis - ToplamGiris;
 
+    [BindProperty] public int? KasaHesapId { get; set; }
+
     [BindProperty]
     public decimal Tutar { get; set; }
 
@@ -58,6 +60,11 @@ public class IndexModel : PageModel
         if (Cari == null)
             return NotFound();
 
+        if (!await KasaHesapService.GecerliMiAsync(_db, firmaId.Value, KasaHesapId))
+        {
+            ModelState.AddModelError("", KasaHesapService.SecimHatasi);
+            return Page();
+        }
         if (Tutar <= 0)
         {
             ModelState.AddModelError("", "Tutar 0'dan büyük olmalı.");
@@ -68,6 +75,7 @@ public class IndexModel : PageModel
         {
             FirmaId = firmaId.Value,
             Tarih = DateTime.UtcNow,
+            KasaHesapId = KasaHesapId,
             Tip = tip,
             Tutar = Tutar,
             Aciklama = (Aciklama ?? "").Trim(),

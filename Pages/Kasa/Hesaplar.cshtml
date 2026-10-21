@@ -1,0 +1,48 @@
+@page
+@using MuhasebeTakip2.App.Models
+@model MuhasebeTakip2.App.Pages.Kasa.HesaplarModel
+@{ ViewData["Title"] = "Kasa ve Banka Hesapları"; }
+<div class="app-page">
+    <section class="app-page-header">
+        <div><span class="app-page-eyebrow">Kasa / Banka</span><h1>Kasa ve Banka Hesapları</h1><p>Nakit kasaları ve banka hesaplarını ayrı takip edin. Transferler gelir veya gider sayılmaz.</p></div>
+        <div class="app-page-actions"><a class="btn btn-primary" asp-page="/Kasa/HareketEkle">Tahsilat / Ödeme</a><a class="btn btn-outline-dark" asp-page="/Kasa/Hareketler">Hareketler</a></div>
+    </section>
+    @if (!string.IsNullOrWhiteSpace(Model.Hata)) { <div class="app-alert app-alert-danger" role="alert">@Model.Hata</div> }
+    <section class="metric-grid metric-grid-three">
+        <article class="metric-card"><span>Nakit Toplamı</span><strong>@Model.Hesaplar.Where(x => x.Hesap.Tur == KasaHesapTuru.Nakit).Sum(x => x.Bakiye).ToString("N2") ₺</strong></article>
+        <article class="metric-card"><span>Banka Toplamı</span><strong>@Model.Hesaplar.Where(x => x.Hesap.Tur == KasaHesapTuru.Banka).Sum(x => x.Bakiye).ToString("N2") ₺</strong></article>
+        <article class="metric-card"><span>Genel Toplam</span><strong>@Model.ToplamBakiye.ToString("N2") ₺</strong></article>
+    </section>
+    @if (Model.AtanmamisHareketSayisi > 0) { <div class="app-alert">Hesap atanmamış @Model.AtanmamisHareketSayisi eski hareket: @Model.AtanmamisBakiye.ToString("N2") ₺. Genel toplama dahildir. Hareketler ekranından hesap seçerek düzenleyebilirsiniz.</div> }
+    <section class="dashboard-panel">
+        <h2>Hesap Bakiyeleri</h2><p>Pasif hesapların bakiyeleri de toplamda korunur. Pasif hesaba yeni hareket eklenmez.</p>
+        <div class="table-wrap"><table class="modern-table"><thead><tr><th>Hesap</th><th>Tür</th><th>Açılış</th><th>Bakiye</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>
+        @foreach (var row in Model.Hesaplar) {
+            <tr><td>@row.Hesap.Ad</td><td>@(row.Hesap.Tur == KasaHesapTuru.Nakit ? "Nakit" : "Banka")</td><td>@row.Hesap.AcilisBakiyesi.ToString("N2") ₺</td><td>@row.Bakiye.ToString("N2") ₺</td><td>@(row.Hesap.AktifMi ? "Aktif" : "Pasif")</td><td><form method="post" asp-page-handler="Aktiflik"><input type="hidden" name="id" value="@row.Hesap.Id"/><button class="btn btn-outline-dark btn-sm">@(row.Hesap.AktifMi ? "Pasife Al" : "Aktifleştir")</button></form></td></tr>
+        }
+        @if (Model.Hesaplar.Count == 0) { <tr><td colspan="6">Önce aşağıdan nakit kasa veya banka hesabı ekleyin.</td></tr> }
+        </tbody></table></div>
+    </section>
+    <section class="app-form-panel"><h2>Hesap Ekle</h2><p>Açılış bakiyesi gelir/gider sayılmaz. İlk kayıt anındaki mevcut parayı belirtir; boş bırakırsanız sıfırdır.</p>
+        <form method="post" asp-page-handler="Ekle" class="app-form-grid">
+            <div class="form-field"><label asp-for="Yeni.Ad">Hesap Adı</label><input asp-for="Yeni.Ad" maxlength="100" placeholder="Nakit Kasa / Banka Adı" required/></div>
+            <div class="form-field"><label asp-for="Yeni.Tur">Tür</label><select asp-for="Yeni.Tur"><option value="1">Nakit</option><option value="2">Banka</option></select></div>
+            <div class="form-field"><label asp-for="Yeni.AcilisBakiyesi">Açılış Bakiyesi (₺)</label><input asp-for="Yeni.AcilisBakiyesi" type="number" step="0.01"/></div>
+            <div class="form-actions-row"><button class="btn btn-primary">Hesap Ekle</button></div>
+        </form>
+    </section>
+    <section class="app-form-panel"><h2>Hesaplar Arası Transfer</h2><p>Bir hesaptan düşen tutar diğerine eklenir. Toplam para, cari bakiyesi ve gelir/gider raporları değişmez.</p>
+        <form method="post" asp-page-handler="Transfer" class="app-form-grid">
+            <div class="form-field"><label asp-for="Transfer.KaynakHesapId">Paranın Çıkacağı Hesap</label><select asp-for="Transfer.KaynakHesapId" required><option value="">Hesap seçin</option>@foreach (var h in Model.Hesaplar.Where(x=>x.Hesap.AktifMi)) { <option value="@h.Hesap.Id">@h.Hesap.Ad</option> }</select></div>
+            <div class="form-field"><label asp-for="Transfer.HedefHesapId">Paranın Gireceği Hesap</label><select asp-for="Transfer.HedefHesapId" required><option value="">Hesap seçin</option>@foreach (var h in Model.Hesaplar.Where(x=>x.Hesap.AktifMi)) { <option value="@h.Hesap.Id">@h.Hesap.Ad</option> }</select></div>
+            <div class="form-field"><label asp-for="Transfer.Tutar">Tutar (₺)</label><input asp-for="Transfer.Tutar" type="number" min="0.01" step="0.01" required/></div>
+            <div class="form-field"><label asp-for="Transfer.Tarih">Tarih</label><input asp-for="Transfer.Tarih" type="date" required/></div>
+            <div class="form-field"><label asp-for="Transfer.Aciklama">Açıklama</label><input asp-for="Transfer.Aciklama" maxlength="500"/></div>
+            <div class="form-actions-row"><button class="btn btn-primary">Transferi Kaydet</button></div>
+        </form>
+    </section>
+    <section class="dashboard-panel"><h2>Son 100 Transfer</h2><div class="table-wrap"><table class="modern-table"><thead><tr><th>Tarih</th><th>Kaynak</th><th>Hedef</th><th>Tutar</th><th>Açıklama</th><th>İşlem</th></tr></thead><tbody>
+    @foreach (var t in Model.Transferler) { <tr><td>@t.Tarih.ToString("dd.MM.yyyy")</td><td>@t.KaynakHesap?.Ad</td><td>@t.HedefHesap?.Ad</td><td>@t.Tutar.ToString("N2") ₺</td><td>@t.Aciklama</td><td><form method="post" asp-page-handler="TransferSil" onsubmit="return confirm('Transfer iki hesaptan birlikte kaldırılacak. Devam edilsin mi?');"><input type="hidden" name="id" value="@t.Id"/><button class="btn btn-outline-danger btn-sm">Sil</button></form></td></tr> }
+    @if (Model.Transferler.Count == 0) { <tr><td colspan="6">Henüz transfer yok.</td></tr> }
+    </tbody></table></div></section>
+</div>
