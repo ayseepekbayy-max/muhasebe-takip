@@ -76,6 +76,8 @@
                 </div>
 
 
+                @if (Model.DemoGirisAcik)
+                {
                          <button type="submit"
                         asp-page-handler="Demo"
                         formnovalidate
@@ -84,6 +86,7 @@
                 </button>
 
                 <small>Örnek firma ve verilerle programı hızlıca inceleyin.</small>
+                }
                 <div class="auth-secondary-action">
                     <a href="/SifremiUnuttum">Şifremi Unuttum</a>
                 </div>

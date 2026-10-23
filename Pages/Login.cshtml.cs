@@ -13,11 +13,15 @@ public class LoginModel : PageModel
     private readonly AppDbContext _db;
 
     private readonly PrivateAccessService _privateAccess;
+    private readonly IWebHostEnvironment _environment;
 
-    public LoginModel(AppDbContext db, PrivateAccessService privateAccess)
+    public bool DemoGirisAcik => _environment.IsDevelopment();
+
+    public LoginModel(AppDbContext db, PrivateAccessService privateAccess, IWebHostEnvironment environment)
     {
         _db = db;
         _privateAccess = privateAccess;
+        _environment = environment;
     }
 
     [BindProperty]
@@ -122,6 +126,9 @@ public class LoginModel : PageModel
 
     public async Task<IActionResult> OnPostDemoAsync()
     {
+        if (!DemoGirisAcik)
+            return StatusCode(StatusCodes.Status403Forbidden);
+
         var kullanici = await DemoDataSeeder.PrepareDemoAsync(_db);
         var firma = kullanici.Firma;
 
