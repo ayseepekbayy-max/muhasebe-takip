@@ -132,7 +132,11 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         }
         catch (DbUpdateException ex) when (replyToMessageId.HasValue && IsMissingReply(ex)) { return InvalidReply(); }
         catch (MediaQuotaExceededException) { return StatusCode(507, new { error = "Medya kotası dolu. Yeni medya gönderilemedi." }); }
-        catch (MediaStorageUnavailableException) { return StatusCode(503, new { error = "Medya gönderimi şu anda tamamlanamıyor." }); }
+        catch (MediaStorageUnavailableException ex) {
+            HttpContext.RequestServices.GetService<ILogger<PanelModel>>()?.LogWarning(
+                "Private media upload stopped. Code={Code}; Stage={Stage}; Runtime={Runtime}", ex.DiagnosticCode, ex.Stage, ex.Runtime);
+            return StatusCode(503, new { error = "Medya gönderimi şu anda tamamlanamıyor." });
+        }
         return new JsonResult(new { success = true });
     }
 

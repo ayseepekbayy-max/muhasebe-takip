@@ -12,7 +12,11 @@ public sealed class PrivateMediaOptions
     public long DatabaseReserveBytes { get; set; } = 128L * 1024 * 1024;
 }
 public sealed class MediaQuotaExceededException() : Exception("Medya kotası dolu; yeni medya gönderilemedi.");
-public sealed class MediaStorageUnavailableException() : Exception("Medya depolaması şu anda kullanılamıyor.");
+public sealed class MediaStorageUnavailableException(string diagnosticCode = "MEDIA_UNAVAILABLE", string stage = "CAPACITY", string runtime = "UNKNOWN") : Exception("Medya depolaması şu anda kullanılamıyor.") {
+    public string DiagnosticCode { get; } = diagnosticCode;
+    public string Stage { get; } = stage;
+    public string Runtime { get; } = runtime;
+}
 public sealed class MediaMissingException() : Exception("Medya artık mevcut değil.");
 
 // PostgreSQL only. No filesystem/R2 fallback, URLs, filenames, or independent upload outbox.
@@ -25,16 +29,47 @@ public sealed class PrivateMediaStore(AppDbContext db, TimeProvider clock, IOpti
     public static bool Expired(PrivateMessage m, DateTime now) => m.Kind != PrivateMessageKind.Text &&
         (m.CreatedAtUtc <= now.AddHours(-24) || m.ExpiredAtUtc != null ||
          (m.Kind == PrivateMessageKind.ViewOncePhoto && m.PhotoAccessExpiresAtUtc <= now));
-    async Task CapacityAsync(CancellationToken token)
+    // This projection replaces the existing size SELECT. Only catalog metadata is read.
+    public sealed class RuntimeCapacity {
+        public long DatabaseBytes { get; set; }
+        public long RoleOid { get; set; }
+        public bool ContentsSelect { get; set; }
+        public bool ContentsInsert { get; set; }
+        public bool ContentsDelete { get; set; }
+        public bool QuotaSelect { get; set; }
+        public bool QuotaUpdate { get; set; }
+        public bool MessageInsert { get; set; }
+        public bool MessageSequence { get; set; }
+        public bool QuotaTriggerEnabled { get; set; }
+        public bool QuotaFunctionExecute { get; set; }
+        public string SafeSummary => $"RoleOid={RoleOid};ContentsSelect={ContentsSelect};ContentsInsert={ContentsInsert};ContentsDelete={ContentsDelete};QuotaSelect={QuotaSelect};QuotaUpdate={QuotaUpdate};MessageInsert={MessageInsert};MessageSequence={MessageSequence};QuotaTrigger={QuotaTriggerEnabled};QuotaFunctionExecute={QuotaFunctionExecute}";
+    }
+    async Task<RuntimeCapacity> CapacityAsync(CancellationToken token)
     {
         var config = options.CurrentValue;
-        if (!db.Database.IsNpgsql() || config.BlockNewUploads || config.MaxDatabaseBytes is not > 0 || config.DatabaseReserveBytes < 0)
-            throw new MediaStorageUnavailableException();
+        if (!db.Database.IsNpgsql()) throw new MediaStorageUnavailableException("MEDIA_PROVIDER");
+        if (config.BlockNewUploads) throw new MediaStorageUnavailableException("MEDIA_UPLOADS_BLOCKED");
+        if (config.MaxDatabaseBytes is not > 0 || config.DatabaseReserveBytes < 0)
+            throw new MediaStorageUnavailableException("MEDIA_CAPACITY_CONFIG");
         // Conservative reserve for the WHOLE logical media allowance. Not a WAL/free-filesystem probe.
-        var size = await db.Database.SqlQueryRaw<long>("SELECT pg_database_size(current_database()) AS \"Value\"").SingleAsync(token);
+        var state = await db.Database.SqlQueryRaw<RuntimeCapacity>("""
+            SELECT pg_catalog.pg_database_size(pg_catalog.current_database()) AS "DatabaseBytes",
+              (SELECT oid::bigint FROM pg_catalog.pg_roles WHERE rolname=current_user) AS "RoleOid",
+              coalesce(pg_catalog.has_table_privilege(pg_catalog.to_regclass('public."PrivateMediaContents"'),'SELECT'),false) AS "ContentsSelect",
+              coalesce(pg_catalog.has_table_privilege(pg_catalog.to_regclass('public."PrivateMediaContents"'),'INSERT'),false) AS "ContentsInsert",
+              coalesce(pg_catalog.has_table_privilege(pg_catalog.to_regclass('public."PrivateMediaContents"'),'DELETE'),false) AS "ContentsDelete",
+              coalesce(pg_catalog.has_table_privilege(pg_catalog.to_regclass('public."PrivateMediaQuotas"'),'SELECT'),false) AS "QuotaSelect",
+              coalesce(pg_catalog.has_column_privilege(pg_catalog.to_regclass('public."PrivateMediaQuotas"'),'UsedBytes','UPDATE'),false) AS "QuotaUpdate",
+              coalesce(pg_catalog.has_table_privilege(pg_catalog.to_regclass('public."PrivateMessages"'),'INSERT'),false) AS "MessageInsert",
+              coalesce(pg_catalog.has_sequence_privilege(pg_catalog.pg_get_serial_sequence('public."PrivateMessages"','Id'),'USAGE'),false) AS "MessageSequence",
+              EXISTS(SELECT 1 FROM pg_catalog.pg_trigger WHERE tgrelid=pg_catalog.to_regclass('public."PrivateMediaContents"') AND tgname='firmova_private_media_quota_trigger' AND tgenabled IN ('O','A')) AS "QuotaTriggerEnabled",
+              coalesce(pg_catalog.has_function_privilege(pg_catalog.to_regprocedure('public.firmova_private_media_quota()'),'EXECUTE'),false) AS "QuotaFunctionExecute"
+            """).SingleAsync(token);
+        var size=state.DatabaseBytes;
         if (size > config.MaxDatabaseBytes.Value || config.MaxDatabaseBytes.Value - size < 4 * TotalLimit ||
             config.MaxDatabaseBytes.Value - size - 4 * TotalLimit < config.DatabaseReserveBytes)
-            throw new MediaStorageUnavailableException();
+            throw new MediaStorageUnavailableException("MEDIA_CAPACITY_HEADROOM",runtime:state.SafeSummary);
+        return state;
     }
     public async Task SaveAsync(PrivateMessage message, byte[] bytes, CancellationToken token)
     {
@@ -44,23 +79,35 @@ public sealed class PrivateMediaStore(AppDbContext db, TimeProvider clock, IOpti
             (photo && message.PhotoViewHours is not (null or 1 or 3 or 5)) || Detect(bytes, photo) is not string type)
             throw new ArgumentException("Geçersiz medya.");
         message.MediaContentType = type; message.MediaKey = Guid.NewGuid().ToString("N"); message.CreatedAtUtc = Now;
+        var stage="BEGIN";var runtime="UNKNOWN";
         try
         {
             await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, token);
-            await CapacityAsync(token);
-            db.PrivateMessages.Add(message); await db.SaveChangesAsync(token);
+            stage="CAPACITY";runtime=(await CapacityAsync(token)).SafeSummary;
+            stage="MESSAGE_INSERT";db.PrivateMessages.Add(message); await db.SaveChangesAsync(token);
             db.PrivateMediaContents.Add(new() { MessageId = message.Id, MediaKey = message.MediaKey,
                 Payload = bytes.ToArray(), CreatedAtUtc = message.CreatedAtUtc, ExpiresAtUtc = message.CreatedAtUtc.AddHours(24) });
             // PostgreSQL trigger locks the quota row, including raw inserts and FK cascades.
-            await db.SaveChangesAsync(token); await tx.CommitAsync(token);
+            stage="PAYLOAD_INSERT";await db.SaveChangesAsync(token);
+            stage="COMMIT";await tx.CommitAsync(token);
         }
         catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "P0001", MessageText: "PRIVATE_MEDIA_QUOTA" })
             { throw new MediaQuotaExceededException(); }
         catch (DbUpdateException ex) when (ex.InnerException is Npgsql.NpgsqlException && ex.InnerException is not Npgsql.PostgresException { SqlState: "23503" })
-            { throw new MediaStorageUnavailableException(); }
+            { throw new MediaStorageUnavailableException(DatabaseFailureCode(ex.InnerException),stage,runtime); }
         catch (OperationCanceledException) { throw; }
-        catch (Npgsql.NpgsqlException) { throw new MediaStorageUnavailableException(); }
+        catch (Npgsql.NpgsqlException ex) { throw new MediaStorageUnavailableException(DatabaseFailureCode(ex),stage,runtime); }
     }
+    // Fixed codes only; never attach exception objects, SQL, parameters or connection details.
+    static string DatabaseFailureCode(Exception? error) => error switch {
+        Npgsql.PostgresException { SqlState: "42501" } => "MEDIA_DB_PERMISSION",
+        Npgsql.PostgresException { SqlState: "42P01" or "42703" } => "MEDIA_DB_SCHEMA",
+        Npgsql.PostgresException { SqlState: "23514" } => "MEDIA_DB_CONSTRAINT",
+        Npgsql.PostgresException { SqlState: "25006" } => "MEDIA_DB_READ_ONLY",
+        Npgsql.PostgresException { SqlState: "P0001" } => "MEDIA_DB_TRIGGER",
+        Npgsql.PostgresException => "MEDIA_DB_SERVER",
+        _ => "MEDIA_DB_CONNECTION"
+    };
     public async Task<byte[]> ReadAsync(PrivateMessage message, CancellationToken token)
     {
         if (message.MediaKey == null || Expired(message, Now)) throw new MediaMissingException();
