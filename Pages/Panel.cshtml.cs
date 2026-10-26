@@ -30,7 +30,7 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
     public DateTime? OtherLastSeenAtUtc { get; private set; }
 
     public int OtherTypingRemainingMs { get; private set; }
-    public DateTime ServerNowUtc => DateTime.UtcNow;
+    public DateTime ServerNowUtc => media.Now;
 
     private bool HasAccess => HttpContext.Session.GetString("PrivateMode") == "1" &&
         HttpContext.Session.GetString("PrivatePerson") is "1" or "2";
@@ -67,8 +67,8 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
             kind = (int)message.Kind,
             photoViewHours = message.PhotoViewHours,
             viewed = message.ViewedAtUtc.HasValue,
-            expired = PhotoExpired(message),
-            available = message.MediaKey != null,
+            expired = PrivateMediaStore.Expired(message, media.Now),
+            available = message.MediaAvailable,
             durationSeconds = message.DurationSeconds,
             createdAtUtc = message.CreatedAtUtc
         }) });
@@ -120,21 +120,19 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         var bytes = buffer.ToArray();
         var type = PrivateMediaStore.Detect(bytes, photo);
         if (type is null) return BadRequest(new { error = "Desteklenmeyen dosya. Fotoğraf: JPEG/PNG; ses: WebM/Opus, Ogg/Opus veya M4A/AAC." });
-        var key = await media.SaveAsync(bytes, HttpContext.RequestAborted);
         try
         {
-            db.PrivateMessages.Add(new PrivateMessage {
+            await media.SaveAsync(new PrivateMessage {
                 SenderPerson = HttpContext.Session.GetString("PrivatePerson") == "1" ? 1 : 2,
-                SenderName = name, Content = "", CreatedAtUtc = DateTime.UtcNow,
+                SenderName = name, Content = "",
                 ReplyToMessageId = replyToMessageId, IsReply = replyToMessageId.HasValue,
                 Kind = photo ? PrivateMessageKind.ViewOncePhoto : PrivateMessageKind.Audio,
-                PhotoViewHours = photo ? photoViewHours : null,
-                MediaKey = key, MediaContentType = type, DurationSeconds = photo ? null : durationSeconds
-            });
-            await db.SaveChangesAsync(HttpContext.RequestAborted);
+                PhotoViewHours = photo ? photoViewHours : null, DurationSeconds = photo ? null : durationSeconds
+            }, bytes, HttpContext.RequestAborted);
         }
-        catch (DbUpdateException ex) when (replyToMessageId.HasValue && IsMissingReply(ex)) { media.Delete(key); return InvalidReply(); }
-        catch { media.Delete(key); throw; }
+        catch (DbUpdateException ex) when (replyToMessageId.HasValue && IsMissingReply(ex)) { return InvalidReply(); }
+        catch (MediaQuotaExceededException) { return StatusCode(507, new { error = "Medya kotası dolu. Yeni medya gönderilemedi." }); }
+        catch (MediaStorageUnavailableException) { return StatusCode(503, new { error = "Medya gönderimi şu anda tamamlanamıyor." }); }
         return new JsonResult(new { success = true });
     }
 
@@ -175,21 +173,22 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
 
     public async Task<IActionResult> OnGetAudioAsync(int id)
     {
+        Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
         if (!HasAccess) return Unauthorized();
         var message = await AccessibleMedia(id).AsNoTracking().SingleOrDefaultAsync(m => m.Kind == PrivateMessageKind.Audio);
-        if (message?.MediaKey is null) return NotFound(new { error = "Ses kaydı bulunamadı." });
-        Response.Headers.CacheControl = "no-store";
-        Response.Headers["X-Content-Type-Options"] = "nosniff";
-        try { return new FileContentResult(await media.ReadAsync(message.MediaKey, HttpContext.RequestAborted), message.MediaContentType!) { EnableRangeProcessing = true }; }
-        catch (FileNotFoundException) { return NotFound(new { error = "Ses kaydı bulunamadı." }); }
-        catch (DirectoryNotFoundException) { return NotFound(new { error = "Ses kaydı bulunamadı." }); }
+        if (message == null || PrivateMediaStore.Expired(message, media.Now)) return NotFound(new { error = "Ses kaydı bulunamadı veya süresi doldu." });
+        try {
+            var bytes = await media.ReadAsync(message, HttpContext.RequestAborted);
+            if (!await AccessibleMedia(id).AnyAsync(m => m.MediaKey == message.MediaKey && m.ExpiredAtUtc == null && m.CreatedAtUtc > media.Now.AddHours(-24), HttpContext.RequestAborted)) return NotFound();
+            return new FileContentResult(bytes, message.MediaContentType!) { EnableRangeProcessing = true };
+        }
+        catch (MediaMissingException) { return NotFound(new { error = "Ses kaydı artık mevcut değil." }); }
+        catch (Npgsql.NpgsqlException) { return StatusCode(503, new { error = "Medya geçici olarak kullanılamıyor." }); }
     }
 
-    public static bool PhotoExpired(PrivateMessage message) =>
-        message.Kind == PrivateMessageKind.ViewOncePhoto &&
-        (message.ExpiredAtUtc.HasValue ||
-         (!message.ViewedAtUtc.HasValue && message.CreatedAtUtc <= DateTime.UtcNow.AddHours(-24)) ||
-         (message.PhotoAccessExpiresAtUtc.HasValue && message.PhotoAccessExpiresAtUtc <= DateTime.UtcNow));
+    public static bool PhotoExpired(PrivateMessage message, DateTime? at = null) =>
+        message.Kind == PrivateMessageKind.ViewOncePhoto && PrivateMediaStore.Expired(message, at ?? DateTime.UtcNow);
 
     public async Task<IActionResult> OnPostPhotoAsync([FromForm] int id)
     {
@@ -204,60 +203,48 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
             return Task.CompletedTask;
         });
         if (!HasAccess) return Unauthorized();
-        if (await AccessibleMedia(id).AnyAsync(m => m.Kind == PrivateMessageKind.ViewOncePhoto && m.PhotoViewHours != null))
-            return await OpenTimedPhotoAsync(id, person);
-        var cutoff = DateTime.UtcNow.AddHours(-24);
-        var query = AccessibleMedia(id).Where(m => m.Kind == PrivateMessageKind.ViewOncePhoto &&
-            m.SenderPerson != person && m.ViewedAtUtc == null && m.ExpiredAtUtc == null &&
-            m.CreatedAtUtc > cutoff && m.MediaKey != null);
-        // Conditional database update serializes competing requests across devices/instances.
-        await using var transaction = await db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
-        if (await query.ExecuteUpdateAsync(u => u.SetProperty(m => m.ViewedAtUtc, DateTime.UtcNow), HttpContext.RequestAborted) != 1)
+        var message = await AccessibleMedia(id).AsNoTracking().SingleOrDefaultAsync(m =>
+            m.Kind == PrivateMessageKind.ViewOncePhoto && m.SenderPerson != person && m.ExpiredAtUtc == null && m.MediaKey != null, HttpContext.RequestAborted);
+        if (message == null || PrivateMediaStore.Expired(message, media.Now) || (message.PhotoViewHours == null && message.ViewedAtUtc != null))
             return StatusCode(410, new { error = "Fotoğraf görüntülendi, süresi doldu veya artık erişilemiyor." });
-        var message = await db.PrivateMessages.AsNoTracking().SingleAsync(m => m.Id == id);
         byte[] bytes;
-        try
-        {
-            bytes = await media.ReadAsync(message.MediaKey!, HttpContext.RequestAborted);
-            // Never deliver the image unless its source file has been deleted.
-            media.Delete(message.MediaKey);
-        }
-        catch (FileNotFoundException) { bytes = []; }
-        catch (DirectoryNotFoundException) { bytes = []; }
-        await db.PrivateMessages.Where(m => m.Id == id).ExecuteUpdateAsync(u => u
-            .SetProperty(m => m.MediaKey, (string?)null).SetProperty(m => m.MediaContentType, (string?)null)
-            .SetProperty(m => m.ViewedAtUtc, bytes.Length == 0 ? (DateTime?)null : message.ViewedAtUtc));
-        await transaction.CommitAsync(CancellationToken.None);
-        Response.Headers.CacheControl = "no-store";
-        Response.Headers["X-Content-Type-Options"] = "nosniff";
-        return bytes.Length == 0 ? StatusCode(410, new { error = "Fotoğraf artık mevcut değil." }) : File(bytes, message.MediaContentType!);
-    }
-
-    private async Task<IActionResult> OpenTimedPhotoAsync(int id, int person)
-    {
+        try { bytes = await media.ReadAsync(message, HttpContext.RequestAborted); }
+        catch (MediaMissingException) { return StatusCode(410, new { error = "Fotoğraf artık mevcut değil." }); }
+        catch (Npgsql.NpgsqlException) { return StatusCode(503, new { error = "Medya geçici olarak kullanılamıyor." }); }
+        var now = media.Now; var cutoff = now.AddHours(-24);
         await using var transaction = await db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
-        var now = DateTime.UtcNow;
-        var cutoff = now.AddHours(-24);
-        var eligible = AccessibleMedia(id).Where(m => m.Kind == PrivateMessageKind.ViewOncePhoto &&
-            m.SenderPerson != person && m.ExpiredAtUtc == null && m.MediaKey != null &&
-            (m.PhotoViewHours == 1 || m.PhotoViewHours == 3 || m.PhotoViewHours == 5));
-        // The row update serializes concurrent opens and cleanup; deadlines are never extended.
-        var changed = await eligible.Where(m =>
-            (m.ViewedAtUtc == null && m.CreatedAtUtc > cutoff) ||
-            (m.ViewedAtUtc != null && m.PhotoAccessExpiresAtUtc > now))
-            .ExecuteUpdateAsync(u => u
-                .SetProperty(m => m.ViewedAtUtc, m => m.ViewedAtUtc ?? now)
-                .SetProperty(m => m.PhotoAccessExpiresAtUtc, m => m.PhotoAccessExpiresAtUtc ?? now.AddHours(m.PhotoViewHours!.Value)), HttpContext.RequestAborted);
-        if (changed != 1) return StatusCode(410, new { error = "Fotoğrafın süresi doldu veya artık erişilemiyor." });
-        var message = await eligible.AsNoTracking().SingleAsync(HttpContext.RequestAborted);
-        byte[] bytes;
-        try { bytes = await media.ReadAsync(message.MediaKey!, HttpContext.RequestAborted); }
-        catch (FileNotFoundException) { return StatusCode(410); }
-        catch (DirectoryNotFoundException) { return StatusCode(410); }
-        var remaining = message.PhotoAccessExpiresAtUtc!.Value - DateTime.UtcNow;
-        if (remaining <= TimeSpan.Zero) return StatusCode(410);
+        var eligible = AccessibleMedia(id).Where(m => m.Kind == PrivateMessageKind.ViewOncePhoto && m.SenderPerson != person &&
+            m.ExpiredAtUtc == null && m.MediaKey == message.MediaKey && m.CreatedAtUtc > cutoff);
+        int changed; DateTime? expires = null;
+        if (message.PhotoViewHours == null)
+        {
+            changed = await eligible.Where(m => m.PhotoViewHours == null && m.ViewedAtUtc == null)
+                .ExecuteUpdateAsync(u => u.SetProperty(m => m.ViewedAtUtc, now).SetProperty(m => m.ExpiredAtUtc, now)
+                    .SetProperty(m => m.MediaKey, (string?)null).SetProperty(m => m.MediaContentType, (string?)null), HttpContext.RequestAborted);
+            if (changed == 1) {
+                // Bytes and quota are removed in the SAME transaction as the atomic view claim.
+                if (await media.DeleteAsync(message.MediaKey, HttpContext.RequestAborted) != 1)
+                    return StatusCode(410, new { error = "Fotoğraf artık mevcut değil." });
+            }
+        }
+        else
+        {
+            changed = await eligible.Where(m => m.PhotoViewHours == 1 || m.PhotoViewHours == 3 || m.PhotoViewHours == 5)
+                .Where(m => m.ViewedAtUtc == null || m.PhotoAccessExpiresAtUtc > now)
+                .ExecuteUpdateAsync(u => u.SetProperty(m => m.ViewedAtUtc, m => m.ViewedAtUtc ?? now)
+                    .SetProperty(m => m.PhotoAccessExpiresAtUtc, m =>
+                        (m.PhotoAccessExpiresAtUtc ?? now.AddHours(m.PhotoViewHours!.Value)) < m.CreatedAtUtc.AddHours(24)
+                            ? (m.PhotoAccessExpiresAtUtc ?? now.AddHours(m.PhotoViewHours!.Value)) : m.CreatedAtUtc.AddHours(24)), HttpContext.RequestAborted);
+            if (changed == 1) {
+                // Cleanup can remove a missing payload concurrently: never claim successful delivery.
+                if (!await db.PrivateMediaContents.AnyAsync(x => x.MessageId == id && x.MediaKey == message.MediaKey, HttpContext.RequestAborted)) return StatusCode(410);
+                expires = await db.PrivateMessages.Where(m => m.Id == id).Select(m => m.PhotoAccessExpiresAtUtc).SingleAsync(HttpContext.RequestAborted);
+            }
+        }
+        if (changed != 1 || (expires.HasValue && expires <= media.Now)) return StatusCode(410, new { error = "Fotoğrafın süresi doldu veya artık erişilemiyor." });
         await transaction.CommitAsync(HttpContext.RequestAborted);
-        Response.Headers["X-Photo-Remaining-Ms"] = Math.Floor(remaining.TotalMilliseconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (expires.HasValue) Response.Headers["X-Photo-Remaining-Ms"] = Math.Max(0, Math.Floor((expires.Value-media.Now).TotalMilliseconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        Response.Headers.CacheControl = "no-store";
         return File(bytes, message.MediaContentType!);
     }
 
@@ -278,7 +265,6 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
         var deleted = await db.PrivateMessages
             .Where(message => message.Id == id && message.SenderPerson == person)
             .ExecuteDeleteAsync(HttpContext.RequestAborted);
-        if (deleted != 0) media.Delete(message.MediaKey);
         await transaction.CommitAsync(HttpContext.RequestAborted);
         return deleted == 0 ? NotFound() : new JsonResult(new { success = true });
     }
@@ -305,7 +291,6 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
 
         await db.PrivateMessages.Where(message => selectedIds.Contains(message.Id) && message.SenderPerson == person)
             .ExecuteDeleteAsync(HttpContext.RequestAborted);
-        foreach (var message in messages) media.Delete(message.MediaKey);
         await transaction.CommitAsync(HttpContext.RequestAborted);
         return new JsonResult(new { success = true });
     }
@@ -318,10 +303,8 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
             return BadRequest();
 
         await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, HttpContext.RequestAborted);
-        var keys = await db.PrivateMessages.Where(m => m.MediaKey != null).Select(m => m.MediaKey).ToListAsync(HttpContext.RequestAborted);
         await db.PrivateMessages.ExecuteDeleteAsync(HttpContext.RequestAborted);
         await db.PrivatePresences.ExecuteUpdateAsync(update => update.SetProperty(presence => presence.MessagesClearedAtUtc, (DateTime?)null), HttpContext.RequestAborted);
-        foreach (var key in keys) media.Delete(key);
         await transaction.CommitAsync(HttpContext.RequestAborted);
         return new JsonResult(new { success = true });
     }
@@ -452,6 +435,10 @@ public sealed class PanelModel(PrivateAccessService privateAccess, AppDbContext 
             .ThenByDescending(message => message.Id)
             .Take(200)
             .ToListAsync(HttpContext.RequestAborted);
+        var mediaIds = recent.Where(m => m.Kind != PrivateMessageKind.Text && !PrivateMediaStore.Expired(m, media.Now)).Select(m => m.Id).ToArray();
+        var available = await db.PrivateMediaContents.AsNoTracking().Where(x => mediaIds.Contains(x.MessageId) && x.ExpiresAtUtc > media.Now)
+            .Select(x => new { x.MessageId, x.MediaKey }).ToListAsync(HttpContext.RequestAborted);
+        foreach (var message in recent) message.MediaAvailable = available.Any(x => x.MessageId == message.Id && x.MediaKey == message.MediaKey);
         return recent.OrderBy(message => message.CreatedAtUtc).ThenBy(message => message.Id).ToList();
     }
 

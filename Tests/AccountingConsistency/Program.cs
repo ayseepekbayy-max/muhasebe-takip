@@ -14,16 +14,15 @@ using InvoiceEdit = MuhasebeTakip2.App.Pages.Faturalar.DuzenleModel;
 
 var checks = 0;
 void Check(bool ok, string message) { if (!ok) throw new Exception(message); checks++; }
-await using var connection = new SqliteConnection("Data Source=:memory:");
-await connection.OpenAsync();
-await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options);
-await db.Database.EnsureCreatedAsync();
+await using var lab = await TemporaryPostgres.StartAsync();
+await lab.InitializeAsync();
+await using var db = new AppDbContext(lab.Options);
 var firma = new Firma { FirmaAdi = "Test" };
 var otherFirma = new Firma { FirmaAdi = "Other" };
 db.AddRange(firma, otherFirma);
 await db.SaveChangesAsync();
-var cari = new CariKart { FirmaId = firma.Id, Unvan = "Test Cari", Tip = CariTip.HerIkisi, AktifMi = true };
-var otherCari = new CariKart { FirmaId = firma.Id, Unvan = "Other Cari", Tip = CariTip.HerIkisi, AktifMi = true };
+var cari = new CariKart { OlusturmaTarihi=DateTime.UtcNow, FirmaId = firma.Id, Unvan = "Test Cari", Tip = CariTip.HerIkisi, AktifMi = true };
+var otherCari = new CariKart { OlusturmaTarihi=DateTime.UtcNow, FirmaId = firma.Id, Unvan = "Other Cari", Tip = CariTip.HerIkisi, AktifMi = true };
 db.AddRange(cari, otherCari); await db.SaveChangesAsync();
 var account = new KasaHesap { FirmaId=firma.Id, Ad="Cash" };
 db.Add(account); await db.SaveChangesAsync();
@@ -95,7 +94,7 @@ foreach (var tip in new[] { FaturaTipi.Satis, FaturaTipi.Alis })
     Check(!await db.KasaHareketleri.AnyAsync(x => x.Id == movement.Id), "Movement deleted");
 }
 // An unlinked cash movement remains editable without changing any invoice.
-var standalone = new KasaHareket { FirmaId = firma.Id, CariKartId = cari.Id, Tip = HareketTipi.Giris, Tutar = 50 };
+var standalone = new KasaHareket { Tarih=DateTime.UtcNow, FirmaId = firma.Id, CariKartId = cari.Id, Tip = HareketTipi.Giris, Tutar = 50 };
 db.Add(standalone); await db.SaveChangesAsync();
 var beforePayments = await db.Faturalar.SumAsync(x => x.OdenenToplam);
 var standaloneEdit = Setup(new HareketDuzenleModel(db, audit));
@@ -107,13 +106,13 @@ await Setup(new HareketlerModel(db, audit)).OnPostSilAsync(standalone.Id);
 Check(await db.Faturalar.SumAsync(x => x.OdenenToplam) == beforePayments, "Unlinked cash deletion leaves invoices unchanged");
 // Last payment deletion reopens the invoice.
 var unpaid = await Invoice(FaturaTipi.Satis, 1000);
-var last = new KasaHareket { FirmaId = firma.Id, FaturaId = unpaid.Id, CariKartId = cari.Id, Tip = HareketTipi.Giris, Tutar = 1000 };
+var last = new KasaHareket { Tarih=DateTime.UtcNow, FirmaId = firma.Id, FaturaId = unpaid.Id, CariKartId = cari.Id, Tip = HareketTipi.Giris, Tutar = 1000 };
 db.Add(last); await db.SaveChangesAsync();
 await Setup(new HareketlerModel(db, audit)).OnPostSilAsync(last.Id);
 Check(unpaid.OdenenToplam == 0 && unpaid.Durum == FaturaDurumu.Bekliyor, "Deleting last payment reopens invoice");
 // Tenant boundary and old inconsistent records are rejected without repairing unrelated data.
 var old = await Invoice(FaturaTipi.Satis);
-var legacy = new KasaHareket { FirmaId = firma.Id, FaturaId = old.Id, CariKartId = cari.Id, Tip = HareketTipi.Giris, Tutar = 100 };
+var legacy = new KasaHareket { Tarih=DateTime.UtcNow, FirmaId = firma.Id, FaturaId = old.Id, CariKartId = cari.Id, Tip = HareketTipi.Giris, Tutar = 100 };
 db.Add(legacy); await db.SaveChangesAsync();
 var blocked = Setup(new HareketlerModel(db, audit));
 await blocked.OnPostSilAsync(legacy.Id);
@@ -123,7 +122,7 @@ var tenantEdit = Setup(new HareketDuzenleModel(db, audit));
 tenantEdit.Hareket = new KasaHareket { KasaHesapId=account.Id, Id = legacy.Id, Tutar = 100, Tip = HareketTipi.Giris };
 Check(await tenantEdit.OnPostAsync() is PageResult && tenantEdit.Hata.Length>0, "Another firm cannot edit movement");
 http.Session.SetInt32("FirmaId", firma.Id);
-db.KasaHareketleri.Add(new KasaHareket { FirmaId = firma.Id, CariKartId = otherCari.Id,
+db.KasaHareketleri.Add(new KasaHareket { Tarih=DateTime.UtcNow, FirmaId = firma.Id, CariKartId = otherCari.Id,
     Tip = HareketTipi.Giris, Tutar = 750 });
 await db.SaveChangesAsync();
 // Excel export preserves advances and agrees with the customer list.
@@ -185,7 +184,7 @@ var failing=Setup(new HesaplarModel(db,new FailingAudit())); failing.Transfer=ne
 try { await failing.OnPostTransferAsync(); throw new Exception("Expected audit failure"); } catch(InvalidOperationException) { }
 db.ChangeTracker.Clear();
 Check(!await db.KasaTransferler.AnyAsync() && (await KasaHesapService.BakiyelerAsync(db,firma.Id)).Sum(x=>x.Bakiye)==initialTotal,"Audit failure rolls back transfer atomically");
-var invalidMovement=new KasaHareket{FirmaId=firma.Id,KasaHesapId=foreignAccount.Id,Tip=HareketTipi.Giris,Tutar=1};
+var invalidMovement=new KasaHareket{Tarih=DateTime.UtcNow,FirmaId=firma.Id,KasaHesapId=foreignAccount.Id,Tip=HareketTipi.Giris,Tutar=1};
 db.Add(invalidMovement);
 try { await db.SaveChangesAsync(); throw new Exception("Expected tenant FK failure"); } catch(DbUpdateException) { db.ChangeTracker.Clear(); checks++; }
 var duplicate=Setup(new HesaplarModel(db,audit)); duplicate.Yeni=new(){Ad="bank"};

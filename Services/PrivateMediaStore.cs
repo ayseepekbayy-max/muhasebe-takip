@@ -1,40 +1,97 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using MuhasebeTakip2.App.Data;
+using MuhasebeTakip2.App.Models;
 namespace MuhasebeTakip2.App.Services;
 
-// Ephemeral application storage: no external volume/configuration is required.
-// No client filenames or paths are used. This directory is never served by static files.
-public sealed class PrivateMediaStore
+public sealed class PrivateMediaOptions
+{
+    public bool BlockNewUploads { get; set; }
+    // Must be chosen from the actual database plan, not guessed from media quota.
+    public long? MaxDatabaseBytes { get; set; }
+    public long DatabaseReserveBytes { get; set; } = 128L * 1024 * 1024;
+}
+public sealed class MediaQuotaExceededException() : Exception("Medya kotası dolu; yeni medya gönderilemedi.");
+public sealed class MediaStorageUnavailableException() : Exception("Medya depolaması şu anda kullanılamıyor.");
+public sealed class MediaMissingException() : Exception("Medya artık mevcut değil.");
+
+// PostgreSQL only. No filesystem/R2 fallback, URLs, filenames, or independent upload outbox.
+public sealed class PrivateMediaStore(AppDbContext db, TimeProvider clock, IOptionsMonitor<PrivateMediaOptions> options)
 {
     public const int PhotoLimit = 8 * 1024 * 1024;
     public const int AudioLimit = 16 * 1024 * 1024;
-    private readonly string root;
-    public PrivateMediaStore(IWebHostEnvironment environment)
+    public const long TotalLimit = 100L * 1024 * 1024;
+    public DateTime Now => new(clock.GetUtcNow().UtcTicks / TimeSpan.TicksPerMillisecond * TimeSpan.TicksPerMillisecond, DateTimeKind.Utc);
+    public static bool Expired(PrivateMessage m, DateTime now) => m.Kind != PrivateMessageKind.Text &&
+        (m.CreatedAtUtc <= now.AddHours(-24) || m.ExpiredAtUtc != null ||
+         (m.Kind == PrivateMessageKind.ViewOncePhoto && m.PhotoAccessExpiresAtUtc <= now));
+    async Task CapacityAsync(CancellationToken token)
     {
-        root = Path.GetFullPath(Path.Combine(environment.ContentRootPath, "App_Data", "PrivateMedia"));
-        var web = Path.GetFullPath(environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot"));
-        if (root.Equals(web, StringComparison.OrdinalIgnoreCase) || root.StartsWith(web + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Özel medya wwwroot altında saklanamaz.");
+        var config = options.CurrentValue;
+        if (!db.Database.IsNpgsql() || config.BlockNewUploads || config.MaxDatabaseBytes is not > 0 || config.DatabaseReserveBytes < 0)
+            throw new MediaStorageUnavailableException();
+        // Conservative reserve for the WHOLE logical media allowance. Not a WAL/free-filesystem probe.
+        var size = await db.Database.SqlQueryRaw<long>("SELECT pg_database_size(current_database()) AS \"Value\"").SingleAsync(token);
+        if (size > config.MaxDatabaseBytes.Value || config.MaxDatabaseBytes.Value - size < 4 * TotalLimit ||
+            config.MaxDatabaseBytes.Value - size - 4 * TotalLimit < config.DatabaseReserveBytes)
+            throw new MediaStorageUnavailableException();
     }
-    private string Resolve(string key)
+    public async Task SaveAsync(PrivateMessage message, byte[] bytes, CancellationToken token)
     {
-        if (!Guid.TryParseExact(key, "N", out _)) throw new InvalidOperationException("Geçersiz medya anahtarı.");
-        return Path.Combine(root, key);
+        var photo = message.Kind == PrivateMessageKind.ViewOncePhoto;
+        if (message.Kind is not (PrivateMessageKind.ViewOncePhoto or PrivateMessageKind.Audio) ||
+            bytes.Length == 0 || bytes.Length > (photo ? PhotoLimit : AudioLimit) ||
+            (photo && message.PhotoViewHours is not (null or 1 or 3 or 5)) || Detect(bytes, photo) is not string type)
+            throw new ArgumentException("Geçersiz medya.");
+        message.MediaContentType = type; message.MediaKey = Guid.NewGuid().ToString("N"); message.CreatedAtUtc = Now;
+        try
+        {
+            await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, token);
+            await CapacityAsync(token);
+            db.PrivateMessages.Add(message); await db.SaveChangesAsync(token);
+            db.PrivateMediaContents.Add(new() { MessageId = message.Id, MediaKey = message.MediaKey,
+                Payload = bytes.ToArray(), CreatedAtUtc = message.CreatedAtUtc, ExpiresAtUtc = message.CreatedAtUtc.AddHours(24) });
+            // PostgreSQL trigger locks the quota row, including raw inserts and FK cascades.
+            await db.SaveChangesAsync(token); await tx.CommitAsync(token);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.PostgresException { SqlState: "P0001", MessageText: "PRIVATE_MEDIA_QUOTA" })
+            { throw new MediaQuotaExceededException(); }
+        catch (DbUpdateException ex) when (ex.InnerException is Npgsql.NpgsqlException && ex.InnerException is not Npgsql.PostgresException { SqlState: "23503" })
+            { throw new MediaStorageUnavailableException(); }
+        catch (OperationCanceledException) { throw; }
+        catch (Npgsql.NpgsqlException) { throw new MediaStorageUnavailableException(); }
     }
-    public async Task<string> SaveAsync(byte[] bytes, CancellationToken token)
+    public async Task<byte[]> ReadAsync(PrivateMessage message, CancellationToken token)
     {
-        Directory.CreateDirectory(root);
-        var key = Guid.NewGuid().ToString("N");
-        try { await File.WriteAllBytesAsync(Resolve(key), bytes, token); }
-        catch { Delete(key); throw; }
-        return key;
+        if (message.MediaKey == null || Expired(message, Now)) throw new MediaMissingException();
+        var now = Now;
+        return await db.PrivateMediaContents.AsNoTracking().Where(x => x.MessageId == message.Id && x.MediaKey == message.MediaKey && x.ExpiresAtUtc > now)
+            .Select(x => x.Payload).SingleOrDefaultAsync(token) ?? throw new MediaMissingException();
     }
-    public Task<byte[]> ReadAsync(string key, CancellationToken token) => File.ReadAllBytesAsync(Resolve(key), token);
-    public void Delete(string? key)
+    public Task<int> DeleteAsync(string? key, CancellationToken token) =>
+        db.PrivateMediaContents.Where(x => x.MediaKey == key).ExecuteDeleteAsync(token);
+    public async Task CleanupAsync(CancellationToken token)
     {
-        if (key is null) return;
-        try { File.Delete(Resolve(key)); }
-        catch (DirectoryNotFoundException) { /* The ephemeral directory was already lost on restart/deploy. */ }
+        var now = Now; var cutoff = now.AddHours(-24);
+        var ids = await db.PrivateMessages.AsNoTracking().Where(m => m.Kind != PrivateMessageKind.Text &&
+            (m.CreatedAtUtc <= cutoff || m.ExpiredAtUtc != null || m.PhotoAccessExpiresAtUtc <= now) &&
+            (m.ExpiredAtUtc == null || m.MediaKey != null || db.PrivateMediaContents.Any(x => x.MessageId == m.Id)))
+            .OrderBy(m => m.Id).Select(m => m.Id).Take(100).ToListAsync(token);
+        foreach (var id in ids)
+        {
+            await using var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, token);
+            var changed = await db.PrivateMessages.Where(m => m.Id == id && m.Kind != PrivateMessageKind.Text &&
+                (m.CreatedAtUtc <= cutoff || m.ExpiredAtUtc != null || m.PhotoAccessExpiresAtUtc <= now))
+                .ExecuteUpdateAsync(u => u.SetProperty(m => m.ExpiredAtUtc, m => m.ExpiredAtUtc ?? now), token);
+            if (changed != 0)
+            {
+                await db.PrivateMediaContents.Where(x => x.MessageId == id).ExecuteDeleteAsync(token);
+                await db.PrivateMessages.Where(m => m.Id == id).ExecuteUpdateAsync(u => u
+                    .SetProperty(m => m.MediaKey, (string?)null).SetProperty(m => m.MediaContentType, (string?)null), token);
+            }
+            await tx.CommitAsync(token);
+        }
     }
-
     public static string? Detect(byte[] bytes, bool photo)
     {
         var b = bytes.AsSpan();

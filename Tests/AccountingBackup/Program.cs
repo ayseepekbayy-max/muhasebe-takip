@@ -20,11 +20,13 @@ var root = Path.Combine(Path.GetTempPath(), "backup-tests-" + Guid.NewGuid().ToS
 Directory.CreateDirectory(root);
 var env = new TestEnvironment(root);
 var interceptor = new FailureInterceptor();
-var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite($"Data Source={root}/test.db").AddInterceptors(interceptor).Options;
+await using var lab = await TemporaryPostgres.StartAsync();
+await lab.InitializeAsync();
+var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(lab.ConnectionString).AddInterceptors(interceptor).Options;
 await using var db = new AppDbContext(options);
 try
 {
-    await db.Database.EnsureCreatedAsync();
+
     var source = new Firma { FirmaAdi = "Source" };
     var target = new Firma { FirmaAdi = "Target" };
     var empty = new Firma { FirmaAdi = "Empty" };
@@ -70,7 +72,7 @@ try
     var sourceCash = (KasaHareket)seeded[nameof(KasaHareket)];
     db.Add(new KasaHareket { FirmaId = source.Id, CariKartId = sourceCash.CariKartId, FaturaId = sourceCash.FaturaId,
         Tarih = sourceCash.Tarih, Tip = sourceCash.Tip, Tutar = sourceCash.Tutar, Aciklama = sourceCash.Aciklama });
-    db.Add(new CariKart { FirmaId = empty.Id, Unvan = "DO_NOT_EXPORT_OTHER_FIRM" });
+    db.Add(new CariKart { OlusturmaTarihi=DateTime.UtcNow, FirmaId = empty.Id, Unvan = "DO_NOT_EXPORT_OTHER_FIRM" });
     db.Add(new PrivateMessage { SenderPerson = 1, SenderName = "private", Content = "NEVER_EXPORT_CHAT" });
     await db.SaveChangesAsync();
     Directory.CreateDirectory(Path.Combine(env.WebRootPath, "uploads/faturalar"));
@@ -204,7 +206,7 @@ try
     var salary = await db.CalisanMaasArsivleri.SingleAsync(x=>x.FirmaId==source.Id);
     var originalEmployeeId = salary.CalisanId;
     salary.CalisanId = 987654;
-    var foreignEmployee = new Calisan { Id=54321, FirmaId=empty.Id, AdSoyad="PRIVATE_FOREIGN_EMPLOYEE", Ad="private" };
+    var foreignEmployee = new Calisan { IseGirisTarihi=DateTime.UtcNow, Id=54321, FirmaId=empty.Id, AdSoyad="PRIVATE_FOREIGN_EMPLOYEE", Ad="private" };
     var secondSalary = new CalisanMaasArsiv { FirmaId=source.Id, CalisanId=54321,
         ToplamMaas=1000.22m, ToplamAvans=300.11m, KalanMaas=700.11m,
         DonemBaslangic=new DateTime(2026,8,1,0,0,0,DateTimeKind.Utc), DonemBitis=new DateTime(2026,8,31,0,0,0,DateTimeKind.Utc),
@@ -235,7 +237,7 @@ try
         (await db.CalisanMaasArsivleri.AsNoTracking().SingleAsync(x=>x.Id==secondSalary.Id)).CalisanId==54321,
         "Export leaves original live-style records untouched");
     // Deliberately allocate the SAME number as the first missing source employee.
-    await db.Database.ExecuteSqlRawAsync("UPDATE sqlite_sequence SET seq=987653 WHERE name='Calisanlar'");
+    await db.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('\"Calisanlar\"', 'Id'), 987653, true)");
     var historicalRestore=await service.RestoreAsync(new MemoryStream(orphanBytes),orphanTarget.Id);
     Check(historicalRestore.Warnings.Any(x=>x.Contains("2 kayıt")), "Restore explicitly warns about unresolved history");
     var realEmployee=await db.Calisanlar.SingleAsync(x=>x.FirmaId==orphanTarget.Id);
@@ -306,7 +308,11 @@ try
     }
     Console.WriteLine($"PASS: {checks} backup checks across 25 tables, file integrity, tenant isolation, rollback, and legacy restore.");
 }
-finally { await db.Database.CloseConnectionAsync(); Directory.Delete(root, true); }
+finally {
+    await db.DisposeAsync(); Npgsql.NpgsqlConnection.ClearAllPools();
+    if(!Path.GetFullPath(root).StartsWith(Path.GetFullPath(Path.GetTempPath()),StringComparison.OrdinalIgnoreCase)||!Path.GetFileName(root).StartsWith("backup-tests-"))throw new Exception("Unsafe test cleanup");
+    Directory.Delete(root,true);
+}
 
 sealed class InjectedFailure : Exception { }
 sealed class FailureInterceptor : SaveChangesInterceptor

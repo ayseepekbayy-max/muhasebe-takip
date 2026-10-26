@@ -15,7 +15,8 @@ builder.Services.AddScoped<PrivateAccessService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<PrivateLoginAttemptLimiter>();
 builder.Services.AddScoped<PrivateSessionRenewal>();
-builder.Services.AddSingleton<PrivateMediaStore>();
+builder.Services.Configure<PrivateMediaOptions>(builder.Configuration.GetSection("PrivateMedia"));
+builder.Services.AddScoped<PrivateMediaStore>();
 builder.Services.AddHostedService<PrivateMediaCleanupService>();
 
 builder.Services.AddSession(options =>
@@ -801,8 +802,9 @@ app.MapPost("/api/ai/son-kasa-hareketleri", async (AppDbContext db, CalisanAvans
 
 app.MapPost("/api/ai/musteri-borc", async (AppDbContext db, CalisanAvansToplamRequest req) =>
 {
-    var firmaId = await GetAiFirmaIdAsync(db, req.FirmaId);
-    var result = await AiApiHelpers.GetMusteriBorcAsync(db, req.CalisanAdi, firmaId.Value);
+    var firmaId = await GetAiFirmaIdAsync(db, req.FirmaId)
+        ?? throw new UnauthorizedAccessException("AI API tenant doğrulaması bulunamadı.");
+    var result = await AiApiHelpers.GetMusteriBorcAsync(db, req.CalisanAdi, firmaId);
     return Results.Json(result);
 });
 

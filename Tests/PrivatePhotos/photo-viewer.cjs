@@ -31,3 +31,23 @@ async function scenario(remaining, elapsed = 50, hidden = false) {
     r=await scenario('1000');r.dialog.close();assert.equal(r.callback,null);assert.equal(r.image.src,undefined);
     console.log('PASS: complete page JavaScript syntax; viewer once/timed expiry, elapsed request time, hidden page and manual close.');
 })().catch(error=>{console.error(error);process.exitCode=1});
+
+// Exercise actual rendering code: missing/expired audio must not create an audio request.
+const renderStart = source.indexOf('            function renderMedia(');
+const renderEnd = source.indexOf('            for (const [id, node] of nodes)', renderStart);
+function renderFixture(message) {
+    const children = [];
+    const content = { dataset:{}, classList:{add(){},toggle(){}}, replaceChildren(){children.length=0}, append(...items){children.push(...items)} };
+    const document = { createElement(tag){return {tag, attributes:{},setAttribute(k,v){this.attributes[k]=v},addEventListener(){},append(){}}} };
+    const context = vm.createContext({document, root:{dataset:{audioUrl:'/Panel?handler=Audio'}}, person:2, formatDuration:()=> '00:02', node:{querySelector:()=>content}, message});
+    vm.runInContext(source.slice(renderStart, renderEnd), context);
+    vm.runInContext('renderMedia(node, message)', context);
+    return {content,children};
+}
+for (const [expired, available, expected] of [[true,false,'Ses kaydının süresi doldu'],[false,false,'Ses kaydı artık mevcut değil']]) {
+    const r=renderFixture({id:1,kind:1,expired,available});assert.equal(r.content.textContent,expected);assert.equal(r.children.length,0);
+}
+const playable=renderFixture({id:1,kind:1,expired:false,available:true});
+assert.equal(playable.children[0].src,'/Panel?handler=Audio&id=1');assert.equal(playable.children[0].attributes.controlsList,'nodownload');
+assert.equal(renderFixture({id:1,kind:2,viewed:false,expired:false,available:false}).content.textContent,'Fotoğraf artık mevcut değil');
+console.log('PASS: missing/expired audio and photo rendering; authorized audio URL and no-download controls preserved.');

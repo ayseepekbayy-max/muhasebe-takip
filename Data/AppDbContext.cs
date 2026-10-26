@@ -44,9 +44,28 @@ public class AppDbContext : DbContext
     public DbSet<PrivatePresence> PrivatePresences { get; set; } = default!;
     public DbSet<PrivateMessageHidden> PrivateMessageHiddens { get; set; } = default!;
 
+    public DbSet<PrivateMediaContent> PrivateMediaContents => Set<PrivateMediaContent>();
+    public DbSet<PrivateMediaQuota> PrivateMediaQuotas => Set<PrivateMediaQuota>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<PrivateMediaContent>(e => {
+            e.HasKey(x => x.MessageId);
+            e.HasIndex(x => x.MediaKey).IsUnique();
+            e.HasIndex(x => x.ExpiresAtUtc);
+            e.HasOne<PrivateMessage>().WithMany().HasForeignKey(x => x.MessageId).OnDelete(DeleteBehavior.Cascade);
+            if (Database.IsNpgsql()) e.ToTable("PrivateMediaContents", t => {
+                t.HasCheckConstraint("CK_PrivateMediaContent_Size", "octet_length(\"Payload\") BETWEEN 1 AND 16777216");
+                t.HasCheckConstraint("CK_PrivateMediaContent_Key", "\"MediaKey\" ~ '^[0-9a-f]{32}$'");
+                t.HasCheckConstraint("CK_PrivateMediaContent_Expiry", "\"ExpiresAtUtc\" - \"CreatedAtUtc\" = interval '24 hours'");
+            });
+        });
+        modelBuilder.Entity<PrivateMediaQuota>(e => {
+            e.HasKey(x => x.Id);
+            e.HasData(new PrivateMediaQuota { Id = 1, UsedBytes = 0 });
+            e.ToTable("PrivateMediaQuotas", t => t.HasCheckConstraint("CK_PrivateMediaQuota_Limit", "\"Id\" = 1 AND \"UsedBytes\" BETWEEN 0 AND 104857600"));
+        });
 
         modelBuilder.Entity<PrivateMessageHidden>(entity =>
         {

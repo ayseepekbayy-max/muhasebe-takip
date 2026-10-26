@@ -162,7 +162,7 @@
                             <span class="reply-excerpt">@reply.Text</span>
                         </button>
                     }
-                    <div class="content" data-expired="@(MuhasebeTakip2.App.Pages.PanelModel.PhotoExpired(message) ? "true" : "false")" data-available="@(message.MediaKey != null ? "true" : "false")" data-photo-hours="@message.PhotoViewHours" data-duration="@message.DurationSeconds" data-kind="@((int)message.Kind)" data-viewed="@(message.ViewedAtUtc.HasValue ? "true" : "false")">@(message.Kind == MuhasebeTakip2.App.Models.PrivateMessageKind.Text ? message.Content : message.Kind == MuhasebeTakip2.App.Models.PrivateMessageKind.Audio ? "Sesli mesaj" : "Tek görüntülemelik fotoğraf")</div>
+                    <div class="content" data-expired="@(MuhasebeTakip2.App.Services.PrivateMediaStore.Expired(message, Model.ServerNowUtc) ? "true" : "false")" data-available="@(message.MediaAvailable ? "true" : "false")" data-photo-hours="@message.PhotoViewHours" data-duration="@message.DurationSeconds" data-kind="@((int)message.Kind)" data-viewed="@(message.ViewedAtUtc.HasValue ? "true" : "false")">@(message.Kind == MuhasebeTakip2.App.Models.PrivateMessageKind.Text ? message.Content : message.Kind == MuhasebeTakip2.App.Models.PrivateMessageKind.Audio ? "Sesli mesaj" : "Tek görüntülemelik fotoğraf")</div>
                     <time datetime="@message.CreatedAtUtc.ToString("O")">@message.CreatedAtUtc.ToString("HH:mm")</time>
                 </article>
             }
@@ -193,6 +193,7 @@
                 <img id="photo-preview" alt="Gönderilecek fotoğraf" draggable="false" hidden />
                 <div class="preview-details">
                     <span id="media-label" role="status"></span>
+                    <small>Gönderilen fotoğraf ve sesler en geç 24 saat sonra kaldırılır.</small>
                     <label id="photo-mode-label" hidden>Görüntüleme süresi
                         <select id="photo-mode"><option value="">1 kez görüntüle</option><option value="1">1 saat</option><option value="3">3 saat</option><option value="5">5 saat</option></select>
                     </label>
@@ -730,6 +731,7 @@
                 content.classList.add('media-content');
                 content.classList.toggle('audio-message', message.kind === 1);
                 if (message.kind === 1) {
+                    if (message.expired || !message.available) { content.textContent = message.expired ? 'Ses kaydının süresi doldu' : 'Ses kaydı artık mevcut değil'; return; }
                     const audio = document.createElement('audio');
                     audio.controls = true; audio.preload = 'metadata';
                     audio.setAttribute('aria-label', 'Sesli mesajı dinle');

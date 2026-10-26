@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using MuhasebeTakip2.App.Pages;
@@ -15,26 +16,28 @@ if (args.Length != 0) throw new ArgumentException("Unknown test option.");
 
 var root = Path.Combine(Path.GetTempPath(), "private-photo-tests-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
-var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite($"Data Source={Path.Combine(root, "test.db")}").Options;
-var store = new PrivateMediaStore(new TestEnvironment(root));
+await using var lab = await TemporaryPostgres.StartAsync();
+await lab.InitializeAsync();
+var options = lab.Options;
+PrivateMediaStore Store(AppDbContext db, DateTime? created=null) => new(db, created.HasValue ? new FixtureClock(created.Value) : TimeProvider.System, new TestOptions());
 var access = new PrivateAccessService(new ConfigurationBuilder().Build(), new PrivateLoginAttemptLimiter(TimeProvider.System));
 int assertions = 0;
 void Check(bool value, string message) { if (!value) throw new Exception(message); assertions++; }
 PanelModel Panel(AppDbContext db, string? person = "2") {
     var http = new DefaultHttpContext { Session = new TestSession() };
     if (person != null) { http.Session.SetString("PrivateMode", "1"); http.Session.SetString("PrivatePerson", person); http.Session.SetString("PrivatePersonName", "Test"); }
-    return new PanelModel(access, db, store) { PageContext = new PageContext { HttpContext = http } };
+    return new PanelModel(access, db, Store(db)) { PageContext = new PageContext { HttpContext = http } };
 }
 byte[] jpeg = Enumerable.Repeat((byte)0, 40).ToArray();
 jpeg[0]=255; jpeg[1]=216; jpeg[2]=255; jpeg[^2]=255; jpeg[^1]=217;
 IFormFile Upload() => new FormFile(new MemoryStream(jpeg), 0, jpeg.Length, "file", "photo.jpg");
 async Task<PrivateMessage> Photo(AppDbContext db, int? hours, DateTime? created = null) {
-    var m = new PrivateMessage { SenderPerson=1, SenderName="Test", Kind=PrivateMessageKind.ViewOncePhoto, PhotoViewHours=hours, CreatedAtUtc=created ?? DateTime.UtcNow, MediaKey=await store.SaveAsync(jpeg, default), MediaContentType="image/jpeg" };
-    db.Add(m); await db.SaveChangesAsync(); db.ChangeTracker.Clear(); return m;
+    var m = new PrivateMessage { SenderPerson=1, SenderName="Test", Kind=PrivateMessageKind.ViewOncePhoto, PhotoViewHours=hours };
+    await Store(db,created).SaveAsync(m,jpeg,default); db.ChangeTracker.Clear(); return m;
 }
 try {
     await using var db = new AppDbContext(options);
-    await db.Database.EnsureCreatedAsync();
+
     // Validate production provider SQL and migration metadata without a live database.
     await using (var pg = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql("Host=localhost;Database=design;Username=design").Options)) {
         Check(!pg.Database.HasPendingModelChanges(), "PostgreSQL migration snapshot matches model");
@@ -76,7 +79,7 @@ try {
     var activeOld=await Photo(db,5);
     Check(await Panel(db).OnPostPhotoAsync(activeOld.Id) is FileContentResult,"Open timed before aging");
     await db.PrivateMessages.Where(x=>x.Id==activeOld.Id).ExecuteUpdateAsync(u=>u.SetProperty(x=>x.CreatedAtUtc,DateTime.UtcNow.AddHours(-25)));
-    Check(await Panel(db).OnPostPhotoAsync(activeOld.Id) is FileContentResult,"Active timer survives upload age of 24 hours");
+    Check(await Panel(db).OnPostPhotoAsync(activeOld.Id) is ObjectResult { StatusCode:410 },"Absolute 24 hour photo deadline overrides active timer");
     var hidden=await Photo(db,1);
     db.PrivateMessageHiddens.Add(new PrivateMessageHidden { PersonNumber=2, PrivateMessageId=hidden.Id, HiddenAtUtc=DateTime.UtcNow }); await db.SaveChangesAsync();
     Check(await Panel(db).OnPostPhotoAsync(hidden.Id) is ObjectResult { StatusCode:410 },"Hidden denied");
@@ -86,8 +89,9 @@ try {
     Check(await Panel(db).OnPostSendAsync("Reply still works",text.Id) is JsonResult,"Reply send");
     Check(await db.PrivateMessages.AnyAsync(x=>x.ReplyToMessageId==text.Id && x.IsReply),"Reply relationship");
     Check(await Panel(db).OnGetMessagesAsync() is JsonResult,"Message polling");
-    var audio=new PrivateMessage { SenderPerson=1,SenderName="Test",Kind=PrivateMessageKind.Audio,CreatedAtUtc=DateTime.UtcNow,MediaKey=await store.SaveAsync(new byte[]{1,2,3},default),MediaContentType="audio/webm",DurationSeconds=1 };
-    db.Add(audio);await db.SaveChangesAsync();
+    var audioBytes=new byte[64]; "OggS"u8.CopyTo(audioBytes); "OpusHead"u8.CopyTo(audioBytes.AsSpan(20));
+    var audio=new PrivateMessage { SenderPerson=1,SenderName="Test",Kind=PrivateMessageKind.Audio,DurationSeconds=1 };
+    await Store(db).SaveAsync(audio,audioBytes,default);
     Check(await Panel(db).OnGetAudioAsync(audio.Id) is FileContentResult,"Audio access");
     Check(await Panel(db,null).OnGetAudioAsync(audio.Id) is UnauthorizedResult,"Audio session protection");
     var concurrent=await Photo(db,3);
@@ -97,11 +101,11 @@ try {
     var concurrentOnce=await Photo(db,null);
     results=await Task.WhenAll(Task.Run(async()=>{await using var other=new AppDbContext(options);return await Panel(other).OnPostPhotoAsync(concurrentOnce.Id);}),Task.Run(async()=>{await using var other=new AppDbContext(options);return await Panel(other).OnPostPhotoAsync(concurrentOnce.Id);}));
     Check(results.Count(x=>x is FileContentResult)==1,"Concurrent once only one winner");
-    await PrivateMediaCleanupService.CleanupAsync(db,store,NullLogger.Instance,default);
+    await PrivateMediaCleanupService.CleanupAsync(db,Store(db),NullLogger.Instance,default);
     Check(!await db.PrivateMessages.AnyAsync(x=>x.PhotoAccessExpiresAtUtc<DateTime.UtcNow && x.MediaKey!=null),"Timed cleanup");
     Check(!await db.PrivateMessages.AnyAsync(x=>x.Kind==PrivateMessageKind.ViewOncePhoto && x.ViewedAtUtc==null && x.CreatedAtUtc<DateTime.UtcNow.AddHours(-24) && x.MediaKey!=null),"Unopened cleanup");
-    Console.WriteLine($"PASS: {assertions} assertions (SQLite; isolated temporary database).");
-} finally { Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); Directory.Delete(root,true); }
+    Console.WriteLine($"PASS: {assertions} assertions (isolated PostgreSQL).");
+} finally { Npgsql.NpgsqlConnection.ClearAllPools(); Directory.Delete(root,true); }
 
 sealed class TestSession : ISession {
     readonly Dictionary<string,byte[]> values=new();
@@ -115,4 +119,11 @@ sealed class TestEnvironment(string root) : IWebHostEnvironment {
     public string ApplicationName{get;set;}="Tests";public string EnvironmentName{get;set;}="Development";
     public string ContentRootPath{get;set;}=root;public string WebRootPath{get;set;}=Path.Combine(root,"wwwroot");
     public IFileProvider ContentRootFileProvider{get;set;}=new NullFileProvider();public IFileProvider WebRootFileProvider{get;set;}=new NullFileProvider();
+}
+
+sealed class FixtureClock(DateTime at):TimeProvider {public override DateTimeOffset GetUtcNow()=>new(DateTime.SpecifyKind(at,DateTimeKind.Utc));}
+sealed class TestOptions:IOptionsMonitor<PrivateMediaOptions> {
+    readonly PrivateMediaOptions value=new(){MaxDatabaseBytes=10L*1024*1024*1024};
+    public PrivateMediaOptions CurrentValue=>value;public PrivateMediaOptions Get(string? name)=>value;
+    public IDisposable? OnChange(Action<PrivateMediaOptions,string?> listener)=>null;
 }

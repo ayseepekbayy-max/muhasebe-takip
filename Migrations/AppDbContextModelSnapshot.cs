@@ -1192,6 +1192,69 @@ namespace MuhasebeTakip2.App.Migrations
                     b.ToTable("OdemePlanlari");
                 });
 
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.PrivateMediaContent", b =>
+                {
+                    b.Property<int>("MessageId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MediaKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<byte[]>("Payload")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.HasKey("MessageId");
+
+                    b.HasIndex("ExpiresAtUtc");
+
+                    b.HasIndex("MediaKey")
+                        .IsUnique();
+
+                    b.ToTable("PrivateMediaContents", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PrivateMediaContent_Expiry", "\"ExpiresAtUtc\" - \"CreatedAtUtc\" = interval '24 hours'");
+
+                            t.HasCheckConstraint("CK_PrivateMediaContent_Key", "\"MediaKey\" ~ '^[0-9a-f]{32}$'");
+
+                            t.HasCheckConstraint("CK_PrivateMediaContent_Size", "octet_length(\"Payload\") BETWEEN 1 AND 16777216");
+                        });
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.PrivateMediaQuota", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("UsedBytes")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PrivateMediaQuotas", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PrivateMediaQuota_Limit", "\"Id\" = 1 AND \"UsedBytes\" BETWEEN 0 AND 104857600");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            UsedBytes = 0L
+                        });
+                });
+
             modelBuilder.Entity("MuhasebeTakip2.App.Models.PrivateMessage", b =>
                 {
                     b.Property<int>("Id")
@@ -1808,6 +1871,15 @@ namespace MuhasebeTakip2.App.Migrations
                         .IsRequired();
 
                     b.Navigation("Firma");
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.PrivateMediaContent", b =>
+                {
+                    b.HasOne("MuhasebeTakip2.App.Models.PrivateMessage", null)
+                        .WithMany()
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("MuhasebeTakip2.App.Models.PrivateMessage", b =>

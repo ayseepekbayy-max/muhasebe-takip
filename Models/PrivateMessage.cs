@@ -8,6 +8,8 @@ public sealed class PrivateMessage
     public const int MaxSenderNameLength = 200;
 
     public int Id { get; set; }
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public bool MediaAvailable { get; set; }
 
     public int? ReplyToMessageId { get; set; }
     // Retained when the foreign key is cleared after deleting the original message.
