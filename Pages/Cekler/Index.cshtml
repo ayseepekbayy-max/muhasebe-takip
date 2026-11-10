@@ -118,8 +118,8 @@
                     <td data-label="Görsel" style="padding:8px;">
                         @if (!string.IsNullOrWhiteSpace(c.ResimYolu))
                         {
-                            <a href="@c.ResimYolu" target="_blank">
-                                <img src="@c.ResimYolu" style="width:60px; height:40px; object-fit:cover; border-radius:6px;" />
+                            <a href="@Url.Content($"~/belgeler/cek/{c.Id}")" target="_blank">
+                                <img src="@Url.Content($"~/belgeler/cek/{c.Id}")" style="width:60px; height:40px; object-fit:cover; border-radius:6px;" />
                             </a>
                         }
                     </td>
@@ -176,8 +176,8 @@
                     <td data-label="Görsel" style="padding:8px;">
                         @if (!string.IsNullOrWhiteSpace(c.ResimYolu))
                         {
-                            <a href="@c.ResimYolu" target="_blank">
-                                <img src="@c.ResimYolu" style="width:60px; height:40px; object-fit:cover; border-radius:6px;" />
+                            <a href="@Url.Content($"~/belgeler/cek/{c.Id}")" target="_blank">
+                                <img src="@Url.Content($"~/belgeler/cek/{c.Id}")" style="width:60px; height:40px; object-fit:cover; border-radius:6px;" />
                             </a>
                         }
                     </td>

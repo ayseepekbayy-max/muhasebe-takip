@@ -326,9 +326,13 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
         AddSalaryWarning(package);
         var unresolvedSalaryIds = package.UnresolvedSalaryEmployees.Select(x => x.SalaryRecordId).ToHashSet();
         var restoreId = Guid.NewGuid().ToString("N");
-        var stage = Path.Combine(environment.ContentRootPath, "App_Data", "RestoreStaging", restoreId);
+        var stage = Path.Combine(environment.WebRootPath, "uploads", ".restore-staging", restoreId);
         var final = Path.Combine(environment.WebRootPath, "uploads", "yedek", restoreId);
+        if (Directory.Exists(stage) || Directory.Exists(final) || File.Exists(stage) || File.Exists(final))
+            throw new BackupException("Geri yükleme dizini hazırlanamadı.");
         Directory.CreateDirectory(stage);
+        var finalPlaced = false;
+        var commitStarted = false;
         var committed = false;
         try
         {
@@ -404,7 +408,17 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
             }
             Directory.CreateDirectory(Path.GetDirectoryName(final)!);
             Directory.Move(stage, final);
-            await transaction.CommitAsync(ct);
+            finalPlaced = true;
+            commitStarted = true;
+            try
+            {
+                await transaction.CommitAsync(ct);
+            }
+            catch (Exception)
+            {
+                // A lost reply can hide a successful commit. Preserve documents for reconciliation.
+                throw new BackupException("Geri yüklemenin veritabanı sonucu doğrulanamadı. Belgeler korundu. Yeniden yüklemeden önce hedef kayıtları kontrol edin.");
+            }
             committed = true;
             var warnings = package.Warnings.ToList();
             if (package.Version < 4 && package.Tables[nameof(KasaHareket)].Count > 0)
@@ -418,7 +432,7 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
             if (!committed)
             {
                 db.ChangeTracker.Clear();
-                if (Directory.Exists(final)) Directory.Delete(final, true);
+                if (finalPlaced && !commitStarted && Directory.Exists(final)) Directory.Delete(final, true);
             }
             if (Directory.Exists(stage)) Directory.Delete(stage, true);
         }

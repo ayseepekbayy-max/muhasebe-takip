@@ -171,11 +171,12 @@ public class DetayModel : PageModel
 
     public async Task<IActionResult> OnPostDosyaEkleAsync(int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = await AccountingDocuments.VerifiedCompanyAsync(_db, HttpContext, HttpContext.RequestAborted);
+        if (firmaId == null) return StatusCode(403);
 
-        var faturaVarMi = await _db.Faturalar.AnyAsync(x => x.Id == id && x.FirmaId == firmaId.Value && x.AktifMi);
+        var ct = HttpContext.RequestAborted;
+        await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        var faturaVarMi = await _db.Faturalar.AnyAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi && (x.CariKartId == null || (x.CariKart != null && x.CariKart.FirmaId == firmaId)), ct);
         if (!faturaVarMi)
             return NotFound();
 
@@ -197,20 +198,38 @@ public class DetayModel : PageModel
         Directory.CreateDirectory(klasor);
         var dosyaAdi = $"fatura-{id}-{Guid.NewGuid():N}{uzanti}";
         var fizikselYol = Path.Combine(klasor, dosyaAdi);
-        await using var fs = System.IO.File.Create(fizikselYol);
-        await EkDosya.CopyToAsync(fs);
-
-        _db.EkDosyalar.Add(new EkDosya
+        var fileCreated = false;
+        var commitStarted = false;
+        try
         {
-            FirmaId = firmaId.Value,
-            FaturaId = id,
-            DosyaAdi = Path.GetFileName(EkDosya.FileName),
-            DosyaYolu = $"/uploads/faturalar/{dosyaAdi}",
-            IcerikTipi = EkDosya.ContentType,
-            Boyut = EkDosya.Length,
-            YuklemeTarihi = DateTime.UtcNow
-        });
-        await _db.SaveChangesAsync();
+            await using (var fs = new FileStream(fizikselYol, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                fileCreated = true;
+                await EkDosya.CopyToAsync(fs, ct);
+            }
+
+            var belge = new EkDosya
+            {
+                FirmaId = firmaId.Value,
+                FaturaId = id,
+                DosyaAdi = Path.GetFileName(EkDosya.FileName),
+                DosyaYolu = $"/uploads/faturalar/{dosyaAdi}",
+                IcerikTipi = EkDosya.ContentType,
+                Boyut = EkDosya.Length,
+                YuklemeTarihi = DateTime.UtcNow
+            };
+            _db.EkDosyalar.Add(belge);
+            await _db.SaveChangesAsync(ct);
+            // A failed commit acknowledgement does not prove that the database rolled back.
+            commitStarted = true;
+            await transaction.CommitAsync(ct);
+        }
+        catch
+        {
+            if (fileCreated && !commitStarted)
+                System.IO.File.Delete(fizikselYol);
+            throw;
+        }
 
         TempData["Basari"] = "Dosya faturaya eklendi.";
         return RedirectToPage(new { id });

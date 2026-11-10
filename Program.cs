@@ -7,6 +7,8 @@ using MuhasebeTakip2.App.Services.Ai;
 using MuhasebeTakip2.App.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+ReleaseMaintenance.ValidateStartup(builder.Configuration, builder.Environment);
+builder.Services.AddSingleton<ReleaseMaintenance>();
 
 // Add services to the container.
 builder.Services.AddRazorPages();
@@ -234,7 +236,8 @@ if (app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-app.UseStaticFiles();
+app.UseAccountingPublicAssets();
+app.UseReleaseMaintenance();
 app.UseRouting();
 app.UseSession();
 
@@ -2664,6 +2667,7 @@ app.MapPost("/api/ai/akilli-isletme-yorumu", async (AppDbContext db, CalisanAvan
     });
 });
 
+app.MapAccountingDocuments();
 app.MapRazorPages();
 
 app.Run();

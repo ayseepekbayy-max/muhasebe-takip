@@ -177,27 +177,36 @@ public class IndexModel : PageModel
 
             if (cek != null)
             {
-                if (!string.IsNullOrWhiteSpace(cek.ResimYolu))
+                var fizikselYol = await AccountingDocuments.FindChequeFileAsync(
+                    _db, _env, firmaId.Value, cek.Id, HttpContext.RequestAborted);
+                // Never remove the document until the database commit is confirmed.
+                // A lost commit acknowledgement must leave the file intact.
+                await using (var transaction = await _db.Database.BeginTransactionAsync(HttpContext.RequestAborted))
                 {
-                    var fizikselYol = Path.Combine(
-                        _env.WebRootPath,
-                        cek.ResimYolu.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString())
-                    );
-
-                    if (System.IO.File.Exists(fizikselYol))
-                        System.IO.File.Delete(fizikselYol);
+                    _db.Cekler.Remove(cek);
+                    await _db.SaveChangesAsync(HttpContext.RequestAborted);
+                    await transaction.CommitAsync(HttpContext.RequestAborted);
                 }
 
-                _db.Cekler.Remove(cek);
-                await _db.SaveChangesAsync();
+                if (fizikselYol != null)
+                {
+                    try
+                    {
+                        System.IO.File.Delete(fizikselYol);
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        // The accounting deletion is already committed. Do not undo it or expose paths.
+                        TempData["Hata"] = "Çek kaydı silindi ancak belge dosyası temizlenemedi. Dosya temizliği ayrıca kontrol edilmelidir.";
+                    }
+                }
             }
 
             return RedirectToPage();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            var detay = ex.InnerException?.Message ?? ex.Message;
-            Hata = "Çek silinirken hata oluştu: " + detay;
+            Hata = "Çek silme işlemi doğrulanamadı. Sonucu kontrol etmeden tekrar denemeyin.";
             await YukleAsync(firmaId.Value);
             return Page();
         }
