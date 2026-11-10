@@ -145,7 +145,7 @@
             <div class="attachment-list">
                 @foreach (var dosya in Model.Dosyalar)
                 {
-                    <a class="attachment-item" href="@dosya.DosyaYolu" target="_blank"><strong>@dosya.DosyaAdi</strong><span>@dosya.YuklemeTarihi.ToString("dd.MM.yyyy HH:mm")</span></a>
+                    <a class="attachment-item" href="@Url.Content($"~/belgeler/ek/{dosya.Id}")" target="_blank"><strong>@dosya.DosyaAdi</strong><span>@dosya.YuklemeTarihi.ToString("dd.MM.yyyy HH:mm")</span></a>
                 }
             </div>
         }

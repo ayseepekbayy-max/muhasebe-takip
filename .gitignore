@@ -22,3 +22,8 @@ secrets.json
 
 # Private chat uploads
 App_Data/PrivateMedia/
+
+# Local PostgreSQL release-test outputs; source projects and reports remain eligible.
+/Tests/PostgresReleaseSafety/Artifacts/
+/Tests/PostgresReleaseSafety/run-state.json
+/Tests/PostgresReleaseSafety/production-hashes.xml
