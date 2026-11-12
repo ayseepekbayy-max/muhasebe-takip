@@ -22,7 +22,7 @@ public class DetayModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.ViewingCompanyId(HttpContext);
         if (firmaId == null) return RedirectToPage("/Login");
 
         var cek = await _db.Cekler.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);

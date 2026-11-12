@@ -179,6 +179,7 @@
                                   asp-page-handler="Sil"
                                   class="inline-form"
                                   onsubmit="return confirm('Bu müşteri silinirse bağlı işler ve masraflar da silinecek. Devam edilsin mi?');">
+                                <partial name="~/Pages/Shared/_AccountingContextStamp.cshtml" />
                                 <input type="hidden" name="id" value="@m.Id" />
                                 <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
                             </form>
@@ -201,6 +202,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
             <form method="post" asp-page-handler="Ekle">
+                <partial name="~/Pages/Shared/_AccountingContextStamp.cshtml" />
                 <div class="modal-body">
                     <div class="cari-modal-form">
                         <div class="form-field">

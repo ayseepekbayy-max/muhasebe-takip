@@ -8,6 +8,7 @@ using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Kasa;
 
+[ServiceFilter(typeof(KasaContextFilter))]
 public class HareketDuzenleModel : PageModel
 {
     private readonly AppDbContext _db;
@@ -33,7 +34,7 @@ public class HareketDuzenleModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = KasaRequestContext.CompanyId(HttpContext);
         if (firmaId == null)
             return RedirectToPage("/Login");
 
@@ -50,9 +51,12 @@ public class HareketDuzenleModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostAsync()
+    public Task<IActionResult> OnPostAsync()
+        => InvoicePaymentTransaction.RunPageAsync(_db, this, DuzenleAsync);
+
+    private async Task<IActionResult> DuzenleAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = KasaRequestContext.CompanyId(HttpContext);
         if (firmaId == null)
             return RedirectToPage("/Login");
 
@@ -103,6 +107,7 @@ public class HareketDuzenleModel : PageModel
         object? eskiFaturaDegeri = null;
         if (dbHareket.FaturaId.HasValue)
         {
+            await InvoicePaymentTransaction.LockInvoiceAsync(_db, firmaId.Value, dbHareket.FaturaId.Value, HttpContext.RequestAborted);
             bagliFatura = await _db.Faturalar.FirstOrDefaultAsync(x =>
                 x.Id == dbHareket.FaturaId.Value && x.FirmaId == firmaId.Value);
             if (bagliFatura == null)

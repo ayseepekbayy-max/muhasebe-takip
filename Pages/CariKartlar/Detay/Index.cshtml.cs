@@ -7,6 +7,7 @@ using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.CariKartlar.Detay;
 
+[ServiceFilter(typeof(KasaContextFilter))]
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
@@ -36,9 +37,13 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = HttpContext.Session.GetString("DemoMode") == "1"
+            ? await CariContextFilter.VerifiedDemoCompanyAsync(_db, HttpContext)
+            : KasaRequestContext.CompanyId(HttpContext);
+        if (firmaId == null ||
+            await CariScope.ForeignCardAsync(_db, firmaId.Value, id, HttpContext.RequestAborted) ||
+            !await CariScope.RelationsValidAsync(_db, firmaId.Value, id, HttpContext.RequestAborted))
+            return StatusCode(403);
 
         await YukleAsync(id, firmaId.Value);
         return Cari == null ? NotFound() : Page();
@@ -52,7 +57,7 @@ public class IndexModel : PageModel
 
     private async Task<IActionResult> HareketEkleAsync(int id, HareketTipi tip)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = KasaRequestContext.CompanyId(HttpContext);
         if (firmaId == null)
             return RedirectToPage("/Login");
 

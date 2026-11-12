@@ -73,6 +73,8 @@
                 <p>Mevcut stok bu seviyenin altına düştüğünde ürün kritik görünür.</p>
             </div>
         </div>
+        @if (!MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.IsViewingAnotherCompany(ViewContext.HttpContext))
+        {
         <form method="post" asp-page-handler="MinStokGuncelle" class="stok-threshold-form">
             <div class="form-field">
                 <label asp-for="MinStokSeviyesi">Minimum Stok Seviyesi</label>
@@ -80,6 +82,7 @@
             </div>
             <button type="submit" class="btn btn-outline-primary">Eşiği Güncelle</button>
         </form>
+        }
     </section>
 
     <section class="two-column-grid">
@@ -87,6 +90,8 @@
             <div class="panel-title-row">
                 <div><h2>Stok Girişi</h2><p>Alış fiyatı ve KDV bilgisiyle giriş kaydedin.</p></div>
             </div>
+            @if (!MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.IsViewingAnotherCompany(ViewContext.HttpContext))
+            {
             <form method="post" asp-page-handler="Giris" class="stok-movement-form">
                 <div class="app-form-grid">
                     <div class="form-field">
@@ -122,12 +127,15 @@
                     <button type="submit" class="btn btn-primary">Stok Girişi Kaydet</button>
                 </div>
             </form>
+            }
         </div>
 
         <div class="app-form-panel">
             <div class="panel-title-row">
                 <div><h2>Stok Çıkışı</h2><p>Mevcut stok miktarını aşmadan çıkış kaydedin.</p></div>
             </div>
+            @if (!MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.IsViewingAnotherCompany(ViewContext.HttpContext))
+            {
             <form method="post" asp-page-handler="Cikis" class="stok-movement-form">
                 <div class="app-form-grid">
                     <div class="form-field">
@@ -147,6 +155,7 @@
                     <button type="submit" class="btn btn-outline-danger">Stok Çıkışı Kaydet</button>
                 </div>
             </form>
+            }
         </div>
     </section>
 
@@ -195,11 +204,14 @@
                                 <td>@hareket.KoliAdedi.ToString("N2") / @hareket.KoliFiyat.ToString("N2") ₺</td>
                                 <td>@(string.IsNullOrWhiteSpace(hareket.Aciklama) ? "-" : hareket.Aciklama)</td>
                                 <td>
+                                    @if (!MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.IsViewingAnotherCompany(ViewContext.HttpContext))
+                                    {
                                     <form method="post" asp-page-handler="Sil" class="inline-form"
                                           onsubmit="return confirm('Stok hareketi silinsin mi?');">
                                         <input type="hidden" name="id2" value="@hareket.Id" />
                                         <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
                                     </form>
+                                    }
                                 </td>
                             </tr>
                         }

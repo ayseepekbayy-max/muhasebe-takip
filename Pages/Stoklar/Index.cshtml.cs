@@ -46,7 +46,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.ViewingCompanyId(HttpContext);
         if (firmaId == null)
             return RedirectToPage("/Login");
 
@@ -137,7 +137,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetDisaAktarAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.ViewingCompanyId(HttpContext);
         if (firmaId == null)
             return RedirectToPage("/Login");
 

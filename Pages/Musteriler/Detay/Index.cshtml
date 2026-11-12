@@ -66,6 +66,7 @@ else
             <h3 style="margin-top:0;">Yeni İş Ekle</h3>
 
             <form method="post" asp-page-handler="IsEkle">
+                <partial name="~/Pages/Shared/_AccountingContextStamp.cshtml" />
                 <div><label asp-for="KasaHesapId">Tahsilatın Hesabı (gelir girilirse zorunlu)</label><select asp-for="KasaHesapId" asp-items="Model.HesapSecenekleri"></select></div>
                 <div style="margin-bottom:10px;">
                     <label><b>Tarih</b></label><br />
@@ -90,6 +91,7 @@ else
             <h3 style="margin-top:0;">Masraf Ekle</h3>
 
             <form method="post" asp-page-handler="MasrafEkle">
+                <partial name="~/Pages/Shared/_AccountingContextStamp.cshtml" />
                 <div style="margin-bottom:10px;">
                     <label><b>İş Seç</b></label><br />
                     <select asp-for="MasrafIsId" style="width:100%; padding:8px;">
@@ -165,6 +167,7 @@ else
                     <div style="margin-top:14px;">
                         <form method="post" asp-page-handler="IsSil" style="display:inline;"
                               onsubmit="return confirm('Bu iş silinirse bağlı masraflar da silinecek. Devam edilsin mi?');">
+                            <partial name="~/Pages/Shared/_AccountingContextStamp.cshtml" />
                             <input type="hidden" name="isId" value="@isKaydi.Id" />
                             <button type="submit" class="btn btn-outline-danger btn-sm">İşi Sil</button>
                         </form>
@@ -198,6 +201,7 @@ else
                                             <td style="border-bottom:1px solid #333; padding:8px;">
                                                 <form method="post" asp-page-handler="MasrafSil" style="display:inline;"
                                                       onsubmit="return confirm('Masraf silinsin mi?');">
+                                                    <partial name="~/Pages/Shared/_AccountingContextStamp.cshtml" />
                                                     <input type="hidden" name="masrafId" value="@masraf.Id" />
                                                     <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
                                                 </form>

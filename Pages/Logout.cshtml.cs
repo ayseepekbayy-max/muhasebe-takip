@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages;
 
-public class LogoutModel : PageModel
+public class LogoutModel(AccountingSessionLifecycle sessionLifecycle) : PageModel
 {
-    public IActionResult OnGet()
+    public async Task<IActionResult> OnGetAsync()
     {
-        HttpContext.Session.Clear();
+        await sessionLifecycle.EndAsync(HttpContext);
         return RedirectToPage("/Login");
     }
 }

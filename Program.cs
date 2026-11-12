@@ -11,7 +11,7 @@ ReleaseMaintenance.ValidateStartup(builder.Configuration, builder.Environment);
 builder.Services.AddSingleton<ReleaseMaintenance>();
 
 // Add services to the container.
-builder.Services.AddRazorPages();
+builder.Services.AddRazorPages().AddMvcOptions(options => options.Filters.Add(new SwitchedAccountingBoundary.HandlerFilter()));
 builder.Services.AddScoped<NovaReplyService>();
 builder.Services.AddScoped<PrivateAccessService>();
 builder.Services.AddSingleton(TimeProvider.System);
@@ -32,6 +32,9 @@ builder.Services.AddSession(options =>
 });
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddAdminPortalAuthorization();
+builder.Services.AddAccountingContextFoundation();
+builder.Services.AddScoped<KasaContextFilter>();
 builder.Services.AddScoped<ConversationMemoryService>();
 builder.Services.AddScoped<IIslemGecmisiService, IslemGecmisiService>();
 builder.Services.AddScoped<IOdemeBildirimService, OdemeBildirimService>();
@@ -240,9 +243,18 @@ app.UseAccountingPublicAssets();
 app.UseReleaseMaintenance();
 app.UseRouting();
 app.UseSession();
+app.UseSwitchedAccountingBoundary();
 
 app.Use(async (context, next) =>
 {
+    // Portal requests must reach their authorization filter, including missing/private sessions,
+    // so denied GETs return 403 instead of the legacy ERP login/panel redirects.
+    if (context.Request.Path.StartsWithSegments("/AdminPortal", StringComparison.OrdinalIgnoreCase))
+    {
+        await next();
+        return;
+    }
+
     // Keep this session domain outside all ERP page and API handlers.
     var accessPath = context.Request.Path.Value?.TrimEnd('/') ?? "";
     var isPanel = string.Equals(accessPath, "/Panel", StringComparison.OrdinalIgnoreCase);

@@ -37,7 +37,10 @@ public class IslemGecmisiService : IIslemGecmisiService
         var session = _httpContextAccessor.HttpContext?.Session
             ?? throw new InvalidOperationException("İşlem geçmişi için aktif oturum bulunamadı.");
 
-        var firmaId = session.GetInt32("FirmaId")
+        var accountingContext = AccountingPageContextFilter.Current(_httpContextAccessor.HttpContext!)
+            ?? KasaRequestContext.Get(_httpContextAccessor.HttpContext!);
+        var personalActor = AccountingManagementAccess.PersonalAuditActor(_httpContextAccessor.HttpContext);
+        var firmaId = personalActor?.HomeCompanyId ?? accountingContext?.ActiveCompanyId ?? session.GetInt32("FirmaId")
             ?? throw new InvalidOperationException("İşlem geçmişi için firma bilgisi bulunamadı.");
         var httpContext = _httpContextAccessor.HttpContext;
 
@@ -52,8 +55,8 @@ public class IslemGecmisiService : IIslemGecmisiService
         _db.IslemGecmisleri.Add(new IslemGecmisi
         {
             FirmaId = firmaId,
-            KullaniciId = session.GetInt32("KullaniciId"),
-            KullaniciAdi = Limit(session.GetString("KullaniciAdi") ?? "Bilinmeyen kullanıcı", 100),
+            KullaniciId = personalActor?.UserId ?? accountingContext?.Actor.UserId ?? session.GetInt32("KullaniciId"),
+            KullaniciAdi = Limit(personalActor?.UserName ?? accountingContext?.Actor.UserName ?? session.GetString("KullaniciAdi") ?? "Bilinmeyen kullanıcı", 100),
             Modul = Limit(modul.Trim(), 80),
             IslemTuru = Limit(islemTuru.Trim(), 30),
             Aciklama = Limit(aciklama.Trim(), 500),

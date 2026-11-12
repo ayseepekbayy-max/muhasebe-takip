@@ -22,6 +22,8 @@
         <div class="app-alert app-alert-danger">@Model.Hata</div>
     }
 
+    @if (ViewData["CanManageCompany"] is true)
+    {
     <section class="app-form-panel">
         <div class="panel-title-row">
             <div>
@@ -35,6 +37,8 @@
         </div>
 
         <form method="post" asp-page-handler="FirmaGuncelle" enctype="multipart/form-data" class="app-form-grid">
+
+            <partial name="_ManagementContextStamp" />
             <div class="form-field form-field-wide"><label asp-for="FirmaAdi">Firma Adı</label><input asp-for="FirmaAdi" /></div>
             <div class="form-field form-field-wide"><label asp-for="Adres">Adres</label><input asp-for="Adres" /></div>
             <div class="form-field"><label asp-for="Telefon">Telefon</label><input asp-for="Telefon" /></div>
@@ -45,10 +49,12 @@
             <div class="form-actions-row"><button type="submit" class="btn btn-primary">Firma Bilgilerini Kaydet</button></div>
         </form>
     </section>
+    }
 
     <section class="app-form-panel">
         <div class="panel-title-row"><div><h2>Kullanıcı Bilgileri</h2><p>Kullanıcı adınızı ve şifrenizi güncelleyin.</p></div></div>
         <form method="post" asp-page-handler="KullaniciGuncelle" class="app-form-grid">
+            <partial name="_ManagementContextStamp" />
             <div class="form-field form-field-wide"><label asp-for="KullaniciAdi">Kullanıcı Adı</label><input asp-for="KullaniciAdi" /></div>
             <div class="form-field"><label asp-for="MevcutSifre">Mevcut Şifre</label><input asp-for="MevcutSifre" type="password" /></div>
             <div class="form-field"><label asp-for="YeniSifre">Yeni Şifre</label><input asp-for="YeniSifre" type="password" /></div>
@@ -60,6 +66,7 @@
     <section class="app-form-panel">
         <div class="panel-title-row"><div><h2>E-posta Bildirim Ayarları</h2><p>Ödemeler için kullanıcı e-posta bildirimlerini yönetin.</p></div></div>
         <form method="post" asp-page-handler="EmailBildirimKaydet" class="app-form-grid">
+            <partial name="_ManagementContextStamp" />
             <div class="form-field form-field-wide"><label asp-for="KullaniciEmail">Kullanıcı E-postası</label><input asp-for="KullaniciEmail" type="email" /></div>
             <div class="form-field form-field-wide">
                 <label><input asp-for="OdemeEmailBildirimiAktifMi" type="checkbox" /> Ödeme e-posta bildirimleri aktif</label>
@@ -67,13 +74,17 @@
             <div class="form-actions-row"><button type="submit" class="btn btn-primary">E-posta Ayarlarını Kaydet</button></div>
         </form>
         <form method="post" asp-page-handler="TestEpostasi" class="form-actions-row">
+            <partial name="_ManagementContextStamp" />
             <button type="submit" class="btn btn-outline-primary">Test E-postası Gönder</button>
         </form>
     </section>
 
+    @if (ViewData["CanManageCompany"] is true)
+    {
     <section class="app-form-panel">
         <div class="panel-title-row"><div><h2>Menü Görünürlüğü</h2><p>Firmanız için hangi kategorilerin görüneceğini seçin.</p></div></div>
         <form method="post" asp-page-handler="MenuKaydet">
+            <partial name="_ManagementContextStamp" />
             <div class="settings-toggle-grid">
                 <label><input asp-for="MenuCariKartlar" type="checkbox" /> Cari Kartlar</label>
                 <label><input asp-for="MenuKasa" type="checkbox" /> Kasa</label>
@@ -88,4 +99,5 @@
             <div class="form-actions-row"><button type="submit" class="btn btn-outline-primary">Menü Ayarlarını Kaydet</button></div>
         </form>
     </section>
+    }
 </div>

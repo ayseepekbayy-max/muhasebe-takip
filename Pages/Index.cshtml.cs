@@ -7,6 +7,7 @@ using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages;
 
+[ServiceFilter(typeof(KasaContextFilter))]
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
@@ -72,43 +73,11 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostSilAsync(int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
-
-        var hareket = await _db.KasaHareketleri
-            .FirstOrDefaultAsync(x =>
-                x.Id == id &&
-                x.FirmaId == firmaId.Value);
-
-        if (hareket == null)
-        {
-            TempData["Hata"] = "Kasa hareketi bulunamadı.";
-            return RedirectToPage();
-        }
-
-        await _islemGecmisi.KaydetAsync(
-            "Kasa",
-            "Silme",
-            $"Kasa hareketi ana sayfadan silindi (ID: {hareket.Id}).",
-            eskiDeger: new
-            {
-                hareket.Id,
-                hareket.Tarih,
-                Tip = hareket.Tip.ToString(),
-                hareket.Tutar,
-                hareket.Aciklama,
-                hareket.CariKartId,
-                hareket.FaturaId
-            });
-        _db.KasaHareketleri.Remove(hareket);
-        await _db.SaveChangesAsync();
-
-        TempData["Basari"] = "Kasa hareketi silindi.";
+        var company = KasaRequestContext.CompanyId(HttpContext)!.Value;
+        var error = await KasaMovementDeletion.DeleteAsync(_db, _islemGecmisi, company, id, HttpContext.RequestAborted);
+        TempData[error == null ? "Basari" : "Hata"] = error ?? "Kasa hareketi silindi.";
         return RedirectToPage();
     }
-
-
     private async Task BildirimleriYukleAsync(int firmaId, DateTime bugun)
     {
         var yediGunSonra = bugun.AddDays(7);

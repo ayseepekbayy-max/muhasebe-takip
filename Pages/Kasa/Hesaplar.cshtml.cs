@@ -6,6 +6,7 @@ using MuhasebeTakip2.App.Models;
 using MuhasebeTakip2.App.Services;
 namespace MuhasebeTakip2.App.Pages.Kasa;
 
+[ServiceFilter(typeof(KasaContextFilter))]
 public class HesaplarModel(AppDbContext db, IIslemGecmisiService audit) : PageModel
 {
     public List<KasaHesapService.BakiyeSatiri> Hesaplar { get; set; } = [];
@@ -19,13 +20,13 @@ public class HesaplarModel(AppDbContext db, IIslemGecmisiService audit) : PageMo
 
     public async Task<IActionResult> OnGetAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = KasaRequestContext.CompanyId(HttpContext);
         if (firmaId == null) return RedirectToPage("/Login");
         await YukleAsync(firmaId.Value); return Page();
     }
     public async Task<IActionResult> OnPostEkleAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = KasaRequestContext.CompanyId(HttpContext);
         if (firmaId == null) return RedirectToPage("/Login");
         Yeni.Ad = (Yeni.Ad ?? "").Trim();
         if (!ModelState.IsValid || Yeni.Ad.Length is < 1 or > 100 || !Enum.IsDefined(Yeni.Tur) ||
@@ -40,7 +41,7 @@ public class HesaplarModel(AppDbContext db, IIslemGecmisiService audit) : PageMo
     }
     public async Task<IActionResult> OnPostAktiflikAsync(int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = KasaRequestContext.CompanyId(HttpContext);
         if (firmaId == null) return RedirectToPage("/Login");
         var hesap = await db.KasaHesaplar.SingleOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
         if (hesap == null) return NotFound();
@@ -50,7 +51,7 @@ public class HesaplarModel(AppDbContext db, IIslemGecmisiService audit) : PageMo
     }
     public async Task<IActionResult> OnPostTransferAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = KasaRequestContext.CompanyId(HttpContext);
         if (firmaId == null) return RedirectToPage("/Login");
         if (!ModelState.IsValid || Transfer.Tutar <= 0 || Transfer.Tutar > 9999999999999999m || decimal.Round(Transfer.Tutar, 2) != Transfer.Tutar || Transfer.Tarih == default ||
             Transfer.KaynakHesapId == Transfer.HedefHesapId || (Transfer.Aciklama?.Length ?? 0) > 500)
@@ -66,7 +67,7 @@ public class HesaplarModel(AppDbContext db, IIslemGecmisiService audit) : PageMo
     }
     public async Task<IActionResult> OnPostTransferSilAsync(int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = KasaRequestContext.CompanyId(HttpContext);
         if (firmaId == null) return RedirectToPage("/Login");
         var transfer = await db.KasaTransferler.SingleOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
         if (transfer == null) return NotFound();
@@ -80,8 +81,10 @@ public class HesaplarModel(AppDbContext db, IIslemGecmisiService audit) : PageMo
         Hesaplar = await KasaHesapService.BakiyelerAsync(db, firmaId);
         AtanmamisBakiye = await KasaHesapService.AtanmamisBakiyeAsync(db, firmaId);
         AtanmamisHareketSayisi = await db.KasaHareketleri.CountAsync(x => x.FirmaId == firmaId && x.KasaHesapId == null);
+        var readOnly = SwitchedAccountingBoundary.IsViewingAnotherCompany(HttpContext);
         Transferler = await db.KasaTransferler.AsNoTracking().Include(x => x.KaynakHesap).Include(x => x.HedefHesap)
-            .Where(x => x.FirmaId == firmaId).OrderByDescending(x => x.Tarih).ThenByDescending(x => x.Id).Take(100).ToListAsync();
+            .Where(x => x.FirmaId == firmaId && (!readOnly ||
+                (x.KaynakHesap!.FirmaId == firmaId && x.HedefHesap!.FirmaId == firmaId))).OrderByDescending(x => x.Tarih).ThenByDescending(x => x.Id).Take(100).ToListAsync();
     }
     public class HesapForm { public string Ad { get; set; } = ""; public KasaHesapTuru Tur { get; set; } = KasaHesapTuru.Nakit; public decimal AcilisBakiyesi { get; set; } }
     public class TransferForm { public int KaynakHesapId { get; set; } public int HedefHesapId { get; set; } public decimal Tutar { get; set; } public DateTime Tarih { get; set; } = DateTime.UtcNow.Date; public string? Aciklama { get; set; } }

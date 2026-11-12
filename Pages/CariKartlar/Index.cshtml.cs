@@ -9,6 +9,7 @@ using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.CariKartlar;
 
+[TypeFilter(typeof(CariContextFilter))]
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
@@ -40,7 +41,7 @@ public class IndexModel : PageModel
 
     [BindProperty]
     [ValidateNever]
-    public CariKart YeniCari { get; set; } = new();
+    public CariEkleForm YeniCari { get; set; } = new();
 
     [BindProperty]
     [ValidateNever]
@@ -51,17 +52,16 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
-
-        await ListeleriYukleAsync(firmaId.Value);
+        var firmaId = CariContextFilter.CompanyId(HttpContext);
 
         if (DuzenleId.HasValue)
         {
             var cari = await _db.CariKartlar
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == DuzenleId.Value && x.FirmaId == firmaId.Value && x.AktifMi);
+                .FirstOrDefaultAsync(x => x.Id == DuzenleId.Value && x.FirmaId == firmaId && x.AktifMi);
+
+            if (cari == null && await CariScope.ForeignCardAsync(_db, firmaId, DuzenleId.Value, HttpContext.RequestAborted))
+                return StatusCode(403);
 
             if (cari != null)
             {
@@ -77,6 +77,11 @@ public class IndexModel : PageModel
             }
         }
 
+        if (!await CariScope.RelationsValidAsync(_db, firmaId, null, HttpContext.RequestAborted))
+            return StatusCode(403);
+
+        await ListeleriYukleAsync(firmaId);
+
         if ((int)YeniCari.Tip == 0)
             YeniCari.Tip = CariTip.Alici;
 
@@ -85,9 +90,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostEkleAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = CariContextFilter.CompanyId(HttpContext);
 
         YeniCari.Unvan = (YeniCari.Unvan ?? "").Trim();
         YeniCari.Telefon = Temizle(YeniCari.Telefon);
@@ -95,59 +98,60 @@ public class IndexModel : PageModel
 
         if (string.IsNullOrWhiteSpace(YeniCari.Unvan))
         {
+            if (!await CariScope.RelationsValidAsync(_db, firmaId, null, HttpContext.RequestAborted))
+                return StatusCode(403);
+
             ModelState.AddModelError("", "Ünvan zorunludur.");
             YeniCariModalAcik = true;
-            await ListeleriYukleAsync(firmaId.Value);
+            await ListeleriYukleAsync(firmaId);
             return Page();
         }
 
         if (!Enum.IsDefined(YeniCari.Tip))
             YeniCari.Tip = CariTip.Alici;
 
-        YeniCari.Ad = YeniCari.Unvan;
-        YeniCari.FirmaId = firmaId.Value;
-        YeniCari.OlusturmaTarihi = DateTime.UtcNow;
-        YeniCari.AktifMi = true;
-        YeniCari.ArsivTarihi = null;
-        YeniCari.ArsivNotu = null;
-
-        try
+        var cari = new CariKart
         {
-            _db.CariKartlar.Add(YeniCari);
-            await _db.SaveChangesWithAuditAsync(
-                () => _islemGecmisi.KaydetAsync(
-                    "Cari Kartlar",
-                    "Ekleme",
-                    $"{YeniCari.Unvan} ünvanlı cari kart eklendi (ID: {YeniCari.Id}).",
-                    yeniDeger: IslemGecmisiSnapshots.Cari(YeniCari)),
-                anaKaydiOnceKaydet: true);
+            Ad = YeniCari.Unvan,
+            Unvan = YeniCari.Unvan,
+            Tip = YeniCari.Tip,
+            Telefon = YeniCari.Telefon,
+            VergiNo = YeniCari.VergiNo,
+            FirmaId = firmaId,
+            OlusturmaTarihi = DateTime.UtcNow
+        };
+        _db.CariKartlar.Add(cari);
+        await _db.SaveChangesWithAuditAsync(
+            () => _islemGecmisi.KaydetAsync(
+                "Cari Kartlar",
+                "Ekleme",
+                $"{cari.Unvan} ünvanlı cari kart eklendi (ID: {cari.Id}).",
+                yeniDeger: IslemGecmisiSnapshots.Cari(cari)),
+            anaKaydiOnceKaydet: true,
+            cancellationToken: HttpContext.RequestAborted);
 
-            TempData["Basari"] = "Cari kart eklendi.";
-            return RedirectToPage();
-        }
-        catch (DbUpdateException ex)
-        {
-            ModelState.AddModelError("", $"Veritabanı hatası: {ex.InnerException?.Message ?? ex.Message}");
-            YeniCariModalAcik = true;
-            await ListeleriYukleAsync(firmaId.Value);
-            return Page();
-        }
+        TempData["Basari"] = "Cari kart eklendi.";
+        return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostDuzenleAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = CariContextFilter.CompanyId(HttpContext);
 
         var cari = await _db.CariKartlar
-            .FirstOrDefaultAsync(x => x.Id == DuzenlenenCari.Id && x.FirmaId == firmaId.Value && x.AktifMi);
+            .FirstOrDefaultAsync(x => x.Id == DuzenlenenCari.Id && x.FirmaId == firmaId && x.AktifMi);
 
         if (cari == null)
         {
+            if (await CariScope.ForeignCardAsync(_db, firmaId, DuzenlenenCari.Id, HttpContext.RequestAborted))
+                return StatusCode(403);
+
             TempData["Hata"] = "Cari kart bulunamadı.";
             return RedirectToPage();
         }
+
+        if (!await CariScope.RelationsValidAsync(_db, firmaId, cari.Id, HttpContext.RequestAborted))
+            return StatusCode(403);
 
         DuzenlenenCari.Unvan = (DuzenlenenCari.Unvan ?? "").Trim();
         DuzenlenenCari.Telefon = Temizle(DuzenlenenCari.Telefon);
@@ -155,9 +159,12 @@ public class IndexModel : PageModel
 
         if (string.IsNullOrWhiteSpace(DuzenlenenCari.Unvan))
         {
+            if (!await CariScope.RelationsValidAsync(_db, firmaId, null, HttpContext.RequestAborted))
+                return StatusCode(403);
+
             ModelState.AddModelError("", "Ünvan zorunludur.");
             DuzenlemeAcik = true;
-            await ListeleriYukleAsync(firmaId.Value);
+            await ListeleriYukleAsync(firmaId);
             return Page();
         }
 
@@ -179,7 +186,8 @@ public class IndexModel : PageModel
                 $"{cari.Unvan} ünvanlı cari kart düzenlendi (ID: {cari.Id}).",
                 eskiDeger,
                 IslemGecmisiSnapshots.Cari(cari)),
-            anaKaydiOnceKaydet: false);
+            anaKaydiOnceKaydet: false,
+            cancellationToken: HttpContext.RequestAborted);
 
         TempData["Basari"] = "Cari kart güncellendi.";
         return RedirectToPage();
@@ -187,18 +195,22 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostSilAsync(int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = CariContextFilter.CompanyId(HttpContext);
 
         var cari = await _db.CariKartlar
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value && x.AktifMi);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi);
 
         if (cari == null)
         {
+            if (await CariScope.ForeignCardAsync(_db, firmaId, id, HttpContext.RequestAborted))
+                return StatusCode(403);
+
             TempData["Hata"] = "Cari kart bulunamadı.";
             return RedirectToPage();
         }
+
+        if (!await CariScope.RelationsValidAsync(_db, firmaId, cari.Id, HttpContext.RequestAborted))
+            return StatusCode(403);
 
         var eskiDeger = IslemGecmisiSnapshots.Cari(cari);
         cari.AktifMi = false;
@@ -212,7 +224,8 @@ public class IndexModel : PageModel
                 $"{cari.Unvan} cari karti silinmeden arsive tasindi (ID: {cari.Id}).",
                 eskiDeger,
                 IslemGecmisiSnapshots.Cari(cari)),
-            anaKaydiOnceKaydet: false);
+            anaKaydiOnceKaydet: false,
+            cancellationToken: HttpContext.RequestAborted);
 
         TempData["Basari"] = "Cari kart silinmeden arsive tasindi. Bagli kayitlar korundu.";
         return RedirectToPage();
@@ -221,11 +234,12 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetDisaAktarAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = CariContextFilter.CompanyId(HttpContext);
 
-        var cariler = await CariOzetSorgusu(firmaId.Value)
+        if (!await CariScope.RelationsValidAsync(_db, firmaId, null, HttpContext.RequestAborted))
+            return StatusCode(403);
+
+        var cariler = await CariOzetSorgusu(firmaId)
             .OrderBy(x => x.Unvan)
             .ToListAsync();
 
@@ -405,6 +419,14 @@ public class IndexModel : PageModel
         public decimal Bakiye => ToplamSatis + ToplamOdeme - ToplamAlis - ToplamTahsilat;
         public int FaturaSayisi { get; set; }
         public decimal ToplamFaturaTutari { get; set; }
+    }
+
+    public class CariEkleForm
+    {
+        public string Unvan { get; set; } = "";
+        public CariTip Tip { get; set; }
+        public string? Telefon { get; set; }
+        public string? VergiNo { get; set; }
     }
 
     public class CariDuzenleForm

@@ -217,6 +217,7 @@
             <div><h2>Cari Dosyaları</h2><p>Sözleşme, belge, fotoğraf veya ofis dosyası ekleyin.</p></div>
         </div>
         <form method="post" asp-page-handler="DosyaEkle" enctype="multipart/form-data" class="attachment-form">
+            <partial name="~/Pages/CariKartlar/_ContextStamp.cshtml" />
             <input type="file" asp-for="EkDosya" accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.docx" />
             <button type="submit" class="btn btn-outline-primary">Dosya Ekle</button>
         </form>

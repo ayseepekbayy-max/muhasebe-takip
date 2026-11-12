@@ -1,21 +1,26 @@
-using MuhasebeTakip2.App.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 
+using MuhasebeTakip2.App.Services;
+
 namespace MuhasebeTakip2.App.Pages.CariKartlar;
 
+[TypeFilter(typeof(CariContextFilter))]
 public class EkstreModel : PageModel
 {
     private readonly AppDbContext _db;
     private readonly IWebHostEnvironment _env;
 
-    public EkstreModel(AppDbContext db, IWebHostEnvironment env)
+    private readonly IIslemGecmisiService _audit;
+
+    public EkstreModel(AppDbContext db, IWebHostEnvironment env, IIslemGecmisiService audit)
     {
         _db = db;
         _env = env;
+        _audit = audit;
     }
 
     public CariKart? Cari { get; set; }
@@ -33,11 +38,14 @@ public class EkstreModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = CariContextFilter.CompanyId(HttpContext);
+        var ct = HttpContext.RequestAborted;
 
-        await YukleAsync(id, firmaId.Value);
+        if (await CariScope.ForeignCardAsync(_db, firmaId, id, ct) ||
+            !await CariScope.RelationsValidAsync(_db, firmaId, id, ct))
+            return StatusCode(403);
+
+        await YukleAsync(id, firmaId);
         if (Cari == null)
             return NotFound();
 
@@ -46,11 +54,14 @@ public class EkstreModel : PageModel
 
     public async Task<IActionResult> OnPostDosyaEkleAsync(int id)
     {
-        var firmaId = await AccountingDocuments.VerifiedCompanyAsync(_db, HttpContext, HttpContext.RequestAborted);
-        if (firmaId == null) return StatusCode(403);
+        var firmaId = CariContextFilter.CompanyId(HttpContext);
         var ct = HttpContext.RequestAborted;
 
         await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
+        if (await CariScope.ForeignCardAsync(_db, firmaId, id, ct) ||
+            !await CariScope.RelationsValidAsync(_db, firmaId, id, ct))
+            return StatusCode(403);
+
         var cariVarMi = await _db.CariKartlar
             .AsNoTracking()
             .AnyAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi, ct);
@@ -89,7 +100,7 @@ public class EkstreModel : PageModel
 
             var belge = new EkDosya
             {
-                FirmaId = firmaId.Value,
+                FirmaId = firmaId,
                 CariKartId = id,
                 DosyaAdi = Path.GetFileName(EkDosya.FileName),
                 DosyaYolu = $"/uploads/cariler/{dosyaAdi}",
@@ -98,7 +109,10 @@ public class EkstreModel : PageModel
                 YuklemeTarihi = DateTime.UtcNow
             };
             _db.EkDosyalar.Add(belge);
-            await _db.SaveChangesAsync(ct);
+            await _db.SaveChangesWithAuditAsync(
+                () => _audit.KaydetAsync("Cari Kartlar", "Belge Ekleme", $"Cari kart {id} için belge eklendi.",
+                    yeniDeger: new { id, belgeId = belge.Id, belge.DosyaAdi }, cancellationToken: ct),
+                anaKaydiOnceKaydet: true, cancellationToken: ct);
             // A failed commit acknowledgement does not prove that the database rolled back.
             commitStarted = true;
             await transaction.CommitAsync(ct);

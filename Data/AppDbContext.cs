@@ -35,6 +35,7 @@ public class AppDbContext : DbContext
     public DbSet<MaliyetKaydi> MaliyetKayitlari { get; set; } = default!;
     public DbSet<EkDosya> EkDosyalar { get; set; } = default!;
     public DbSet<IslemGecmisi> IslemGecmisleri { get; set; } = default!;
+    public DbSet<AdminCompanyTransition> AdminCompanyTransitions { get; set; } = default!;
     public DbSet<OdemePlani> OdemePlanlari { get; set; } = default!;
     public DbSet<OdemeHareketi> OdemeHareketleri { get; set; } = default!;
     public DbSet<OdemeBildirimGecmisi> OdemeBildirimGecmisleri { get; set; } = default!;

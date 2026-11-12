@@ -113,6 +113,7 @@
             </div>
 
             <form method="post" asp-page-handler="Duzenle" class="app-form-grid">
+                <partial name="~/Pages/CariKartlar/_ContextStamp.cshtml" />
                 <input type="hidden" asp-for="DuzenlenenCari.Id" />
                 <div class="form-field form-field-wide">
                     <label asp-for="DuzenlenenCari.Unvan">Ünvan</label>
@@ -215,6 +216,7 @@
                                asp-fragment="cariDuzenle">Düzenle</a>
                             <form method="post" asp-page-handler="Sil" class="inline-form"
                                   onsubmit="return confirm('Cari kart silinsin mi? Bağlı kayıtlar korunacak ve cari bağlantıları kaldırılacaktır.');">
+                                <partial name="~/Pages/CariKartlar/_ContextStamp.cshtml" />
                                 <input type="hidden" name="id" value="@cari.Id" />
                                 <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
                             </form>
@@ -237,6 +239,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
             <form method="post" asp-page-handler="Ekle">
+                <partial name="~/Pages/CariKartlar/_ContextStamp.cshtml" />
                 <div class="modal-body">
                     <div class="cari-modal-form">
                         <div class="form-field">

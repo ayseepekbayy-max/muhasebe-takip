@@ -48,28 +48,43 @@ public static partial class AccountingDocuments
     public static void MapAccountingDocuments(this WebApplication app)
     {
         app.MapMethods("/belgeler/ek/{id:int}", ["GET", "HEAD"],
-            (int id, HttpContext http, AppDbContext db, IWebHostEnvironment env) =>
-                ServeAsync(id, false, http, db, env));
+            (int id, HttpContext http, AppDbContext db, IWebHostEnvironment env, IAccountingContextService contexts) =>
+                ServeAsync(id, false, http, db, env, contexts)).WithName(SwitchedAccountingBoundary.AttachmentEndpoint);
         app.MapMethods("/belgeler/cek/{id:int}", ["GET", "HEAD"],
-            (int id, HttpContext http, AppDbContext db, IWebHostEnvironment env) =>
-                ServeAsync(id, true, http, db, env));
+            (int id, HttpContext http, AppDbContext db, IWebHostEnvironment env, IAccountingContextService contexts) =>
+                ServeAsync(id, true, http, db, env, contexts)).WithName(SwitchedAccountingBoundary.ChequeEndpoint);
     }
 
     private static async Task<IResult> ServeAsync(int id, bool cheque, HttpContext http, AppDbContext db,
-        IWebHostEnvironment env)
+        IWebHostEnvironment env, IAccountingContextService contexts)
     {
         http.Response.Headers.CacheControl = "private, no-store";
         http.Response.Headers.XContentTypeOptions = "nosniff";
         http.Response.Headers.ContentSecurityPolicy = "default-src 'none'; frame-ancestors 'self'";
         http.Response.Headers["Referrer-Policy"] = "no-referrer";
         var ct = http.RequestAborted;
-        var company = await VerifiedCompanyAsync(db, http, ct);
-        if (company == null) return Results.NotFound();
+        int company;
+        try
+        {
+            if (http.Session.GetString("DemoMode") == "1")
+            {
+                var demoCompany = await AccountingPageContextFilter.VerifiedDemoCompanyAsync(db, http);
+                if (demoCompany == null) return Results.NotFound();
+                company = demoCompany.Value;
+            }
+            else
+                company = (await contexts.GetCurrentAsync(http, ct)).ActiveCompanyId;
+        }
+        catch (AccountingContextDeniedException)
+        {
+            return Results.NotFound();
+        }
+
         string? path;
         string? originalName = null;
         if (cheque)
         {
-            path = await FindChequeFileAsync(db, env, company.Value, id, ct);
+            path = await FindChequeFileAsync(db, env, company, id, ct);
         }
         else
         {

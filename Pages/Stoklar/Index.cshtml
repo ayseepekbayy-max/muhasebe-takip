@@ -165,11 +165,14 @@
                                 <td class="amount-cell">@urun.StokDegeri.ToString("N2") ₺</td>
                                 <td class="table-actions-cell">
                                     <a class="btn btn-primary btn-sm" asp-page="/Stoklar/Detay/Index" asp-route-id="@urun.Id">Detay</a>
+                                    @if (!MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.IsViewingAnotherCompany(ViewContext.HttpContext))
+                                    {
                                     <form method="post" asp-page-handler="Sil" class="inline-form"
                                           onsubmit="return confirm('Ürün ve tüm stok hareketleri silinsin mi?');">
                                         <input type="hidden" name="id" value="@urun.Id" />
                                         <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
                                     </form>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -190,6 +193,8 @@
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
+            @if (!MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.IsViewingAnotherCompany(ViewContext.HttpContext))
+            {
             <form method="post" asp-page-handler="Ekle">
                 <div class="modal-body">
                     <div class="cari-modal-form">
@@ -216,6 +221,7 @@
                     <button type="submit" class="btn btn-primary">Ürün Ekle</button>
                 </div>
             </form>
+            }
         </div>
     </div>
 </div>

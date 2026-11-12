@@ -32,12 +32,16 @@ public class YedeklemeModel : PageModel
     public string Uyari { get; private set; } = "";
     public IReadOnlyList<AccountingBackupService.LinkIssue> BaglantiHatalari { get; private set; } = [];
 
-    public async Task<IActionResult> OnGetAsync()
+    private AccountingManagementAccess Access => HttpContext.RequestServices.GetRequiredService<AccountingManagementAccess>();
+
+    public Task<IActionResult> OnGetAsync() =>
+        Access.ReadAsync(this, AccountingManagementPermission.BackupRead, GetAsync);
+
+    private async Task<IActionResult> GetAsync(AccountingRequestContext context)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null) return RedirectToPage("/Login");
-        var unresolvedCount = await _db.CalisanMaasArsivleri.CountAsync(x => x.FirmaId == firmaId.Value &&
-            !_db.Calisanlar.Any(c => c.FirmaId == firmaId.Value && c.Id == x.CalisanId));
+        var firmaId = context.ActiveCompanyId;
+        var unresolvedCount = await _db.CalisanMaasArsivleri.CountAsync(x => x.FirmaId == firmaId &&
+            !_db.Calisanlar.Any(c => c.FirmaId == firmaId && c.Id == x.CalisanId));
         if (unresolvedCount > 0)
             Uyari = $"{unresolvedCount} maaş arşivi kaydının çalışan bağlantısı çözümlenemiyor. " +
                 "Bu kayıtlar tutar ve tarihleriyle yedeklenecek; geri yüklemede başka çalışana bağlanmayacak. " +
@@ -45,15 +49,18 @@ public class YedeklemeModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnGetIndirAsync()
+    public IActionResult OnGetIndir() => StatusCode(StatusCodes.Status405MethodNotAllowed);
+
+    public Task<IActionResult> OnPostIndirAsync() =>
+        Access.SubmitAsync(this, AccountingManagementPermission.BackupRead, IndirAsync);
+
+    private async Task<IActionResult> IndirAsync(AccountingRequestContext context)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = context.ActiveCompanyId;
 
         try
         {
-            var bytes = await _backup.ExportAsync(firmaId.Value, HttpContext.RequestAborted);
+            var bytes = await _backup.ExportAsync(firmaId, HttpContext.RequestAborted);
             return File(bytes, "application/zip", $"firmova_tam_yedek_{DateTime.Now:yyyyMMdd_HHmmss}.zip");
         }
         catch (AccountingBackupService.BackupException ex)
@@ -69,11 +76,12 @@ public class YedeklemeModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostGeriYukleAsync()
+    public Task<IActionResult> OnPostGeriYukleAsync() =>
+        Access.SubmitAsync(this, AccountingManagementPermission.BackupRestore, GeriYukleAsync);
+
+    private async Task<IActionResult> GeriYukleAsync(AccountingRequestContext context)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = context.ActiveCompanyId;
 
         if (YedekDosyasi == null || YedekDosyasi.Length == 0)
         {
@@ -91,7 +99,7 @@ public class YedeklemeModel : PageModel
             stream.Position = 0;
             if (stream.Length >= 4 && stream.GetBuffer()[0] == (byte)'P' && stream.GetBuffer()[1] == (byte)'K')
             {
-                var result = await _backup.RestoreAsync(stream, firmaId.Value, HttpContext.RequestAborted);
+                var result = await _backup.RestoreAsync(stream, firmaId, HttpContext.RequestAborted);
                 Mesaj = $"Tam yedek geri yüklendi: {result.Records} kayıt, {result.Files} belge. " + string.Join(" ", result.Warnings);
                 return Page();
             }
@@ -123,13 +131,13 @@ public class YedeklemeModel : PageModel
                 if (string.IsNullOrWhiteSpace(cari.Unvan))
                     continue;
 
-                var varMi = await _db.CariKartlar.AnyAsync(x => x.FirmaId == firmaId.Value && x.Unvan == cari.Unvan);
+                var varMi = await _db.CariKartlar.AnyAsync(x => x.FirmaId == firmaId && x.Unvan == cari.Unvan);
                 if (varMi)
                     continue;
 
                 _db.CariKartlar.Add(new CariKart
                 {
-                    FirmaId = firmaId.Value,
+                    FirmaId = firmaId,
                     Unvan = cari.Unvan,
                     Ad = string.IsNullOrWhiteSpace(cari.Ad) ? cari.Unvan : cari.Ad,
                     Telefon = cari.Telefon,
@@ -146,13 +154,13 @@ public class YedeklemeModel : PageModel
                 if (string.IsNullOrWhiteSpace(stok.Ad))
                     continue;
 
-                var varMi = await _db.StokUrunler.AnyAsync(x => x.FirmaId == firmaId.Value && x.Ad == stok.Ad && x.Kod == stok.Kod);
+                var varMi = await _db.StokUrunler.AnyAsync(x => x.FirmaId == firmaId && x.Ad == stok.Ad && x.Kod == stok.Kod);
                 if (varMi)
                     continue;
 
                 _db.StokUrunler.Add(new StokUrun
                 {
-                    FirmaId = firmaId.Value,
+                    FirmaId = firmaId,
                     Ad = stok.Ad,
                     Kod = stok.Kod ?? "",
                     Birim = string.IsNullOrWhiteSpace(stok.Birim) ? "Adet" : stok.Birim,
@@ -168,16 +176,16 @@ public class YedeklemeModel : PageModel
                 if (string.IsNullOrWhiteSpace(fatura.FaturaNo))
                     continue;
 
-                var varMi = await _db.Faturalar.AnyAsync(x => x.FirmaId == firmaId.Value && x.FaturaNo == fatura.FaturaNo);
+                var varMi = await _db.Faturalar.AnyAsync(x => x.FirmaId == firmaId && x.FaturaNo == fatura.FaturaNo);
                 if (varMi)
                     continue;
 
                 var cariId = string.IsNullOrWhiteSpace(fatura.CariUnvan) ? null
-                    : await LegacyCariIdAsync(fatura.CariUnvan, firmaId.Value);
+                    : await LegacyCariIdAsync(fatura.CariUnvan, firmaId);
 
                 _db.Faturalar.Add(new Fatura
                 {
-                    FirmaId = firmaId.Value,
+                    FirmaId = firmaId,
                     CariKartId = cariId,
                     FaturaNo = fatura.FaturaNo,
                     Tip = fatura.Tip,
@@ -208,19 +216,19 @@ public class YedeklemeModel : PageModel
             // Old format has no invoice IDs on cash rows: restore amounts without guessing links.
             await _db.SaveChangesAsync();
             var existingCash = await _db.KasaHareketleri.AsNoTracking()
-                .Where(x => x.FirmaId == firmaId.Value).ToListAsync();
+                .Where(x => x.FirmaId == firmaId).ToListAsync();
             var usedCash = new HashSet<int>();
             foreach (var kasa in paket.KasaHareketleri)
             {
                 var cariId = string.IsNullOrWhiteSpace(kasa.CariUnvan) ? null
-                    : await LegacyCariIdAsync(kasa.CariUnvan, firmaId.Value);
+                    : await LegacyCariIdAsync(kasa.CariUnvan, firmaId);
                 var tarih = DateTime.SpecifyKind(kasa.Tarih, DateTimeKind.Utc);
                 var existing = existingCash.FirstOrDefault(x => !usedCash.Contains(x.Id) && x.Tarih == tarih &&
                     x.Tip == kasa.Tip && x.Tutar == kasa.Tutar && x.CariKartId == cariId && x.Aciklama == (kasa.Aciklama ?? ""));
                 if (existing != null) { usedCash.Add(existing.Id); continue; }
                 _db.KasaHareketleri.Add(new KasaHareket
                 {
-                    FirmaId = firmaId.Value, CariKartId = cariId, Tarih = tarih,
+                    FirmaId = firmaId, CariKartId = cariId, Tarih = tarih,
                     Tip = kasa.Tip, Tutar = kasa.Tutar, Aciklama = kasa.Aciklama ?? ""
                 });
                 eklenen++;
@@ -228,13 +236,13 @@ public class YedeklemeModel : PageModel
 
             foreach (var cek in paket.Cekler)
             {
-                var varMi = await _db.Cekler.AnyAsync(x => x.FirmaId == firmaId.Value && x.No == cek.No && x.Tarih == cek.Tarih && x.Tutar == cek.Tutar);
+                var varMi = await _db.Cekler.AnyAsync(x => x.FirmaId == firmaId && x.No == cek.No && x.Tarih == cek.Tarih && x.Tutar == cek.Tutar);
                 if (varMi)
                     continue;
 
                 _db.Cekler.Add(new Cek
                 {
-                    FirmaId = firmaId.Value,
+                    FirmaId = firmaId,
                     No = cek.No ?? "",
                     Tarih = DateTime.SpecifyKind(cek.Tarih.Date, DateTimeKind.Utc),
                     Tutar = cek.Tutar,

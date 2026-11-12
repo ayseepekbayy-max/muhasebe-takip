@@ -44,6 +44,8 @@
 <div style="border:1px solid #444; border-radius:12px; padding:16px; margin-bottom:20px; background:white; max-width:850px;">
     <h3>Yeni Çek Ekle</h3>
 
+    @if (!MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.IsViewingAnotherCompany(ViewContext.HttpContext))
+    {
     <form method="post" enctype="multipart/form-data">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
             <div>
@@ -85,6 +87,7 @@
             <button type="submit" class="btn btn-dark btn-sm">Kaydet</button>
         </div>
     </form>
+    }
 </div>
 
 <h3>Alınacak Çekler</h3>
@@ -130,14 +133,20 @@
                     <td data-label="İşlem Tarihi" style="padding:8px;">@(c.OdemeTarihi?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
                     <td class="cek-actions" data-label="İşlem" style="padding:8px; white-space:nowrap;">
                         <a class="btn btn-outline-secondary btn-sm" asp-page="/Cekler/Detay" asp-route-id="@c.Id">Detay</a>
+                        @if (!MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.IsViewingAnotherCompany(ViewContext.HttpContext))
+                        {
                         <form method="post" asp-page-handler="DurumDegistir" style="display:inline;">
                             <input type="hidden" name="id" value="@c.Id" /><input type="hidden" name="odendiMi" value="@(!c.OdendiMi ? "true" : "false")" />
                             <button type="submit" class="btn btn-outline-success btn-sm">@(c.OdendiMi ? "Tahsil Edilmedi Olarak İşaretle" : "Tahsil Edildi")</button>
                         </form>
+                        }
+                        @if (!MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.IsViewingAnotherCompany(ViewContext.HttpContext))
+                        {
                         <form method="post" asp-page-handler="Sil" style="display:inline;" onsubmit="return confirm('Kayıt silinsin mi?');">
                             <input type="hidden" name="id" value="@c.Id" />
                             <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
                         </form>
+                        }
                     </td>
                 </tr>
             }
@@ -188,14 +197,20 @@
                     <td data-label="İşlem Tarihi" style="padding:8px;">@(c.OdemeTarihi?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
                     <td class="cek-actions" data-label="İşlem" style="padding:8px; white-space:nowrap;">
                         <a class="btn btn-outline-secondary btn-sm" asp-page="/Cekler/Detay" asp-route-id="@c.Id">Detay</a>
+                        @if (!MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.IsViewingAnotherCompany(ViewContext.HttpContext))
+                        {
                         <form method="post" asp-page-handler="DurumDegistir" style="display:inline;">
                             <input type="hidden" name="id" value="@c.Id" /><input type="hidden" name="odendiMi" value="@(!c.OdendiMi ? "true" : "false")" />
                             <button type="submit" class="btn btn-outline-success btn-sm">@(c.OdendiMi ? "Ödenmedi Olarak İşaretle" : "Ödeme Yapıldı")</button>
                         </form>
+                        }
+                        @if (!MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.IsViewingAnotherCompany(ViewContext.HttpContext))
+                        {
                         <form method="post" asp-page-handler="Sil" style="display:inline;" onsubmit="return confirm('Kayıt silinsin mi?');">
                             <input type="hidden" name="id" value="@c.Id" />
                             <button type="submit" class="btn btn-outline-danger btn-sm">Sil</button>
                         </form>
+                        }
                     </td>
                 </tr>
             }

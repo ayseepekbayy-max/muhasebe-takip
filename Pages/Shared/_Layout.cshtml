@@ -23,6 +23,11 @@
     </script>
 
     @{
+        var admitted = SwitchedAccountingBoundary.AdmittedContext(Context);
+        var switched = admitted != null && admitted.ActiveCompanyId != admitted.Actor.HomeCompanyId;
+        var aktifFirmaAdi = switched
+            ? await LayoutDb.Firmalar.AsNoTracking().Where(x => x.Id == admitted!.ActiveCompanyId).Select(x => x.FirmaAdi).SingleOrDefaultAsync()
+            : null;
         var rol = (Context.Session.GetString("Rol") ?? "").Trim().ToLower();
         var path = Context.Request.Path.Value?.ToLower() ?? "";
         var loginSayfasiMi = path == "/login";
@@ -34,13 +39,44 @@
         var kullaniciId = Context.Session.GetInt32("KullaniciId");
         var bugun = DateTime.UtcNow.Date;
         var odemeBildirimSayisi = 0;
-        if (firmaId != null)
+        if (!switched && firmaId != null)
         {
             odemeBildirimSayisi = await OdemeBildirimService.AktifBildirimSayisiAsync(firmaId.Value, kullaniciId, bugun);
         }
     }
 
-    @if (!loginSayfasiMi)
+    @if (switched)
+    {
+        <header class="app-header">
+            <nav class="navbar app-navbar" aria-label="Firma muhasebesi">
+                <div class="container-fluid app-nav-container">
+                    <span class="navbar-brand app-brand"><strong>Salt okunur firma</strong> @aktifFirmaAdi</span>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a class="app-top-btn" href="/Kasa/Hareketler">Kasa</a>
+                        <a class="app-top-btn" href="/CariKartlar">Cari</a>
+                        <a class="app-top-btn" href="/Faturalar">Faturalar</a>
+                        <a class="app-top-btn" href="/Musteriler">Müşteriler</a>
+                        <a class="app-top-btn" href="/Kasa/Hesaplar">Banka</a>
+                        <a class="app-top-btn" href="/Cekler">Çekler</a>
+                        <a class="app-top-btn" href="/Stoklar">Stoklar</a>
+                        <a class="app-top-btn" href="/Raporlar">Raporlar</a>
+                        <a class="app-top-btn" href="/AdminPortal">Admin Portalı</a>
+                        <form method="post" asp-page="/AdminPortal/Index" asp-page-handler="GeriDon">
+                            <input type="hidden" name="AccountingCompanyId" value="@admitted!.ActiveCompanyId" />
+                            <input type="hidden" name="AccountingVersion" value="@admitted.Version" />
+                            @if (admitted!.SwitchGeneration.HasValue && !string.IsNullOrEmpty(Context.Session.GetString("AccountingLoginEpoch")))
+                            {
+                                <input type="hidden" name="AccountingSwitchToken" value="@AccountingSwitchTokens.Issue(Context, admitted!)" />
+                                <button class="app-top-btn" type="submit">Kendi ofisime dön</button>
+                            }
+                        </form>
+                        <a class="app-top-btn app-top-btn-danger" href="/Logout">Çıkış</a>
+                    </div>
+                </div>
+            </nav>
+        </header>
+    }
+    else if (!loginSayfasiMi)
     {
         <header class="app-header">
             <nav class="navbar navbar-expand-lg app-navbar">
@@ -178,7 +214,7 @@
         }
     }
 
-    @if (!loginSayfasiMi && (rol == "superadmin" || rol == "admin"))
+    @if (!switched && !loginSayfasiMi && (rol == "superadmin" || rol == "admin"))
     {
         <div id="yonetici-notlari-ekran" class="yonetici-notlari-ekran" hidden aria-hidden="true">
             <button type="button" class="yonetici-notlari-arka-plan" data-yonetici-notlari-kapat
@@ -232,7 +268,7 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 
-    @if (!loginSayfasiMi && (rol == "superadmin" || rol == "admin"))
+    @if (!switched && !loginSayfasiMi && (rol == "superadmin" || rol == "admin"))
     {
         <script>
             (() => {

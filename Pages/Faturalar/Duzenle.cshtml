@@ -36,6 +36,7 @@
     <section class="app-form-panel">
         <div class="panel-title-row"><div><h2>Fatura Bilgileri</h2><p>Numara, cari, tarih ve kalemleri düzenleyebilirsiniz.</p></div></div>
         <form method="post" class="app-form-grid invoice-form-grid">
+            <partial name="~/Pages/Shared/_AccountingContextStamp.cshtml" />
             <input type="hidden" asp-for="Fatura.Id" />
             <div class="form-field form-field-wide">
                 <label asp-for="Fatura.CariKartId">Cari</label>

@@ -1,0 +1,137 @@
+@page
+@using MuhasebeTakip2.App.Services
+@model MuhasebeTakip2.App.Pages.AdminPortal.IndexModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Portalı - Firmova ERP</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="app-header">
+        <nav class="navbar app-navbar" aria-label="Portal">
+            <div class="container-fluid app-nav-container">
+                <span class="navbar-brand app-brand"><span class="app-brand-mark">F</span><span class="app-brand-text">Firmova ERP</span></span>
+                <span class="badge text-bg-light">Admin Portalı</span>
+            </div>
+        </nav>
+    </header>
+    <main class="container py-4">
+        <div class="page-panel mb-4">
+            <div>
+                <span class="page-eyebrow">Merkezi yönetim</span>
+                <h1>Admin Portalı</h1>
+                <p class="mb-0">İş yerlerini ve kullanıcı sayılarını tek ekranda görüntüleyin.</p>
+            </div>
+        </div>
+        @if (Model.SwitchControl is { } control)
+        {
+            <div class="alert @(control.ActiveCompanyAvailable ? "alert-info" : "alert-warning")">
+                <strong>Aktif firma</strong> @Model.ActiveCompanyName
+                @if (!control.ActiveCompanyAvailable)
+                {
+                    <p>Bu firma artık kullanılamıyor. Kendi ofisinize dönebilirsiniz.</p>
+                }
+                @if (control.Context.ActiveCompanyId != control.Context.Actor.HomeCompanyId)
+                {
+                    <form method="post" asp-page-handler="GeriDon">
+                        <partial name="~/Pages/Shared/_AccountingContextStamp.cshtml" />
+                        <input type="hidden" name="AccountingSwitchToken" value="@AccountingSwitchTokens.Issue(HttpContext, control.Context)" />
+                        <button class="btn btn-primary" type="submit">Kendi ofisime dön</button>
+                    </form>
+                }
+            </div>
+        }
+
+        @if (Model.SwitchControl?.ActiveCompanyAvailable != false)
+        {
+        <div class="row g-3 mb-4">
+            <section class="col-12 col-md-6" aria-labelledby="companies-heading">
+                <div class="page-panel h-100"><div>
+                    <h2 id="companies-heading" class="h5">İş yerleri</h2>
+                    <p><strong class="fs-3">@Model.Companies.Count</strong> kayıtlı iş yeri</p>
+                    <a href="#company-list" class="btn btn-outline-primary">İş yerlerini görüntüle</a>
+                    @if (Model.SwitchControl == null)
+                    {
+                        <p class="small text-muted mt-3 mb-0">Hesap geçişi: <strong>Henüz etkin değil</strong></p>
+                    }
+                </div></div>
+            </section>
+            <section class="col-12 col-md-6" aria-labelledby="history-heading">
+                <div class="page-panel h-100"><div>
+                    <h2 id="history-heading" class="h5">Merkezi işlem geçmişi</h2>
+                    <p>İş yerlerinin işlem geçmişini birlikte inceleme.</p>
+                    <span class="badge text-bg-secondary">Yakında</span>
+                </div></div>
+            </section>
+            <section class="col-12 col-md-6" aria-labelledby="users-heading">
+                <div class="page-panel h-100"><div>
+                    <h2 id="users-heading" class="h5">Kullanıcılar</h2>
+                    <p><strong class="fs-3">@Model.UserCount</strong> kayıtlı kullanıcı</p>
+                    <p class="mb-0 text-muted">Firma bazındaki kullanıcı sayıları aşağıda gösterilir. Kullanıcı yönetimi: <strong>Yakında</strong></p>
+                </div></div>
+            </section>
+            <section class="col-12 col-md-6" aria-labelledby="office-heading">
+                <div class="page-panel h-100"><div>
+                    <h2 id="office-heading" class="h5">Ofis Muhasebesi</h2>
+                    <p>@Model.OfficeName</p>
+                    @if (Model.CanOpenOffice)
+                    {
+                        <a href="/Index" class="btn btn-primary" id="office-accounting">Ofis muhasebesini aç</a>
+                    }
+                    else
+                    {
+                        <p class="mb-0 text-muted">Ofis bağlantısı kullanılamıyor. Kendi ofis hesabınızla yeniden giriş yapın.</p>
+                    }
+                </div></div>
+            </section>
+        </div>
+        <section id="company-list" class="page-panel" aria-labelledby="company-list-heading">
+            <div class="w-100">
+                <h2 id="company-list-heading" class="h4">İş yeri listesi</h2>
+                @if (Model.Companies.Count == 0)
+                {
+                    <p class="text-muted mb-0">Kayıtlı iş yeri bulunmuyor.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <caption>İş yerleri ve firma bazındaki kullanıcı sayıları</caption>
+                            <thead><tr><th scope="col">Firma ID</th><th scope="col">Firma adı</th><th scope="col">Durum</th><th scope="col">Kullanıcı sayısı</th>@if (Model.SwitchControl != null) { <th scope="col">İşlem</th> }</tr></thead>
+                            <tbody>
+                                @foreach (var company in Model.Companies)
+                                {
+                                    <tr><td>@company.Id</td><td>@company.Name</td><td><span class="badge @(company.IsActive ? "text-bg-success" : "text-bg-secondary")">@(company.IsActive ? "Aktif" : "Pasif")</span></td><td>@company.UserCount</td>
+                                        @if (Model.SwitchControl != null)
+                                        {
+                                            <td>
+                                                @if (company.IsActive && company.Id != Model.SwitchControl.Context.ActiveCompanyId)
+                                                {
+                                                    <form method="post" asp-page-handler="Sec">
+                                                        <partial name="~/Pages/Shared/_AccountingContextStamp.cshtml" />
+                                                        <input type="hidden" name="AccountingSwitchToken" value="@AccountingSwitchTokens.Issue(HttpContext, Model.SwitchControl.Context, company.Id)" />
+                                                        <input type="hidden" name="targetCompanyId" value="@company.Id" />
+                                                        <button class="btn btn-outline-primary" type="submit">Muhasebeye Geç</button>
+                                                    </form>
+                                                }
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
+        }
+    </main>
+</body>
+</html>

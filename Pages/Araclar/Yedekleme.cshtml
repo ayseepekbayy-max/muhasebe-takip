@@ -12,7 +12,10 @@
             <p>Muhasebe kayıtlarını, arşivleri ve bağlı belgeleri tek ZIP dosyasında saklayın.</p>
         </div>
         <div class="app-page-actions">
-            <a class="btn btn-primary" href="/Araclar/Yedekleme?handler=Indir">Yedek İndir</a>
+            <form method="post" asp-page-handler="Indir">
+                <partial name="_ManagementContextStamp" />
+                <button type="submit" class="btn btn-primary">Yedek İndir</button>
+            </form>
         </div>
     </section>
 
@@ -52,6 +55,7 @@
         <p>Tam yedek: nakit/banka hesapları, açılış bakiyeleri ve transferler, cari, fatura ve kalemleri, kasa, çek görselleri, stok hareketleri, personel ve maaş/avans/puantaj, müşteri işleri/masrafları, maliyetler, ödeme planları ve hareketleri, işlem geçmişi ve ek belgeler. Arşivlenmiş kayıtlar dahildir.</p>
         <p>Giriş hesapları, şifreler, firma ayarları ve sohbet dahil değildir. Kullanıcıya bağlı geçmiş için hedef firmada aynı kullanıcı adı ve e-posta ile hesap bulunmalıdır. Yedek en fazla 100 MB, tek belge en fazla 25 MB olabilir.</p>
         <form method="post" asp-page-handler="GeriYukle" enctype="multipart/form-data" class="app-form-grid">
+            <partial name="_ManagementContextStamp" />
             <div class="form-field form-field-wide">
                 <label asp-for="YedekDosyasi">Yedek Dosyası</label>
                 <input asp-for="YedekDosyasi" type="file" accept=".zip,.json" />
