@@ -7,6 +7,7 @@ using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Faturalar;
 
+[TypeFilter(typeof(AccountingPageContextFilter))]
 public class DuzenleModel : PageModel
 {
     private readonly AppDbContext _db;
@@ -25,20 +26,21 @@ public class DuzenleModel : PageModel
     [BindProperty]
     public FaturaDuzenleForm Fatura { get; set; } = new();
 
-    public async Task<IActionResult> OnGetAsync(int id)
+    public async Task<IActionResult> OnGetAsync([FromRoute] int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = AccountingPageContextFilter.CompanyId(HttpContext);
+
+        if (!await InvoiceScope.CanAccessAsync(_db, firmaId, id, HttpContext.RequestAborted))
+            return StatusCode(403);
 
         var fatura = await _db.Faturalar
             .Include(x => x.Kalemler)
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value && x.AktifMi);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi);
 
         if (fatura == null)
             return NotFound();
 
-        await CarileriYukleAsync(firmaId.Value);
+        await CarileriYukleAsync(firmaId);
         Fatura = new FaturaDuzenleForm
         {
             Id = fatura.Id,
@@ -65,25 +67,33 @@ public class DuzenleModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostAsync()
+    public Task<IActionResult> OnPostAsync([FromRoute] int id)
+        => InvoicePaymentTransaction.RunPageAsync(_db, this, () => DuzenleAsync(id));
+
+    private async Task<IActionResult> DuzenleAsync(int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = AccountingPageContextFilter.CompanyId(HttpContext);
+
+        if (Fatura.Id != id)
+            return StatusCode(403);
+
+        await InvoicePaymentTransaction.LockInvoiceAsync(_db, firmaId, id, HttpContext.RequestAborted);
+        if (!await InvoiceScope.CanAccessAsync(_db, firmaId, id, HttpContext.RequestAborted))
+            return StatusCode(403);
 
         var fatura = await _db.Faturalar
             .Include(x => x.Kalemler)
-            .FirstOrDefaultAsync(x => x.Id == Fatura.Id && x.FirmaId == firmaId.Value && x.AktifMi);
+            .FirstOrDefaultAsync(x => x.Id == Fatura.Id && x.FirmaId == firmaId && x.AktifMi);
 
         if (fatura == null)
             return NotFound();
 
-        await CarileriYukleAsync(firmaId.Value);
+        await CarileriYukleAsync(firmaId);
         OdenenToplam = fatura.OdenenToplam;
         MevcutDurum = fatura.Durum;
 
         var bagliOdemeVar = fatura.OdenenToplam > 0 || await _db.KasaHareketleri
-            .AnyAsync(x => x.FirmaId == firmaId.Value && x.FaturaId == fatura.Id);
+            .AnyAsync(x => x.FirmaId == firmaId && x.FaturaId == fatura.Id);
         if (bagliOdemeVar && (Fatura.CariKartId != fatura.CariKartId || Fatura.Tip != fatura.Tip))
             ModelState.AddModelError("", "Ödeme hareketi bulunan faturanın carisi veya alış/satış türü değiştirilemez. Önce bağlı ödeme hareketlerini düzeltin.");
 
@@ -92,7 +102,12 @@ public class DuzenleModel : PageModel
 
         var secilenCari = await _db.CariKartlar
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == Fatura.CariKartId && x.FirmaId == firmaId.Value && x.AktifMi);
+            .FirstOrDefaultAsync(x => x.Id == Fatura.CariKartId && x.FirmaId == firmaId && x.AktifMi);
+        if (await CariScope.ForeignCardAsync(_db, firmaId, Fatura.CariKartId, HttpContext.RequestAborted) ||
+            Fatura.Kalemler?.Any(kalem => kalem.Id is int kalemId &&
+                !fatura.Kalemler.Any(x => x.Id == kalemId)) == true)
+            return StatusCode(403);
+
         if (secilenCari == null)
             ModelState.AddModelError("", "Seçilen cari bulunamadı.");
         else if (Fatura.Tip == FaturaTipi.Satis && !secilenCari.Tip.AliciMi())
@@ -109,7 +124,7 @@ public class DuzenleModel : PageModel
             : Fatura.FaturaNo.Trim();
 
         var faturaNoVarMi = await _db.Faturalar
-            .AnyAsync(x => x.FirmaId == firmaId.Value && x.Id != fatura.Id && x.FaturaNo == yeniFaturaNo);
+            .AnyAsync(x => x.FirmaId == firmaId && x.Id != fatura.Id && x.FaturaNo == yeniFaturaNo);
         if (faturaNoVarMi)
             ModelState.AddModelError("", "Bu fatura numarasi bu firmada zaten kullaniliyor.");
 
@@ -227,7 +242,7 @@ public class DuzenleModel : PageModel
     {
         public int Id { get; set; }
         public int CariKartId { get; set; }
-        public string FaturaNo { get; set; } = "";
+        public string? FaturaNo { get; set; }
         public FaturaTipi Tip { get; set; } = FaturaTipi.Satis;
         public DateTime Tarih { get; set; } = DateTime.UtcNow.Date;
         public DateTime? VadeTarihi { get; set; }
@@ -237,6 +252,7 @@ public class DuzenleModel : PageModel
 
     public class FaturaKalemForm
     {
+        public int? Id { get; set; }
         public string? Aciklama { get; set; }
         public decimal Miktar { get; set; } = 1;
         public decimal BirimFiyat { get; set; }

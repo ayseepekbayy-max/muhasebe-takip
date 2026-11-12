@@ -21,7 +21,7 @@
   </div>
 }
 
-<form method="post" class="app-form-panel" style="max-width:720px;">
+<form method="post" class="app-form-panel" style="max-width:720px;"><partial name="/Pages/Kasa/_ContextStamp.cshtml" />
   <div style="margin-bottom:10px;">
     <label asp-for="Hareket.KasaHesapId"><b>Nakit Kasa / Banka Hesabı</b></label><br />
     <select asp-for="Hareket.KasaHesapId" asp-items="Model.HesapSecenekleri" required style="width:100%; padding:8px;"></select>

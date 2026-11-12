@@ -55,25 +55,22 @@ public class AyarlarModel : PageModel
     public string Mesaj { get; set; } = "";
     public string Hata { get; set; } = "";
 
-    public async Task<IActionResult> OnGetAsync()
+    private AccountingManagementAccess Access => HttpContext.RequestServices.GetRequiredService<AccountingManagementAccess>();
+
+    public Task<IActionResult> OnGetAsync() =>
+        Access.ReadAsync(this, AccountingManagementPermission.PersonalAccount, async context =>
+        {
+            await BilgileriYukle(context);
+            return Page();
+        });
+    public Task<IActionResult> OnPostFirmaGuncelleAsync() =>
+        Access.SubmitAsync(this, AccountingManagementPermission.CompanySettings, FirmaGuncelleAsync);
+
+    private async Task<IActionResult> FirmaGuncelleAsync(AccountingRequestContext context)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        var kullaniciId = HttpContext.Session.GetInt32("KullaniciId");
-        if (firmaId == null || kullaniciId == null)
-            return RedirectToPage("/Login");
+        var firmaId = context.Actor.HomeCompanyId;
 
-        await BilgileriYukle(firmaId.Value, kullaniciId.Value);
-        return Page();
-    }
-
-    public async Task<IActionResult> OnPostFirmaGuncelleAsync()
-    {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        var kullaniciId = HttpContext.Session.GetInt32("KullaniciId");
-        if (firmaId == null || kullaniciId == null)
-            return RedirectToPage("/Login");
-
-        var firma = await _db.Firmalar.FirstOrDefaultAsync(x => x.Id == firmaId.Value);
+        var firma = await _db.Firmalar.FirstOrDefaultAsync(x => x.Id == firmaId && x.AktifMi);
         if (firma == null)
             return RedirectToPage("/Login");
 
@@ -81,7 +78,7 @@ public class AyarlarModel : PageModel
         if (string.IsNullOrWhiteSpace(FirmaAdi))
         {
             Hata = "Firma adı boş olamaz.";
-            await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+            await BilgileriYukle(context);
             return Page();
         }
 
@@ -99,14 +96,14 @@ public class AyarlarModel : PageModel
             if (!izinli.Contains(uzanti))
             {
                 Hata = "Logo için PNG, JPG veya WEBP yükleyin.";
-                await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+                await BilgileriYukle(context);
                 return Page();
             }
 
             if (LogoDosyasi.Length > 1024 * 1024)
             {
                 Hata = "Logo dosyası en fazla 1 MB olabilir.";
-                await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+                await BilgileriYukle(context);
                 return Page();
             }
 
@@ -125,19 +122,21 @@ public class AyarlarModel : PageModel
 
         await _db.SaveChangesAsync();
         HttpContext.Session.SetString("FirmaAdi", firma.FirmaAdi);
+        await HttpContext.Session.CommitAsync(HttpContext.RequestAborted);
         Mesaj = "Firma bilgileri güncellendi.";
-        await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+        await BilgileriYukle(context);
         return Page();
     }
 
-    public async Task<IActionResult> OnPostKullaniciGuncelleAsync()
-    {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        var kullaniciId = HttpContext.Session.GetInt32("KullaniciId");
-        if (firmaId == null || kullaniciId == null)
-            return RedirectToPage("/Login");
+    public Task<IActionResult> OnPostKullaniciGuncelleAsync() =>
+        Access.SubmitAsync(this, AccountingManagementPermission.PersonalAccount, KullaniciGuncelleAsync);
 
-        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId.Value && x.FirmaId == firmaId.Value);
+    private async Task<IActionResult> KullaniciGuncelleAsync(AccountingRequestContext context)
+    {
+        var firmaId = context.Actor.HomeCompanyId;
+        var kullaniciId = context.Actor.UserId;
+
+        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId && x.FirmaId == firmaId);
         if (kullanici == null)
             return RedirectToPage("/Login");
 
@@ -145,7 +144,7 @@ public class AyarlarModel : PageModel
         if (string.IsNullOrWhiteSpace(KullaniciAdi))
         {
             Hata = "Kullanıcı adı boş olamaz.";
-            await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+            await BilgileriYukle(context);
             return Page();
         }
 
@@ -153,7 +152,7 @@ public class AyarlarModel : PageModel
         if (ayniAdKullananVar)
         {
             Hata = "Bu kullanıcı adı zaten kullanılıyor.";
-            await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+            await BilgileriYukle(context);
             return Page();
         }
 
@@ -163,7 +162,7 @@ public class AyarlarModel : PageModel
             if (string.IsNullOrWhiteSpace(MevcutSifre))
             {
                 Hata = "Şifre değiştirmek için mevcut şifrenizi girin.";
-                await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+                await BilgileriYukle(context);
                 return Page();
             }
 
@@ -171,14 +170,14 @@ public class AyarlarModel : PageModel
             if (!mevcutSifreKontrolu.Succeeded)
             {
                 Hata = "Mevcut şifre yanlış.";
-                await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+                await BilgileriYukle(context);
                 return Page();
             }
 
             if (YeniSifre != YeniSifreTekrar || YeniSifre.Length < 4)
             {
                 Hata = "Yeni şifreler aynı olmalı ve en az 4 karakter içermeli.";
-                await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+                await BilgileriYukle(context);
                 return Page();
             }
 
@@ -187,19 +186,21 @@ public class AyarlarModel : PageModel
 
         await _db.SaveChangesAsync();
         HttpContext.Session.SetString("KullaniciAdi", kullanici.KullaniciAdi);
+        await HttpContext.Session.CommitAsync(HttpContext.RequestAborted);
         Mesaj = "Kullanıcı bilgileri güncellendi.";
-        await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+        await BilgileriYukle(context);
         return Page();
     }
 
-    public async Task<IActionResult> OnPostEmailBildirimKaydetAsync()
-    {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        var kullaniciId = HttpContext.Session.GetInt32("KullaniciId");
-        if (firmaId == null || kullaniciId == null)
-            return RedirectToPage("/Login");
+    public Task<IActionResult> OnPostEmailBildirimKaydetAsync() =>
+        Access.SubmitAsync(this, AccountingManagementPermission.PersonalAccount, EmailBildirimKaydetAsync);
 
-        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId.Value && x.FirmaId == firmaId.Value);
+    private async Task<IActionResult> EmailBildirimKaydetAsync(AccountingRequestContext context)
+    {
+        var firmaId = context.Actor.HomeCompanyId;
+        var kullaniciId = context.Actor.UserId;
+
+        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId && x.FirmaId == firmaId);
         if (kullanici == null)
             return RedirectToPage("/Login");
 
@@ -207,7 +208,7 @@ public class AyarlarModel : PageModel
         if (!string.IsNullOrWhiteSpace(yeniEmail) && !EmailService.IsValidEmail(yeniEmail))
         {
             Hata = "Geçerli bir e-posta adresi girin.";
-            await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+            await BilgileriYukle(context);
             KullaniciEmail = yeniEmail;
             return Page();
         }
@@ -215,7 +216,7 @@ public class AyarlarModel : PageModel
         if (OdemeEmailBildirimiAktifMi && string.IsNullOrWhiteSpace(yeniEmail))
         {
             Hata = "Ödeme e-posta bildirimi için kullanıcı e-posta adresi gereklidir.";
-            await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+            await BilgileriYukle(context);
             KullaniciEmail = yeniEmail;
             OdemeEmailBildirimiAktifMi = true;
             return Page();
@@ -238,25 +239,26 @@ public class AyarlarModel : PageModel
 
         await _db.SaveChangesAsync();
         Mesaj = "E-posta bildirim ayarları kaydedildi.";
-        await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+        await BilgileriYukle(context);
         return Page();
     }
 
-    public async Task<IActionResult> OnPostTestEpostasiAsync()
-    {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        var kullaniciId = HttpContext.Session.GetInt32("KullaniciId");
-        if (firmaId == null || kullaniciId == null)
-            return RedirectToPage("/Login");
+    public Task<IActionResult> OnPostTestEpostasiAsync() =>
+        Access.SubmitAsync(this, AccountingManagementPermission.PersonalAccount, TestEpostasiAsync);
 
-        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId.Value && x.FirmaId == firmaId.Value);
+    private async Task<IActionResult> TestEpostasiAsync(AccountingRequestContext context)
+    {
+        var firmaId = context.Actor.HomeCompanyId;
+        var kullaniciId = context.Actor.UserId;
+
+        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId && x.FirmaId == firmaId);
         if (kullanici == null)
             return RedirectToPage("/Login");
 
         if (!EmailService.IsValidEmail(kullanici.Email))
         {
             Hata = "Test e-postası göndermek için önce geçerli bir kullanıcı e-postası kaydedin.";
-            await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+            await BilgileriYukle(context);
             return Page();
         }
 
@@ -278,7 +280,7 @@ public class AyarlarModel : PageModel
         if (!sonuc.BasariliMi)
         {
             Hata = sonuc.HataMesaji ?? "Test e-postası gönderilemedi.";
-            await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+            await BilgileriYukle(context);
             return Page();
         }
 
@@ -290,18 +292,18 @@ public class AyarlarModel : PageModel
 
         await _db.SaveChangesAsync();
         Mesaj = "Test e-postası gönderildi.";
-        await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+        await BilgileriYukle(context);
         return Page();
     }
 
-    public async Task<IActionResult> OnPostMenuKaydetAsync()
-    {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        var kullaniciId = HttpContext.Session.GetInt32("KullaniciId");
-        if (firmaId == null || kullaniciId == null)
-            return RedirectToPage("/Login");
+    public Task<IActionResult> OnPostMenuKaydetAsync() =>
+        Access.SubmitAsync(this, AccountingManagementPermission.CompanySettings, MenuKaydetAsync);
 
-        var firma = await _db.Firmalar.FirstOrDefaultAsync(x => x.Id == firmaId.Value);
+    private async Task<IActionResult> MenuKaydetAsync(AccountingRequestContext context)
+    {
+        var firmaId = context.Actor.HomeCompanyId;
+
+        var firma = await _db.Firmalar.FirstOrDefaultAsync(x => x.Id == firmaId && x.AktifMi);
         if (firma == null)
             return RedirectToPage("/Login");
 
@@ -325,22 +327,26 @@ public class AyarlarModel : PageModel
         HttpContext.Session.SetString("MenuStoklar", MenuStoklar ? "1" : "0");
         HttpContext.Session.SetString("MenuMaliyet", MenuMaliyet ? "1" : "0");
         HttpContext.Session.SetString("MenuCekler", MenuCekler ? "1" : "0");
+        await HttpContext.Session.CommitAsync(HttpContext.RequestAborted);
 
         Mesaj = "Menü ayarları kaydedildi.";
-        await BilgileriYukle(firmaId.Value, kullaniciId.Value);
+        await BilgileriYukle(context);
         return Page();
     }
 
-    private async Task BilgileriYukle(int firmaId, int kullaniciId)
+    private async Task BilgileriYukle(AccountingRequestContext context)
     {
-        var firma = await _db.Firmalar.FirstOrDefaultAsync(x => x.Id == firmaId);
-        var kullanici = await _db.Kullanicilar.FirstOrDefaultAsync(x => x.Id == kullaniciId && x.FirmaId == firmaId);
-        if (firma == null || kullanici == null)
-            return;
+        var kullanici = await _db.Kullanicilar.AsNoTracking().FirstOrDefaultAsync(x =>
+            x.Id == context.Actor.UserId && x.FirmaId == context.Actor.HomeCompanyId);
+        if (kullanici == null) return;
 
         KullaniciAdi = kullanici.KullaniciAdi;
         KullaniciEmail = kullanici.Email;
         OdemeEmailBildirimiAktifMi = kullanici.OdemeEmailBildirimiAktifMi;
+
+        if (!AccountingManagementAccess.CanManageCompany(context)) return;
+        var firma = await _db.Firmalar.AsNoTracking().FirstOrDefaultAsync(x => x.Id == context.ActiveCompanyId && x.AktifMi);
+        if (firma == null) return;
         FirmaAdi = firma.FirmaAdi;
         Adres = firma.Adres;
         Telefon = firma.Telefon;

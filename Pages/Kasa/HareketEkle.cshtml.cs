@@ -9,6 +9,7 @@ using System.Globalization;
 
 namespace MuhasebeTakip2.App.Pages.Kasa;
 
+[ServiceFilter(typeof(KasaContextFilter))]
 public class HareketEkleModel : PageModel
 {
     private readonly AppDbContext _db;
@@ -35,7 +36,7 @@ public class HareketEkleModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(int? cariId, HareketTipi? tip)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = KasaRequestContext.CompanyId(HttpContext);
         if (firmaId == null)
             return RedirectToPage("/Login");
 
@@ -64,7 +65,7 @@ public class HareketEkleModel : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = KasaRequestContext.CompanyId(HttpContext);
         if (firmaId == null)
             return RedirectToPage("/Login");
 
@@ -131,15 +132,17 @@ public class HareketEkleModel : PageModel
                 }
             }
 
+            await using var transaction = await InvoicePaymentTransaction.BeginAsync(_db, HttpContext.RequestAborted);
             Fatura? bagliFatura = null;
             object? eskiFaturaDegeri = null;
             if (Hareket.FaturaId.HasValue)
             {
+                await InvoicePaymentTransaction.LockInvoiceAsync(_db, firmaId.Value, Hareket.FaturaId.Value, HttpContext.RequestAborted);
                 bagliFatura = await _db.Faturalar
                     .Include(x => x.CariKart)
                     .Include(x => x.Kalemler)
                     .FirstOrDefaultAsync(x => x.Id == Hareket.FaturaId.Value &&
-                        x.FirmaId == firmaId.Value && x.AktifMi && x.Durum != FaturaDurumu.Iptal);
+                        x.FirmaId == firmaId.Value && (x.CariKartId == null || (x.CariKart != null && x.CariKart.FirmaId == firmaId.Value)) && x.AktifMi && x.Durum != FaturaDurumu.Iptal);
 
                 if (bagliFatura == null)
                 {
@@ -183,8 +186,10 @@ public class HareketEkleModel : PageModel
             var secilenTarih = Hareket.Tarih.Date;
             Hareket.Tarih = DateTime.SpecifyKind(secilenTarih, DateTimeKind.Utc);
 
-            await using var transaction = await _db.Database.BeginTransactionAsync();
-
+            // Persist only intended scalar input; never attach posted navigation graphs or IDs.
+            Hareket = new KasaHareket { FirmaId = firmaId.Value, Tarih = Hareket.Tarih, Tip = Hareket.Tip,
+                Tutar = Hareket.Tutar, Aciklama = Hareket.Aciklama, CariKartId = Hareket.CariKartId,
+                FaturaId = Hareket.FaturaId, KasaHesapId = Hareket.KasaHesapId };
             _db.KasaHareketleri.Add(Hareket);
             await _db.SaveChangesAsync();
 
@@ -205,8 +210,8 @@ public class HareketEkleModel : PageModel
                     IslemGecmisiSnapshots.Fatura(bagliFatura));
             }
             await _db.SaveChangesAsync();
-            await transaction.CommitAsync();
 
+            await transaction.CommitAsync(HttpContext.RequestAborted);
             TempData["Basari"] = bagliFatura == null
                 ? "Cari hareket kasaya işlendi."
                 : "Hareket kasaya ve seçilen faturaya işlendi.";
@@ -215,6 +220,9 @@ public class HareketEkleModel : PageModel
                 ? RedirectToPage("/CariKartlar/Detay/Index", new { id = Hareket.CariKartId.Value })
                 : RedirectToPage("/Kasa/Hareketler");
         }
+        catch (KasaScopeException) { throw; }
+        catch (Exception ex) when (InvoicePaymentTransaction.IsConflict(ex)) { throw; }
+        catch (OperationCanceledException) { throw; }
         catch (DbUpdateException ex)
         {
             var detay = ex.InnerException?.Message ?? ex.Message;
@@ -265,7 +273,7 @@ public class HareketEkleModel : PageModel
         var sorgu = _db.Faturalar
             .AsNoTracking()
             .Include(x => x.CariKart)
-            .Where(x => x.FirmaId == firmaId && x.AktifMi &&
+            .Where(x => x.FirmaId == firmaId && (x.CariKartId == null || (x.CariKart != null && x.CariKart.FirmaId == firmaId)) && x.AktifMi &&
                 x.Durum != FaturaDurumu.Iptal && x.OdenenToplam < x.GenelToplam);
 
         if (cariId.HasValue && cariId.Value > 0)

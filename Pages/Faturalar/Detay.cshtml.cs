@@ -8,6 +8,7 @@ using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Faturalar;
 
+[TypeFilter(typeof(AccountingPageContextFilter))]
 public class DetayModel : PageModel
 {
     private readonly AppDbContext _db;
@@ -37,32 +38,43 @@ public class DetayModel : PageModel
     [BindProperty]
     public DurumGuncelleForm DurumForm { get; set; } = new();
 
-    public async Task<IActionResult> OnGetAsync(int id)
+    public async Task<IActionResult> OnGetAsync([FromRoute] int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = AccountingPageContextFilter.CompanyId(HttpContext);
 
-        await YukleAsync(id, firmaId.Value);
+        if (!await InvoiceScope.CanAccessAsync(_db, firmaId, id, HttpContext.RequestAborted))
+            return StatusCode(403);
+
+        await YukleAsync(id, firmaId);
+        if (Fatura?.CariKartId != null && Fatura.CariKart?.FirmaId != firmaId)
+            return StatusCode(403);
         if (Fatura == null)
             return NotFound();
 
         return Page();
     }
 
-    public async Task<IActionResult> OnPostDurumGuncelleAsync(int id)
+    public Task<IActionResult> OnPostDurumGuncelleAsync([FromRoute] int id)
+        => InvoicePaymentTransaction.RunPageAsync(_db, this, () => DurumGuncelleAsync(id));
+
+    private async Task<IActionResult> DurumGuncelleAsync(int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = AccountingPageContextFilter.CompanyId(HttpContext);
+
+        await InvoicePaymentTransaction.LockInvoiceAsync(_db, firmaId, id, HttpContext.RequestAborted);
+        if (!await InvoiceScope.CanAccessAsync(_db, firmaId, id, HttpContext.RequestAborted))
+            return StatusCode(403);
 
         var fatura = await _db.Faturalar
             .Include(x => x.CariKart)
             .Include(x => x.Kalemler)
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value && x.AktifMi);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi, HttpContext.RequestAborted);
 
         if (fatura == null)
             return NotFound();
+
+        if (await InvoiceScope.ForeignAccountAsync(_db, firmaId, DurumForm.KasaHesapId, HttpContext.RequestAborted))
+            return StatusCode(403);
 
         if (!Enum.IsDefined(DurumForm.Durum))
         {
@@ -90,7 +102,7 @@ public class DetayModel : PageModel
         }
 
         if (DurumForm.Durum == FaturaDurumu.Odendi && fatura.KalanTutar > 0 &&
-            !await KasaHesapService.GecerliMiAsync(_db, firmaId.Value, DurumForm.KasaHesapId))
+            !await KasaHesapService.GecerliMiAsync(_db, firmaId, DurumForm.KasaHesapId))
         {
             TempData["Hata"] = KasaHesapService.SecimHatasi;
             return RedirectToPage(new { id });
@@ -108,7 +120,7 @@ public class DetayModel : PageModel
                 var islemAdi = fatura.Tip == FaturaTipi.Satis ? "Tahsilat" : "Ödeme";
                 kasaHareketi = new KasaHareket
                 {
-                    FirmaId = firmaId.Value,
+                    FirmaId = firmaId,
                     KasaHesapId = DurumForm.KasaHesapId,
                     CariKartId = fatura.CariKartId,
                     FaturaId = fatura.Id,
@@ -169,14 +181,17 @@ public class DetayModel : PageModel
         return RedirectToPage(new { id });
     }
 
-    public async Task<IActionResult> OnPostDosyaEkleAsync(int id)
+    public async Task<IActionResult> OnPostDosyaEkleAsync([FromRoute] int id)
     {
-        var firmaId = await AccountingDocuments.VerifiedCompanyAsync(_db, HttpContext, HttpContext.RequestAborted);
-        if (firmaId == null) return StatusCode(403);
+        var firmaId = AccountingPageContextFilter.CompanyId(HttpContext);
 
         var ct = HttpContext.RequestAborted;
-        await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
-        var faturaVarMi = await _db.Faturalar.AnyAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi && (x.CariKartId == null || (x.CariKart != null && x.CariKart.FirmaId == firmaId)), ct);
+        await using var transaction = await InvoicePaymentTransaction.BeginAsync(_db, ct);
+        await InvoicePaymentTransaction.LockInvoiceAsync(_db, firmaId, id, ct);
+        if (!await InvoiceScope.CanAccessAsync(_db, firmaId, id, ct))
+            return StatusCode(403);
+
+        var faturaVarMi = await _db.Faturalar.AnyAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi, ct);
         if (!faturaVarMi)
             return NotFound();
 
@@ -210,7 +225,7 @@ public class DetayModel : PageModel
 
             var belge = new EkDosya
             {
-                FirmaId = firmaId.Value,
+                FirmaId = firmaId,
                 FaturaId = id,
                 DosyaAdi = Path.GetFileName(EkDosya.FileName),
                 DosyaYolu = $"/uploads/faturalar/{dosyaAdi}",
@@ -219,7 +234,10 @@ public class DetayModel : PageModel
                 YuklemeTarihi = DateTime.UtcNow
             };
             _db.EkDosyalar.Add(belge);
-            await _db.SaveChangesAsync(ct);
+            await _db.SaveChangesWithAuditAsync(
+                () => _islemGecmisi.KaydetAsync("Faturalar", "Belge Ekleme", $"Fatura {id} için belge eklendi.",
+                    yeniDeger: new { id, belgeId = belge.Id, belge.DosyaAdi }, cancellationToken: ct),
+                anaKaydiOnceKaydet: true, cancellationToken: ct);
             // A failed commit acknowledgement does not prove that the database rolled back.
             commitStarted = true;
             await transaction.CommitAsync(ct);
@@ -242,7 +260,7 @@ public class DetayModel : PageModel
         Fatura = await _db.Faturalar
             .Include(x => x.CariKart)
             .Include(x => x.Kalemler)
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi, HttpContext.RequestAborted);
 
         if (Fatura == null)
             return;
@@ -254,13 +272,16 @@ public class DetayModel : PageModel
         };
 
         Hareketler = await _db.KasaHareketleri
-            .Where(x => x.FirmaId == firmaId && (x.FaturaId == id || x.Aciklama.Contains(Fatura.FaturaNo)))
+            .Where(x => x.FirmaId == firmaId && (x.FaturaId == id ||
+                (x.FaturaId == null && Fatura.FaturaNo != "" && x.Aciklama.Contains(Fatura.FaturaNo))) &&
+                (x.CariKartId == null || (x.CariKart != null && x.CariKart.FirmaId == firmaId)) &&
+                (x.KasaHesapId == null || (x.KasaHesap != null && x.KasaHesap.FirmaId == firmaId)))
             .OrderByDescending(x => x.Tarih)
             .ThenByDescending(x => x.Id)
             .ToListAsync();
 
         Dosyalar = await _db.EkDosyalar
-            .Where(x => x.FirmaId == firmaId && x.FaturaId == id)
+            .Where(x => x.FirmaId == firmaId && x.FaturaId == id && x.CariKartId == null)
             .OrderByDescending(x => x.YuklemeTarihi)
             .ToListAsync();
     }

@@ -17,6 +17,22 @@ namespace MuhasebeTakip2.App.Migrations.Sqlite
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.3");
 
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.AdminCompanyTransition", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("TEXT");
+                    b.Property<int>("AdminUserId").HasColumnType("INTEGER");
+                    b.Property<string>("LoginEpoch").IsRequired().HasMaxLength(32).HasColumnType("TEXT");
+                    b.Property<DateTime>("RequestedAtUtc").HasColumnType("TEXT");
+                    b.Property<DateTime?>("ResolvedAtUtc").HasColumnType("TEXT");
+                    b.Property<bool>("ReturnHome").HasColumnType("INTEGER");
+                    b.Property<int>("SourceCompanyId").HasColumnType("INTEGER");
+                    b.Property<Guid>("SourceVersion").HasColumnType("TEXT");
+                    b.Property<int>("Status").HasColumnType("INTEGER");
+                    b.Property<int>("TargetCompanyId").HasColumnType("INTEGER");
+                    b.HasKey("Id");
+                    b.ToTable("AdminCompanyTransitions");
+                });
+
             modelBuilder.Entity("MuhasebeTakip2.App.Models.Calisan", b =>
                 {
                     b.Property<int>("Id")

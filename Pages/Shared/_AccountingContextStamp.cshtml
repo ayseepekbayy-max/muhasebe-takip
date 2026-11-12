@@ -1,0 +1,6 @@
+@using MuhasebeTakip2.App.Services
+@if (ViewData["AccountingContextStamp"] is AccountingContextStamp stamp)
+{
+    <input type="hidden" name="AccountingCompanyId" value="@stamp.CompanyId" />
+    <input type="hidden" name="AccountingVersion" value="@stamp.Version" />
+}

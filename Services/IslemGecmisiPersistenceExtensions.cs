@@ -11,7 +11,9 @@ public static class IslemGecmisiPersistenceExtensions
         bool anaKaydiOnceKaydet,
         CancellationToken cancellationToken = default)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = db.Database.CurrentTransaction == null
+            ? await db.Database.BeginTransactionAsync(cancellationToken)
+            : null;
 
         if (anaKaydiOnceKaydet)
             await db.SaveChangesAsync(cancellationToken);
@@ -19,6 +21,6 @@ public static class IslemGecmisiPersistenceExtensions
         await auditKaydiOlustur();
         await db.SaveChangesAsync(cancellationToken);
 
-        await transaction.CommitAsync(cancellationToken);
+        if (transaction != null) await transaction.CommitAsync(cancellationToken);
     }
 }

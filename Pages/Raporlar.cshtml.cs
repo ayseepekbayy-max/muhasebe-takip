@@ -59,7 +59,7 @@ public class RaporlarModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.ViewingCompanyId(HttpContext);
         if (firmaId == null)
             return RedirectToPage("/Login");
 
@@ -71,7 +71,7 @@ public class RaporlarModel : PageModel
 
     public async Task<IActionResult> OnGetDisaAktarAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.ViewingCompanyId(HttpContext);
         if (firmaId == null)
             return RedirectToPage("/Login");
 
@@ -306,6 +306,7 @@ public class RaporlarModel : PageModel
 
     private async Task<List<RaporSatiri>> TopCariHareketleriAsync(int firmaId, HareketTipi tip)
     {
+        var readOnly = MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.IsViewingAnotherCompany(HttpContext);
         return await _db.KasaHareketleri
             .AsNoTracking()
             .Where(x =>
@@ -314,7 +315,7 @@ public class RaporlarModel : PageModel
                 x.Tarih >= SeciliBaslangic &&
                 x.Tarih < SeciliBitisHaric &&
                 x.Tip == tip)
-            .Where(x => x.CariKart == null || x.CariKart.AktifMi)
+            .Where(x => x.CariKart == null || (x.CariKart.AktifMi && (!readOnly || x.CariKart.FirmaId == firmaId)))
             .GroupBy(x => new { x.CariKartId, x.CariKart!.Unvan })
             .Select(g => new RaporSatiri
             {
@@ -330,10 +331,11 @@ public class RaporlarModel : PageModel
 
     private async Task<List<StokHareketRaporSatiri>> TopStokHareketleriAsync(int firmaId)
     {
+        var readOnly = MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.IsViewingAnotherCompany(HttpContext);
         return await _db.StokHareketleri
             .AsNoTracking()
             .Where(x => x.FirmaId == firmaId && x.Tarih >= SeciliBaslangic && x.Tarih < SeciliBitisHaric)
-            .Where(x => x.StokUrun == null || x.StokUrun.AktifMi)
+            .Where(x => x.StokUrun == null || (x.StokUrun.AktifMi && (!readOnly || x.StokUrun.FirmaId == firmaId)))
             .GroupBy(x => new { x.StokUrunId, x.StokUrun!.Ad, x.StokUrun.Kod })
             .Select(g => new StokHareketRaporSatiri
             {

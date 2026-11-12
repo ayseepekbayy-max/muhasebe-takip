@@ -58,6 +58,7 @@
             </div>
         </div>
         <form method="post" asp-page-handler="Ekle" class="app-form-grid invoice-form-grid">
+            <partial name="~/Pages/Shared/_AccountingContextStamp.cshtml" />
             <div class="form-field form-field-wide">
                 <label asp-for="Yeni.CariKartId">Cari</label>
                 <select asp-for="Yeni.CariKartId">
@@ -185,6 +186,7 @@
                                     else
                                     {
                                         <form method="post" asp-page-handler="Odeme" class="invoice-payment-form">
+                                            <partial name="~/Pages/Shared/_AccountingContextStamp.cshtml" />
                                             <input type="hidden" asp-for="Odeme.FaturaId" value="@fatura.Id" />
                                             <input asp-for="Odeme.Tutar" type="number" step="0.01" min="0" max="@fatura.KalanTutar" placeholder="Tutar" />
                                             <select asp-for="Odeme.KasaHesapId" asp-items="Model.HesapSecenekleri" aria-label="Ödemenin hesabı" required></select>
@@ -198,6 +200,7 @@
                                         <a class="btn btn-outline-primary btn-sm" asp-page="/Faturalar/Detay" asp-route-id="@fatura.Id">Detay</a>
                                         <a class="btn btn-outline-dark btn-sm" asp-page="/Faturalar/Duzenle" asp-route-id="@fatura.Id">Düzenle</a>
                                         <form method="post" asp-page-handler="Sil" class="inline-form" onsubmit="return confirm('Bu fatura silinecek. Daha önce kasaya işlenen tahsilat/ödeme hareketleri silinmez. Devam edilsin mi?');">
+                                            <partial name="~/Pages/Shared/_AccountingContextStamp.cshtml" />
                                             <input type="hidden" name="id" value="@fatura.Id" />
                                             <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
                                         </form>

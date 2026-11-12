@@ -39,6 +39,7 @@
             </div>
         </div>
         <form method="post" asp-page-handler="DurumGuncelle" class="app-form-grid">
+            <partial name="~/Pages/Shared/_AccountingContextStamp.cshtml" />
             <div class="form-field">
                 <label asp-for="DurumForm.Durum">Durum</label>
                 <select asp-for="DurumForm.Durum">
@@ -133,6 +134,7 @@
     <section class="dashboard-panel no-print">
         <div class="panel-title-row"><div><h2>Fatura Dosyaları</h2><p>PDF, resim, Excel veya Word dosyası ekleyin.</p></div></div>
         <form method="post" asp-page-handler="DosyaEkle" enctype="multipart/form-data" class="attachment-form">
+            <partial name="~/Pages/Shared/_AccountingContextStamp.cshtml" />
             <input type="file" asp-for="EkDosya" accept=".pdf,.png,.jpg,.jpeg,.webp,.xlsx,.xls,.docx" />
             <button type="submit" class="btn btn-outline-primary">Dosya Ekle</button>
         </form>

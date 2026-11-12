@@ -9,6 +9,7 @@ using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Kasa;
 
+[ServiceFilter(typeof(KasaContextFilter))]
 public class HareketlerModel : PageModel
 {
     private readonly AppDbContext _db;
@@ -31,15 +32,18 @@ public class HareketlerModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = KasaRequestContext.CompanyId(HttpContext);
         if (firmaId == null)
             return RedirectToPage("/Login");
 
+        var readOnly = SwitchedAccountingBoundary.IsViewingAnotherCompany(HttpContext);
         HesapSecenekleri = await _db.KasaHesaplar.AsNoTracking().Where(x => x.FirmaId == firmaId).OrderBy(x => x.Ad)
             .Select(x => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem(x.Ad, x.Id.ToString())).ToListAsync();
         Hareketler = await _db.KasaHareketleri
             .Include(x => x.CariKart).Include(x => x.KasaHesap)
             .Where(x => x.FirmaId == firmaId && (!HesapId.HasValue || (HesapId == 0 ? x.KasaHesapId == null : x.KasaHesapId == HesapId)))
+            .Where(x => !readOnly || ((x.CariKartId == null || x.CariKart!.FirmaId == firmaId) &&
+                                      (x.KasaHesapId == null || x.KasaHesap!.FirmaId == firmaId)))
             .OrderByDescending(x => x.Tarih)
             .ThenByDescending(x => x.Id)
             .ToListAsync();
@@ -49,62 +53,12 @@ public class HareketlerModel : PageModel
 
     public async Task<IActionResult> OnPostSilAsync(int id)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
-
-        var h = await _db.KasaHareketleri
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId);
-
-        if (h == null)
-        {
-            Hata = "Silinecek hareket bulunamadı.";
-
-            Hareketler = await _db.KasaHareketleri
-                .Include(x => x.CariKart)
-                .Where(x => x.FirmaId == firmaId)
-                .OrderByDescending(x => x.Tarih)
-                .ThenByDescending(x => x.Id)
-                .ToListAsync();
-
-            return Page();
-        }
-
-        Fatura? bagliFatura = null;
-        object? eskiFaturaDegeri = null;
-        if (h.FaturaId.HasValue)
-        {
-            bagliFatura = await _db.Faturalar.FirstOrDefaultAsync(x =>
-                x.Id == h.FaturaId.Value && x.FirmaId == firmaId.Value);
-            var hata = bagliFatura == null
-                ? "Hareketin bağlı olduğu fatura bulunamadı."
-                : FaturaOdemeTutarliligi.Dogrula(bagliFatura, h, 0, h.Tip, h.CariKartId);
-            if (hata != null)
-            {
-                Hata = hata;
-                await OnGetAsync();
-                return Page();
-            }
-            eskiFaturaDegeri = IslemGecmisiSnapshots.Fatura(bagliFatura!);
-            FaturaOdemeTutarliligi.Uygula(bagliFatura!, h.Tutar, 0);
-        }
-
-        _db.KasaHareketleri.Remove(h);
-        await _db.SaveChangesWithAuditAsync(async () =>
-        {
-            await _islemGecmisi.KaydetAsync(
-                "Kasa", "Silme", $"Kasa hareketi silindi (ID: {h.Id}).",
-                eskiDeger: KasaDegeri(h));
-            if (bagliFatura != null)
-                await _islemGecmisi.KaydetAsync(
-                    "Faturalar", "Ödeme Düzeltme", $"{bagliFatura.FaturaNo} faturasının ödemesi kasa hareketi silindiği için güncellendi.",
-                    eskiFaturaDegeri, IslemGecmisiSnapshots.Fatura(bagliFatura));
-        }, anaKaydiOnceKaydet: false);
-
+        var company = KasaRequestContext.CompanyId(HttpContext)!.Value;
+        var error = await KasaMovementDeletion.DeleteAsync(_db, _islemGecmisi, company, id, HttpContext.RequestAborted);
+        if (error != null) { Hata = error; await OnGetAsync(); return Page(); }
         Mesaj = "Kasa hareketi silindi.";
         return RedirectToPage();
     }
-
     private static object KasaDegeri(KasaHareket hareket) => new
     {
         hareket.Id,
@@ -117,15 +71,22 @@ public class HareketlerModel : PageModel
         hareket.KasaHesapId
     };
 
-    public async Task<IActionResult> OnPostDisaAktarAsync()
+    public Task<IActionResult> OnGetDisaAktarAsync() => ExportAsync();
+
+    public Task<IActionResult> OnPostDisaAktarAsync() => ExportAsync();
+
+    private async Task<IActionResult> ExportAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
+        var firmaId = KasaRequestContext.CompanyId(HttpContext);
         if (firmaId == null)
             return RedirectToPage("/Login");
 
+        var readOnly = SwitchedAccountingBoundary.IsViewingAnotherCompany(HttpContext);
         var hareketler = await _db.KasaHareketleri
             .Include(x => x.CariKart).Include(x => x.KasaHesap)
             .Where(x => x.FirmaId == firmaId && (!HesapId.HasValue || (HesapId == 0 ? x.KasaHesapId == null : x.KasaHesapId == HesapId)))
+            .Where(x => !readOnly || ((x.CariKartId == null || x.CariKart!.FirmaId == firmaId) &&
+                                      (x.KasaHesapId == null || x.KasaHesap!.FirmaId == firmaId)))
             .OrderByDescending(x => x.Tarih)
             .ThenByDescending(x => x.Id)
             .ToListAsync();

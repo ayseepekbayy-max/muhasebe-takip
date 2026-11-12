@@ -15,6 +15,8 @@ public class LoginModel : PageModel
     private readonly PrivateAccessService _privateAccess;
     private readonly IWebHostEnvironment _environment;
 
+    private AccountingSessionLifecycle SessionLifecycle => HttpContext.RequestServices.GetRequiredService<AccountingSessionLifecycle>();
+
     public bool DemoGirisAcik => _environment.IsDevelopment();
 
     public LoginModel(AppDbContext db, PrivateAccessService privateAccess, IWebHostEnvironment environment)
@@ -48,8 +50,8 @@ public class LoginModel : PageModel
                 return Page();
             }
 
-            await HttpContext.RequestServices.GetRequiredService<PrivateSessionRenewal>()
-                .SignInAsync(HttpContext, privateResult.Person);
+            await SessionLifecycle.ReplaceAsync(HttpContext, () => HttpContext.RequestServices
+                .GetRequiredService<PrivateSessionRenewal>().SignInAsync(HttpContext, privateResult.Person));
             return RedirectToPage("/Panel");
         }
 
@@ -86,25 +88,29 @@ public class LoginModel : PageModel
             if (sifreKontrolu.RehashNeeded)
                 await TryRehashPasswordAsync(kullanici, Sifre);
 
-            HttpContext.Session.Clear();
+            await SessionLifecycle.ReplaceAsync(HttpContext, () =>
+            {
+                HttpContext.Session.Clear();
 
-            HttpContext.Session.SetInt32("KullaniciId", kullanici.Id);
-            HttpContext.Session.SetInt32("FirmaId", kullanici.FirmaId);
-            HttpContext.Session.SetString("KullaniciAdi", kullanici.KullaniciAdi);
-            HttpContext.Session.SetString("FirmaAdi", firma.FirmaAdi ?? "Firma");
-            HttpContext.Session.SetString("Rol", (kullanici.Rol ?? "").Trim());
-            HttpContext.Session.Remove("DemoMode");
+                HttpContext.Session.SetInt32("KullaniciId", kullanici.Id);
+                HttpContext.Session.SetInt32("FirmaId", kullanici.FirmaId);
+                HttpContext.Session.SetString("KullaniciAdi", kullanici.KullaniciAdi);
+                HttpContext.Session.SetString("FirmaAdi", firma.FirmaAdi ?? "Firma");
+                HttpContext.Session.SetString("Rol", (kullanici.Rol ?? "").Trim());
+                HttpContext.Session.Remove("DemoMode");
 
-            HttpContext.Session.SetString("MenuCariKartlar", firma.MenuCariKartlar ? "1" : "0");
-            HttpContext.Session.SetString("MenuKasa", firma.MenuKasa ? "1" : "0");
-            HttpContext.Session.SetString("MenuRaporlar", firma.MenuRaporlar ? "1" : "0");
-            HttpContext.Session.SetString("MenuOdemeler", firma.MenuOdemeler ? "1" : "0");
-            HttpContext.Session.SetString("MenuCalisanlar", firma.MenuCalisanlar ? "1" : "0");
-            HttpContext.Session.SetString("MenuMusteriler", firma.MenuMusteriler ? "1" : "0");
-            HttpContext.Session.SetString("MenuStoklar", firma.MenuStoklar ? "1" : "0");
-            HttpContext.Session.SetString("MenuMaliyet", firma.MenuMaliyet ? "1" : "0");
-            HttpContext.Session.SetString("MenuCekler", firma.MenuCekler ? "1" : "0");
-                    return RedirectToPage("/Index");
+                HttpContext.Session.SetString("MenuCariKartlar", firma.MenuCariKartlar ? "1" : "0");
+                HttpContext.Session.SetString("MenuKasa", firma.MenuKasa ? "1" : "0");
+                HttpContext.Session.SetString("MenuRaporlar", firma.MenuRaporlar ? "1" : "0");
+                HttpContext.Session.SetString("MenuOdemeler", firma.MenuOdemeler ? "1" : "0");
+                HttpContext.Session.SetString("MenuCalisanlar", firma.MenuCalisanlar ? "1" : "0");
+                HttpContext.Session.SetString("MenuMusteriler", firma.MenuMusteriler ? "1" : "0");
+                HttpContext.Session.SetString("MenuStoklar", firma.MenuStoklar ? "1" : "0");
+                HttpContext.Session.SetString("MenuMaliyet", firma.MenuMaliyet ? "1" : "0");
+                HttpContext.Session.SetString("MenuCekler", firma.MenuCekler ? "1" : "0");
+                return Task.CompletedTask;
+            }, establishAccounting: true);
+            return RedirectToPage("/Index");
     }
 
     private async Task TryRehashPasswordAsync(Kullanici kullanici, string verifiedPassword)
@@ -138,23 +144,27 @@ public class LoginModel : PageModel
             return Page();
         }
 
-        HttpContext.Session.Clear();
-        HttpContext.Session.SetInt32("KullaniciId", kullanici.Id);
-        HttpContext.Session.SetInt32("FirmaId", kullanici.FirmaId);
-        HttpContext.Session.SetString("KullaniciAdi", kullanici.KullaniciAdi);
-        HttpContext.Session.SetString("FirmaAdi", firma.FirmaAdi ?? "Demo Firma");
-        HttpContext.Session.SetString("Rol", "Demo");
-        HttpContext.Session.SetString("DemoMode", "1");
+        await SessionLifecycle.ReplaceAsync(HttpContext, async () =>
+        {
+            HttpContext.Session.Clear();
+            HttpContext.Session.SetInt32("KullaniciId", kullanici.Id);
+            HttpContext.Session.SetInt32("FirmaId", kullanici.FirmaId);
+            HttpContext.Session.SetString("KullaniciAdi", kullanici.KullaniciAdi);
+            HttpContext.Session.SetString("FirmaAdi", firma.FirmaAdi ?? "Demo Firma");
+            HttpContext.Session.SetString("Rol", "Demo");
+            HttpContext.Session.SetString("DemoMode", "1");
 
-        HttpContext.Session.SetString("MenuCariKartlar", firma.MenuCariKartlar ? "1" : "0");
-        HttpContext.Session.SetString("MenuKasa", firma.MenuKasa ? "1" : "0");
-        HttpContext.Session.SetString("MenuRaporlar", firma.MenuRaporlar ? "1" : "0");
-        HttpContext.Session.SetString("MenuOdemeler", firma.MenuOdemeler ? "1" : "0");
-        HttpContext.Session.SetString("MenuCalisanlar", firma.MenuCalisanlar ? "1" : "0");
-        HttpContext.Session.SetString("MenuMusteriler", firma.MenuMusteriler ? "1" : "0");
-        HttpContext.Session.SetString("MenuStoklar", firma.MenuStoklar ? "1" : "0");
-        HttpContext.Session.SetString("MenuMaliyet", firma.MenuMaliyet ? "1" : "0");
-        HttpContext.Session.SetString("MenuCekler", firma.MenuCekler ? "1" : "0");
+            HttpContext.Session.SetString("MenuCariKartlar", firma.MenuCariKartlar ? "1" : "0");
+            HttpContext.Session.SetString("MenuKasa", firma.MenuKasa ? "1" : "0");
+            HttpContext.Session.SetString("MenuRaporlar", firma.MenuRaporlar ? "1" : "0");
+            HttpContext.Session.SetString("MenuOdemeler", firma.MenuOdemeler ? "1" : "0");
+            HttpContext.Session.SetString("MenuCalisanlar", firma.MenuCalisanlar ? "1" : "0");
+            HttpContext.Session.SetString("MenuMusteriler", firma.MenuMusteriler ? "1" : "0");
+            HttpContext.Session.SetString("MenuStoklar", firma.MenuStoklar ? "1" : "0");
+            HttpContext.Session.SetString("MenuMaliyet", firma.MenuMaliyet ? "1" : "0");
+            HttpContext.Session.SetString("MenuCekler", firma.MenuCekler ? "1" : "0");
+            await HttpContext.Session.CommitAsync(HttpContext.RequestAborted);
+        });
 
         TempData["Mesaj"] = "Demo hesap hazırlandı. Örnek verileri güvenle inceleyebilirsiniz.";
         return RedirectToPage("/Index");

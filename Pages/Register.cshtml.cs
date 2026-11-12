@@ -1,3 +1,4 @@
+using MuhasebeTakip2.App.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -30,9 +31,9 @@ public class RegisterModel : PageModel
 
     public string Hata { get; set; } = "";
 
-    public IActionResult OnGet()
+    public async Task<IActionResult> OnGetAsync()
     {
-        HttpContext.Session.Clear();
+        await HttpContext.RequestServices.GetRequiredService<AccountingSessionLifecycle>().EndAsync(HttpContext);
         return Page();
     }
 
@@ -120,10 +121,6 @@ public class RegisterModel : PageModel
             await _db.SaveChangesAsync();
 
             await transaction.CommitAsync();
-
-            HttpContext.Session.Clear();
-
-            return RedirectToPage("/Login");
         }
         catch
         {
@@ -131,5 +128,8 @@ public class RegisterModel : PageModel
             Hata = "Kayıt sırasında bir hata oluştu.";
             return Page();
         }
+
+        await HttpContext.RequestServices.GetRequiredService<AccountingSessionLifecycle>().EndAsync(HttpContext);
+        return RedirectToPage("/Login");
     }
 }

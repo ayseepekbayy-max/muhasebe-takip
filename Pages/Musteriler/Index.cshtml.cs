@@ -1,6 +1,6 @@
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
@@ -9,6 +9,7 @@ using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.Musteriler;
 
+[TypeFilter(typeof(AccountingPageContextFilter))]
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
@@ -39,8 +40,7 @@ public class IndexModel : PageModel
     public string? IsDurumuFiltre { get; set; }
 
     [BindProperty]
-    [ValidateNever]
-    public Musteri Yeni { get; set; } = new();
+    public MusteriForm Yeni { get; set; } = new();
 
     public string Hata { get; set; } = "";
     public string Mesaj { get; set; } = "";
@@ -48,19 +48,31 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = AccountingPageContextFilter.CompanyId(HttpContext);
 
-        await ListeyiYukleAsync(firmaId.Value);
+        if (!await ListeyiYukleAsync(firmaId))
+            return StatusCode(403);
         return Page();
     }
 
-    public async Task<IActionResult> OnPostEkleAsync()
+    public Task<IActionResult> OnPostEkleAsync() => WriteAsync(EkleAsync);
+
+    private async Task<IActionResult> WriteAsync(Func<Task<IActionResult>> operation)
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        try
+        {
+            return await CustomerScope.RunWriteAsync(_db, operation, HttpContext.RequestAborted);
+        }
+        catch
+        {
+            TempData.Remove("Basari");
+            throw;
+        }
+    }
+
+    private async Task<IActionResult> EkleAsync()
+    {
+        var firmaId = AccountingPageContextFilter.CompanyId(HttpContext);
 
         Yeni.AdSoyad = (Yeni.AdSoyad ?? "").Trim();
         Yeni.Telefon = (Yeni.Telefon ?? "").Trim();
@@ -69,37 +81,51 @@ public class IndexModel : PageModel
         if (string.IsNullOrWhiteSpace(Yeni.AdSoyad))
         {
             ModelState.AddModelError("", "Ad Soyad boş olamaz.");
+        }
+
+        if (!ModelState.IsValid)
+        {
             YeniMusteriModalAcik = true;
-            await ListeyiYukleAsync(firmaId.Value);
+            if (!await ListeyiYukleAsync(firmaId))
+                return StatusCode(403);
             return Page();
         }
 
-        Yeni.Ad = Yeni.AdSoyad;
-        Yeni.FirmaId = firmaId.Value;
-        Yeni.AktifMi = true;
-        Yeni.ArsivTarihi = null;
-        Yeni.ArsivNotu = null;
+        var musteri = new Musteri
+        {
+            FirmaId = firmaId,
+            Ad = Yeni.AdSoyad,
+            AdSoyad = Yeni.AdSoyad,
+            Telefon = Yeni.Telefon,
+            Adres = Yeni.Adres
+        };
 
-        _db.Musteriler.Add(Yeni);
+        _db.Musteriler.Add(musteri);
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
                 "Müşteriler",
                 "Ekleme",
-                $"{Yeni.AdSoyad} müşterisi eklendi (ID: {Yeni.Id}).",
-                yeniDeger: IslemGecmisiSnapshots.Musteri(Yeni)),
-            anaKaydiOnceKaydet: true);
+                $"{musteri.AdSoyad} müşterisi eklendi (ID: {musteri.Id}).",
+                yeniDeger: IslemGecmisiSnapshots.Musteri(musteri)),
+            anaKaydiOnceKaydet: true, cancellationToken: HttpContext.RequestAborted);
 
         TempData["Basari"] = "Müşteri eklendi.";
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostSilAsync(int id)
+    public Task<IActionResult> OnPostSilAsync(int id) => WriteAsync(() => ArsivleAsync(id));
+
+    private async Task<IActionResult> ArsivleAsync(int id)
     {
         ModelState.Clear();
 
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = AccountingPageContextFilter.CompanyId(HttpContext);
+
+        var ct = HttpContext.RequestAborted;
+        await CustomerScope.LockCustomerAsync(_db, firmaId, id, ct);
+        if (await CustomerScope.ForeignCustomerAsync(_db, firmaId, id, ct) ||
+            !await CustomerScope.RelationsValidAsync(_db, firmaId, id, ct))
+            return StatusCode(403);
 
         var musteri = await _db.Musteriler
             .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi);
@@ -119,7 +145,7 @@ public class IndexModel : PageModel
                 $"{musteri.AdSoyad} musterisi silinmeden arsive tasindi (ID: {musteri.Id}).",
                 eskiDeger,
                 IslemGecmisiSnapshots.Musteri(musteri)),
-            anaKaydiOnceKaydet: false);
+            anaKaydiOnceKaydet: false, cancellationToken: ct);
 
         TempData["Basari"] = "Musteri silinmeden arsive tasindi. Is ve masraf kayitlari korundu.";
         return RedirectToPage();
@@ -128,11 +154,10 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetDisaAktarAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = AccountingPageContextFilter.CompanyId(HttpContext);
 
-        await ListeyiYukleAsync(firmaId.Value);
+        if (!await ListeyiYukleAsync(firmaId))
+            return StatusCode(403);
 
         using var workbook = new XLWorkbook();
         var ws = workbook.Worksheets.Add("Müşteriler");
@@ -192,8 +217,11 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostDisaAktarAsync() => await OnGetDisaAktarAsync();
 
-    private async Task ListeyiYukleAsync(int firmaId)
+    private async Task<bool> ListeyiYukleAsync(int firmaId)
     {
+        if (!await CustomerScope.RelationsValidAsync(_db, firmaId, null, HttpContext.RequestAborted))
+            return false;
+
         var genelOzet = await _db.Musteriler
             .AsNoTracking()
             .Where(x => x.FirmaId == firmaId && x.AktifMi)
@@ -205,7 +233,7 @@ public class IndexModel : PageModel
 
         var isOzeti = await _db.MusteriIsler
             .AsNoTracking()
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId && x.Musteri != null && x.Musteri.FirmaId == firmaId)
             .GroupBy(_ => 1)
             .Select(grup => new
             {
@@ -217,7 +245,8 @@ public class IndexModel : PageModel
 
         var masrafOzeti = await _db.MusteriMasraflar
             .AsNoTracking()
-            .Where(x => x.FirmaId == firmaId)
+            .Where(x => x.FirmaId == firmaId && x.MusteriIs != null && x.MusteriIs.FirmaId == firmaId &&
+                        x.MusteriIs.Musteri != null && x.MusteriIs.Musteri.FirmaId == firmaId)
             .GroupBy(_ => 1)
             .Select(grup => new { Masraf = grup.Sum(x => (decimal?)x.Tutar) ?? 0 })
             .FirstOrDefaultAsync();
@@ -258,7 +287,7 @@ public class IndexModel : PageModel
                 .Where(x => x.FirmaId == firmaId && x.MusteriId == musteri.Id)
                 .Sum(x => (decimal?)x.Gelir) ?? 0,
             ToplamMasraf = _db.MusteriMasraflar
-                .Where(x => x.FirmaId == firmaId && x.MusteriIs != null && x.MusteriIs.MusteriId == musteri.Id)
+                .Where(x => x.FirmaId == firmaId && x.MusteriIs != null && x.MusteriIs.FirmaId == firmaId && x.MusteriIs.MusteriId == musteri.Id)
                 .Sum(x => (decimal?)x.Tutar) ?? 0,
             SonIsTarihi = _db.MusteriIsler
                 .Where(x => x.FirmaId == firmaId && x.MusteriId == musteri.Id)
@@ -284,6 +313,17 @@ public class IndexModel : PageModel
             .OrderByDescending(x => x.SonIsTarihi ?? DateTime.MinValue)
             .ThenBy(x => x.AdSoyad)
             .ToListAsync();
+        return true;
+    }
+
+    public class MusteriForm
+    {
+        [Required, MaxLength(120)]
+        public string AdSoyad { get; set; } = "";
+        [MaxLength(30)]
+        public string? Telefon { get; set; }
+        [MaxLength(250)]
+        public string? Adres { get; set; }
     }
 
     public class MusteriOzet

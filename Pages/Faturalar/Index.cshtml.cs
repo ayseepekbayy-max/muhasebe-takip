@@ -8,6 +8,7 @@ using ClosedXML.Excel;
 
 namespace MuhasebeTakip2.App.Pages.Faturalar;
 
+[TypeFilter(typeof(AccountingPageContextFilter))]
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
@@ -61,11 +62,10 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnGetAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = AccountingPageContextFilter.CompanyId(HttpContext);
 
-        await VerileriYukleAsync(firmaId.Value);
+        if (!await VerileriYukleAsync(firmaId))
+            return StatusCode(403);
 
         if (CariId.HasValue && Cariler.Any(x => x.Id == CariId.Value))
             Yeni.CariKartId = CariId.Value;
@@ -76,21 +76,26 @@ public class IndexModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostEkleAsync()
+    public Task<IActionResult> OnPostEkleAsync()
+        => InvoicePaymentTransaction.RunPageAsync(_db, this, EkleAsync);
+
+    private async Task<IActionResult> EkleAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = AccountingPageContextFilter.CompanyId(HttpContext);
 
         Yeni.Aciklama = (Yeni.Aciklama ?? "").Trim();
         Yeni.Kalemler ??= new List<FaturaKalemForm>();
+
+        if (await CariScope.ForeignCardAsync(_db, firmaId, Yeni.CariKartId, HttpContext.RequestAborted) ||
+            Yeni.Kalemler.Any(x => x.Id.HasValue))
+            return StatusCode(403);
 
         if (Yeni.CariKartId <= 0)
             ModelState.AddModelError("", "Cari seçimi zorunludur.");
 
         var secilenCari = await _db.CariKartlar
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == Yeni.CariKartId && x.FirmaId == firmaId.Value && x.AktifMi);
+            .FirstOrDefaultAsync(x => x.Id == Yeni.CariKartId && x.FirmaId == firmaId && x.AktifMi);
         if (secilenCari == null)
             ModelState.AddModelError("", "Seçilen cari bulunamadı.");
         else if (Yeni.Tip == FaturaTipi.Satis && !secilenCari.Tip.AliciMi())
@@ -104,28 +109,30 @@ public class IndexModel : PageModel
         if (!ModelState.IsValid)
         {
             Yeni.Kalemler = doluKalemler.Any() ? doluKalemler : Yeni.Kalemler;
-            await VerileriYukleAsync(firmaId.Value);
+            if (!await VerileriYukleAsync(firmaId))
+                return StatusCode(403);
             return Page();
         }
 
         var faturaKalemleri = FaturaKalemleriOlustur(doluKalemler);
         var faturaNo = string.IsNullOrWhiteSpace(Yeni.FaturaNo)
-            ? await SiradakiFaturaNoAsync(firmaId.Value)
+            ? await SiradakiFaturaNoAsync(firmaId)
             : Yeni.FaturaNo.Trim();
 
         var faturaNoVarMi = await _db.Faturalar
-            .AnyAsync(x => x.FirmaId == firmaId.Value && x.FaturaNo == faturaNo);
+            .AnyAsync(x => x.FirmaId == firmaId && x.FaturaNo == faturaNo);
         if (faturaNoVarMi)
         {
             ModelState.AddModelError("", "Bu fatura numarası bu firmada zaten kullanılıyor.");
             Yeni.Kalemler = doluKalemler;
-            await VerileriYukleAsync(firmaId.Value);
+            if (!await VerileriYukleAsync(firmaId))
+                return StatusCode(403);
             return Page();
         }
 
         var fatura = new Fatura
         {
-            FirmaId = firmaId.Value,
+            FirmaId = firmaId,
             CariKartId = Yeni.CariKartId,
             FaturaNo = faturaNo,
             Tip = Yeni.Tip,
@@ -157,13 +164,20 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostOdemeAsync()
-    {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+    public Task<IActionResult> OnPostOdemeAsync()
+        => InvoicePaymentTransaction.RunPageAsync(_db, this, OdemeAsync);
 
-        if (!await KasaHesapService.GecerliMiAsync(_db, firmaId.Value, Odeme.KasaHesapId))
+    private async Task<IActionResult> OdemeAsync()
+    {
+        var firmaId = AccountingPageContextFilter.CompanyId(HttpContext);
+
+        if (await InvoiceScope.ForeignInvoiceAsync(_db, firmaId, Odeme.FaturaId, HttpContext.RequestAborted))
+            return StatusCode(403);
+
+        if (await InvoiceScope.ForeignAccountAsync(_db, firmaId, Odeme.KasaHesapId, HttpContext.RequestAborted))
+            return StatusCode(403);
+
+        if (!await KasaHesapService.GecerliMiAsync(_db, firmaId, Odeme.KasaHesapId))
         {
             TempData["Hata"] = KasaHesapService.SecimHatasi;
             return RedirectToPage();
@@ -175,10 +189,13 @@ public class IndexModel : PageModel
             return RedirectToPage();
         }
 
+        await InvoicePaymentTransaction.LockInvoiceAsync(_db, firmaId, Odeme.FaturaId, HttpContext.RequestAborted);
+        if (!await InvoiceScope.CanAccessAsync(_db, firmaId, Odeme.FaturaId, HttpContext.RequestAborted))
+            return StatusCode(403);
         var fatura = await _db.Faturalar
             .Include(x => x.CariKart)
             .Include(x => x.Kalemler)
-            .FirstOrDefaultAsync(x => x.Id == Odeme.FaturaId && x.FirmaId == firmaId.Value && x.AktifMi);
+            .FirstOrDefaultAsync(x => x.Id == Odeme.FaturaId && x.FirmaId == firmaId && x.AktifMi);
 
         if (fatura == null)
         {
@@ -210,7 +227,7 @@ public class IndexModel : PageModel
 
         var kasaHareketi = new KasaHareket
         {
-            FirmaId = firmaId.Value,
+            FirmaId = firmaId,
             CariKartId = fatura.CariKartId,
             FaturaId = fatura.Id,
             Tarih = ToUtcDate(Odeme.Tarih),
@@ -255,15 +272,19 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 
-    public async Task<IActionResult> OnPostSilAsync(int id)
-    {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+    public Task<IActionResult> OnPostSilAsync(int id)
+        => InvoicePaymentTransaction.RunPageAsync(_db, this, () => ArsivleAsync(id));
 
+    private async Task<IActionResult> ArsivleAsync(int id)
+    {
+        var firmaId = AccountingPageContextFilter.CompanyId(HttpContext);
+
+        await InvoicePaymentTransaction.LockInvoiceAsync(_db, firmaId, id, HttpContext.RequestAborted);
+        if (!await InvoiceScope.CanAccessAsync(_db, firmaId, id, HttpContext.RequestAborted))
+            return StatusCode(403);
         var fatura = await _db.Faturalar
             .Include(x => x.Kalemler)
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value && x.AktifMi);
+            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId && x.AktifMi);
 
         if (fatura == null)
         {
@@ -291,8 +312,11 @@ public class IndexModel : PageModel
 
     }
 
-    private async Task VerileriYukleAsync(int firmaId)
+    private async Task<bool> VerileriYukleAsync(int firmaId)
     {
+        if (!await ListeKapsamiGecerliAsync(firmaId))
+            return false;
+
         HesapSecenekleri = await KasaHesapService.SeceneklerAsync(_db, firmaId);
         Cariler = await _db.CariKartlar
             .Where(x => x.FirmaId == firmaId && x.AktifMi)
@@ -306,13 +330,17 @@ public class IndexModel : PageModel
             .ThenByDescending(x => x.Id)
             .ToListAsync();
 
+        if (Faturalar.Any(x => x.CariKartId != null && x.CariKart?.FirmaId != firmaId))
+            return false;
+
         var aktifFaturalar = Faturalar.Where(x => x.Durum != FaturaDurumu.Iptal).ToList();
         ToplamSatis = aktifFaturalar.Where(x => x.Tip == FaturaTipi.Satis).Sum(x => x.GenelToplam);
         ToplamAlis = aktifFaturalar.Where(x => x.Tip == FaturaTipi.Alis).Sum(x => x.GenelToplam);
         BekleyenTahsilat = aktifFaturalar.Where(x => x.Tip == FaturaTipi.Satis).Sum(x => Math.Max(0, x.KalanTutar));
         BekleyenOdeme = aktifFaturalar.Where(x => x.Tip == FaturaTipi.Alis).Sum(x => Math.Max(0, x.KalanTutar));
 
-        var ayar = await GetOrCreateNumaraAyariAsync(firmaId);
+        var ayar = await _db.FaturaNumaraAyarlari.AsNoTracking().FirstOrDefaultAsync(x => x.FirmaId == firmaId)
+            ?? VarsayilanNumaraAyari(firmaId);
         NumaraAyari = new NumaraAyariForm
         {
             Prefix = ayar.Prefix,
@@ -340,19 +368,25 @@ public class IndexModel : PageModel
 
         if (Odeme.Tarih == default)
             Odeme.Tarih = DateTime.UtcNow.Date;
+
+        return true;
     }
 
     public async Task<IActionResult> OnGetDisaAktarAsync()
     {
-        var firmaId = HttpContext.Session.GetInt32("FirmaId");
-        if (firmaId == null)
-            return RedirectToPage("/Login");
+        var firmaId = AccountingPageContextFilter.CompanyId(HttpContext);
 
-        var faturalar = await FiltreliFaturaSorgusu(firmaId.Value)
+        if (!await ListeKapsamiGecerliAsync(firmaId))
+            return StatusCode(403);
+
+        var faturalar = await FiltreliFaturaSorgusu(firmaId)
             .Include(x => x.CariKart)
             .OrderByDescending(x => x.Tarih)
             .ThenByDescending(x => x.Id)
             .ToListAsync();
+
+        if (faturalar.Any(x => x.CariKartId != null && x.CariKart?.FirmaId != firmaId))
+            return StatusCode(403);
 
         using var workbook = new XLWorkbook();
         var ws = workbook.Worksheets.Add("Faturalar");
@@ -404,6 +438,16 @@ public class IndexModel : PageModel
             $"faturalar_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
     }
 
+    private async Task<bool> ListeKapsamiGecerliAsync(int firmaId)
+    {
+        var ct = HttpContext.RequestAborted;
+        if ((FiltreCariId is int filtre && await CariScope.ForeignCardAsync(_db, firmaId, filtre, ct)) ||
+            (CariId is int cari && await CariScope.ForeignCardAsync(_db, firmaId, cari, ct)))
+            return false;
+
+        return await InvoiceScope.RelationsValidAsync(_db, FiltreliFaturaSorgusu(firmaId), firmaId, ct);
+    }
+
     private IQueryable<Fatura> FiltreliFaturaSorgusu(int firmaId)
     {
         var sorgu = _db.Faturalar
@@ -439,22 +483,19 @@ public class IndexModel : PageModel
 
     private async Task<string> SiradakiFaturaNoAsync(int firmaId)
     {
-        var ayar = await GetOrCreateNumaraAyariAsync(firmaId);
+        var ayar = await _db.FaturaNumaraAyarlari.FirstOrDefaultAsync(x => x.FirmaId == firmaId);
+        if (ayar == null)
+        {
+            ayar = VarsayilanNumaraAyari(firmaId);
+            _db.FaturaNumaraAyarlari.Add(ayar);
+        }
+
         ayar.SonNumara += 1;
         return NumaraOlustur(ayar, ayar.SonNumara);
     }
 
-    private async Task<FaturaNumaraAyari> GetOrCreateNumaraAyariAsync(int firmaId)
-    {
-        var ayar = await _db.FaturaNumaraAyarlari.FirstOrDefaultAsync(x => x.FirmaId == firmaId);
-        if (ayar != null)
-            return ayar;
-
-        ayar = new FaturaNumaraAyari { FirmaId = firmaId, Prefix = "FTR", SonNumara = 0, SiraUzunlugu = 4, YilEkle = true };
-        _db.FaturaNumaraAyarlari.Add(ayar);
-        await _db.SaveChangesAsync();
-        return ayar;
-    }
+    private static FaturaNumaraAyari VarsayilanNumaraAyari(int firmaId) =>
+        new() { FirmaId = firmaId, Prefix = "FTR", SonNumara = 0, SiraUzunlugu = 4, YilEkle = true };
 
     private static string NumaraOlustur(FaturaNumaraAyari ayar, int sira)
     {
@@ -533,7 +574,7 @@ public class IndexModel : PageModel
     public class FaturaForm
     {
         public int CariKartId { get; set; }
-        public string FaturaNo { get; set; } = "";
+        public string? FaturaNo { get; set; }
         public FaturaTipi Tip { get; set; } = FaturaTipi.Satis;
         public DateTime Tarih { get; set; } = DateTime.UtcNow.Date;
         public DateTime? VadeTarihi { get; set; }
@@ -543,6 +584,7 @@ public class IndexModel : PageModel
 
     public class FaturaKalemForm
     {
+        public int? Id { get; set; }
         public string? Aciklama { get; set; }
         public decimal Miktar { get; set; } = 1;
         public decimal BirimFiyat { get; set; }

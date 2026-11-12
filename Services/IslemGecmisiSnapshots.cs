@@ -61,7 +61,10 @@ public static class IslemGecmisiSnapshots
         x.Ad,
         x.AdSoyad,
         x.Telefon,
-        x.Adres
+        x.Adres,
+        x.AktifMi,
+        x.ArsivTarihi,
+        x.ArsivNotu
     };
 
     public static object Calisan(Calisan x) => new

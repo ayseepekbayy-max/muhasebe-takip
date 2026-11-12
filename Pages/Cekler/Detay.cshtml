@@ -24,6 +24,9 @@
         <dt class="col-sm-4">İşlem Tarihi</dt><dd class="col-sm-8">@(Model.Cek.OdemeTarihi?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</dd>
     </dl>
     @if (!string.IsNullOrWhiteSpace(Model.Cek.ResimYolu)) { <a href="@Url.Content($"~/belgeler/cek/{Model.Cek.Id}")" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm mt-3">Çek Görselini Aç</a> }
+    @if (!MuhasebeTakip2.App.Services.SwitchedAccountingBoundary.IsViewingAnotherCompany(ViewContext.HttpContext))
+    {
     <form method="post" asp-page-handler="DurumDegistir" class="d-inline"><input type="hidden" name="id" value="@Model.Cek.Id" /><input type="hidden" name="odendiMi" value="@(!Model.Cek.OdendiMi ? "true" : "false")" /><button type="submit" class="btn btn-success btn-sm mt-3">@(alinacak ? (Model.Cek.OdendiMi ? "Tahsil Edilmedi Olarak İşaretle" : "Tahsil Edildi") : (Model.Cek.OdendiMi ? "Ödenmedi Olarak İşaretle" : "Ödeme Yapıldı"))</button></form>
+    }
     <a asp-page="/Cekler/Index" class="btn btn-outline-dark btn-sm mt-3">Listeye Dön</a>
 </div></div>

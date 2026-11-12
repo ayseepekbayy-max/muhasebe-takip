@@ -19,9 +19,7 @@
         <div class="app-page-actions">
             <a class="btn btn-outline-primary" asp-page="/Kasa/Hesaplar">Kasa / Banka Hesapları</a>
             <a class="btn btn-primary" href="/Kasa/HareketEkle">Hareket Ekle</a>
-            <form method="post" asp-page-handler="DisaAktar"><input type="hidden" name="HesapId" value="@Model.HesapId"/>
-                <button type="submit" class="btn btn-outline-success">Excel İndir</button>
-            </form>
+            <a class="btn btn-outline-success" asp-page-handler="DisaAktar" asp-route-HesapId="@Model.HesapId">Excel İndir</a>
             <a class="btn btn-outline-dark" href="/">Kasa Özeti</a>
         </div>
     </section>
@@ -131,7 +129,7 @@
                                     <form method="post"
                                           asp-page-handler="Sil"
                                           class="inline-form"
-                                          onsubmit="return confirm('Silinsin mi?');">
+                                          onsubmit="return confirm('Silinsin mi?');"><partial name="/Pages/Kasa/_ContextStamp.cshtml" />
                                         <input type="hidden" name="id" value="@h.Id" />
                                         <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
                                     </form>
