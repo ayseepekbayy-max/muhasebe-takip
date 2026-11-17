@@ -10,7 +10,7 @@ using MuhasebeTakip2.App.Models;
 namespace MuhasebeTakip2.App.Services;
 
 // Explicit allowlist: never serialize users, credentials, private chat, or arbitrary EF types.
-public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment environment)
+public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment environment, bool writePrivate = false)
 {
     public const long MaxPackageBytes = 100L * 1024 * 1024;
     public const long MaxExpandedBytes = 300L * 1024 * 1024;
@@ -326,11 +326,20 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
         AddSalaryWarning(package);
         var unresolvedSalaryIds = package.UnresolvedSalaryEmployees.Select(x => x.SalaryRecordId).ToHashSet();
         var restoreId = Guid.NewGuid().ToString("N");
-        var stage = Path.Combine(environment.WebRootPath, "uploads", ".restore-staging", restoreId);
-        var final = Path.Combine(environment.WebRootPath, "uploads", "yedek", restoreId);
+        var uploads = Path.Combine(environment.WebRootPath, "uploads");
+        var recovery = writePrivate ? CompanyDiskStorage.Archives(environment) : Path.Combine(uploads, "yedek");
+        var stage = Path.Combine(writePrivate ? CompanyDiskStorage.Root(environment) : uploads, ".restore-staging", restoreId);
+        var final = Path.Combine(recovery, restoreId);
+        var storedRoot = writePrivate ? $"/uploads/{CompanyDiskStorage.PrivateDirectory}/recovery" : "/uploads/yedek";
         if (Directory.Exists(stage) || Directory.Exists(final) || File.Exists(stage) || File.Exists(final))
             throw new BackupException("Geri yükleme dizini hazırlanamadı.");
-        Directory.CreateDirectory(stage);
+        if (writePrivate)
+        {
+            CompanyDiskStorage.EnsurePrivateDirectory(CompanyDiskStorage.Root(environment));
+            CompanyDiskStorage.EnsurePrivateDirectory(stage);
+        }
+        else
+            Directory.CreateDirectory(stage);
         var finalPlaced = false;
         var commitStarted = false;
         var committed = false;
@@ -395,7 +404,7 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
                         }
                         if (value is DateTime date) value = date.Kind == DateTimeKind.Local ? date.ToUniversalTime() : DateTime.SpecifyKind(date, DateTimeKind.Utc);
                         var document = package.Documents.SingleOrDefault(x => x.Table == table.Type.Name && x.RowId == Id(row) && x.Property == property.Name);
-                        if (document != null) value = $"/uploads/yedek/{restoreId}/{Path.GetFileName(document.Entry)}";
+                        if (document != null) value = $"{storedRoot}/{restoreId}/{Path.GetFileName(document.Entry)}";
                         property.PropertyInfo!.SetValue(entity, value);
                     }
                     db.Add(entity);
@@ -406,7 +415,10 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
                     maps[table.Type.Name][sourceId] = (int)table.Type.GetProperty("Id")!.GetValue(entity)!;
                 records += inserted.Count;
             }
-            Directory.CreateDirectory(Path.GetDirectoryName(final)!);
+            if (writePrivate)
+                CompanyDiskStorage.EnsurePrivateDirectory(recovery);
+            else
+                Directory.CreateDirectory(recovery);
             Directory.Move(stage, final);
             finalPlaced = true;
             commitStarted = true;

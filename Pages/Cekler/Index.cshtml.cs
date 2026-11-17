@@ -113,18 +113,16 @@ public class IndexModel : PageModel
                     return Page();
                 }
 
-                var klasor = Path.Combine(_env.WebRootPath, "uploads", "cekler");
-                Directory.CreateDirectory(klasor);
-
                 var dosyaAdi = $"{Guid.NewGuid()}{ext}";
-                var tamYol = Path.Combine(klasor, dosyaAdi);
+                var (tamYol, belgeYolu) = AccountingDocuments.PrepareUpload(
+                    _env, HttpContext.RequestServices.GetRequiredService<IConfiguration>(), "cekler", dosyaAdi);
 
-                using (var stream = new FileStream(tamYol, FileMode.Create))
+                using (var stream = new FileStream(tamYol, FileMode.CreateNew))
                 {
                     await CekResmi.CopyToAsync(stream);
                 }
 
-                resimYolu = $"/uploads/cekler/{dosyaAdi}";
+                resimYolu = belgeYolu;
             }
 
             var utcTarih = new DateTime(

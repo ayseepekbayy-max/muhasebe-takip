@@ -17,10 +17,11 @@ public class YedeklemeModel : PageModel
     private readonly AccountingBackupService _backup;
     private readonly ILogger<YedeklemeModel> _logger;
 
-    public YedeklemeModel(AppDbContext db, IWebHostEnvironment environment, ILogger<YedeklemeModel> logger)
+    public YedeklemeModel(AppDbContext db, IWebHostEnvironment environment, ILogger<YedeklemeModel> logger,
+        IConfiguration? configuration = null)
     {
         _db = db;
-        _backup = new AccountingBackupService(db, environment);
+        _backup = new AccountingBackupService(db, environment, configuration?.GetValue<bool>("CompanyDocuments:WritePrivate") == true);
         _logger = logger;
     }
 

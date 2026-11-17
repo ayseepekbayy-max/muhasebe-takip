@@ -37,7 +37,9 @@ static async Task TestAsync(string root)
     const string b = "/uploads/faturalar/fatura-22-00000000000000000000000000000002.pdf";
     const string zip = "/uploads/yedek/00000000000000000000000000000003/00000000000000000000000000000004.docx";
     const string cheque = "/uploads/cekler/00000000-0000-0000-0000-000000000005.png";
-    const string wrongOwner = "/uploads/faturalar/fatura-22-00000000000000000000000000000008.pdf";
+    const string privateCheque = "/uploads/.firmova-private/objects/cekler/00000000-0000-0000-0000-000000000032.png";
+    const string privateAttachment = "/uploads/.firmova-private/objects/cariler/cari-11-00000000000000000000000000000011.pdf";
+    const string wrongOwner = "/uploads/faturalar/fatura-23-00000000000000000000000000000008.pdf";
     const string orphan = "/uploads/yedek/00000000000000000000000000000003/00000000000000000000000000000010.pdf";
     const string duplicate = "/uploads/yedek/00000000000000000000000000000006/00000000000000000000000000000007.pdf";
 
@@ -50,6 +52,7 @@ static async Task TestAsync(string root)
     Write(a, "synthetic-cari-A"); Write(b, "synthetic-invoice-B"); Write(zip, "synthetic-restored-A");
     Write(wrongOwner, "synthetic-wrong-owner"); Write(orphan, "synthetic-orphan");
     Write(cheque, "synthetic-cheque-A"); Write(duplicate, "synthetic-ambiguous");
+    Write(privateCheque, "synthetic-private-cheque"); Write(privateAttachment, "synthetic-private-attachment");
     Write("/css/site.css", "body{}"); Write("/js/site.js", "void 0;"); Write("/images/logo.png", "public-image");
     Write("/favicon.ico", "public-icon"); Write("/MuhasebeTakip2.App.styles.css", "body{}");
 
@@ -61,18 +64,21 @@ static async Task TestAsync(string root)
     seed.CariKartlar.AddRange(new CariKart { Id = 11, FirmaId = 71, Unvan = "Synthetic A" },
         new CariKart { Id = 12, FirmaId = 72, Unvan = "Synthetic B" });
     seed.Faturalar.Add(new Fatura { Id = 22, FirmaId = 72, CariKartId = 12, FaturaNo = "Synthetic B" });
+    seed.Faturalar.Add(new Fatura { Id = 23, FirmaId = 72, CariKartId = 12, FaturaNo = "Synthetic invalid relation" });
     seed.Cekler.Add(new Cek { Tip = CekTipi.Alinacak, Id = 31, FirmaId = 71, No = "Synthetic cheque", ResimYolu = cheque });
+    seed.Cekler.Add(new Cek { Tip = CekTipi.Alinacak, Id = 32, FirmaId = 71, No = "Synthetic private cheque", ResimYolu = privateCheque });
     seed.EkDosyalar.AddRange(
         new EkDosya { Id = 1, FirmaId = 71, CariKartId = 11, DosyaYolu = a, DosyaAdi = "Ekstre.pdf", IcerikTipi = "text/html" },
         new EkDosya { Id = 2, FirmaId = 72, FaturaId = 22, DosyaYolu = b },
         new EkDosya { Id = 3, FirmaId = 71, CariKartId = 11, DosyaYolu = zip, DosyaAdi = "Arşiv.docx" },
-        new EkDosya { Id = 4, FirmaId = 71, FaturaId = 22, DosyaYolu = wrongOwner },
+        new EkDosya { Id = 4, FirmaId = 71, FaturaId = 23, DosyaYolu = wrongOwner },
         new EkDosya { Id = 5, FirmaId = 71, CariKartId = 11, DosyaYolu = "/uploads/cariler/../../css/site.css" },
         new EkDosya { Id = 6, FirmaId = 71, CariKartId = 11, DosyaYolu = "/uploads/cariler/%2e%2e/site.css" },
         new EkDosya { Id = 7, FirmaId = 71, DosyaYolu = orphan },
         new EkDosya { Id = 8, FirmaId = 71, CariKartId = 11, DosyaYolu = duplicate },
         new EkDosya { Id = 9, FirmaId = 72, CariKartId = 12, DosyaYolu = duplicate },
-        new EkDosya { Id = 10, FirmaId = 71, CariKartId = 11, DosyaYolu = "/uploads/cariler/cari-11-00000000000000000000000000000009.pdf" });
+        new EkDosya { Id = 10, FirmaId = 71, CariKartId = 11, DosyaYolu = "/uploads/cariler/cari-11-00000000000000000000000000000009.pdf" },
+        new EkDosya { Id = 11, FirmaId = 71, CariKartId = 11, DosyaYolu = privateAttachment });
     var now = DateTime.UtcNow;
     var mediaKey = Guid.NewGuid().ToString("N");
     seed.PrivateMessages.Add(new PrivateMessage { Id = 51, SenderPerson = 1, SenderName = "Synthetic private",
@@ -92,12 +98,14 @@ static async Task TestAsync(string root)
     builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
     builder.Services.AddDistributedMemoryCache();
     builder.Services.AddSession();
-    builder.Services.AddRazorPages();
+    builder.Services.AddRazorPages().AddMvcOptions(options => options.Filters.Add(new SwitchedAccountingBoundary.HandlerFilter()));
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<IIslemGecmisiService, IslemGecmisiService>();
     builder.Services.AddScoped<IOdemeBildirimService, OdemeBildirimService>();
     builder.Services.AddScoped<ICekDurumService, CekDurumService>();
     builder.Services.AddScoped<AppDbContext>(_ => new AppDbContext(options));
+    builder.Services.AddAdminPortalAuthorization();
+    builder.Services.AddAccountingContextFoundation();
 
 
     builder.Services.AddSingleton(TimeProvider.System);
@@ -109,21 +117,30 @@ static async Task TestAsync(string root)
     app.UseAccountingPublicAssets();
     app.UseRouting();
     app.UseSession();
+    app.UseSwitchedAccountingBoundary();
     app.MapAccountingDocuments();
     app.MapRazorPages();
     // The only identity fixture. No production startup, credentials or configuration are loaded.
-    app.MapGet("/fixture/{user:int}/{company:int}", (int user, int company, HttpContext http) =>
+    app.MapGet("/fixture/{user:int}/{company:int}", async (int user, int company, HttpContext http, AccountingSessionLifecycle lifecycle) =>
     {
-        http.Session.Clear();
-        http.Session.SetInt32("KullaniciId", user);
-        http.Session.SetInt32("FirmaId", company);
+        await lifecycle.ReplaceAsync(http, () =>
+        {
+            http.Session.Clear();
+            http.Session.SetInt32("KullaniciId", user);
+            http.Session.SetInt32("FirmaId", company);
+            return Task.CompletedTask;
+        }, establishAccounting: true);
         return Results.Ok();
     });
-    app.MapGet("/fixture/private", (HttpContext http) =>
+    app.MapGet("/fixture/private", async (HttpContext http, AccountingSessionLifecycle lifecycle) =>
     {
-        http.Session.Clear();
-        http.Session.SetString("PrivateMode", "1");
-        http.Session.SetString("PrivatePerson", "1");
+        await lifecycle.ReplaceAsync(http, () =>
+        {
+            http.Session.Clear();
+            http.Session.SetString("PrivateMode", "1");
+            http.Session.SetString("PrivatePerson", "1");
+            return Task.CompletedTask;
+        });
         return Results.Ok();
     });
     await app.StartAsync();
@@ -142,7 +159,8 @@ static async Task TestAsync(string root)
         {
             using var response = await client.GetAsync(path);
             var body = await response.Content.ReadAsStringAsync();
-            Check(response.StatusCode == HttpStatusCode.NotFound && !body.Contains(root) && !body.Contains("synthetic-"), "denied " + path);
+            Check(response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden &&
+                !body.Contains(root) && !body.Contains("synthetic-"), "denied " + path);
         }
         foreach (var asset in new[] { "/css/site.css", "/js/site.js", "/images/logo.png", "/favicon.ico", "/MuhasebeTakip2.App.styles.css" })
             Check((await client.GetAsync(asset)).IsSuccessStatusCode, "public asset " + asset);
@@ -150,6 +168,16 @@ static async Task TestAsync(string root)
         await Denied(zip);
         await Denied("/belgeler/ek/1");
         Check((await client.GetAsync("/fixture/101/71")).IsSuccessStatusCode, "firm A identity established");
+        Check(await client.GetStringAsync("/belgeler/cek/32") == "synthetic-private-cheque", "private cheque uses existing endpoint");
+        Check(await client.GetStringAsync("/belgeler/ek/11") == "synthetic-private-attachment", "private attachment uses existing endpoint");
+        await Denied(privateCheque);
+        await Denied(privateAttachment);
+        var archiveId = Guid.NewGuid();
+        var archive = CompanyRecoveryArchive.OnCompanyDisk(app.Environment, new byte[32], "synthetic");
+        archive.Save(new(71, archiveId, new(), [new(archiveId, "synthetic-recovery-payload"u8.ToArray())]));
+        Check(archive.Read(71, archiveId).Documents.Single().Content.AsSpan().SequenceEqual("synthetic-recovery-payload"u8), "encrypted recovery round trip");
+        var (archiveName, _) = archive.ReadEncryptedDownload(71, archiveId);
+        await Denied("/uploads/.firmova-private/recovery/" + archiveName);
         foreach (var pagePath in new[] { "/Cekler", "/Cekler/Detay/31", "/CariKartlar/Ekstre/11" })
         {
             using var pageResponse = await client.GetAsync(pagePath);
@@ -198,6 +226,8 @@ static async Task TestAsync(string root)
         }
         await Denied("/belgeler/ek/1");
         await Denied("/belgeler/cek/31");
+        await Denied("/belgeler/cek/32");
+        await Denied("/belgeler/ek/11");
         await client.GetAsync("/fixture/103/73");
         await Denied("/belgeler/ek/1");
         await client.GetAsync("/fixture/999/71");
@@ -207,9 +237,10 @@ static async Task TestAsync(string root)
         await client.GetAsync("/fixture/101/71");
         await seed.Firmalar.Where(x => x.Id == 71).ExecuteUpdateAsync(x => x.SetProperty(f => f.AktifMi, false));
         await Denied("/belgeler/ek/1");
-        await client.GetAsync("/fixture/private");
-        await Denied("/belgeler/ek/1");
-        Check(await client.GetStringAsync("/Panel?handler=Audio&id=51") == "synthetic-private-audio",
+        using var privateClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { BaseAddress = new Uri(address) };
+        Check((await privateClient.GetAsync("/fixture/private")).IsSuccessStatusCode, "private session established");
+        Check((await privateClient.GetAsync("/belgeler/ek/1")).StatusCode == HttpStatusCode.NotFound, "private session cannot read accounting attachment");
+        Check(await privateClient.GetStringAsync("/Panel?handler=Audio&id=51") == "synthetic-private-audio",
             "actual private audio handler retains authorized access");
         Console.WriteLine($"PASS {checks} isolated document HTTP checks");
     }

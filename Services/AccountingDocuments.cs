@@ -22,6 +22,24 @@ public static partial class AccountingDocuments
     [GeneratedRegex(@"\A[A-Za-z0-9_-][A-Za-z0-9_.-]*\z")]
     private static partial Regex SafeSegment();
 
+    internal static (string PhysicalPath, string StoredPath) PrepareUpload(
+        IWebHostEnvironment environment, IConfiguration configuration, string kind, string filename)
+    {
+        var usePrivate = configuration.GetValue<bool>("CompanyDocuments:WritePrivate");
+        var relative = usePrivate
+            ? $"uploads/{CompanyDiskStorage.PrivateDirectory}/objects/{kind}"
+            : $"uploads/{kind}";
+        var directory = Path.Combine(environment.WebRootPath, relative.Replace('/', Path.DirectorySeparatorChar));
+        if (usePrivate)
+        {
+            CompanyDiskStorage.EnsurePrivateDirectory(CompanyDiskStorage.Root(environment));
+            CompanyDiskStorage.EnsurePrivateDirectory(directory);
+        }
+        else
+            Directory.CreateDirectory(directory);
+        return (Path.Combine(directory, filename), $"/{relative}/{filename}");
+    }
+
     public static void UseAccountingPublicAssets(this WebApplication app)
     {
         // Only public asset roots are eligible for static serving. Uploads are
@@ -170,14 +188,20 @@ public static partial class AccountingDocuments
             (kind == "cekler" && !mime.StartsWith("image/") && mime != "application/pdf")) return null;
 
         var stem = Path.GetFileNameWithoutExtension(filename);
-        if (parts.Length == 4 && parts[1] == "yedek")
+        var restored = (parts.Length == 4 && parts[1] == "yedek") ||
+            (parts.Length == 5 && parts[1] == CompanyDiskStorage.PrivateDirectory && parts[2] == "recovery");
+        if (restored)
         {
-            if (!Guid.TryParseExact(parts[2], "N", out _) || !Guid.TryParseExact(stem, "N", out _)) return null;
+            if (!Guid.TryParseExact(parts[^2], "N", out _) || !Guid.TryParseExact(stem, "N", out _)) return null;
         }
-        else if (parts.Length != 3 || parts[1] != kind || !stem.StartsWith(prefix, StringComparison.Ordinal) ||
-            !Guid.TryParseExact(stem[prefix.Length..], kind == "cekler" ? "D" : "N", out _))
+        else
         {
-            return null;
+            var legacy = parts.Length == 3 && parts[1] == kind;
+            var privateObject = parts.Length == 5 && parts[1] == CompanyDiskStorage.PrivateDirectory &&
+                parts[2] == "objects" && parts[3] == kind;
+            if ((!legacy && !privateObject) || !stem.StartsWith(prefix, StringComparison.Ordinal) ||
+                !Guid.TryParseExact(stem[prefix.Length..], kind == "cekler" ? "D" : "N", out _))
+                return null;
         }
 
         return ResolveFile(root, parts);
@@ -191,7 +215,7 @@ public static partial class AccountingDocuments
             if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) return null;
             foreach (var part in parts)
             {
-                if (!SafeSegment().IsMatch(part) || part.EndsWith('.')) return null;
+                if (part != CompanyDiskStorage.PrivateDirectory && (!SafeSegment().IsMatch(part) || part.EndsWith('.'))) return null;
                 path = Path.Combine(path, part);
                 if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) return null;
             }

@@ -83,10 +83,9 @@ public class EkstreModel : PageModel
             return RedirectToPage(new { id });
         }
 
-        var klasor = Path.Combine(_env.WebRootPath, "uploads", "cariler");
-        Directory.CreateDirectory(klasor);
         var dosyaAdi = $"cari-{id}-{Guid.NewGuid():N}{uzanti}";
-        var fizikselYol = Path.Combine(klasor, dosyaAdi);
+        var (fizikselYol, belgeYolu) = AccountingDocuments.PrepareUpload(
+            _env, HttpContext.RequestServices.GetRequiredService<IConfiguration>(), "cariler", dosyaAdi);
 
         var fileCreated = false;
         var commitStarted = false;
@@ -103,7 +102,7 @@ public class EkstreModel : PageModel
                 FirmaId = firmaId,
                 CariKartId = id,
                 DosyaAdi = Path.GetFileName(EkDosya.FileName),
-                DosyaYolu = $"/uploads/cariler/{dosyaAdi}",
+                DosyaYolu = belgeYolu,
                 IcerikTipi = EkDosya.ContentType,
                 Boyut = EkDosya.Length,
                 YuklemeTarihi = DateTime.UtcNow

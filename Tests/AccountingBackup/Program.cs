@@ -20,10 +20,15 @@ var root = Path.Combine(Path.GetTempPath(), "backup-tests-" + Guid.NewGuid().ToS
 Directory.CreateDirectory(root);
 var env = new TestEnvironment(root);
 var interceptor = new FailureInterceptor();
-await using var lab = await TemporaryPostgres.StartAsync();
-await lab.InitializeAsync();
-var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(lab.ConnectionString).AddInterceptors(interceptor).Options;
+// The fixed Unix socket is supplied only by the networkless PostgreSQL test container.
+var useLocalSocket = args is ["--isolated-unix"] && OperatingSystem.IsLinux();
+await using var lab = useLocalSocket ? null : await TemporaryPostgres.StartAsync();
+if (lab is not null) await lab.InitializeAsync();
+var options = new DbContextOptionsBuilder<AppDbContext>()
+    .UseNpgsql(lab?.ConnectionString ?? "Host=/work;Database=firmova_stage8_synthetic;Username=postgres")
+    .AddInterceptors(interceptor).Options;
 await using var db = new AppDbContext(options);
+if (useLocalSocket) await db.Database.EnsureCreatedAsync();
 try
 {
 
@@ -109,7 +114,7 @@ try
     Check(!manifestText.Contains("NEVER_EXPORT") && !manifestText.Contains("DO_NOT_EXPORT") && !manifestText.Contains("Sifre"), "Tenant isolation and no secrets/chat");
     Check(package.Documents.Count == 2, "Both attachment and check image packaged");
     Check(package.Tables["CariKart"][0]["AktifMi"].GetBoolean() == false, "Archived cards included");
-    var result = await service.RestoreAsync(new MemoryStream(bytes), target.Id);
+    var result = await new AccountingBackupService(db, env, writePrivate: true).RestoreAsync(new MemoryStream(bytes), target.Id);
     Check(result.Records == 27 && result.Files == 2, "Full restore counts");
     db.ChangeTracker.Clear();
     var restoredInvoice = await db.Faturalar.SingleAsync(x=>x.FirmaId==target.Id);
@@ -121,7 +126,9 @@ try
     Check((await db.CalisanMaasArsivleri.SingleAsync(x=>x.FirmaId==target.Id)).CalisanId == restoredEmployee.Id, "Undeclared salary employee link remapped");
     Check((await db.OdemeBildirimGecmisleri.SingleAsync(x=>x.FirmaId==target.Id)).KullaniciId == targetUser.Id, "User reference mapped within target firm");
     var restoredFile = await db.EkDosyalar.SingleAsync(x=>x.FirmaId==target.Id);
+    Check(restoredFile.DosyaYolu.StartsWith("/uploads/.firmova-private/recovery/", StringComparison.Ordinal), "Restored attachment uses private disk directory");
     Check(await File.ReadAllTextAsync(Path.Combine(env.WebRootPath, restoredFile.DosyaYolu.TrimStart('/'))) == "PDF fixture bytes", "Attachment bytes restored");
+    Check((await service.ExportAsync(target.Id)).Length > 0, "Private attachment is included in a subsequent backup");
     var restoredAccounts=await db.KasaHesaplar.Where(x=>x.FirmaId==target.Id).ToListAsync();
     var restoredTransfer=await db.KasaTransferler.SingleAsync(x=>x.FirmaId==target.Id);
     Check(restoredAccounts.Count==2 && restoredAccounts.Any(x=>x.Id==restoredTransfer.KaynakHesapId) &&
@@ -174,6 +181,15 @@ try
     try { await AccountingBackupService.CopyLimitedAsync(new MemoryStream([1,2,3]),new MemoryStream(),2,default); throw new Exception("Size limit ignored"); }
     catch (AccountingBackupService.BackupException) { checks++; }
     // Legacy JSON includes cash rows, preserves multiplicity, is repeat-safe, and warns about missing scope.
+    if (useLocalSocket)
+    {
+        await new AccountingBackupService(db, env, writePrivate: false).RestoreAsync(new MemoryStream(bytes), legacyTarget.Id);
+        var legacyDocument = await db.EkDosyalar.SingleAsync(x => x.FirmaId == legacyTarget.Id);
+        Check(legacyDocument.DosyaYolu.StartsWith("/uploads/yedek/", StringComparison.Ordinal), "Disabled private writing preserves the legacy restore path");
+        Check(await File.ReadAllTextAsync(Path.Combine(env.WebRootPath, legacyDocument.DosyaYolu.TrimStart('/'))) == "PDF fixture bytes", "Disabled private writing preserves restored bytes");
+        Console.WriteLine($"PASS {checks} isolated PostgreSQL document backup and restore checks");
+        return;
+    }
     var legacy = new YedeklemeModel.YedekPaketi
     {
         Cariler = [new("Legacy Cari", "Legacy Cari", null, null, CariTip.Alici, DateTime.UtcNow)],
@@ -292,7 +308,7 @@ try
     File.Delete(Path.Combine(env.WebRootPath,"uploads/faturalar/fixture.pdf"));
     try { await service.ExportAsync(source.Id); throw new Exception("Missing document accepted"); }
     catch (Exception ex) when (ex is AccountingBackupService.BackupException or FileNotFoundException) { checks++; }
-    if(args.Length==1)
+    if(args.Length==1 && !useLocalSocket)
     {
         var providedBytes=await File.ReadAllBytesAsync(args[0]);
         var provided=Read(providedBytes);

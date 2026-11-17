@@ -209,10 +209,9 @@ public class DetayModel : PageModel
             return RedirectToPage(new { id });
         }
 
-        var klasor = Path.Combine(_env.WebRootPath, "uploads", "faturalar");
-        Directory.CreateDirectory(klasor);
         var dosyaAdi = $"fatura-{id}-{Guid.NewGuid():N}{uzanti}";
-        var fizikselYol = Path.Combine(klasor, dosyaAdi);
+        var (fizikselYol, belgeYolu) = AccountingDocuments.PrepareUpload(
+            _env, HttpContext.RequestServices.GetRequiredService<IConfiguration>(), "faturalar", dosyaAdi);
         var fileCreated = false;
         var commitStarted = false;
         try
@@ -228,7 +227,7 @@ public class DetayModel : PageModel
                 FirmaId = firmaId,
                 FaturaId = id,
                 DosyaAdi = Path.GetFileName(EkDosya.FileName),
-                DosyaYolu = $"/uploads/faturalar/{dosyaAdi}",
+                DosyaYolu = belgeYolu,
                 IcerikTipi = EkDosya.ContentType,
                 Boyut = EkDosya.Length,
                 YuklemeTarihi = DateTime.UtcNow
