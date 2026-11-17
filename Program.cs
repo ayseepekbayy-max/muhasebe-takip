@@ -77,6 +77,8 @@ if (databaseProvider?.Equals("PostgreSql", StringComparison.OrdinalIgnoreCase) =
 
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseNpgsql(databaseConnectionString));
+    if (builder.Environment.IsProduction() && builder.Configuration.GetValue<bool>("Database:VerifyRuntimeRoleOnStartup"))
+        builder.Services.AddHostedService<DatabaseRuntimeRoleDiagnostic>();
 }
 else if (databaseProvider?.Equals("Sqlite", StringComparison.OrdinalIgnoreCase) == true)
 {
