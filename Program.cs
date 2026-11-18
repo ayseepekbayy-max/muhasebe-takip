@@ -7,6 +7,7 @@ using MuhasebeTakip2.App.Services.Ai;
 using MuhasebeTakip2.App.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddPersistentSessionKeys();
 ReleaseMaintenance.ValidateStartup(builder.Configuration, builder.Environment);
 builder.Services.AddSingleton<ReleaseMaintenance>();
 
