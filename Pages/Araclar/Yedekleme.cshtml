@@ -55,6 +55,18 @@
         <section class="app-form-panel">
             <h2>Şifreli kurtarma arşivi</h2>
             <p>Arşiv, yalnızca ait olduğu firmanın boş muhasebe alanına geri yüklenebilir.</p>
+            <form method="post" asp-page-handler="SifreliDosyaGeriYukle" enctype="multipart/form-data">
+                <partial name="_ManagementContextStamp" />
+                <label for="recoveryFile">Bilgisayardaki şifreli kurtarma arşivi</label>
+                <input id="recoveryFile" name="recoveryFile" type="file" accept=".firmova-recovery" required />
+                <p>Özgün dosya adından arşiv kimliği ve anahtar sürümü alınır. Dosyanın adı değiştiyse aşağıdaki iki alanı doldurun. Sunucudaki özgün kopyanın bulunması gerekmez.</p>
+                <label for="uploadedArchiveId">Dosya adı değiştiyse arşiv kimliği</label>
+                <input id="uploadedArchiveId" name="uploadedArchiveId" maxlength="36" />
+                <label for="uploadedKeyVersion">Dosya adı değiştiyse anahtar sürümü</label>
+                <input id="uploadedKeyVersion" name="uploadedKeyVersion" maxlength="32" />
+                <label><input type="checkbox" name="confirmRestore" value="true" required /> Bu firmanın boş muhasebe alanına dosyadan geri yüklemeyi onaylıyorum.</label>
+                <button type="submit" class="btn btn-outline-primary">Şifreli Dosyayı Yükle ve Geri Yükle</button>
+            </form>
             <form method="post" asp-page-handler="SifreliArsivOlustur">
                 <partial name="_ManagementContextStamp" />
                 <button type="submit" class="btn btn-outline-primary">Şifreli Arşiv Oluştur</button>

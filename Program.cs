@@ -245,6 +245,7 @@ if (app.Environment.IsDevelopment())
 app.UseAccountingPublicAssets();
 app.UseReleaseMaintenance();
 app.UseRouting();
+app.UseAccountingRecoveryAdmission();
 app.UseSession();
 app.UseSwitchedAccountingBoundary();
 

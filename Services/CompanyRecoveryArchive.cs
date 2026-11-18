@@ -8,6 +8,15 @@ public sealed class CompanyRecoveryArchive(string directory, byte[] key, string?
 {
     private const long DiskReserveBytes = 64L * 1024 * 1024;
     private const int EnvelopeBytes = 28;
+    public const long MaxAccountingEnvelopeBytes = AccountingBackupService.MaxPackageBytes + EnvelopeBytes;
+
+    public byte[] ReadUploadedAccountingPackage(int companyId, Guid operationId, byte[] envelope)
+    {
+        _ = AccountingPath(companyId, operationId); // Same tenant/operation/version identity as existing downloads.
+        if (envelope.LongLength is <= EnvelopeBytes or > MaxAccountingEnvelopeBytes)
+            throw new InvalidDataException("Invalid accounting archive size.");
+        return Decrypt(envelope, AccountingIdentity(companyId, operationId));
+    }
 
     public static CompanyRecoveryArchive OnCompanyDisk(IWebHostEnvironment environment, byte[] key, string? keyVersion = null) =>
         new(CompanyDiskStorage.Archives(environment), key, keyVersion);

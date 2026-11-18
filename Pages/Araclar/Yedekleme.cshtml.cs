@@ -9,7 +9,8 @@ using MuhasebeTakip2.App.Services;
 namespace MuhasebeTakip2.App.Pages.Araclar;
 
 [RequestSizeLimit(AccountingBackupService.MaxPackageBytes + 1024 * 1024)]
-[RequestFormLimits(MultipartBodyLengthLimit = AccountingBackupService.MaxPackageBytes)]
+[RequestFormLimits(MultipartBodyLengthLimit = CompanyRecoveryArchive.MaxAccountingEnvelopeBytes,
+    MemoryBufferThreshold = (int)CompanyRecoveryArchive.MaxAccountingEnvelopeBytes)]
 public class YedeklemeModel : PageModel
 {
     private readonly AppDbContext _db;
@@ -36,6 +37,38 @@ public class YedeklemeModel : PageModel
     [BindProperty]
     public IFormFile? YedekDosyasi { get; set; }
     public Guid? CreatedArchiveId { get; private set; }
+
+    public Task<IActionResult> OnPostSifreliDosyaGeriYukleAsync(IFormFile? recoveryFile, bool confirmRestore,
+        Guid? uploadedArchiveId, string? uploadedKeyVersion) =>
+        Access.SubmitAsync(this, AccountingManagementPermission.BackupRestore, async context =>
+        {
+            if (!confirmRestore || recoveryFile is null ||
+                recoveryFile.Length is <= 28 or > CompanyRecoveryArchive.MaxAccountingEnvelopeBytes ||
+                !CompanyAccountingRecovery.TryResolveUploadIdentity(recoveryFile.FileName, uploadedArchiveId, uploadedKeyVersion,
+                    out var operation, out var version))
+            {
+                Hata = "Geri yükleme onayı ve geçerli şifreli arşiv gerekiyor. Özgün dosya adını koruyun veya arşiv kimliğini ve anahtar sürümünü girin (en fazla 100 MB + şifreleme başlığı).";
+                return Page();
+            }
+            try
+            {
+                using var archive = _keys?.OpenArchive(version) ?? throw new InvalidOperationException();
+                await using var input = recoveryFile.OpenReadStream();
+                var result = await new CompanyAccountingRecovery(_backup, archive).RestoreUploadedAsync(
+                    context.ActiveCompanyId, operation, input, recoveryFile.Length, HttpContext.RequestAborted);
+                Mesaj = $"Şifreli arşiv geri yüklendi. {result.Records} kayıt ve {result.Files} belge. " + string.Join(" ", result.Warnings);
+            }
+            catch (AccountingBackupService.BackupException ex)
+            {
+                Hata = ex.Message;
+                BaglantiHatalari = ex.LinkIssues;
+            }
+            catch (Exception) when (!HttpContext.RequestAborted.IsCancellationRequested)
+            {
+                Hata = "Şifreli arşiv doğrulanamadı veya geri yüklenemedi. Firma, anahtar sürümü ve dosya bütünlüğünü kontrol edin.";
+            }
+            return Page();
+        });
 
     public Task<IActionResult> OnPostSifreliArsivOlusturAsync() =>
         Access.SubmitAsync(this, AccountingManagementPermission.BackupRead, async context =>
