@@ -10,9 +10,11 @@ public sealed class CompanyRecoveryKeySource(IConfiguration configuration, IWebH
         @"\A\.\.[0-9]{4}_[0-9]{2}_[0-9]{2}_[0-9]{2}_[0-9]{2}_[0-9]{2}\.[0-9]{1,10}\z",
         RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
 
-    public CompanyRecoveryArchive? OpenArchive()
+    public CompanyRecoveryArchive? OpenArchive(string? requestedVersion = null)
     {
-        var version = configuration["CompanyRecovery:KeyVersion"];
+        if (!configuration.GetValue<bool>("CompanyRecovery:Enabled"))
+            return null;
+        var version = requestedVersion ?? configuration["CompanyRecovery:KeyVersion"];
         if (!IsVersion(version))
             return null;
         var key = ReadKey(RenderSecretDirectory, version!);

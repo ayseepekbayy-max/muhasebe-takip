@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace MuhasebeTakip2.App.Services;
 
 /// <summary>Durable encrypted storage for a prepared tenant recovery snapshot.</summary>
-public sealed class CompanyRecoveryArchive(string directory, byte[] key, string? keyVersion = null)
+public sealed class CompanyRecoveryArchive(string directory, byte[] key, string? keyVersion = null) : IDisposable
 {
     private const long DiskReserveBytes = 64L * 1024 * 1024;
     private const int EnvelopeBytes = 28;
@@ -20,12 +20,64 @@ public sealed class CompanyRecoveryArchive(string directory, byte[] key, string?
     public sealed record Snapshot(int CompanyId, Guid OperationId,
         Dictionary<string, JsonElement[]> Tables, Document[] Documents);
 
+    public void SaveAccountingPackage(int companyId, Guid operationId, byte[] zip)
+    {
+        if (zip.LongLength is <= 0 or > AccountingBackupService.MaxPackageBytes)
+            throw new InvalidDataException("Invalid accounting archive size.");
+        WriteEncrypted(AccountingPath(companyId, operationId), zip, AccountingIdentity(companyId, operationId));
+    }
+
+    public byte[] ReadAccountingPackage(int companyId, Guid operationId)
+        => Decrypt(ReadAccountingEnvelope(companyId, operationId), AccountingIdentity(companyId, operationId));
+
+    public byte[] ReadVerifiedAccountingEnvelope(int companyId, Guid operationId)
+    {
+        var bytes = ReadAccountingEnvelope(companyId, operationId);
+        var plaintext = Decrypt(bytes, AccountingIdentity(companyId, operationId));
+        CryptographicOperations.ZeroMemory(plaintext);
+        return bytes;
+    }
+
+    private byte[] ReadAccountingEnvelope(int companyId, Guid operationId)
+    {
+        var path = AccountingPath(companyId, operationId);
+        CompanyDiskStorage.VerifyDirectoryPath(directory);
+        if ((File.GetAttributes(path) & (FileAttributes.Directory | FileAttributes.ReparsePoint)) != 0)
+            throw new IOException("Archive is not a regular file.");
+        using var stream = File.OpenRead(path);
+        if (stream.Length is <= EnvelopeBytes or > AccountingBackupService.MaxPackageBytes + EnvelopeBytes)
+            throw new InvalidDataException("Invalid accounting archive size.");
+        var bytes = new byte[checked((int)stream.Length)];
+        stream.ReadExactly(bytes);
+        return bytes;
+    }
+
+    private string AccountingPath(int companyId, Guid operationId)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(companyId);
+        if (operationId == Guid.Empty || !CompanyRecoveryKeySource.IsVersion(keyVersion))
+            throw new InvalidDataException("Invalid accounting archive identity.");
+        return Path.Combine(directory, FormattableString.Invariant($"accounting-{companyId}-{operationId:N}-key-{keyVersion}.firmova-recovery"));
+    }
+
+    private byte[] AccountingIdentity(int companyId, Guid operationId) => System.Text.Encoding.UTF8.GetBytes(
+        FormattableString.Invariant($"firmova-accounting-v1/{companyId}/{operationId:N}/{keyVersion}"));
+
+    public void Dispose() => CryptographicOperations.ZeroMemory(key);
+
     public void Save(Snapshot snapshot)
     {
         ValidateIdentity(snapshot.CompanyId, snapshot.OperationId);
         var destination = PathFor(snapshot.CompanyId, snapshot.OperationId);
-        var temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
         var plaintext = JsonSerializer.SerializeToUtf8Bytes(snapshot);
+        try { WriteEncrypted(destination, plaintext, Identity(snapshot.CompanyId, snapshot.OperationId)); }
+        finally { CryptographicOperations.ZeroMemory(plaintext); }
+    }
+
+    private void WriteEncrypted(string destination, byte[] plaintext, byte[] identity)
+    {
+        var temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        var created = false;
         try
         {
             CompanyDiskStorage.EnsurePrivateDirectory(directory);
@@ -43,12 +95,13 @@ public sealed class CompanyRecoveryArchive(string directory, byte[] key, string?
             var tag = new byte[16];
             var ciphertext = new byte[plaintext.Length];
             using var cipher = new AesGcm(key, tag.Length);
-            cipher.Encrypt(nonce, plaintext, ciphertext, tag, Identity(snapshot.CompanyId, snapshot.OperationId));
+            cipher.Encrypt(nonce, plaintext, ciphertext, tag, identity);
             var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write, Share = FileShare.None };
             if (!OperatingSystem.IsWindows())
                 options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
             using (var stream = new FileStream(temporary, options))
             {
+                created = true;
                 stream.Write(nonce);
                 stream.Write(tag);
                 stream.Write(ciphertext);
@@ -58,8 +111,7 @@ public sealed class CompanyRecoveryArchive(string directory, byte[] key, string?
         }
         finally
         {
-            CryptographicOperations.ZeroMemory(plaintext);
-            File.Delete(temporary);
+            if (created) File.Delete(temporary);
         }
     }
 
@@ -100,12 +152,9 @@ public sealed class CompanyRecoveryArchive(string directory, byte[] key, string?
     {
         if (bytes.Length <= 28)
             throw new InvalidDataException("Incomplete recovery archive.");
-        var plaintext = new byte[bytes.Length - 28];
+        var plaintext = Decrypt(bytes, Identity(companyId, operationId));
         try
         {
-            using var cipher = new AesGcm(key, 16);
-            cipher.Decrypt(bytes.AsSpan(0, 12), bytes.AsSpan(28), bytes.AsSpan(12, 16),
-                plaintext, Identity(companyId, operationId));
             var snapshot = JsonSerializer.Deserialize<Snapshot>(plaintext);
             if (snapshot is null || snapshot.CompanyId != companyId || snapshot.OperationId != operationId)
                 throw new InvalidDataException("Recovery archive identity mismatch.");
@@ -114,6 +163,22 @@ public sealed class CompanyRecoveryArchive(string directory, byte[] key, string?
         finally
         {
             CryptographicOperations.ZeroMemory(plaintext);
+        }
+    }
+
+    private byte[] Decrypt(byte[] bytes, byte[] identity)
+    {
+        var plaintext = new byte[bytes.Length - EnvelopeBytes];
+        try
+        {
+            using var cipher = new AesGcm(key, 16);
+            cipher.Decrypt(bytes.AsSpan(0, 12), bytes.AsSpan(28), bytes.AsSpan(12, 16), plaintext, identity);
+            return plaintext;
+        }
+        catch
+        {
+            CryptographicOperations.ZeroMemory(plaintext);
+            throw;
         }
     }
 

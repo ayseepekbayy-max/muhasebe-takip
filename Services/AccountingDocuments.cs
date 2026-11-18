@@ -178,7 +178,7 @@ public static partial class AccountingDocuments
             !await db.Cekler.AnyAsync(x => x.Id != chequeId && x.ResimYolu != null && x.ResimYolu.ToLower() == key, ct);
     }
 
-    private static string? ResolveDocument(string root, string? stored, string kind, string prefix)
+    internal static string? ResolveDocument(string root, string? stored, string kind, string prefix)
     {
         if (stored == null || !stored.StartsWith("/uploads/", StringComparison.Ordinal)) return null;
         var parts = stored[1..].Split('/');

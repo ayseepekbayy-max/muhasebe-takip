@@ -92,7 +92,7 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
     private static int Id(Dictionary<string, JsonElement> row) => row["Id"].GetInt32();
     private static bool HasValue(JsonElement value) => value.ValueKind != JsonValueKind.Null;
 
-    public async Task<byte[]> ExportAsync(int firmaId, CancellationToken ct = default)
+    public async Task<byte[]> ExportAsync(int firmaId, CancellationToken ct = default, bool requireUniqueDocuments = false)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var package = new Package
@@ -131,6 +131,19 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
                 {
                     if (table == nameof(EkDosya)) throw new BackupException("Bir belge kaydının dosya yolu boş. Eksiksiz yedek oluşturulamadı.");
                     continue;
+                }
+                if (requireUniqueDocuments)
+                {
+                    var (kind, prefix) = table == nameof(Cek) ? ("cekler", "") :
+                        HasValue(row["FaturaId"]) ? ("faturalar", $"fatura-{row["FaturaId"].GetInt32()}-") :
+                        HasValue(row["CariKartId"]) ? ("cariler", $"cari-{row["CariKartId"].GetInt32()}-") : ("", "");
+                    if (kind.Length == 0 || AccountingDocuments.ResolveDocument(environment.WebRootPath, url, kind, prefix) is null)
+                        throw new BackupException("Doğrulanamayan belge yolu şifreli arşive eklenemedi.");
+                    var match = url.ToLowerInvariant();
+                    var references = await db.Cekler.CountAsync(x => x.ResimYolu != null && x.ResimYolu.ToLower() == match, ct) +
+                        await db.EkDosyalar.CountAsync(x => x.DosyaYolu.ToLower() == match, ct);
+                    if (references != 1)
+                        throw new BackupException("Sahipliği belirsiz bir belge şifreli arşive eklenemedi.");
                 }
                 var path = SourceDocumentPath(url);
                 if (!File.Exists(path)) throw new BackupException("Kayıtlara bağlı bir belge sunucuda bulunamadı. Eksiksiz yedek oluşturulamadı; önce eksik belgeyi kontrol edin.");

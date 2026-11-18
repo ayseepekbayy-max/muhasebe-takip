@@ -16,6 +16,8 @@ public class YedeklemeModel : PageModel
 
     private readonly AccountingBackupService _backup;
     private readonly ILogger<YedeklemeModel> _logger;
+    private readonly CompanyRecoveryKeySource? _keys;
+    public string? ArchiveKeyVersion { get; }
 
     public YedeklemeModel(AppDbContext db, IWebHostEnvironment environment, ILogger<YedeklemeModel> logger,
         IConfiguration? configuration = null)
@@ -23,10 +25,84 @@ public class YedeklemeModel : PageModel
         _db = db;
         _backup = new AccountingBackupService(db, environment, configuration?.GetValue<bool>("CompanyDocuments:WritePrivate") == true);
         _logger = logger;
+        if (configuration?.GetValue<bool>("CompanyRecovery:Enabled") == true)
+        {
+            _keys = new CompanyRecoveryKeySource(configuration, environment);
+            var version = configuration["CompanyRecovery:KeyVersion"];
+            ArchiveKeyVersion = CompanyRecoveryKeySource.IsVersion(version) ? version : null;
+        }
     }
 
     [BindProperty]
     public IFormFile? YedekDosyasi { get; set; }
+    public Guid? CreatedArchiveId { get; private set; }
+
+    public Task<IActionResult> OnPostSifreliArsivOlusturAsync() =>
+        Access.SubmitAsync(this, AccountingManagementPermission.BackupRead, async context =>
+        {
+            try
+            {
+                using var archive = _keys?.OpenArchive() ?? throw new InvalidOperationException();
+                var id = await new CompanyAccountingRecovery(_backup, archive).CreateAsync(context.ActiveCompanyId, HttpContext.RequestAborted);
+                CreatedArchiveId = id;
+                Mesaj = $"Şifreli arşiv oluşturuldu. Arşiv kimliği {id:D}, anahtar sürümü {ArchiveKeyVersion}.";
+            }
+            catch (AccountingBackupService.BackupException ex)
+            {
+                Hata = ex.Message;
+                BaglantiHatalari = ex.LinkIssues;
+            }
+            catch (Exception) when (!HttpContext.RequestAborted.IsCancellationRequested)
+            {
+                Hata = "Şifreli arşiv oluşturulamadı. Anahtar ayarını ve disk erişimini kontrol edin.";
+            }
+            return Page();
+        });
+
+    public Task<IActionResult> OnPostSifreliArsivIndirAsync(Guid archiveId, string? keyVersion) =>
+        Access.SubmitAsync(this, AccountingManagementPermission.BackupRead, context =>
+        {
+            try
+            {
+                if (archiveId == Guid.Empty || !CompanyRecoveryKeySource.IsVersion(keyVersion))
+                    throw new InvalidDataException();
+                using var archive = _keys?.OpenArchive(keyVersion) ?? throw new InvalidOperationException();
+                var bytes = archive.ReadVerifiedAccountingEnvelope(context.ActiveCompanyId, archiveId);
+                return Task.FromResult<IActionResult>(File(bytes, "application/octet-stream", $"firmova-{archiveId:N}-key-{keyVersion}.firmova-recovery"));
+            }
+            catch (Exception) when (!HttpContext.RequestAborted.IsCancellationRequested)
+            {
+                Hata = "Şifreli arşiv doğrulanamadı veya indirilemedi.";
+                return Task.FromResult<IActionResult>(Page());
+            }
+        });
+
+    public Task<IActionResult> OnPostSifreliArsivGeriYukleAsync(Guid archiveId, string? keyVersion, bool confirmRestore) =>
+        Access.SubmitAsync(this, AccountingManagementPermission.BackupRestore, async context =>
+        {
+            if (!confirmRestore || archiveId == Guid.Empty || !CompanyRecoveryKeySource.IsVersion(keyVersion))
+            {
+                Hata = "Geçerli arşiv kimliği, anahtar sürümü ve geri yükleme onayı gerekiyor.";
+                return Page();
+            }
+            try
+            {
+                using var archive = _keys?.OpenArchive(keyVersion) ?? throw new InvalidOperationException();
+                var result = await new CompanyAccountingRecovery(_backup, archive).RestoreAsync(
+                    context.ActiveCompanyId, archiveId, HttpContext.RequestAborted);
+                Mesaj = $"Şifreli arşiv geri yüklendi. {result.Records} kayıt ve {result.Files} belge. " + string.Join(" ", result.Warnings);
+            }
+            catch (AccountingBackupService.BackupException ex)
+            {
+                Hata = ex.Message;
+                BaglantiHatalari = ex.LinkIssues;
+            }
+            catch (Exception) when (!HttpContext.RequestAborted.IsCancellationRequested)
+            {
+                Hata = "Şifreli arşiv doğrulanamadı veya geri yüklenemedi.";
+            }
+            return Page();
+        });
 
     public string Mesaj { get; set; } = "";
     public string Hata { get; set; } = "";

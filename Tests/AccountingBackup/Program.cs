@@ -70,8 +70,8 @@ try
         }
         // Include archived cards and employees instead of filtering them out.
         type.GetProperty("AktifMi")?.SetValue(entity, false);
-        if (entity is EkDosya attachment) attachment.DosyaYolu = "/uploads/faturalar/fixture.pdf";
-        if (entity is Cek check) check.ResimYolu = "/uploads/cekler/check.jpg";
+        if (entity is EkDosya attachment) attachment.DosyaYolu = $"/uploads/faturalar/fatura-{attachment.FaturaId}-00000000000000000000000000000011.pdf";
+        if (entity is Cek check) check.ResimYolu = "/uploads/cekler/00000000-0000-0000-0000-000000000012.jpg";
         db.Add(entity); await db.SaveChangesAsync(); seeded[type.Name] = entity;
     }
     var sourceCash = (KasaHareket)seeded[nameof(KasaHareket)];
@@ -82,8 +82,9 @@ try
     await db.SaveChangesAsync();
     Directory.CreateDirectory(Path.Combine(env.WebRootPath, "uploads/faturalar"));
     Directory.CreateDirectory(Path.Combine(env.WebRootPath, "uploads/cekler"));
-    await File.WriteAllBytesAsync(Path.Combine(env.WebRootPath, "uploads/faturalar/fixture.pdf"), Encoding.UTF8.GetBytes("PDF fixture bytes"));
-    await File.WriteAllBytesAsync(Path.Combine(env.WebRootPath, "uploads/cekler/check.jpg"), [1, 2, 3, 4, 5]);
+    var attachmentPath = Path.Combine(env.WebRootPath, ((EkDosya)seeded[nameof(EkDosya)]).DosyaYolu.TrimStart('/'));
+    await File.WriteAllBytesAsync(attachmentPath, Encoding.UTF8.GetBytes("PDF fixture bytes"));
+    await File.WriteAllBytesAsync(Path.Combine(env.WebRootPath, "uploads/cekler/00000000-0000-0000-0000-000000000012.jpg"), [1, 2, 3, 4, 5]);
     var service = new AccountingBackupService(db, env);
     var bytes = await service.ExportAsync(source.Id);
     AccountingBackupService.Package Read(byte[] data)
@@ -187,6 +188,45 @@ try
         var legacyDocument = await db.EkDosyalar.SingleAsync(x => x.FirmaId == legacyTarget.Id);
         Check(legacyDocument.DosyaYolu.StartsWith("/uploads/yedek/", StringComparison.Ordinal), "Disabled private writing preserves the legacy restore path");
         Check(await File.ReadAllTextAsync(Path.Combine(env.WebRootPath, legacyDocument.DosyaYolu.TrimStart('/'))) == "PDF fixture bytes", "Disabled private writing preserves restored bytes");
+        using var archive = CompanyRecoveryArchive.OnCompanyDisk(env, new byte[32], "synthetic-v1");
+        var recovery = new CompanyAccountingRecovery(service, archive);
+        var operation = await recovery.CreateAsync(source.Id, default);
+        var archivePath = Directory.GetFiles(CompanyDiskStorage.Archives(env), "accounting-*.firmova-recovery").Single();
+        var encrypted = await File.ReadAllBytesAsync(archivePath);
+        Check(!encrypted.AsSpan().StartsWith("PK"u8) && encrypted.AsSpan().IndexOf("PDF fixture bytes"u8) < 0, "No plaintext ZIP or test document in archive");
+        try { await recovery.RestoreAsync(source.Id, operation, default); throw new Exception("Nonempty company accepted"); }
+        catch (AccountingBackupService.BackupException) { checks++; }
+        Check(await db.EkDosyalar.CountAsync(x => x.FirmaId == source.Id) == 1, "Nonempty company unchanged");
+        var foreignPath = Path.Combine(CompanyDiskStorage.Archives(env), $"accounting-{empty.Id}-{operation:N}-key-synthetic-v1.firmova-recovery");
+        File.Copy(archivePath, foreignPath);
+        try { await recovery.RestoreAsync(empty.Id, operation, default); throw new Exception("Cross-company archive accepted"); }
+        catch (System.Security.Cryptography.CryptographicException) { checks++; }
+        Check(await db.CariKartlar.AnyAsync(x => x.FirmaId == empty.Id && x.Unvan == "DO_NOT_EXPORT_OTHER_FIRM"), "Other company unchanged");
+        using var wrongKey = CompanyRecoveryArchive.OnCompanyDisk(env, Enumerable.Repeat((byte)1, 32).ToArray(), "synthetic-v1");
+        try { await new CompanyAccountingRecovery(service, wrongKey).RestoreAsync(source.Id, operation, default); throw new Exception("Wrong key accepted"); }
+        catch (System.Security.Cryptography.CryptographicException) { checks++; }
+        encrypted[^1] ^= 1;
+        await File.WriteAllBytesAsync(archivePath, encrypted);
+        try { await recovery.RestoreAsync(source.Id, operation, default); throw new Exception("Corrupted archive accepted"); }
+        catch (System.Security.Cryptography.CryptographicException) { checks++; }
+        encrypted[^1] ^= 1;
+        await File.WriteAllBytesAsync(archivePath, encrypted);
+
+        var recoveryOptions = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql("Host=/work;Database=firmova_stage8_recovery;Username=postgres").Options;
+        await using var recoveryDb = new AppDbContext(recoveryOptions);
+        await recoveryDb.Database.EnsureCreatedAsync();
+        recoveryDb.Firmalar.Add(new Firma { Id = source.Id, FirmaAdi = "Synthetic recovery target" });
+        recoveryDb.Kullanicilar.Add(new Kullanici { FirmaId = source.Id, KullaniciAdi = user.KullaniciAdi, Email = user.Email });
+        await recoveryDb.SaveChangesAsync();
+        var isolatedRecovery = new CompanyAccountingRecovery(new AccountingBackupService(recoveryDb, env, writePrivate: true), archive);
+        var recovered = await isolatedRecovery.RestoreAsync(source.Id, operation, default);
+        Check(recovered.Records == 27 && recovered.Files == 2, "Same-company encrypted archive restores into empty recovery database");
+        var recoveredFile = await recoveryDb.EkDosyalar.SingleAsync();
+        Check(await File.ReadAllTextAsync(Path.Combine(env.WebRootPath, recoveredFile.DosyaYolu.TrimStart('/'))) == "PDF fixture bytes", "Encrypted recovery preserves attachment bytes");
+        try { await isolatedRecovery.RestoreAsync(source.Id, operation, default); throw new Exception("Replay accepted"); }
+        catch (AccountingBackupService.BackupException) { checks++; }
+        Check(await recoveryDb.EkDosyalar.CountAsync() == 1, "Replay leaves recovered rows unchanged");
         Console.WriteLine($"PASS {checks} isolated PostgreSQL document backup and restore checks");
         return;
     }
@@ -305,7 +345,7 @@ try
     }
     Check(!await db.KasaHareketleri.AnyAsync(x=>x.FirmaId==missingUserTarget.Id), "Restore diagnostics stop before any writes");
     // Missing source documents must not produce a supposedly complete backup.
-    File.Delete(Path.Combine(env.WebRootPath,"uploads/faturalar/fixture.pdf"));
+    File.Delete(attachmentPath);
     try { await service.ExportAsync(source.Id); throw new Exception("Missing document accepted"); }
     catch (Exception ex) when (ex is AccountingBackupService.BackupException or FileNotFoundException) { checks++; }
     if(args.Length==1 && !useLocalSocket)

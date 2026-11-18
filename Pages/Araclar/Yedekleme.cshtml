@@ -50,6 +50,36 @@
         <div class="app-alert app-alert-success">@Model.Mesaj</div>
     }
 
+    @if (Model.ArchiveKeyVersion is not null)
+    {
+        <section class="app-form-panel">
+            <h2>Şifreli kurtarma arşivi</h2>
+            <p>Arşiv, yalnızca ait olduğu firmanın boş muhasebe alanına geri yüklenebilir.</p>
+            <form method="post" asp-page-handler="SifreliArsivOlustur">
+                <partial name="_ManagementContextStamp" />
+                <button type="submit" class="btn btn-outline-primary">Şifreli Arşiv Oluştur</button>
+            </form>
+            @if (Model.CreatedArchiveId is Guid createdArchive)
+            {
+                <form method="post" asp-page-handler="SifreliArsivIndir">
+                    <partial name="_ManagementContextStamp" />
+                    <input type="hidden" name="archiveId" value="@createdArchive.ToString("D")" />
+                    <input type="hidden" name="keyVersion" value="@Model.ArchiveKeyVersion" />
+                    <button type="submit" class="btn btn-outline-primary">Şifreli Arşivi İndir</button>
+                </form>
+            }
+            <form method="post" asp-page-handler="SifreliArsivGeriYukle">
+                <partial name="_ManagementContextStamp" />
+                <label for="archiveId">Arşiv kimliği</label>
+                <input id="archiveId" name="archiveId" required />
+                <label for="keyVersion">Anahtar sürümü</label>
+                <input id="keyVersion" name="keyVersion" value="@Model.ArchiveKeyVersion" maxlength="32" required />
+                <label><input type="checkbox" name="confirmRestore" value="true" required /> Bu firmanın boş muhasebe alanına geri yüklemeyi onaylıyorum.</label>
+                <button type="submit" class="btn btn-outline-primary">Şifreli Arşivi Geri Yükle</button>
+            </form>
+        </section>
+    }
+
     <section class="app-form-panel">
         <div class="panel-title-row"><div><h2>Güvenli Geri Yükleme</h2><p>Mevcut kayıtlar silinmez. Tam ZIP yedeği yalnızca boş muhasebe alanına yüklenir; mevcut kayıt varsa işlem durur. Eski JSON dosyaları eksik kapsam uyarısıyla desteklenir.</p></div></div>
         <p>Tam yedek: nakit/banka hesapları, açılış bakiyeleri ve transferler, cari, fatura ve kalemleri, kasa, çek görselleri, stok hareketleri, personel ve maaş/avans/puantaj, müşteri işleri/masrafları, maliyetler, ödeme planları ve hareketleri, işlem geçmişi ve ek belgeler. Arşivlenmiş kayıtlar dahildir.</p>
