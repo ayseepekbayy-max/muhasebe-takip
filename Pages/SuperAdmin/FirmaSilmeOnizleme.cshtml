@@ -39,8 +39,9 @@
         }
     </tbody>
 </table>
-<p>Firma kapsamı belirlenemeyen genel özel panel envanteri: @Model.LegacyFiles.PrivateMessages mesaj ve @Model.LegacyFiles.PrivateMediaReferences medya referansı. Bu kayıtlar silme kapsamı dışında.</p>
-<p>@Model.LegacyFiles.PresenceRecords durum kaydı, @Model.LegacyFiles.HiddenRecords gizleme kaydı ve @Model.LegacyFiles.StoredMedia özel medya nesnesi ayrıca kontrol edildi. Aidiyeti belirsiz kayıt varsa silme durur.</p>
+<h2 class="h5">Firma dışında korunan özel panel</h2>
+<p>Özel panelin @Model.LegacyFiles.PrivateMessages mesajı, @Model.LegacyFiles.PresenceRecords durum kaydı, @Model.LegacyFiles.HiddenRecords gizleme kaydı ve @Model.LegacyFiles.StoredMedia medya nesnesi bu firmaya atanmaz ve silinmez. Genel medya kotası ve özel panel dosyaları da korunur.</p>
+<p>Özel panelin ayrı giriş yetkileri değiştirilmez; bu yetkiler ERP erişimi sağlamaz. Özel panel sınırı doğrulanamazsa veya muhasebe dosyalarının sahipliği belirsizse silme durur.</p>
 
 @if (Model.Confirmation is null)
 {

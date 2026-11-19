@@ -105,27 +105,11 @@ public sealed class PostgreSqlCompanyDeletion(AppDbContext db)
         await LockSnapshotAsync(tx, ct);
         await store.LockCompanyObjectsAsync(companyId, ct);
         await EnsureDeletionSchemaAsync(tx, ct);
-        {
-            await using var gate = Command(tx, """
-                LOCK TABLE public."PrivateMessages", public."PrivatePresence", public."PrivateMessageHidden"
-                IN SHARE ROW EXCLUSIVE MODE
-                """);
-            await gate.ExecuteNonQueryAsync(ct);
-            await using var mediaTable = Command(tx, """SELECT to_regclass('public."PrivateMediaContents"') IS NOT NULL""");
-            if ((bool)(await mediaTable.ExecuteScalarAsync(ct))!)
-            {
-                await using var lockMedia = Command(tx, """LOCK TABLE public."PrivateMediaContents" IN SHARE ROW EXCLUSIVE MODE""");
-                await lockMedia.ExecuteNonQueryAsync(ct);
-                await using var media = Command(tx, """SELECT EXISTS (SELECT 1 FROM public."PrivateMediaContents")""");
-                if ((bool)(await media.ExecuteScalarAsync(ct))!)
-                    throw new InvalidDataException("Private database media has no verified company owner.");
-            }
-            if (await db.PrivateMessages.AnyAsync(ct) || await db.PrivatePresences.AnyAsync(ct) ||
-                await db.PrivateMessageHiddens.AnyAsync(ct) ||
-                !await db.Kullanicilar.AnyAsync(x => x.Id == administratorUserId && x.FirmaId == administratorCompanyId &&
-                    x.Rol == "SuperAdmin" && x.Firma != null && x.Firma.AktifMi, ct))
-                throw new InvalidDataException("Unresolved private scope or administrator identity.");
-        }
+        if (!await IndependentPrivatePanelScope.IsCompatibleAsync(db, ct))
+            throw new InvalidDataException("The independent private-panel boundary could not be verified.");
+        if (!await db.Kullanicilar.AnyAsync(x => x.Id == administratorUserId && x.FirmaId == administratorCompanyId &&
+                x.Rol == "SuperAdmin" && x.Firma != null && x.Firma.AktifMi, ct))
+            throw new InvalidDataException("Unresolved administrator identity.");
         await EnsureDatabaseGuardAsync(administratorUserId, tx, ct);
         var snapshot = await CaptureLockedAsync(companyId, store, tx, ct, requirePersistent: true);
         store.ConsumeDeletionConfirmation(operation);

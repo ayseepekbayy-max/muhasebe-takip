@@ -18,6 +18,7 @@ public sealed class FirmaSilmeOnizlemeModel(
     public CompanyDeletionInventory.Result Inventory { get; private set; } = default!;
     public LegacyCompanyFileReport.Report LegacyFiles { get; private set; } = default!;
     public string? Confirmation { get; private set; }
+    public bool PrivatePanelIndependent { get; private set; }
 
     internal static bool HedefUygun(int firmaId, int yoneticiFirmaId) =>
         firmaId > 1 && firmaId != yoneticiFirmaId;
@@ -54,7 +55,8 @@ public sealed class FirmaSilmeOnizlemeModel(
         FirmaId = id;
         Inventory = await new CompanyDeletionInventory(db).InspectAsync(id, ct);
         LegacyFiles = await new LegacyCompanyFileReport(db, environment).InspectAsync(id, ct);
-        if (DeletionEnabled() && db.Database.IsNpgsql() && !HasBlockers() && !HasUnattributedMedia() &&
+        PrivatePanelIndependent = db.Database.IsNpgsql() && await IndependentPrivatePanelScope.IsCompatibleAsync(db, ct);
+        if (DeletionEnabled() && db.Database.IsNpgsql() && !HasBlockers() &&
             (LegacyFiles.Items.Count == 0 || CleanupEnabled()) &&
             Guid.TryParseExact(HttpContext.Session.GetString(AccountingSessionLifecycle.EpochKey), "N", out _))
             Confirmation = Protector().Protect(ConfirmationValue(id, Guid.NewGuid()), TimeSpan.FromMinutes(5));
@@ -71,8 +73,6 @@ public sealed class FirmaSilmeOnizlemeModel(
         if (!CleanupEnabled() && (await db.EkDosyalar.AnyAsync(x => x.FirmaId == id, ct) ||
             await db.Cekler.AnyAsync(x => x.FirmaId == id && x.ResimYolu != null && x.ResimYolu != "", ct)))
             return Blocked("Belge temizleme işçisi etkin değil; dosyalı firma silme durduruldu.");
-        if (HasUnattributedMedia())
-            return Blocked("Özel medya dosyalarının firma aidiyeti doğrulanamadı.");
         if (confirmation is null)
             return BadRequest();
         Guid operation;
@@ -117,18 +117,9 @@ public sealed class FirmaSilmeOnizlemeModel(
     private bool CleanupEnabled() =>
         HttpContext.RequestServices?.GetService<IConfiguration>()?.GetValue<bool>("CompanyDocuments:CleanupEnabled") == true;
 
-    private bool HasBlockers() => LegacyFiles.HasUnattributedPrivateData ||
+    private bool HasBlockers() => !PrivatePanelIndependent ||
         Inventory.Tables.Any(x => x.HasExternalReferences) ||
         LegacyFiles.Items.Any(x => !x.Status.StartsWith("Sahiplik kaydı eşleşti", StringComparison.Ordinal));
-
-    private bool HasUnattributedMedia()
-    {
-        var root = Path.Combine(environment.ContentRootPath, "App_Data", "PrivateMedia");
-        try { return Directory.EnumerateFileSystemEntries(root).Any(); }
-        catch (DirectoryNotFoundException) { return false; }
-        catch (IOException) { return true; }
-        catch (UnauthorizedAccessException) { return true; }
-    }
 
     private ITimeLimitedDataProtector Protector() => HttpContext.RequestServices.GetRequiredService<IDataProtectionProvider>()
         .CreateProtector("Firmova.CompanyDeletion.Confirmation.v3").ToTimeLimitedDataProtector();

@@ -57,6 +57,38 @@ public sealed class CompanyDeletionInventory(AppDbContext db)
             tables.Add(new(entity.GetTableName()!, rows, external));
         }
 
+        // This production legacy table is intentionally outside the EF model. Keep the
+        // preview in the same snapshot as the modeled rows and use the deletion scope's
+        // exact FirmaId filter; do not infer ownership from the historical employee ID.
+        if (db.Database.IsNpgsql())
+        {
+            var archiveCount = await db.Database.SqlQueryRaw<int>("""
+                SELECT CAST(COUNT(*) AS integer) AS "Value"
+                FROM public."CalisanArsivleri" WHERE "FirmaId" = {0}
+                """, companyId).SingleAsync(ct);
+            var archiveExternal = await db.Database.SqlQueryRaw<bool>("""
+                SELECT EXISTS (
+                    SELECT 1 FROM public."CalisanArsivleri" a
+                    JOIN public."Calisanlar" c ON c."Id" = a."EskiCalisanId"
+                    WHERE a."FirmaId" = {0} AND c."FirmaId" IS DISTINCT FROM a."FirmaId"
+                ) AS "Value"
+                """, companyId).SingleAsync(ct);
+            var employeeExternal = await db.Database.SqlQueryRaw<bool>("""
+                SELECT EXISTS (
+                    SELECT 1 FROM public."Calisanlar" c
+                    JOIN public."CalisanArsivleri" a ON a."EskiCalisanId" = c."Id"
+                    WHERE c."FirmaId" = {0} AND a."FirmaId" IS DISTINCT FROM c."FirmaId"
+                ) AS "Value"
+                """, companyId).SingleAsync(ct);
+            tables.Add(new("CalisanArsivleri", archiveCount, archiveExternal));
+            if (employeeExternal)
+            {
+                var index = tables.FindIndex(x => x.Name == "Calisanlar");
+                tables[index] = tables[index] with { HasExternalReferences = true };
+            }
+            tables.Sort((left, right) => StringComparer.Ordinal.Compare(left.Name, right.Name));
+        }
+
         var attachments = db.EkDosyalar.Select(x => new { x.FirmaId, Path = (string?)x.DosyaYolu });
         var checkImages = db.Cekler.Where(x => x.ResimYolu != null && x.ResimYolu != "")
             .Select(x => new { x.FirmaId, Path = x.ResimYolu });

@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using MuhasebeTakip2.App.Services;
-if(!OperatingSystem.IsLinux() || args is not ["schema" or "run" or "locks" or "package" or "compat"])throw new InvalidOperationException("Synthetic Linux fixture only.");
+if(!OperatingSystem.IsLinux() || args is not ["schema" or "run" or "locks" or "package" or "compat" or "preview" or "private-scope"])throw new InvalidOperationException("Synthetic Linux fixture only.");
 if(args[0]=="schema")
 {
     await using var db=new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql("Host=/work;Database=firmova_stage10_synthetic;Username=postgres").Options);
@@ -20,6 +20,8 @@ if(args[0]=="schema")
 }
 if(args[0]=="locks") { await DeletionLockProof.RunAsync(); return; }
 if(args[0]=="compat") { await PackageRecoveryCompatibility.RunAsync(); return; }
+if(args[0]=="preview") { await ArchivePreviewProof.RunAsync(); return; }
+if(args[0]=="private-scope") { await IndependentPrivatePanelProof.RunAsync(); return; }
 await Proof.RunAsync("firmova_stage10_synthetic", args[0]=="package");
 if(args[0]=="package") await PackageRecoveryCompatibility.RunAsync();
 internal static class Proof
@@ -175,16 +177,16 @@ internal static class Proof
         (await client.PostAsync("/fixture-login/101", null)).EnsureSuccessStatusCode();
         if(await Post(73)!=400)throw new InvalidDataException("Confirmation survived login epoch replacement.");
         html=await client.GetStringAsync(path+"?id=73");token=Field("__RequestVerificationToken");confirmation=Field("confirmation");
-        db.Add(new PrivateMessage { SenderPerson = 1, Content = "Synthetic blocker" });
+        db.Add(new PrivateMessage { SenderPerson = 1, Content = "Synthetic independent panel" });
         await db.SaveChangesAsync();
-        if (await Post(73) != 409 || !await db.Firmalar.AnyAsync(x => x.Id == 73))
-            throw new InvalidDataException("Unattributed data did not block deletion.");
-        await db.PrivateMessages.ExecuteDeleteAsync();
         db.Add(new PrivatePresence{PersonNumber=1,LastSeenAtUtc=DateTime.UtcNow});await db.SaveChangesAsync();
         var privatePreview=await client.GetStringAsync(path+"?id=73");
-        if(privatePreview.Contains("name=\"confirmation\"",StringComparison.Ordinal) || await Post(73)!=409)
-            throw new InvalidDataException("Unattributed presence was not blocked in preview and POST.");
-        await db.PrivatePresences.ExecuteDeleteAsync();
+        if(!privatePreview.Contains("name=\"confirmation\"",StringComparison.Ordinal))
+            throw new InvalidDataException("Independent panel unexpectedly blocked preview.");
+        await db.Database.ExecuteSqlRawAsync("""ALTER TABLE public."PrivateMessages" ADD COLUMN "FirmaId" integer""");
+        if((await client.GetStringAsync(path+"?id=73")).Contains("name=\"confirmation\"",StringComparison.Ordinal) || await Post(73)!=409)
+            throw new InvalidDataException("Unexpected private/company coupling did not fail closed.");
+        await db.Database.ExecuteSqlRawAsync("""ALTER TABLE public."PrivateMessages" DROP COLUMN "FirmaId" """);
         await db.Database.ExecuteSqlRawAsync("""CREATE TABLE public."SyntheticUnmappedCompanyRows" ("FirmaId" integer NOT NULL)""");
         if (await Post(73) != 409 || !await db.Firmalar.AnyAsync(x => x.Id == 73))
             throw new InvalidDataException("Unmapped company table did not block deletion.");
@@ -212,6 +214,8 @@ internal static class Proof
             await db.Kullanicilar.AnyAsync(x => x.Id == 103) || await db.Faturalar.AnyAsync(x => x.FirmaId == 73) ||
             !await db.Faturalar.AnyAsync(x => x.FirmaId == 74 && x.FaturaNo == "preserve-fixture"))
             throw new InvalidDataException($"Confirmed deletion or replay failed: {confirmedStatus}, {replayStatus}.");
+        if(await db.PrivateMessages.CountAsync()!=1 || await db.PrivatePresences.CountAsync()!=1)
+            throw new InvalidDataException("Independent private panel changed during company deletion.");
         if (!File.Exists(store.ObjectPath(storedFile)) ||
             !await db.Set<CompanyFileCleanupJob>().AnyAsync(x => x.FileId == storedFile && x.CompanyId == 73))
             throw new InvalidDataException("Verified document was not queued safely.");

@@ -12,7 +12,7 @@ public sealed class LegacyCompanyFileReport(AppDbContext db, IWebHostEnvironment
     public sealed record Report(IReadOnlyList<Item> Items, int PrivateMessages, int PrivateMediaReferences,
         int PresenceRecords, int HiddenRecords, int StoredMedia)
     {
-        public bool HasUnattributedPrivateData => PrivateMessages > 0 || PrivateMediaReferences > 0 ||
+        public bool HasPrivatePanelData => PrivateMessages > 0 || PrivateMediaReferences > 0 ||
             PresenceRecords > 0 || HiddenRecords > 0 || StoredMedia > 0;
     }
     private sealed record Link(int Company, string Source, int Id, string Path, bool ParentMatches);
