@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
 using MuhasebeTakip2.App.Services;
-if(!OperatingSystem.IsLinux() || args is not ["schema" or "run" or "locks" or "package" or "compat" or "preview" or "private-scope"])throw new InvalidOperationException("Synthetic Linux fixture only.");
+if(!OperatingSystem.IsLinux() || args is not ["schema" or "run" or "locks" or "package" or "compat" or "preview" or "private-scope" or "audit-actor"])throw new InvalidOperationException("Synthetic Linux fixture only.");
 if(args[0]=="schema")
 {
     await using var db=new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql("Host=/work;Database=firmova_stage10_synthetic;Username=postgres").Options);
@@ -22,6 +22,7 @@ if(args[0]=="locks") { await DeletionLockProof.RunAsync(); return; }
 if(args[0]=="compat") { await PackageRecoveryCompatibility.RunAsync(); return; }
 if(args[0]=="preview") { await ArchivePreviewProof.RunAsync(); return; }
 if(args[0]=="private-scope") { await IndependentPrivatePanelProof.RunAsync(); return; }
+if(args[0]=="audit-actor") { await CompanyAuditActorProof.RunAsync(); return; }
 await Proof.RunAsync("firmova_stage10_synthetic", args[0]=="package");
 if(args[0]=="package") await PackageRecoveryCompatibility.RunAsync();
 internal static class Proof

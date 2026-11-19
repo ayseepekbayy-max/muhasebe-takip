@@ -54,6 +54,8 @@ public sealed class CompanyDeletionInventory(AppDbContext db)
                     break;
                 }
             }
+            if (entity.ClrType == typeof(IslemGecmisi))
+                external |= await CompanyAuditActorPolicy.HasUnresolvedAsync(db, companyId, ct);
             tables.Add(new(entity.GetTableName()!, rows, external));
         }
 

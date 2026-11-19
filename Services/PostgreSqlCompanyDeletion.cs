@@ -41,7 +41,6 @@ public sealed class PostgreSqlCompanyDeletion(AppDbContext db)
     private static readonly (string Table, string Column, string Parent)[] HistoricalLinks =
     [
         ("CalisanMaasArsivleri", "CalisanId", "Calisanlar"),
-        ("IslemGecmisleri", "KullaniciId", "Kullanicilar"),
         ("OdemePlanlari", "OlusturanKullaniciId", "Kullanicilar"),
         ("OdemeHareketleri", "OlusturanKullaniciId", "Kullanicilar")
     ];
@@ -274,6 +273,8 @@ public sealed class PostgreSqlCompanyDeletion(AppDbContext db)
             result.Add(table, JsonSerializer.Deserialize<JsonElement[]>((string)(await command.ExecuteScalarAsync(ct))!)!);
         }
         ValidateRows(companyId, result);
+        if (await CompanyAuditActorPolicy.HasUnresolvedAsync(db, companyId, ct))
+            throw new InvalidDataException("Unresolved historical reference in IslemGecmisleri.KullaniciId.");
         await ValidateArchivedEmployeesAsync(companyId, result["CalisanArsivleri"], transaction, ct);
         return result;
     }
