@@ -1,75 +1,60 @@
 @page
 @model MuhasebeTakip2.App.Pages.Araclar.YedeklemeModel
+@using MuhasebeTakip2.App.Services
 @{
     ViewData["Title"] = "Yedekleme";
+    var company = ViewData["ManagementContextStamp"] as AccountingContextStamp;
 }
-
 <div class="app-page">
     <section class="app-page-header">
         <div>
             <span class="app-page-eyebrow">Araçlar</span>
-            <h1>Yedekleme / Geri Yükleme</h1>
-            <p>Muhasebe kayıtlarını, arşivleri ve bağlı belgeleri tek ZIP dosyasında saklayın.</p>
-        </div>
-        <div class="app-page-actions">
-            <form method="post" asp-page-handler="Indir">
-                <partial name="_ManagementContextStamp" />
-                <button type="submit" class="btn btn-primary">Yedek İndir</button>
-            </form>
+            <h1>Yedekleme</h1>
+            <p>Muhasebe kayıtlarınızı ve belgelerinizi yedekleyin veya bir yedekten geri yükleyin.</p>
+            @if (company is not null)
+            {
+                <p><strong>İşlem yapılacak firma:</strong> @Model.HedefFirmaAdi <span>(Firma no: @company.CompanyId)</span></p>
+            }
         </div>
     </section>
-
     @if (!string.IsNullOrWhiteSpace(Model.Uyari))
     {
         <div class="app-alert app-alert-warning" role="status">@Model.Uyari</div>
     }
     @if (!string.IsNullOrWhiteSpace(Model.Hata))
     {
-        <div class="app-alert app-alert-danger">@Model.Hata</div>
+        <div class="app-alert app-alert-danger" role="alert">@Model.Hata</div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.Mesaj))
+    {
+        <div class="app-alert app-alert-success" role="status">@Model.Mesaj</div>
     }
     @if (Model.BaglantiHatalari.Count > 0)
     {
-        <section class="app-form-panel">
-            <h2>Kontrol edilmesi gereken bağlantılar</h2>
-            <p>Bu liste sorunlu bağlantıları gösterir; otomatik düzeltme veya silme yapılmaz.</p>
+        <details class="app-form-panel">
+            <summary>Kontrol edilmesi gereken kayıt bağlantıları (@Model.BaglantiHatalari.Count)</summary>
+            <p>İşlemin neden durduğunu gösterir. Otomatik düzeltme veya silme yapılmaz.</p>
             <div style="overflow-x:auto">
                 <table class="table">
-                    <thead><tr><th>Kayıt türü</th><th>Kayıt no</th><th>Bağlantı alanı</th><th>Bulunamayan bağlı kayıt türü</th><th>Bağlı kayıt no</th></tr></thead>
+                    <thead><tr><th>Kayıt türü</th><th>Kayıt no</th><th>Bağlantı alanı</th><th>Bulunamayan kayıt türü</th><th>Bağlı kayıt no</th></tr></thead>
                     <tbody>
-                    @foreach (var sorun in Model.BaglantiHatalari)
+                    @foreach (var issue in Model.BaglantiHatalari)
                     {
-                        <tr><td>@sorun.RecordType</td><td>@sorun.RecordId</td><td>@sorun.Field</td><td>@sorun.RelatedType</td><td>@sorun.RelatedId</td></tr>
+                        <tr><td>@issue.RecordType</td><td>@issue.RecordId</td><td>@issue.Field</td><td>@issue.RelatedType</td><td>@issue.RelatedId</td></tr>
                     }
                     </tbody>
                 </table>
             </div>
-        </section>
+        </details>
     }
-    @if (!string.IsNullOrWhiteSpace(Model.Mesaj))
-    {
-        <div class="app-alert app-alert-success">@Model.Mesaj</div>
-    }
-
-    @if (Model.ArchiveKeyVersion is not null)
-    {
-        <section class="app-form-panel">
-            <h2>Şifreli kurtarma arşivi</h2>
-            <p>Arşiv, yalnızca ait olduğu firmanın boş muhasebe alanına geri yüklenebilir.</p>
-            <form method="post" asp-page-handler="SifreliDosyaGeriYukle" enctype="multipart/form-data">
-                <partial name="_ManagementContextStamp" />
-                <label for="recoveryFile">Bilgisayardaki şifreli kurtarma arşivi</label>
-                <input id="recoveryFile" name="recoveryFile" type="file" accept=".firmova-recovery" required />
-                <p>Özgün dosya adından arşiv kimliği ve anahtar sürümü alınır. Dosyanın adı değiştiyse aşağıdaki iki alanı doldurun. Sunucudaki özgün kopyanın bulunması gerekmez.</p>
-                <label for="uploadedArchiveId">Dosya adı değiştiyse arşiv kimliği</label>
-                <input id="uploadedArchiveId" name="uploadedArchiveId" maxlength="36" />
-                <label for="uploadedKeyVersion">Dosya adı değiştiyse anahtar sürümü</label>
-                <input id="uploadedKeyVersion" name="uploadedKeyVersion" maxlength="32" />
-                <label><input type="checkbox" name="confirmRestore" value="true" required /> Bu firmanın boş muhasebe alanına dosyadan geri yüklemeyi onaylıyorum.</label>
-                <button type="submit" class="btn btn-outline-primary">Şifreli Dosyayı Yükle ve Geri Yükle</button>
-            </form>
+    <section class="app-form-panel" aria-labelledby="create-backup-title" data-backup-section="create">
+        <h2 id="create-backup-title">Yedek Oluştur</h2>
+        <p>Muhasebe kayıtları ve bağlı belgeler şifreli bir dosyada saklanır. Dosyayı indirip güvenli bir yerde tutun.</p>
+        @if (Model.ArchiveKeyVersion is not null)
+        {
             <form method="post" asp-page-handler="SifreliArsivOlustur">
                 <partial name="_ManagementContextStamp" />
-                <button type="submit" class="btn btn-outline-primary">Şifreli Arşiv Oluştur</button>
+                <button type="submit" class="btn btn-primary">Yedek Oluştur</button>
             </form>
             @if (Model.CreatedArchiveId is Guid createdArchive)
             {
@@ -77,34 +62,83 @@
                     <partial name="_ManagementContextStamp" />
                     <input type="hidden" name="archiveId" value="@createdArchive.ToString("D")" />
                     <input type="hidden" name="keyVersion" value="@Model.ArchiveKeyVersion" />
-                    <button type="submit" class="btn btn-outline-primary">Şifreli Arşivi İndir</button>
+                    <button type="submit" class="btn btn-primary">Yedeği İndir</button>
                 </form>
             }
+        }
+        else
+        {
+            <p class="app-alert app-alert-warning" role="status">Şifreli yedekleme kullanıma açık değil. Gelişmiş Seçenekler'den ZIP yedeği indirebilirsiniz.</p>
+            <button type="button" class="btn btn-primary" disabled>Yedek Oluştur</button>
+        }
+    </section>
+    <section class="app-form-panel" aria-labelledby="restore-backup-title" data-backup-section="restore">
+        <h2 id="restore-backup-title">Yedekten Geri Yükle</h2>
+        <p>Muhasebe kayıtları ve belgeler yalnızca boş muhasebe alanına geri yüklenir. Mevcut kayıtların üzerine yazılmaz. Şifreli yedek yalnızca ait olduğu firmada kullanılabilir.</p>
+        <form method="post" asp-page-handler="SifreliDosyaGeriYukle" enctype="multipart/form-data" class="app-form-grid">
+            <partial name="_ManagementContextStamp" />
+            <fieldset class="form-field form-field-wide">
+                <legend>Yedek türü</legend>
+                @if (Model.ArchiveKeyVersion is not null)
+                {
+                    <label><input type="radio" name="restoreFormat" value="encrypted" checked="@(Model.RestoreFormat != "zip")" /> Şifreli yedek (önerilen)</label>
+                }
+                <label><input type="radio" name="restoreFormat" value="zip" checked="@(Model.RestoreFormat == "zip" || Model.ArchiveKeyVersion is null)" /> ZIP yedeği</label>
+            </fieldset>
+            <div class="form-field form-field-wide">
+                <label for="recoveryFile">Yedek dosyası</label>
+                <input id="recoveryFile" name="recoveryFile" type="file" accept=".firmova-recovery,.zip" required aria-describedby="restore-limit" />
+                <p id="restore-limit">En fazla 100 MB (şifreli dosyada şifreleme başlığı ayrıca kabul edilir). Dosyanın içeriği geri yüklenmeden önce doğrulanır.</p>
+            </div>
+            <details class="form-field form-field-wide">
+                <summary>Şifreli dosyanın adı değiştirildiyse</summary>
+                <p>Özgün dosya adı korunmuşsa bu alanları boş bırakın. Adı değişmiş şifreli dosyada özgün arşiv kimliği ve anahtar sürümü gerekir. Bu bilgiler doğrulamanın yerine geçmez.</p>
+                <label for="uploadedArchiveId">Arşiv kimliği</label>
+                <input id="uploadedArchiveId" name="uploadedArchiveId" maxlength="36" />
+                <label for="uploadedKeyVersion">Anahtar sürümü</label>
+                <input id="uploadedKeyVersion" name="uploadedKeyVersion" maxlength="32" />
+            </details>
+            <div class="form-field form-field-wide">
+                <label><input type="checkbox" name="confirmRestore" value="true" required /> Gösterilen firmanın boş muhasebe alanına kayıtları ve belgeleri geri yüklemeyi onaylıyorum.</label>
+            </div>
+            <div class="form-actions-row"><button type="submit" class="btn btn-primary">Yedekten Geri Yükle</button></div>
+        </form>
+    </section>
+    <details class="app-form-panel" id="advanced-backup-options">
+        <summary>Gelişmiş Seçenekler</summary>
+        <h3>ZIP yedeği indir</h3>
+        <p>Şifrelenmemiş tam muhasebe yedeğidir. Dosyayı güvenli bir yerde saklayın.</p>
+        <form method="post" asp-page-handler="Indir">
+            <partial name="_ManagementContextStamp" />
+            <button type="submit" class="btn btn-outline-primary">ZIP Yedeği İndir</button>
+        </form>
+        <h3>Eski JSON verilerini aktar</h3>
+        <p class="app-alert app-alert-warning">Bu işlem tam geri yükleme değildir. Mevcut muhasebe alanına kayıt ekleyebilir; personel, stok hareketleri, ödeme planları, maliyetler ve belge dosyalarını içermez. Mevcut kayıtlar silinmez.</p>
+        <form method="post" asp-page-handler="GeriYukle" enctype="multipart/form-data">
+            <partial name="_ManagementContextStamp" />
+            <label asp-for="YedekDosyasi">Eski JSON dosyası (en fazla 32 MB)</label>
+            <input asp-for="YedekDosyasi" type="file" accept=".json" required />
+            <label><input type="checkbox" name="confirmLegacyImport" value="true" required /> Bunun tam geri yükleme olmadığını ve gösterilen firmanın mevcut kayıtlarına veri ekleyebileceğini kabul ediyorum.</label>
+            <button type="submit" class="btn btn-outline-primary">Eski Verileri Aktar</button>
+        </form>
+        @if (Model.ArchiveKeyVersion is not null)
+        {
+            <h3>Sunucudaki şifreli arşivden geri yükle</h3>
+            <p>Yalnızca aynı firmaya ait boş muhasebe alanında çalışır. Arşivin sunucuda mevcut olması gerekir.</p>
             <form method="post" asp-page-handler="SifreliArsivGeriYukle">
                 <partial name="_ManagementContextStamp" />
                 <label for="archiveId">Arşiv kimliği</label>
                 <input id="archiveId" name="archiveId" required />
                 <label for="keyVersion">Anahtar sürümü</label>
                 <input id="keyVersion" name="keyVersion" value="@Model.ArchiveKeyVersion" maxlength="32" required />
-                <label><input type="checkbox" name="confirmRestore" value="true" required /> Bu firmanın boş muhasebe alanına geri yüklemeyi onaylıyorum.</label>
-                <button type="submit" class="btn btn-outline-primary">Şifreli Arşivi Geri Yükle</button>
+                <label><input type="checkbox" name="confirmRestore" value="true" required /> Gösterilen firmanın boş muhasebe alanına kayıtları ve belgeleri geri yüklemeyi onaylıyorum.</label>
+                <button type="submit" class="btn btn-outline-primary">Sunucudaki Arşivden Geri Yükle</button>
             </form>
-        </section>
-    }
-
-    <section class="app-form-panel">
-        <div class="panel-title-row"><div><h2>Güvenli Geri Yükleme</h2><p>Mevcut kayıtlar silinmez. Tam ZIP yedeği yalnızca boş muhasebe alanına yüklenir; mevcut kayıt varsa işlem durur. Eski JSON dosyaları eksik kapsam uyarısıyla desteklenir.</p></div></div>
-        <p>Tam yedek: nakit/banka hesapları, açılış bakiyeleri ve transferler, cari, fatura ve kalemleri, kasa, çek görselleri, stok hareketleri, personel ve maaş/avans/puantaj, müşteri işleri/masrafları, maliyetler, ödeme planları ve hareketleri, işlem geçmişi ve ek belgeler. Arşivlenmiş kayıtlar dahildir.</p>
-        <p>Giriş hesapları, şifreler, firma ayarları ve sohbet dahil değildir. Kullanıcıya bağlı geçmiş için hedef firmada aynı kullanıcı adı ve e-posta ile hesap bulunmalıdır. Yedek en fazla 100 MB, tek belge en fazla 25 MB olabilir.</p>
-        <form method="post" asp-page-handler="GeriYukle" enctype="multipart/form-data" class="app-form-grid">
-            <partial name="_ManagementContextStamp" />
-            <div class="form-field form-field-wide">
-                <label asp-for="YedekDosyasi">Yedek Dosyası</label>
-                <input asp-for="YedekDosyasi" type="file" accept=".zip,.json" />
-            </div>
-            <div class="form-actions-row">
-                <button type="submit" class="btn btn-outline-primary" onclick="return confirm('Seçilen yedek geri yüklenecek. Mevcut kayıtlar silinmez. Devam edilsin mi?');">Geri Yükle</button>
-            </div>
-        </form>
-    </section>
+        }
+        <details>
+            <summary>Yedek kapsamı ve sınırlar</summary>
+            <p>Tam yedek muhasebe kayıtlarını, arşivleri ve bağlı belgeleri kapsar. Giriş hesapları, şifreler, firma ayarları ve sohbet dahil değildir. Kullanıcı bağlantısı gerektiren kayıtlar için hedef firmada uygun hesapların bulunması gerekebilir. Tek belge sınırı 25 MB'dir.</p>
+            <p>Şifreli arşiv, ZIP ve eski JSON farklı doğrulama yolları kullanır. Doğrulama başarısız olursa başka formata otomatik geçilmez.</p>
+        </details>
+    </details>
 </div>

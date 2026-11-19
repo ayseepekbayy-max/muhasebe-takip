@@ -245,17 +245,17 @@ try
         };
     }
     var legacyJson = JsonSerializer.SerializeToUtf8Bytes(legacy);
-    var page = Page(legacyJson); await page.OnPostGeriYukleAsync();
+    var page = Page(legacyJson); await page.OnPostGeriYukleAsync(confirmLegacyImport: true);
     Check(page.Hata == "" && page.Mesaj.Contains("eksik kapsam"), "Legacy format warning");
     Check(await db.KasaHareketleri.CountAsync(x=>x.FirmaId==legacyTarget.Id) == 2, "Legacy cash multiplicity restored");
-    await Page(legacyJson).OnPostGeriYukleAsync();
+    await Page(legacyJson).OnPostGeriYukleAsync(confirmLegacyImport: true);
     Check(await db.KasaHareketleri.CountAsync(x=>x.FirmaId==legacyTarget.Id) == 2, "Legacy repeat does not duplicate cash");
-    var invalid = Page(Encoding.UTF8.GetBytes("{}")); await invalid.OnPostGeriYukleAsync();
+    var invalid = Page(Encoding.UTF8.GetBytes("{}")); await invalid.OnPostGeriYukleAsync(confirmLegacyImport: true);
     Check(invalid.Hata.Length > 0, "Unrecognized JSON rejected");
     // Failure after a legacy parent insert is rolled back too.
     legacy.Cariler = [new("Rollback Cari", "Rollback Cari", null, null, CariTip.Alici, DateTime.UtcNow)];
     legacy.KasaHareketleri = [new(DateTime.UtcNow.Date,HareketTipi.Giris,1,"bad","Missing Cari")];
-    var badLegacy=Page(JsonSerializer.SerializeToUtf8Bytes(legacy)); await badLegacy.OnPostGeriYukleAsync();
+    var badLegacy=Page(JsonSerializer.SerializeToUtf8Bytes(legacy)); await badLegacy.OnPostGeriYukleAsync(confirmLegacyImport: true);
     Check(badLegacy.Hata.Length > 0 && !await db.CariKartlar.AnyAsync(x=>x.FirmaId==legacyTarget.Id && x.Unvan=="Rollback Cari"), "Legacy rollback preserves all-or-nothing behavior");
     // Preserve two historical salary records, including a reference to an employee outside
     // the source company. Neither resolve foreign data nor manufacture an employee.

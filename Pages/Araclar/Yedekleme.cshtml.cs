@@ -37,11 +37,51 @@ public class YedeklemeModel : PageModel
     [BindProperty]
     public IFormFile? YedekDosyasi { get; set; }
     public Guid? CreatedArchiveId { get; private set; }
+    public string HedefFirmaAdi { get; private set; } = "";
+    public string RestoreFormat { get; private set; } = "encrypted";
+
+    private async Task ShowCompanyAsync(AccountingRequestContext context) =>
+        HedefFirmaAdi = await _db.Firmalar.AsNoTracking().Where(x => x.Id == context.ActiveCompanyId)
+            .Select(x => x.FirmaAdi).SingleAsync(HttpContext.RequestAborted);
 
     public Task<IActionResult> OnPostSifreliDosyaGeriYukleAsync(IFormFile? recoveryFile, bool confirmRestore,
-        Guid? uploadedArchiveId, string? uploadedKeyVersion) =>
+        Guid? uploadedArchiveId, string? uploadedKeyVersion, string restoreFormat = "encrypted") =>
         Access.SubmitAsync(this, AccountingManagementPermission.BackupRestore, async context =>
         {
+            await ShowCompanyAsync(context);
+            RestoreFormat = restoreFormat;
+            if (restoreFormat == "zip")
+            {
+                // UI routing only: ZIP retains its existing full-package validator and empty-target rule.
+                // Never send an unrecognized/encrypted upload through the legacy JSON importer.
+                if (!confirmRestore || recoveryFile is null || recoveryFile.Length is < 4 or > AccountingBackupService.MaxPackageBytes)
+                {
+                    Hata = "Geri yükleme onayı ve geçerli bir ZIP yedeği gerekiyor (en fazla 100 MB).";
+                    return Page();
+                }
+                try
+                {
+                    await using (var headerStream = recoveryFile.OpenReadStream())
+                    {
+                        var header = new byte[4];
+                        await headerStream.ReadExactlyAsync(header, HttpContext.RequestAborted);
+                        if (!header.AsSpan().SequenceEqual(new byte[] { 0x50, 0x4b, 0x03, 0x04 }))
+                            throw new AccountingBackupService.BackupException("Dosya geçerli bir ZIP yedeği değil. Eski JSON dosyaları için Gelişmiş Seçenekler'i kullanın.");
+                    }
+                    await using var input = recoveryFile.OpenReadStream();
+                    var result = await _backup.RestoreAsync(input, context.ActiveCompanyId, HttpContext.RequestAborted);
+                    Mesaj = $"Tam yedek geri yüklendi: {result.Records} kayıt, {result.Files} belge. " + string.Join(" ", result.Warnings);
+                }
+                catch (AccountingBackupService.BackupException ex) { Hata = ex.Message; BaglantiHatalari = ex.LinkIssues; }
+                catch (Exception) when (!HttpContext.RequestAborted.IsCancellationRequested)
+                { Hata = "ZIP yedeği doğrulanamadı veya geri yüklenemedi. Başka bir dosya türüyle otomatik işlem yapılmadı."; }
+                return Page();
+            }
+            if (restoreFormat != "encrypted")
+            {
+                Hata = "Desteklenen bir yedek türü seçin.";
+                return Page();
+            }
             if (!confirmRestore || recoveryFile is null ||
                 recoveryFile.Length is <= 28 or > CompanyRecoveryArchive.MaxAccountingEnvelopeBytes ||
                 !CompanyAccountingRecovery.TryResolveUploadIdentity(recoveryFile.FileName, uploadedArchiveId, uploadedKeyVersion,
@@ -73,12 +113,13 @@ public class YedeklemeModel : PageModel
     public Task<IActionResult> OnPostSifreliArsivOlusturAsync() =>
         Access.SubmitAsync(this, AccountingManagementPermission.BackupRead, async context =>
         {
+            await ShowCompanyAsync(context);
             try
             {
                 using var archive = _keys?.OpenArchive() ?? throw new InvalidOperationException();
                 var id = await new CompanyAccountingRecovery(_backup, archive).CreateAsync(context.ActiveCompanyId, HttpContext.RequestAborted);
                 CreatedArchiveId = id;
-                Mesaj = $"Şifreli arşiv oluşturuldu. Arşiv kimliği {id:D}, anahtar sürümü {ArchiveKeyVersion}.";
+                Mesaj = "Şifreli yedek oluşturuldu. Bilgisayarınıza indirmek için Yedeği İndir'i kullanın.";
             }
             catch (AccountingBackupService.BackupException ex)
             {
@@ -113,6 +154,7 @@ public class YedeklemeModel : PageModel
     public Task<IActionResult> OnPostSifreliArsivGeriYukleAsync(Guid archiveId, string? keyVersion, bool confirmRestore) =>
         Access.SubmitAsync(this, AccountingManagementPermission.BackupRestore, async context =>
         {
+            await ShowCompanyAsync(context);
             if (!confirmRestore || archiveId == Guid.Empty || !CompanyRecoveryKeySource.IsVersion(keyVersion))
             {
                 Hata = "Geçerli arşiv kimliği, anahtar sürümü ve geri yükleme onayı gerekiyor.";
@@ -149,6 +191,7 @@ public class YedeklemeModel : PageModel
 
     private async Task<IActionResult> GetAsync(AccountingRequestContext context)
     {
+        await ShowCompanyAsync(context);
         var firmaId = context.ActiveCompanyId;
         var unresolvedCount = await _db.CalisanMaasArsivleri.CountAsync(x => x.FirmaId == firmaId &&
             !_db.Calisanlar.Any(c => c.FirmaId == firmaId && c.Id == x.CalisanId));
@@ -166,6 +209,7 @@ public class YedeklemeModel : PageModel
 
     private async Task<IActionResult> IndirAsync(AccountingRequestContext context)
     {
+        await ShowCompanyAsync(context);
         var firmaId = context.ActiveCompanyId;
 
         try
@@ -186,11 +230,12 @@ public class YedeklemeModel : PageModel
         return Page();
     }
 
-    public Task<IActionResult> OnPostGeriYukleAsync() =>
-        Access.SubmitAsync(this, AccountingManagementPermission.BackupRestore, GeriYukleAsync);
+    public Task<IActionResult> OnPostGeriYukleAsync(bool confirmLegacyImport = false) =>
+        Access.SubmitAsync(this, AccountingManagementPermission.BackupRestore, context => GeriYukleAsync(context, confirmLegacyImport));
 
-    private async Task<IActionResult> GeriYukleAsync(AccountingRequestContext context)
+    private async Task<IActionResult> GeriYukleAsync(AccountingRequestContext context, bool confirmLegacyImport)
     {
+        await ShowCompanyAsync(context);
         var firmaId = context.ActiveCompanyId;
 
         if (YedekDosyasi == null || YedekDosyasi.Length == 0)
@@ -215,6 +260,8 @@ public class YedeklemeModel : PageModel
             }
             if (stream.Length > AccountingBackupService.MaxManifestBytes)
                 throw new AccountingBackupService.BackupException("Eski JSON yedek dosyası 32 MB sınırını aşıyor.");
+            if (!confirmLegacyImport)
+                throw new AccountingBackupService.BackupException("Eski JSON aktarımı tam geri yükleme değildir ve mevcut kayıtlara veri ekleyebilir. Ayrı aktarım onayı gerekiyor.");
             using (var document = await JsonDocument.ParseAsync(stream))
             {
                 var names = document.RootElement.EnumerateObject().Select(x => x.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);

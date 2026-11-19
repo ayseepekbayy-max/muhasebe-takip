@@ -101,7 +101,7 @@ if (write)
 {
     using var created = await BackupPost(owner, "SifreliArsivOlustur", new());
     var html = await created.Content.ReadAsStringAsync();
-    var id = Regex.Match(WebUtility.HtmlDecode(html), "Arşiv kimliği ([0-9a-f-]{36})").Groups[1].Value;
+    var id = Regex.Match(WebUtility.HtmlDecode(html), "name=\"archiveId\"[^>]*value=\"([0-9a-f-]{36})\"").Groups[1].Value;
     Check(created.IsSuccessStatusCode && Guid.TryParse(id,out _), "archive is created through Razor POST");
     await File.WriteAllTextAsync(idFile,id);
     var argsForArchive = ArchiveForm(id);
@@ -224,7 +224,7 @@ else
             OlusturmaTarihi=DateTime.UtcNow,
             Cariler=new[] { new {Unvan="Synthetic JSON", Ad="Synthetic JSON", Tip=1, OlusturmaTarihi=DateTime.UtcNow}},
             Stoklar=Array.Empty<object>(), Faturalar=Array.Empty<object>(), KasaHareketleri=Array.Empty<object>(), Cekler=Array.Empty<object>()});
-        using var json = await BackupPost(stranger,"GeriYukle",new(),legacy,"synthetic.json");
+        using var json = await BackupPost(stranger,"GeriYukle",new(){["confirmLegacyImport"]="true"},legacy,"synthetic.json");
         Check(await db.CariKartlar.AsNoTracking().AnyAsync(x=>x.FirmaId==72 && x.Unvan=="Synthetic JSON"),"legacy JSON import via real handler");
     }
 }
