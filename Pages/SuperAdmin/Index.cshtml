@@ -83,6 +83,10 @@
                                     @(f.AktifMi ? "Pasif Yap" : "Aktif Yap")
                                 </button>
                             </form>
+                            @if (Model.KaliciSilmeGoster(f.Id))
+                            {
+                                <a class="btn btn-outline-danger btn-sm" asp-page="/SuperAdmin/FirmaSilmeOnizleme" asp-route-id="@f.Id">Kalıcı Sil</a>
+                            }
                         </td>
                     </tr>
                 }

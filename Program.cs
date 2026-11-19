@@ -8,6 +8,7 @@ using MuhasebeTakip2.App.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddPersistentSessionKeys();
+builder.Services.AddCompanyDocuments(builder.Configuration);
 ReleaseMaintenance.ValidateStartup(builder.Configuration, builder.Environment);
 builder.Services.AddSingleton<ReleaseMaintenance>();
 
@@ -247,6 +248,7 @@ app.UseReleaseMaintenance();
 app.UseRouting();
 app.UseAccountingRecoveryAdmission();
 app.UseSession();
+app.Use(CompanySessionValidation.InvokeAsync);
 app.UseSwitchedAccountingBoundary();
 
 app.Use(async (context, next) =>

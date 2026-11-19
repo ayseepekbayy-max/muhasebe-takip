@@ -238,5 +238,6 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        CompanyFileModel.Configure(modelBuilder);
     }
 }

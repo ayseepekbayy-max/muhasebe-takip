@@ -3,16 +3,19 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using MuhasebeTakip2.App.Data;
 using MuhasebeTakip2.App.Models;
+using MuhasebeTakip2.App.Services;
 
 namespace MuhasebeTakip2.App.Pages.SuperAdmin;
 
 public class IndexModel : PageModel
 {
     private readonly AppDbContext _db;
+    private readonly IAdminPortalAuthorizationService? _portalAuthorization;
 
-    public IndexModel(AppDbContext db)
+    public IndexModel(AppDbContext db, IAdminPortalAuthorizationService? portalAuthorization = null)
     {
         _db = db;
+        _portalAuthorization = portalAuthorization;
     }
 
     public List<Firma> Firmalar { get; set; } = new();
@@ -20,6 +23,9 @@ public class IndexModel : PageModel
 
     public string Hata { get; set; } = "";
     public string Mesaj { get; set; } = "";
+    public int? SilmeOnizlemeYetkiliFirmaId { get; private set; }
+    public bool KaliciSilmeGoster(int firmaId) => SilmeOnizlemeYetkiliFirmaId is int own &&
+        FirmaSilmeOnizlemeModel.HedefUygun(firmaId, own);
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -146,6 +152,8 @@ public class IndexModel : PageModel
 
     private async Task YukleAsync()
     {
+        SilmeOnizlemeYetkiliFirmaId = _portalAuthorization is null ? null :
+            await FirmaSilmeOnizlemeModel.YoneticiFirmaIdAsync(_db, _portalAuthorization, HttpContext, HttpContext.RequestAborted);
         Firmalar = await _db.Firmalar
             .OrderBy(x => x.FirmaAdi)
             .ToListAsync();

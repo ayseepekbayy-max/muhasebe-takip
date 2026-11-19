@@ -1,0 +1,62 @@
+@page
+@model MuhasebeTakip2.App.Pages.SuperAdmin.FirmaSilmeOnizlemeModel
+@{
+    ViewData["Title"] = "Kalıcı silme önizlemesi";
+}
+
+<h1>Kalıcı silme önizlemesi</h1>
+<h2 class="h4">@Model.FirmaAdi (ID @Model.FirmaId)</h2>
+<p>Planlanan silme kapsamı</p>
+<ul>
+    <li>Firma ayarları, kullanıcı hesapları ve hesap kurtarma bilgileri</li>
+    <li>Cari, kasa, fatura, stok, çalışan, müşteri, çek, maliyet ve ödeme kayıtları</li>
+    <li>Bildirimler, yönetici notları ve işlem geçmişi</li>
+    <li>Firma belgeleri ve yalnızca bu firmaya ait olduğu doğrulanan dosyalar</li>
+</ul>
+<h2 class="h5">Firma kayıtları</h2>
+<table class="table table-sm">
+    <thead><tr><th scope="col">Tablo</th><th scope="col">Kayıt</th><th scope="col">Firma dışı referans</th></tr></thead>
+    <tbody>
+        @foreach (var table in Model.Inventory.Tables.Where(x => x.Rows > 0))
+        {
+            <tr><td>@table.Name</td><td>@table.Rows</td><td>@(table.HasExternalReferences ? "Tespit edildi" : "Tespit edilmedi")</td></tr>
+        }
+    </tbody>
+</table>
+<p>@Model.Inventory.Attachments ek belge kaydı ve @Model.Inventory.CheckImages çek görseli referansı var.</p>
+<p>@Model.Inventory.SharedFilePaths paylaşılan yükleme yolu ve @Model.Inventory.UnrecognizedFilePaths tanınmayan dosya yolu tespit edildi.</p>
+@if (Model.Inventory.UnverifiedLogo)
+{
+    <p>Firma logosunun dosya sahipliği doğrulanamadı.</p>
+}
+<h2 class="h5">Dosya sahipliği ön kontrolü</h2>
+<table class="table table-sm">
+    <thead><tr><th>Kayıt türü</th><th>Kayıt ID</th><th>Sahiplik durumu</th></tr></thead>
+    <tbody>
+        @foreach (var file in Model.LegacyFiles.Items)
+        {
+            <tr><td>@file.Source</td><td>@file.RecordId</td><td>@file.Status</td></tr>
+        }
+    </tbody>
+</table>
+<p>Firma kapsamı belirlenemeyen genel özel panel envanteri: @Model.LegacyFiles.PrivateMessages mesaj ve @Model.LegacyFiles.PrivateMediaReferences medya referansı. Bu kayıtlar silme kapsamı dışında.</p>
+<p>@Model.LegacyFiles.PresenceRecords durum kaydı, @Model.LegacyFiles.HiddenRecords gizleme kaydı ve @Model.LegacyFiles.StoredMedia özel medya nesnesi ayrıca kontrol edildi. Aidiyeti belirsiz kayıt varsa silme durur.</p>
+
+@if (Model.Confirmation is null)
+{
+<p class="alert alert-warning" role="status">
+    Kalıcı silme kapalı veya kayıtlarda doğrulanamayan ilişkiler var.
+</p>
+<p>Bu firmaya ait tüm veriler kalıcı olarak silinecek. Emin misiniz?</p>
+<button type="button" class="btn btn-danger" disabled>Kalıcı Sil</button>
+}
+else
+{
+    <p>Bu firmaya ait tüm veriler kalıcı olarak silinecek. Emin misiniz?</p>
+    <form method="post" asp-page="/SuperAdmin/FirmaSilmeOnizleme">
+        <input type="hidden" name="id" value="@Model.FirmaId" />
+        <input type="hidden" name="confirmation" value="@Model.Confirmation" />
+        <button type="submit" class="btn btn-danger">Kalıcı Sil</button>
+    </form>
+}
+<a class="btn btn-outline-secondary" asp-page="/SuperAdmin/Index">İptal</a>

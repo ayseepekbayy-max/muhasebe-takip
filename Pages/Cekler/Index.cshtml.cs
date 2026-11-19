@@ -92,6 +92,7 @@ public class IndexModel : PageModel
 
         try
         {
+            await using var uploadTransaction = await _db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
             string? resimYolu = null;
 
             if (CekResmi != null && CekResmi.Length > 0)
@@ -146,6 +147,9 @@ public class IndexModel : PageModel
 
             _db.Cekler.Add(kayit);
             await _db.SaveChangesAsync();
+            if (resimYolu is not null)
+                await new CompanyDocumentStore(_db, _env).RegisterPublishedAsync(resimYolu, null, kayit, HttpContext.RequestAborted);
+            await uploadTransaction.CommitAsync(HttpContext.RequestAborted);
 
             Mesaj = "Çek kaydedildi.";
             YeniCek = new Cek { Tarih = DateTime.Today };
@@ -181,8 +185,15 @@ public class IndexModel : PageModel
                 // A lost commit acknowledgement must leave the file intact.
                 await using (var transaction = await _db.Database.BeginTransactionAsync(HttpContext.RequestAborted))
                 {
+                    var store = new CompanyDocumentStore(_db, _env);
+                    var trackedFile = await store.LockCheckReferenceAsync(cek, HttpContext.RequestAborted);
                     _db.Cekler.Remove(cek);
                     await _db.SaveChangesAsync(HttpContext.RequestAborted);
+                    if (trackedFile is Guid fileId)
+                    {
+                        await store.RetireRemovedReferenceAsync(fileId, firmaId.Value, HttpContext.RequestAborted);
+                        fizikselYol = null; // Durable worker owns tracked-file cleanup.
+                    }
                     await transaction.CommitAsync(HttpContext.RequestAborted);
                 }
 

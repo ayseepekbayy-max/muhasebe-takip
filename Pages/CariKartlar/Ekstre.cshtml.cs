@@ -112,13 +112,14 @@ public class EkstreModel : PageModel
                 () => _audit.KaydetAsync("Cari Kartlar", "Belge Ekleme", $"Cari kart {id} için belge eklendi.",
                     yeniDeger: new { id, belgeId = belge.Id, belge.DosyaAdi }, cancellationToken: ct),
                 anaKaydiOnceKaydet: true, cancellationToken: ct);
+            await new CompanyDocumentStore(_db, _env).RegisterPublishedAsync(belgeYolu, belge, null, ct);
             // A failed commit acknowledgement does not prove that the database rolled back.
             commitStarted = true;
             await transaction.CommitAsync(ct);
         }
         catch
         {
-            if (fileCreated && !commitStarted)
+            if (fileCreated && !commitStarted && !belgeYolu.StartsWith($"/uploads/{CompanyDiskStorage.PrivateDirectory}/", StringComparison.Ordinal))
                 System.IO.File.Delete(fizikselYol);
             throw;
         }

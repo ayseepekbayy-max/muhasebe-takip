@@ -66,7 +66,7 @@ public class LoginModel : PageModel
 
         if (kullanici == null)
         {
-            Hata = "Kullanıcı adı veya şifre yanlış.";
+            Hata = "Bu hesap kayıtlı değil.";
             return Page();
         }
 
