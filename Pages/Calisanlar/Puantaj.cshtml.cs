@@ -73,8 +73,8 @@ public class PuantajModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        var calisan = await _db.Calisanlar
-            .FirstOrDefaultAsync(x => x.Id == CalisanId && x.FirmaId == firmaId);
+        await using var employeeTx = await _db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
+        var calisan = await EmployeeIdentityGuard.LockActiveAsync(_db, firmaId.Value, CalisanId, HttpContext.RequestAborted);
 
         if (calisan == null)
             return RedirectToPage("/Calisanlar");
@@ -133,6 +133,7 @@ public class PuantajModel : PageModel
                 anaKaydiOnceKaydet: true);
         }
 
+        await employeeTx.CommitAsync(HttpContext.RequestAborted);
         return RedirectToPage(new { id = CalisanId, yil = SeciliYil, ay = SeciliAy });
     }
 

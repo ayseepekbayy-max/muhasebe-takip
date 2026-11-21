@@ -133,7 +133,7 @@ public sealed class CompanyDeletionInventory(AppDbContext db)
         var additional = target.ClrType == typeof(Kullanici)
             ? new[] { (typeof(IslemGecmisi), "KullaniciId"), (typeof(OdemePlani), "OlusturanKullaniciId"),
                 (typeof(OdemeHareketi), "OlusturanKullaniciId") }
-            : target.ClrType == typeof(Calisan) ? new[] { (typeof(CalisanMaasArsiv), "CalisanId") } : [];
+            : [];
         foreach (var (type, property) in additional)
             yield return (model.Single(x => x.ClrType == type), property);
     }

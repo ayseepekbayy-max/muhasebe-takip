@@ -2526,7 +2526,7 @@ if (
         var arsivler = await _db.CalisanMaasArsivleri
             .Where(x =>
                 x.FirmaId == firmaId &&
-                x.CalisanId == calisanId)
+                x.DogrulanmisCalisanId == calisanId)
             .OrderByDescending(x => x.OdemeTarihi)
             .ToListAsync();
 
@@ -2534,7 +2534,7 @@ if (
         {
             var detaylar = await _db.CalisanAvanslari
                 .Where(x =>
-                    x.FirmaId == firmaId &&
+                    arsiv.CalisanId == calisanId && x.FirmaId == firmaId &&
                     x.CalisanId == calisanId &&
                     x.ArsivlendiMi &&
                     x.Tarih >= arsiv.DonemBaslangic &&

@@ -194,7 +194,7 @@ public class YedeklemeModel : PageModel
         await ShowCompanyAsync(context);
         var firmaId = context.ActiveCompanyId;
         var unresolvedCount = await _db.CalisanMaasArsivleri.CountAsync(x => x.FirmaId == firmaId &&
-            !_db.Calisanlar.Any(c => c.FirmaId == firmaId && c.Id == x.CalisanId));
+            (x.DogrulanmisCalisanId == null || !_db.Calisanlar.Any(c => c.FirmaId == firmaId && c.Id == x.DogrulanmisCalisanId)));
         if (unresolvedCount > 0)
             Uyari = $"{unresolvedCount} maaş arşivi kaydının çalışan bağlantısı çözümlenemiyor. " +
                 "Bu kayıtlar tutar ve tarihleriyle yedeklenecek; geri yüklemede başka çalışana bağlanmayacak. " +

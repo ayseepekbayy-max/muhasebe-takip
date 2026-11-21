@@ -5,7 +5,10 @@ namespace MuhasebeTakip2.App.Models
         public int Id { get; set; }
 
         public int FirmaId { get; set; }
+        // Original historical reference. Never infer a person from their name or rewrite this ID.
         public int CalisanId { get; set; }
+        // A separately verified, same-company employee. Null means unresolved, never a name match.
+        public int? DogrulanmisCalisanId { get; set; }
 
         public DateTime DonemBaslangic { get; set; }
         public DateTime DonemBitis { get; set; }

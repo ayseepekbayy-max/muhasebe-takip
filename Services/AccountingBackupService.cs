@@ -24,7 +24,7 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
     public sealed class Package
     {
         public string Format { get; set; } = "FirmovaAccountingBackup";
-        public int Version { get; set; } = 4;
+        public int Version { get; set; } = 5;
         public Guid BackupId { get; set; } = Guid.NewGuid();
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
         public string CompanyName { get; set; } = "";
@@ -82,7 +82,7 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
     {
         ["KasaHesapId"] = nameof(KasaHesap), ["KaynakHesapId"] = nameof(KasaHesap), ["HedefHesapId"] = nameof(KasaHesap),
         ["CariKartId"] = nameof(CariKart), ["StokUrunId"] = nameof(StokUrun),
-        ["CalisanId"] = nameof(Calisan), ["MusteriId"] = nameof(Musteri),
+        ["DogrulanmisCalisanId"] = nameof(Calisan), ["CalisanId"] = nameof(Calisan), ["MusteriId"] = nameof(Musteri),
         ["MusteriIsId"] = nameof(MusteriIs), ["FaturaId"] = nameof(Fatura),
         ["OdemePlaniId"] = nameof(OdemePlani)
     };
@@ -113,9 +113,8 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
             .Where(HasValue).Select(x => x.GetInt32()).Distinct();
         foreach (var id in referencedUsers)
             if (package.Users.All(x => x.Id != id)) package.Users.Add(new UserReference(id, "", ""));
-        var employeeIds = package.Tables[nameof(Calisan)].Select(Id).ToHashSet();
         package.UnresolvedSalaryEmployees = package.Tables[nameof(CalisanMaasArsiv)]
-            .Where(row => !employeeIds.Contains(row["CalisanId"].GetInt32()))
+            .Where(row => !HasValue(row["DogrulanmisCalisanId"]))
             .Select(row => new UnresolvedSalaryEmployee(Id(row), row["CalisanId"].GetInt32())).ToList();
         AddSalaryWarning(package);
         Validate(package);
@@ -218,10 +217,28 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
         package.Tables[nameof(KasaTransfer)] = [];
     }
 
+    private static void NormalizeEmployeeLinks(Package package)
+    {
+        if (package.Version >= 5) return;
+        if (package.Tables is null || !package.Tables.TryGetValue(nameof(CalisanMaasArsiv), out var salaries) ||
+            !package.Tables.TryGetValue(nameof(Calisan), out var employees) || package.UnresolvedSalaryEmployees is null)
+            throw new BackupException("Eski yedekte çalışan kapsamı eksik.");
+        var employeeIds = employees.Select(Id).ToHashSet();
+        var unresolved = package.UnresolvedSalaryEmployees.Select(x => x.SalaryRecordId).ToHashSet();
+        foreach (var row in salaries)
+        {
+            if (row.ContainsKey("DogrulanmisCalisanId")) throw new BackupException("Eski yedekte beklenmeyen çalışan bağlantısı.");
+            var original = row["CalisanId"].GetInt32();
+            if (unresolved.Contains(Id(row)) && employeeIds.Contains(original))
+                throw new BackupException("Eski yedekte çelişkili çalışan başvurusu.");
+            row["DogrulanmisCalisanId"] = JsonSerializer.SerializeToElement<int?>(
+                !unresolved.Contains(Id(row)) && employeeIds.Contains(original) ? original : null);
+        }
+    }
     private void Validate(Package package)
     {
         var tables = Tables();
-        if (package.Format != "FirmovaAccountingBackup" || package.Version is not (2 or 3 or 4) || package.BackupId == Guid.Empty ||
+        if (package.Format != "FirmovaAccountingBackup" || package.Version is not (2 or 3 or 4 or 5) || package.BackupId == Guid.Empty ||
             package.Tables == null || package.Users == null || package.Documents == null || package.Warnings == null || package.UnresolvedSalaryEmployees == null ||
             (package.Version == 2 && package.UnresolvedSalaryEmployees.Count > 0) ||
             package.Tables.Count != tables.Length || tables.Any(t => !package.Tables.ContainsKey(t.Type.Name)) ||
@@ -237,9 +254,11 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
         var salaryRows = package.Tables[nameof(CalisanMaasArsiv)].ToDictionary(Id);
         foreach (var reference in unresolved)
             if (!salaryRows.TryGetValue(reference.SalaryRecordId, out var salary) ||
-                salary["CalisanId"].GetInt32() != reference.SourceEmployeeId || ids[nameof(Calisan)].Contains(reference.SourceEmployeeId))
+                salary["CalisanId"].GetInt32() != reference.SourceEmployeeId || HasValue(salary["DogrulanmisCalisanId"]))
                 throw new BackupException("Çözümlenemeyen maaş bağlantıları kayıtlarla eşleşmiyor.");
         var unresolvedRows = unresolved.Select(x => x.SalaryRecordId).ToHashSet();
+        if (salaryRows.Any(x => !HasValue(x.Value["DogrulanmisCalisanId"]) && !unresolvedRows.Contains(x.Key)))
+            throw new BackupException("Maaş arşivindeki çözümlenmemiş çalışan başvurusu açıkça belirtilmeli.");
         var userIds = package.Users.Select(x => x.Id).ToHashSet();
         var linkIssues = new List<LinkIssue>();
         var issueCount = 0;
@@ -267,7 +286,8 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
                     var value = json.Deserialize(property.ClrType, JsonOptions);
                     if (value is string text && property.GetMaxLength() is int max && text.Length > max)
                         throw new BackupException("Yedekte bir metin alanı izin verilen uzunluğu aşıyor.");
-                    if (HasValue(json) && Links.TryGetValue(property.Name, out var parent) && !ids[parent].Contains(json.GetInt32()))
+                    if (HasValue(json) && Links.TryGetValue(property.Name, out var parent) &&
+                        !(table.Type == typeof(CalisanMaasArsiv) && property.Name == "CalisanId") && !ids[parent].Contains(json.GetInt32()))
                     {
                         var historicalSalary = table.Type == typeof(CalisanMaasArsiv) && property.Name == "CalisanId" && unresolvedRows.Contains(Id(row));
                         if (!historicalSalary) MissingLink(table.Type.Name, Id(row), property.Name, parent, json.GetInt32());
@@ -322,6 +342,7 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
         var package = await JsonSerializer.DeserializeAsync<Package>(manifestBytes, JsonOptions, ct)
             ?? throw new BackupException("Yedek okunamadı.");
         NormalizeLegacyAccounts(package);
+        NormalizeEmployeeLinks(package);
         Validate(package);
         var expected = package.Documents.Select(x => x.Entry).Append("manifest.json").ToHashSet(StringComparer.Ordinal);
         if (package.Version >= 3 && package.Warnings.Count > 0) expected.Add("UYARILAR.txt");
@@ -337,7 +358,6 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
 
         // Recompute the warning from validated references; never rely on supplied warning text.
         AddSalaryWarning(package);
-        var unresolvedSalaryIds = package.UnresolvedSalaryEmployees.Select(x => x.SalaryRecordId).ToHashSet();
         var restoreId = Guid.NewGuid().ToString("N");
         var uploads = Path.Combine(environment.WebRootPath, "uploads");
         var recovery = writePrivate ? CompanyDiskStorage.Archives(environment) : Path.Combine(uploads, "yedek");
@@ -401,13 +421,12 @@ public sealed class AccountingBackupService(AppDbContext db, IWebHostEnvironment
                         var json = row[property.Name];
                         object? value = json.Deserialize(property.ClrType, JsonOptions);
                         if (property.Name == "FirmaId") value = firmaId;
+                        else if (table.Type == typeof(CalisanMaasArsiv) && property.Name == "CalisanId")
+                        { /* Keep the original reference, even when source/destination employee IDs collide. */ }
                         else if (HasValue(json) && Links.TryGetValue(property.Name, out var parent))
                         {
-                            // Normal employee IDs are strictly positive. A nonpositive historical reference
-                            // cannot accidentally bind to a newly generated employee with the same old ID.
-                            value = table.Type == typeof(CalisanMaasArsiv) && property.Name == "CalisanId" && unresolvedSalaryIds.Contains(Id(row))
-                                ? -Math.Abs(json.GetInt32())
-                                : maps[parent][json.GetInt32()];
+                            // Verified links map through source IDs. Historical original IDs are kept above.
+                            value = maps[parent][json.GetInt32()];
                         }
                         else if (HasValue(json) && UserProperties.Contains(property.Name))
                         {

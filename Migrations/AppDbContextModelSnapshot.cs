@@ -24,17 +24,41 @@ namespace MuhasebeTakip2.App.Migrations
 
             modelBuilder.Entity("MuhasebeTakip2.App.Models.AdminCompanyTransition", b =>
                 {
-                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
-                    b.Property<int>("AdminUserId").HasColumnType("integer");
-                    b.Property<string>("LoginEpoch").IsRequired().HasMaxLength(32).HasColumnType("character varying(32)");
-                    b.Property<DateTime>("RequestedAtUtc").HasColumnType("timestamp with time zone");
-                    b.Property<DateTime?>("ResolvedAtUtc").HasColumnType("timestamp with time zone");
-                    b.Property<bool>("ReturnHome").HasColumnType("boolean");
-                    b.Property<int>("SourceCompanyId").HasColumnType("integer");
-                    b.Property<Guid>("SourceVersion").HasColumnType("uuid");
-                    b.Property<int>("Status").HasColumnType("integer");
-                    b.Property<int>("TargetCompanyId").HasColumnType("integer");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AdminUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LoginEpoch")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime>("RequestedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ResolvedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("ReturnHome")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("SourceCompanyId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SourceVersion")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TargetCompanyId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
                     b.ToTable("AdminCompanyTransitions");
                 });
 
@@ -66,7 +90,7 @@ namespace MuhasebeTakip2.App.Migrations
                     b.Property<DateTime?>("AyrilisTarihi")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("FirmaId")
+                    b.Property<int>("FirmaId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("IseGirisTarihi")
@@ -108,7 +132,7 @@ namespace MuhasebeTakip2.App.Migrations
                     b.Property<int>("CalisanId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("FirmaId")
+                    b.Property<int>("FirmaId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("Tarih")
@@ -126,6 +150,8 @@ namespace MuhasebeTakip2.App.Migrations
 
                     b.HasIndex("FirmaId");
 
+                    b.HasIndex("CalisanId", "FirmaId");
+
                     b.ToTable("CalisanAvanslari");
                 });
 
@@ -141,6 +167,9 @@ namespace MuhasebeTakip2.App.Migrations
                         .HasColumnType("text");
 
                     b.Property<int>("CalisanId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DogrulanmisCalisanId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("DonemBaslangic")
@@ -165,6 +194,8 @@ namespace MuhasebeTakip2.App.Migrations
                         .HasColumnType("numeric");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DogrulanmisCalisanId", "FirmaId");
 
                     b.ToTable("CalisanMaasArsivleri");
                 });
@@ -197,6 +228,8 @@ namespace MuhasebeTakip2.App.Migrations
                     b.HasIndex("CalisanId");
 
                     b.HasIndex("FirmaId");
+
+                    b.HasIndex("CalisanId", "FirmaId");
 
                     b.ToTable("CalisanPuantajlari");
                 });
@@ -296,6 +329,102 @@ namespace MuhasebeTakip2.App.Migrations
                     b.HasIndex("FirmaId");
 
                     b.ToTable("Cekler");
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.CompanyFileCleanupJob", b =>
+                {
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EnqueuedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("FileId");
+
+                    b.HasIndex("CompletedAtUtc", "EnqueuedAtUtc");
+
+                    b.HasIndex("FileId", "CompanyId");
+
+                    b.ToTable("CompanyFileCleanupJobs", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CompanyFileCleanupJobs_Company", "\"CompanyId\" > 1");
+                        });
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.CompanyStoredFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Length")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("OwnerCompanyId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("RetiredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CompanyStoredFiles", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CompanyStoredFiles_Length", "\"Length\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.CompanyStoredFileReference", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int?>("AttachmentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CheckId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttachmentId")
+                        .IsUnique();
+
+                    b.HasIndex("CheckId")
+                        .IsUnique();
+
+                    b.HasIndex("FileId");
+
+                    b.HasIndex("AttachmentId", "CompanyId");
+
+                    b.HasIndex("CheckId", "CompanyId");
+
+                    b.ToTable("CompanyStoredFileReferences", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CompanyStoredFileReferences_Source", "(\"AttachmentId\" IS NULL) <> (\"CheckId\" IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("MuhasebeTakip2.App.Models.EkDosya", b =>
@@ -1539,40 +1668,53 @@ namespace MuhasebeTakip2.App.Migrations
                 {
                     b.HasOne("MuhasebeTakip2.App.Models.Firma", "Firma")
                         .WithMany()
-                        .HasForeignKey("FirmaId");
+                        .HasForeignKey("FirmaId")
+                        .IsRequired();
 
                     b.Navigation("Firma");
                 });
 
             modelBuilder.Entity("MuhasebeTakip2.App.Models.CalisanAvans", b =>
                 {
-                    b.HasOne("MuhasebeTakip2.App.Models.Calisan", "Calisan")
-                        .WithMany("Avanslar")
-                        .HasForeignKey("CalisanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("MuhasebeTakip2.App.Models.Firma", "Firma")
                         .WithMany()
-                        .HasForeignKey("FirmaId");
+                        .HasForeignKey("FirmaId")
+                        .IsRequired();
+
+                    b.HasOne("MuhasebeTakip2.App.Models.Calisan", "Calisan")
+                        .WithMany("Avanslar")
+                        .HasForeignKey("CalisanId", "FirmaId")
+                        .HasPrincipalKey("Id", "FirmaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Calisan");
 
                     b.Navigation("Firma");
                 });
 
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.CalisanMaasArsiv", b =>
+                {
+                    b.HasOne("MuhasebeTakip2.App.Models.Calisan", null)
+                        .WithMany()
+                        .HasForeignKey("DogrulanmisCalisanId", "FirmaId")
+                        .HasPrincipalKey("Id", "FirmaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("MuhasebeTakip2.App.Models.CalisanPuantaj", b =>
                 {
-                    b.HasOne("MuhasebeTakip2.App.Models.Calisan", "Calisan")
-                        .WithMany()
-                        .HasForeignKey("CalisanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("MuhasebeTakip2.App.Models.Firma", "Firma")
                         .WithMany()
                         .HasForeignKey("FirmaId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MuhasebeTakip2.App.Models.Calisan", "Calisan")
+                        .WithMany()
+                        .HasForeignKey("CalisanId", "FirmaId")
+                        .HasPrincipalKey("Id", "FirmaId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Calisan");
@@ -1598,6 +1740,37 @@ namespace MuhasebeTakip2.App.Migrations
                         .IsRequired();
 
                     b.Navigation("Firma");
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.CompanyFileCleanupJob", b =>
+                {
+                    b.HasOne("MuhasebeTakip2.App.Models.CompanyStoredFile", null)
+                        .WithMany()
+                        .HasForeignKey("FileId", "CompanyId")
+                        .HasPrincipalKey("Id", "OwnerCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MuhasebeTakip2.App.Models.CompanyStoredFileReference", b =>
+                {
+                    b.HasOne("MuhasebeTakip2.App.Models.CompanyStoredFile", null)
+                        .WithMany()
+                        .HasForeignKey("FileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MuhasebeTakip2.App.Models.EkDosya", null)
+                        .WithMany()
+                        .HasForeignKey("AttachmentId", "CompanyId")
+                        .HasPrincipalKey("Id", "FirmaId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("MuhasebeTakip2.App.Models.Cek", null)
+                        .WithMany()
+                        .HasForeignKey("CheckId", "CompanyId")
+                        .HasPrincipalKey("Id", "FirmaId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("MuhasebeTakip2.App.Models.EkDosya", b =>

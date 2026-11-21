@@ -92,6 +92,8 @@ public class IndexModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
+        await using var employeeTx = await _db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
+        if (await EmployeeIdentityGuard.LockActiveAsync(_db, firmaId.Value, id, HttpContext.RequestAborted) is null) return NotFound();
         await YukleAsync(id, firmaId.Value, null);
 
         if (Calisan == null)
@@ -131,6 +133,7 @@ public class IndexModel : PageModel
             yeniDeger: IslemGecmisiSnapshots.CalisanHareket(kayit));
         await _db.SaveChangesAsync();
 
+        await employeeTx.CommitAsync(HttpContext.RequestAborted);
         return RedirectToPage(new { id });
     }
 
@@ -140,8 +143,8 @@ public class IndexModel : PageModel
         if (firmaId == null)
             return RedirectToPage("/Login");
 
-        var calisan = await _db.Calisanlar
-            .FirstOrDefaultAsync(x => x.Id == id && x.FirmaId == firmaId.Value);
+        await using var employeeTx = await _db.Database.BeginTransactionAsync(HttpContext.RequestAborted);
+        var calisan = await EmployeeIdentityGuard.LockActiveAsync(_db, firmaId.Value, id, HttpContext.RequestAborted);
 
         if (calisan == null)
             return NotFound();
@@ -179,6 +182,7 @@ public class IndexModel : PageModel
         {
             FirmaId = firmaId.Value,
             CalisanId = id,
+            DogrulanmisCalisanId = id,
             DonemBaslangic = aktifKayitlar.Min(x => x.Tarih),
             DonemBitis = aktifKayitlar.Max(x => x.Tarih),
             ToplamMaas = toplamMaas,
@@ -203,6 +207,7 @@ public class IndexModel : PageModel
             yeniDeger: IslemGecmisiSnapshots.MaasArsiv(arsiv));
         await _db.SaveChangesAsync();
 
+        await employeeTx.CommitAsync(HttpContext.RequestAborted);
         return RedirectToPage(new { id });
     }
 
@@ -244,7 +249,7 @@ public class IndexModel : PageModel
         var arsiv = await _db.CalisanMaasArsivleri
             .FirstOrDefaultAsync(x =>
                 x.Id == arsivId &&
-                x.CalisanId == id &&
+                x.DogrulanmisCalisanId == id && x.CalisanId == id &&
                 x.FirmaId == firmaId.Value);
 
         if (arsiv == null)
@@ -300,7 +305,7 @@ public class IndexModel : PageModel
             .ToListAsync();
 
         Arsivler = await _db.CalisanMaasArsivleri
-            .Where(x => x.CalisanId == id && x.FirmaId == firmaId)
+            .Where(x => x.DogrulanmisCalisanId == id && x.FirmaId == firmaId)
             .OrderByDescending(x => x.OdemeTarihi)
             .ToListAsync();
 
@@ -336,7 +341,7 @@ public class IndexModel : PageModel
                     x.CalisanId == id &&
                     x.FirmaId == firmaId);
 
-            if (seciliArsiv != null)
+            if (seciliArsiv != null && seciliArsiv.DogrulanmisCalisanId == id && seciliArsiv.CalisanId == id)
             {
                 SeciliArsivDetaylari = await _db.CalisanAvanslari
                     .Where(x =>

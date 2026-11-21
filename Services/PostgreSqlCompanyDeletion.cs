@@ -40,7 +40,7 @@ public sealed class PostgreSqlCompanyDeletion(AppDbContext db)
     };
     private static readonly (string Table, string Column, string Parent)[] HistoricalLinks =
     [
-        ("CalisanMaasArsivleri", "CalisanId", "Calisanlar"),
+        ("CalisanMaasArsivleri", "DogrulanmisCalisanId", "Calisanlar"),
         ("OdemePlanlari", "OlusturanKullaniciId", "Kullanicilar"),
         ("OdemeHareketleri", "OlusturanKullaniciId", "Kullanicilar")
     ];

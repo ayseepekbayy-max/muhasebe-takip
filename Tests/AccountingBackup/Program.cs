@@ -46,7 +46,7 @@ try
         typeof(CalisanMaasArsiv), typeof(StokHareket), typeof(FaturaKalem), typeof(MusteriMasraf), typeof(KasaHareket),
         typeof(EkDosya), typeof(OdemeHareketi), typeof(OdemeBildirimGecmisi), typeof(OdemeBildirimGizleme), typeof(YoneticiNotu), typeof(IslemGecmisi)];
     var seeded = new Dictionary<string, object>();
-    var links = new Dictionary<string, string> { ["KasaHesapId"]="KasaHesap", ["KaynakHesapId"]="KasaHesap", ["HedefHesapId"]="KasaHesap", ["CariKartId"]="CariKart", ["StokUrunId"]="StokUrun", ["CalisanId"]="Calisan", ["MusteriId"]="Musteri",
+    var links = new Dictionary<string, string> { ["KasaHesapId"]="KasaHesap", ["KaynakHesapId"]="KasaHesap", ["HedefHesapId"]="KasaHesap", ["CariKartId"]="CariKart", ["StokUrunId"]="StokUrun", ["CalisanId"]="Calisan", ["DogrulanmisCalisanId"]="Calisan", ["MusteriId"]="Musteri",
         ["MusteriIsId"]="MusteriIs", ["FaturaId"]="Fatura", ["OdemePlaniId"]="OdemePlani" };
     foreach (var type in types)
     {
@@ -124,7 +124,7 @@ try
     Check(restoredInvoice.Id != ((Fatura)seeded["Fatura"]).Id && restoredInvoice.CariKartId == restoredCari.Id, "New IDs with invoice/customer link");
     Check(restoredCash.Count == 2 && restoredCash.All(x=>x.FaturaId==restoredInvoice.Id && x.CariKartId==restoredCari.Id), "Duplicate cash preserved with remapped links");
     var restoredEmployee = await db.Calisanlar.SingleAsync(x=>x.FirmaId==target.Id);
-    Check((await db.CalisanMaasArsivleri.SingleAsync(x=>x.FirmaId==target.Id)).CalisanId == restoredEmployee.Id, "Undeclared salary employee link remapped");
+    Check((await db.CalisanMaasArsivleri.SingleAsync(x=>x.FirmaId==target.Id)).DogrulanmisCalisanId == restoredEmployee.Id, "Verified salary employee link remapped; original reference preserved");
     Check((await db.OdemeBildirimGecmisleri.SingleAsync(x=>x.FirmaId==target.Id)).KullaniciId == targetUser.Id, "User reference mapped within target firm");
     var restoredFile = await db.EkDosyalar.SingleAsync(x=>x.FirmaId==target.Id);
     Check(restoredFile.DosyaYolu.StartsWith("/uploads/.firmova-private/recovery/", StringComparison.Ordinal), "Restored attachment uses private disk directory");
@@ -261,7 +261,7 @@ try
     // the source company. Neither resolve foreign data nor manufacture an employee.
     var salary = await db.CalisanMaasArsivleri.SingleAsync(x=>x.FirmaId==source.Id);
     var originalEmployeeId = salary.CalisanId;
-    salary.CalisanId = 987654;
+    salary.CalisanId = 987654; salary.DogrulanmisCalisanId = null;
     var foreignEmployee = new Calisan { IseGirisTarihi=DateTime.UtcNow, Id=54321, FirmaId=empty.Id, AdSoyad="PRIVATE_FOREIGN_EMPLOYEE", Ad="private" };
     var secondSalary = new CalisanMaasArsiv { FirmaId=source.Id, CalisanId=54321,
         ToplamMaas=1000.22m, ToplamAvans=300.11m, KalanMaas=700.11m,
@@ -277,7 +277,7 @@ try
     await db.SaveChangesAsync();
     var orphanBytes = await service.ExportAsync(source.Id);
     var orphanPackage = Read(orphanBytes);
-    Check(orphanPackage.Version==4 && orphanPackage.UnresolvedSalaryEmployees.Count==2, "Versioned explicit unresolved salary references");
+    Check(orphanPackage.Version==5 && orphanPackage.UnresolvedSalaryEmployees.Count==2, "Versioned explicit unresolved salary references");
     Check(orphanPackage.Tables["CalisanMaasArsiv"].Count==2 && orphanPackage.Tables["Calisan"].Count==1, "All salary records kept; no employee fabricated");
     Check(!JsonSerializer.Serialize(orphanPackage).Contains("PRIVATE_FOREIGN_EMPLOYEE"), "No foreign employee data included");
     using (var z=new ZipArchive(new MemoryStream(orphanBytes),ZipArchiveMode.Read))
@@ -299,14 +299,14 @@ try
     var realEmployee=await db.Calisanlar.SingleAsync(x=>x.FirmaId==orphanTarget.Id);
     Check(realEmployee.Id==987654, "Fixture reproduces source/destination employee ID collision");
     var restoredSalaries=await db.CalisanMaasArsivleri.AsNoTracking().Where(x=>x.FirmaId==orphanTarget.Id).OrderBy(x=>x.ToplamMaas).ToListAsync();
-    Check(restoredSalaries.Count==2 && restoredSalaries.All(x=>x.CalisanId<=0 && x.CalisanId!=realEmployee.Id),
+    Check(restoredSalaries.Count==2 && restoredSalaries.All(x=>x.DogrulanmisCalisanId==null),
         "Neither salary attaches to an existing or newly generated real employee");
     var restoredHistorical=restoredSalaries.Single(x=>x.ToplamMaas==1000.22m);
     Check(restoredHistorical.ToplamAvans==secondSalary.ToplamAvans && restoredHistorical.KalanMaas==secondSalary.KalanMaas &&
         restoredHistorical.DonemBaslangic==secondSalary.DonemBaslangic && restoredHistorical.DonemBitis==secondSalary.DonemBitis &&
         restoredHistorical.OdemeTarihi==secondSalary.OdemeTarihi && restoredHistorical.Aciklama==secondSalary.Aciklama,
         "Exact money, dates, periods and original description preserved");
-    Check(restoredSalaries.Select(x=>x.CalisanId).Order().SequenceEqual(new[]{-987654,-54321}.Order()), "Original employee numbers retained as non-linking historical references");
+    Check(restoredSalaries.Select(x=>x.CalisanId).Order().SequenceEqual(new[]{987654,54321}.Order()), "Original employee numbers retained as non-linking historical references");
     var reexportedHistory=await service.ExportAsync(orphanTarget.Id);
     Check(Read(reexportedHistory).UnresolvedSalaryEmployees.Count==2, "Unresolved status survives re-export");
     await service.RestoreAsync(new MemoryStream(reexportedHistory),orphanAgain.Id);
@@ -318,7 +318,7 @@ try
         missingUserTarget.Id,"Resolved employees cannot be falsely declared unresolved");
     var compatibility=await service.RestoreAsync(new MemoryStream(Change(bytes,p=>
     {
-        p.Version=2; p.Tables.Remove("KasaHesap"); p.Tables.Remove("KasaTransfer");
+        p.Version=2; foreach(var row in p.Tables["CalisanMaasArsiv"]) row.Remove("DogrulanmisCalisanId"); p.Tables.Remove("KasaHesap"); p.Tables.Remove("KasaTransfer");
         foreach(var row in p.Tables["KasaHareket"]) row.Remove("KasaHesapId");
     })),version2Target.Id);
     Check(compatibility.Records==24 && compatibility.Warnings.Any(x=>x.Contains("hesap atanmadan")), "Valid previous version 2 ZIP remains supported");
@@ -358,7 +358,7 @@ try
         await db.SaveChangesAsync();
         var providedResult=await service.RestoreAsync(new MemoryStream(providedBytes),providedTarget.Id);
         Check(providedResult.Records==provided.Tables.Values.Sum(x=>x.Count), "Uploaded backup restores all original rows without modification");
-        Check((await db.CalisanMaasArsivleri.Where(x=>x.FirmaId==providedTarget.Id && x.CalisanId<=0).CountAsync())==provided.UnresolvedSalaryEmployees.Count,
+        Check((await db.CalisanMaasArsivleri.Where(x=>x.FirmaId==providedTarget.Id && x.DogrulanmisCalisanId==null).CountAsync())==provided.UnresolvedSalaryEmployees.Count,
             "Uploaded backup preserves unresolved salary records");
         Console.WriteLine($"Uploaded backup: {providedResult.Records} records restored in isolated temporary database.");
     }

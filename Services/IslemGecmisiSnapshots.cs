@@ -99,6 +99,7 @@ public static class IslemGecmisiSnapshots
         x.Id,
         x.FirmaId,
         x.CalisanId,
+        x.DogrulanmisCalisanId,
         x.DonemBaslangic,
         x.DonemBitis,
         x.ToplamMaas,

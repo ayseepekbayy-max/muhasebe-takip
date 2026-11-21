@@ -128,6 +128,7 @@
         <div class="panel-title-row">
             <div>
                 <h2>Çalışan Listesi</h2>
+                <p>Yeniden işe alınan kişi için yeni kayıt oluşturmak yerine Çalışan Arşivi ekranındaki kaydı geri alın. Aynı isim, aynı kişi olduğu anlamına gelmez.</p>
                 <p>Maaş, son avans, son maaş ve durum bilgilerini hızlıca karşılaştırın.</p>
             </div>
         </div>
@@ -148,7 +149,7 @@
                                 <span class="status-pill @(c.AktifMi ? "status-pill-income" : "status-pill-expense")">
                                     @(c.AktifMi ? "Aktif" : "Ayrıldı")
                                 </span>
-                                <h3>@c.AdSoyad</h3>
+                                <h3>@c.AdSoyad</h3><small>Çalışan no: @c.Id</small>
                                 <p>@(string.IsNullOrWhiteSpace(c.Telefon) ? "Telefon belirtilmemiş" : c.Telefon)</p>
                             </div>
                         </div>
@@ -204,10 +205,10 @@
                                 </form>
                             }
 
-                            <form method="post" asp-page-handler="Sil" class="inline-form"
-                                  onsubmit="return confirm('Bu çalışan kalıcı olarak silinecek. Bağlı maaş, avans ve puantaj kayıtları da silinir. Devam edilsin mi?');">
+                            <form method="post" asp-page-handler="Arsivle" class="inline-form"
+                                  onsubmit="return confirm('Bu çalışan arşivlenecek. Çalışan numarası, maaş, avans ve puantaj geçmişi korunacak. Devam edilsin mi?');">
                                 <input type="hidden" name="id" value="@c.Id" />
-                                <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Sil</button>
+                                <button type="submit" formnovalidate class="btn btn-outline-danger btn-sm">Arşivle</button>
                             </form>
                         </div>
                     </article>

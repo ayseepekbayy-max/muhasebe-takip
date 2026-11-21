@@ -123,6 +123,7 @@ public class IndexModel : PageModel
             ? DateTime.UtcNow.Date
             : YeniCalisan.IseGirisTarihi);
 
+        YeniCalisan.Id = 0; // New person, never infer an existing identity.
         _db.Calisanlar.Add(YeniCalisan);
         await _db.SaveChangesWithAuditAsync(
             () => _islemGecmisi.KaydetAsync(
@@ -241,12 +242,12 @@ public class IndexModel : PageModel
             () => _islemGecmisi.KaydetAsync(
                 "Çalışanlar",
                 "Arsivleme",
-                $"{calisan.AdSoyad} çalışanı silindi (ID: {calisan.Id}).",
+                $"{calisan.AdSoyad} çalışanı arşivlendi (ID: {calisan.Id}).",
                 eskiDeger,
                 IslemGecmisiSnapshots.Calisan(calisan)),
             anaKaydiOnceKaydet: false);
 
-        TempData["Basari"] = "Çalışan silindi.";
+        TempData["Basari"] = "Çalışan arşivlendi. Çalışan numarası ve geçmiş kayıtlar korundu.";
         return RedirectToPage();
     }
 

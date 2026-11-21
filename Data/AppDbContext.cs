@@ -239,5 +239,6 @@ public class AppDbContext : DbContext
         });
 
         CompanyFileModel.Configure(modelBuilder);
+        EmployeeIdentityModel.Configure(modelBuilder);
     }
 }
